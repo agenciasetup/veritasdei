@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Veritas Dei
 
-## Getting Started
+**O que a Igreja ensina — com as fontes.**
 
-First, run the development server:
+Sistema de consulta da fé católica estruturado por autoridade, com respostas em 3 pilares: Bíblia, Magistério e Patrística. Usa RAG (Retrieval-Augmented Generation) sobre base de conhecimento própria.
+
+**Princípio:** A IA nunca responde do zero. Ela busca na base de conhecimento e organiza os trechos encontrados. Se não houver trechos suficientes, o sistema informa isso claramente.
+
+## Stack
+
+- **Next.js 14** (App Router) + TypeScript + Tailwind CSS
+- **Supabase** (PostgreSQL + pgvector)
+- **OpenAI** (embeddings + formatação)
+- **Vercel** (deploy)
+
+## Como rodar localmente
 
 ```bash
+# 1. Clonar
+git clone https://github.com/agenciasetup/veritasdei.git
+cd veritasdei
+
+# 2. Instalar dependências
+npm install
+
+# 3. Configurar variáveis de ambiente
+cp .env.example .env.local
+# Preencher com as chaves do Supabase e OpenAI
+
+# 4. Configurar o Supabase
+# Ver instruções em /supabase/README.md
+
+# 5. Rodar
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Ingestão do corpus
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Após configurar o Supabase e rodar o schema:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+# Colocar PDFs em scripts/ingest/data/
+# Ver detalhes em /supabase/README.md
 
-## Learn More
+# Seed da Patrística (10 citações de teste)
+npx tsx scripts/ingest/ingest-patristica.ts
 
-To learn more about Next.js, take a look at the following resources:
+# Bíblia (requer PDF)
+npx tsx scripts/ingest/ingest-biblia.ts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Catecismo (requer PDF)
+npx tsx scripts/ingest/ingest-catecismo.ts
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Estrutura
 
-## Deploy on Vercel
+```
+src/
+  app/          → Páginas e API routes
+  components/   → Componentes UI
+  lib/          → Clientes (Supabase, OpenAI) e motor RAG
+  types/        → Tipos TypeScript globais
+scripts/
+  ingest/       → Scripts de ingestão do corpus
+supabase/
+  schema.sql    → Schema completo do banco
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deploy
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Ver [vercel-env-checklist.md](./vercel-env-checklist.md) para configuração das variáveis de ambiente no Vercel.
