@@ -1,1 +1,5 @@
-// Placeholder — implemented in Sprint 2
+import OpenAI from 'openai'
+
+export const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+})
