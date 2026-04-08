@@ -4,6 +4,11 @@ import "./globals.css"
 export const metadata: Metadata = {
   title: "Veritas Dei — O que a Igreja ensina",
   description: "Sistema de consulta da fé católica com fontes da Bíblia, Magistério e Patrística.",
+  openGraph: {
+    title: "Veritas Dei — O que a Igreja ensina",
+    description: "Consulte a fé católica com as fontes: Bíblia, Magistério e Patrística.",
+    type: "website",
+  },
 }
 
 export default function RootLayout({
