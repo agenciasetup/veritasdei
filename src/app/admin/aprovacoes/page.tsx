@@ -74,16 +74,15 @@ export default function AdminAprovacoesPage() {
     else fetchParoquias()
   }, [tab, fetchVerificacoes, fetchParoquias])
 
-  const handleVerificacao = async (id: string, action: 'aprovada' | 'rejeitada') => {
+  const handleVerificacao = async (id: string, action: 'aprovado' | 'rejeitado') => {
     if (!supabase || !profile) return
     await supabase.from('verificacoes').update({
       status: action,
       revisado_por: profile.id,
-      revisado_em: new Date().toISOString(),
     }).eq('id', id)
 
     // If approved, also update the user's profile
-    if (action === 'aprovada') {
+    if (action === 'aprovado') {
       const ver = verificacoes.find(v => v.id === id)
       if (ver) {
         await supabase.from('profiles').update({ verified: true }).eq('id', ver.user_id)
@@ -195,12 +194,12 @@ export default function AdminAprovacoesPage() {
                     </div>
                     {/* Actions */}
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <button onClick={() => handleVerificacao(v.id, 'aprovada')}
+                      <button onClick={() => handleVerificacao(v.id, 'aprovado')}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all"
                         style={{ background: 'rgba(76,175,80,0.1)', border: '1px solid rgba(76,175,80,0.2)', color: '#4CAF50', fontFamily: 'Poppins, sans-serif' }}>
                         <CheckCircle className="w-3.5 h-3.5" /> Aprovar
                       </button>
-                      <button onClick={() => handleVerificacao(v.id, 'rejeitada')}
+                      <button onClick={() => handleVerificacao(v.id, 'rejeitado')}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all"
                         style={{ background: 'rgba(217,79,92,0.1)', border: '1px solid rgba(217,79,92,0.2)', color: '#D94F5C', fontFamily: 'Poppins, sans-serif' }}>
                         <XCircle className="w-3.5 h-3.5" /> Rejeitar
