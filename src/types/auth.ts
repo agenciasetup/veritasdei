@@ -24,14 +24,14 @@ export type Sacramento =
   | 'ordem'
   | 'matrimonio'
 
-export const VOCACOES: { value: Vocacao; label: string; icon: string }[] = [
-  { value: 'leigo', label: 'Leigo(a)', icon: '🙏' },
-  { value: 'catequista', label: 'Catequista', icon: '📖' },
-  { value: 'diacono', label: 'Diácono', icon: '⛪' },
-  { value: 'padre', label: 'Padre', icon: '✝️' },
-  { value: 'bispo', label: 'Bispo', icon: '🔷' },
-  { value: 'cardeal', label: 'Cardeal', icon: '🔴' },
-  { value: 'papa', label: 'Papa', icon: '🟡' },
+export const VOCACOES: { value: Vocacao; label: string }[] = [
+  { value: 'leigo', label: 'Leigo(a)' },
+  { value: 'catequista', label: 'Catequista' },
+  { value: 'diacono', label: 'Diácono' },
+  { value: 'padre', label: 'Padre' },
+  { value: 'bispo', label: 'Bispo' },
+  { value: 'cardeal', label: 'Cardeal' },
+  { value: 'papa', label: 'Papa' },
 ]
 
 export const SACRAMENTOS: { value: Sacramento; label: string }[] = [

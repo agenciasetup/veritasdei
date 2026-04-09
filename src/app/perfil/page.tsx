@@ -8,6 +8,7 @@ import {
   VOCACOES, SACRAMENTOS,
   type Vocacao, type Sacramento, type ProfileUpdate,
 } from '@/types/auth'
+import { VocacaoIcon } from '@/components/icons/VocacaoIcons'
 import {
   User, Camera, Save, Church, MapPin, Heart, BookOpen,
   CheckCircle, Phone, Calendar, Shield, AtSign,
@@ -131,7 +132,7 @@ function PerfilContent() {
     <div className="min-h-screen px-4 md:px-8 py-8 relative">
       <div className="bg-glow" />
 
-      <div className="max-w-4xl mx-auto relative z-10">
+      <div className="max-w-5xl mx-auto relative z-10">
         {/* Header */}
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-8">
           {/* Avatar */}
@@ -197,8 +198,8 @@ function PerfilContent() {
                   fontFamily: 'Poppins, sans-serif',
                 }}
               >
-                {VOCACOES.find(v => v.value === profile?.vocacao)?.icon}{' '}
-                {VOCACOES.find(v => v.value === profile?.vocacao)?.label ?? 'Leigo'}
+                <VocacaoIcon vocacao={profile?.vocacao ?? 'leigo'} size={14} />
+                {' '}{VOCACOES.find(v => v.value === profile?.vocacao)?.label ?? 'Leigo'}
               </span>
               <span
                 className="text-xs px-2.5 py-1 rounded-full uppercase"
@@ -313,7 +314,7 @@ function PerfilContent() {
                         color: form.vocacao === v.value ? '#C9A84C' : '#7A7368',
                       }}
                     >
-                      <span>{v.icon}</span>
+                      <VocacaoIcon vocacao={v.value} size={16} />
                       {v.label}
                     </button>
                   ))}

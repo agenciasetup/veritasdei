@@ -64,7 +64,7 @@ function SegurancaContent() {
       </Link>
 
       <div
-        className="w-full max-w-md rounded-2xl p-6 md:p-8 relative z-10"
+        className="w-full max-w-lg rounded-2xl p-6 md:p-8 relative z-10"
         style={{
           background: 'rgba(16,16,16,0.85)',
           backdropFilter: 'blur(20px)',

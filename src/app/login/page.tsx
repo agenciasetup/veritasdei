@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { VOCACOES, type Vocacao } from '@/types/auth'
+import { VocacaoIcon } from '@/components/icons/VocacaoIcons'
 import { LogIn, UserPlus, Mail, Eye, EyeOff, ArrowLeft, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 
@@ -152,7 +153,7 @@ function LoginPageInner() {
 
       {/* Card */}
       <div
-        className="w-full max-w-md rounded-2xl p-6 md:p-8 relative z-10"
+        className="w-full max-w-lg rounded-2xl p-6 md:p-8 relative z-10"
         style={{
           background: 'rgba(16,16,16,0.85)',
           backdropFilter: 'blur(20px)',
@@ -257,7 +258,7 @@ function LoginPageInner() {
             {/* Vocação */}
             <div>
               <label className="block text-xs mb-2 tracking-wider uppercase" style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}>Vocação</label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {VOCACOES.map((v) => (
                   <button
                     key={v.value}
@@ -271,7 +272,7 @@ function LoginPageInner() {
                       color: vocacao === v.value ? '#C9A84C' : '#7A7368',
                     }}
                   >
-                    <span>{v.icon}</span>
+                    <VocacaoIcon vocacao={v.value} size={16} />
                     {v.label}
                   </button>
                 ))}

@@ -51,7 +51,7 @@ export default function LandingPage() {
   if (isAuthenticated) return null
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen px-4 py-10 relative" style={{ marginLeft: '-64px' }}>
+    <div className="flex flex-col items-center justify-center min-h-screen px-4 py-10 relative">
       <div className="bg-glow" />
 
       {/* ── Cross ── */}
