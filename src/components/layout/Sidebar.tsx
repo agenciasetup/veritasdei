@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { getDisplayName } from '@/lib/greetings'
 import {
   ChevronLeft, ChevronRight, Home, Church, Droplets, ScrollText,
   Tablets, BookOpen, Scale, Heart, GraduationCap,
@@ -146,7 +147,7 @@ export default function Sidebar() {
                         className="text-sm whitespace-nowrap block truncate"
                         style={{ fontFamily: 'Poppins, sans-serif' }}
                       >
-                        {profile.name || 'Meu Perfil'}
+                        {getDisplayName(profile.vocacao, profile.name) || 'Meu Perfil'}
                       </span>
                       {profile.role === 'admin' && (
                         <span className="flex items-center gap-1 text-[10px]" style={{ color: '#C9A84C' }}>
