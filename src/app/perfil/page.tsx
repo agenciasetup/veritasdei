@@ -13,6 +13,7 @@ import {
   User, Camera, Save, Church, MapPin, Heart, BookOpen,
   CheckCircle, Phone, Calendar, Shield, AtSign,
 } from 'lucide-react'
+import Link from 'next/link'
 
 type Section = 'pessoal' | 'endereco' | 'fe' | 'social'
 
@@ -212,7 +213,7 @@ function PerfilContent() {
               >
                 Plano {profile?.plan ?? 'free'}
               </span>
-              {profile?.verified && (
+              {profile?.verified ? (
                 <span
                   className="text-xs px-2.5 py-1 rounded-full flex items-center gap-1"
                   style={{
@@ -224,7 +225,20 @@ function PerfilContent() {
                 >
                   <Shield className="w-3 h-3" /> Verificado
                 </span>
-              )}
+              ) : profile?.vocacao && profile.vocacao !== 'leigo' ? (
+                <Link
+                  href="/perfil/verificacao"
+                  className="text-xs px-2.5 py-1 rounded-full flex items-center gap-1 transition-colors hover:opacity-80"
+                  style={{
+                    background: 'rgba(201,168,76,0.08)',
+                    border: '1px solid rgba(201,168,76,0.15)',
+                    color: '#C9A84C',
+                    fontFamily: 'Poppins, sans-serif',
+                  }}
+                >
+                  <Shield className="w-3 h-3" /> Verificar perfil
+                </Link>
+              ) : null}
             </div>
           </div>
         </div>
