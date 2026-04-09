@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { usePathname } from 'next/navigation'
 import Sidebar from './Sidebar'
 
-const PUBLIC_PATHS = ['/login', '/auth']
+const PUBLIC_PATHS = ['/login', '/auth', '/privacidade', '/termos', '/onboarding']
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()

@@ -10,17 +10,25 @@ export async function GET(request: Request) {
     const supabase = await createServerSupabaseClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      // Check if user needs to set password (first access)
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('has_password_set')
+          .select('has_password_set, onboarding_completed')
           .eq('id', user.id)
           .single()
 
-        if (profile && !profile.has_password_set) {
+        // OAuth users (google, facebook, apple) don't need to set a password
+        const provider = user.app_metadata?.provider
+        const isOAuth = provider && provider !== 'email'
+
+        if (!isOAuth && profile && !profile.has_password_set) {
           return NextResponse.redirect(`${origin}/perfil/seguranca`)
+        }
+
+        // Redirect to onboarding if not completed
+        if (profile && !profile.onboarding_completed) {
+          return NextResponse.redirect(`${origin}/onboarding`)
         }
       }
       return NextResponse.redirect(`${origin}${next}`)

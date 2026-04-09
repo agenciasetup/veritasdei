@@ -4,14 +4,16 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { getDisplayName } from '@/lib/greetings'
 import {
   ChevronLeft, ChevronRight, Home, Church, Droplets, ScrollText,
-  Tablets, BookOpen, Scale, Heart, GraduationCap,
+  Tablets, BookOpen, Scale, Heart, GraduationCap, MapPin,
   LogIn, User, LogOut, Shield,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
   { href: '/', icon: Home, label: 'Início' },
+  { href: '/paroquias', icon: MapPin, label: 'Paróquias' },
   { href: '/trilhas', icon: GraduationCap, label: 'Trilhas' },
   { href: '/dogmas', icon: Church, label: 'Dogmas' },
   { href: '/sacramentos', icon: Droplets, label: 'Sacramentos' },
@@ -146,7 +148,7 @@ export default function Sidebar() {
                         className="text-sm whitespace-nowrap block truncate"
                         style={{ fontFamily: 'Poppins, sans-serif' }}
                       >
-                        {profile.name || 'Meu Perfil'}
+                        {getDisplayName(profile.vocacao, profile.name) || 'Meu Perfil'}
                       </span>
                       {profile.role === 'admin' && (
                         <span className="flex items-center gap-1 text-[10px]" style={{ color: '#C9A84C' }}>

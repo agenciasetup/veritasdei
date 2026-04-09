@@ -10,6 +10,8 @@ import RichText from '@/components/ui/RichText'
 import CatechismPopup from '@/components/ui/CatechismPopup'
 import LandingPage from '@/components/landing/LandingPage'
 import { useAuth } from '@/contexts/AuthContext'
+import { useRouter } from 'next/navigation'
+import { getGreeting } from '@/lib/greetings'
 import {
   Church, Droplets, ScrollText, Tablets, BookOpen, Scale, Heart,
   Sparkles, Lightbulb, ArrowRight, AlertTriangle, ShieldAlert, BookMarked,
@@ -29,11 +31,18 @@ const FEATURES = [
 ]
 
 export default function Home() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const { isAuthenticated, isLoading: authLoading, profile } = useAuth()
+  const router = useRouter()
 
   // Show landing page for unauthenticated users
   if (!authLoading && !isAuthenticated) {
     return <LandingPage />
+  }
+
+  // Redirect to onboarding if not completed
+  if (!authLoading && isAuthenticated && profile && !profile.onboarding_completed) {
+    router.push('/onboarding')
+    return null
   }
 
   // Show loading while checking auth
@@ -114,6 +123,15 @@ export default function Home() {
           ══════════════════════════════════════════════ */}
       {!hasResponse && !isLoading && (
         <section className="relative z-10 flex flex-col items-center min-h-[85vh] justify-center transition-all duration-700 ease-out">
+          {/* Greeting */}
+          {profile?.name && (
+            <p
+              className="text-sm mb-6 fade-in"
+              style={{ color: '#B8AFA2', fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic', fontSize: '1.1rem' }}
+            >
+              {getGreeting(profile.vocacao, profile.name)}
+            </p>
+          )}
           <Header />
           <div className="w-full mt-10">
             <SearchBox onSearch={handleSearch} isLoading={isLoading} />

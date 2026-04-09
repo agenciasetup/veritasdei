@@ -8,10 +8,12 @@ import {
   VOCACOES, SACRAMENTOS,
   type Vocacao, type Sacramento, type ProfileUpdate,
 } from '@/types/auth'
+import { VocacaoIcon } from '@/components/icons/VocacaoIcons'
 import {
   User, Camera, Save, Church, MapPin, Heart, BookOpen,
-  CheckCircle, Phone, Calendar, Shield, AtSign,
+  CheckCircle, Phone, Calendar, Shield, AtSign, GraduationCap,
 } from 'lucide-react'
+import Link from 'next/link'
 
 type Section = 'pessoal' | 'endereco' | 'fe' | 'social'
 
@@ -131,7 +133,7 @@ function PerfilContent() {
     <div className="min-h-screen px-4 md:px-8 py-8 relative">
       <div className="bg-glow" />
 
-      <div className="max-w-4xl mx-auto relative z-10">
+      <div className="max-w-5xl mx-auto relative z-10">
         {/* Header */}
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-8">
           {/* Avatar */}
@@ -197,8 +199,8 @@ function PerfilContent() {
                   fontFamily: 'Poppins, sans-serif',
                 }}
               >
-                {VOCACOES.find(v => v.value === profile?.vocacao)?.icon}{' '}
-                {VOCACOES.find(v => v.value === profile?.vocacao)?.label ?? 'Leigo'}
+                <VocacaoIcon vocacao={profile?.vocacao ?? 'leigo'} size={14} />
+                {' '}{VOCACOES.find(v => v.value === profile?.vocacao)?.label ?? 'Leigo'}
               </span>
               <span
                 className="text-xs px-2.5 py-1 rounded-full uppercase"
@@ -211,7 +213,7 @@ function PerfilContent() {
               >
                 Plano {profile?.plan ?? 'free'}
               </span>
-              {profile?.verified && (
+              {profile?.verified ? (
                 <span
                   className="text-xs px-2.5 py-1 rounded-full flex items-center gap-1"
                   style={{
@@ -223,10 +225,50 @@ function PerfilContent() {
                 >
                   <Shield className="w-3 h-3" /> Verificado
                 </span>
-              )}
+              ) : profile?.vocacao && profile.vocacao !== 'leigo' ? (
+                <Link
+                  href="/perfil/verificacao"
+                  className="text-xs px-2.5 py-1 rounded-full flex items-center gap-1 transition-colors hover:opacity-80"
+                  style={{
+                    background: 'rgba(201,168,76,0.08)',
+                    border: '1px solid rgba(201,168,76,0.15)',
+                    color: '#C9A84C',
+                    fontFamily: 'Poppins, sans-serif',
+                  }}
+                >
+                  <Shield className="w-3 h-3" /> Verificar perfil
+                </Link>
+              ) : null}
             </div>
           </div>
         </div>
+
+        {/* Catechist Authorization - for verified priests */}
+        {profile?.verified && ['padre', 'bispo', 'cardeal', 'papa'].includes(profile?.vocacao ?? '') && (
+          <Link
+            href="/perfil/catequistas"
+            className="flex items-center gap-3 rounded-xl p-4 mb-6 transition-all hover:opacity-90"
+            style={{
+              background: 'rgba(201,168,76,0.05)',
+              border: '1px solid rgba(201,168,76,0.12)',
+            }}
+          >
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: 'rgba(201,168,76,0.1)' }}
+            >
+              <GraduationCap className="w-5 h-5" style={{ color: '#C9A84C' }} />
+            </div>
+            <div className="flex-1">
+              <span className="text-sm font-medium block" style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}>
+                Autorizar Catequistas
+              </span>
+              <span className="text-xs" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+                Registre emails de catequistas para verificacao automatica
+              </span>
+            </div>
+          </Link>
+        )}
 
         {/* Section Tabs */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
@@ -313,7 +355,7 @@ function PerfilContent() {
                         color: form.vocacao === v.value ? '#C9A84C' : '#7A7368',
                       }}
                     >
-                      <span>{v.icon}</span>
+                      <VocacaoIcon vocacao={v.value} size={16} />
                       {v.label}
                     </button>
                   ))}

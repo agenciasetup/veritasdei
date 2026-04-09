@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { Users, Church, HeartHandshake, ArrowRight, UserPlus, LogIn } from 'lucide-react'
+import { Users, Church, HeartHandshake, UserPlus, LogIn, MapPin, Clock, Search } from 'lucide-react'
+import type { Paroquia } from '@/types/paroquia'
 
 interface Stats {
   catolicos: number
@@ -16,6 +17,10 @@ export default function LandingPage() {
   const { isAuthenticated } = useAuth()
   const [stats, setStats] = useState<Stats>({ catolicos: 0, convertidos: 0, igrejas: 0 })
   const [animated, setAnimated] = useState(false)
+  const [searchCity, setSearchCity] = useState('')
+  const [searchResults, setSearchResults] = useState<Paroquia[]>([])
+  const [searched, setSearched] = useState(false)
+  const [searching, setSearching] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -32,10 +37,9 @@ export default function LandingPage() {
         .eq('veio_de_outra_religiao', true)
 
       const { count: igrejas } = await supabase!
-        .from('profiles')
+        .from('paroquias')
         .select('*', { count: 'exact', head: true })
-        .in('vocacao', ['padre', 'diacono', 'bispo', 'cardeal', 'papa'])
-        .eq('verified', true)
+        .eq('status', 'aprovada')
 
       setStats({
         catolicos: total ?? 0,
@@ -48,10 +52,27 @@ export default function LandingPage() {
     setTimeout(() => setAnimated(true), 100)
   }, [])
 
+  const handleSearch = async () => {
+    const supabase = createClient()
+    if (!supabase || !searchCity.trim()) return
+    setSearching(true)
+    setSearched(true)
+
+    const { data } = await supabase
+      .from('paroquias')
+      .select('*')
+      .eq('status', 'aprovada')
+      .ilike('cidade', `%${searchCity.trim()}%`)
+      .limit(6)
+
+    setSearchResults((data as Paroquia[]) ?? [])
+    setSearching(false)
+  }
+
   if (isAuthenticated) return null
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen px-4 py-10 relative" style={{ marginLeft: '-64px' }}>
+    <div className="flex flex-col items-center min-h-screen px-4 pt-16 pb-10 relative">
       <div className="bg-glow" />
 
       {/* ── Cross ── */}
@@ -108,6 +129,104 @@ export default function LandingPage() {
         <CounterCard icon={Users} value={stats.catolicos} label="Católicos" />
         <CounterCard icon={HeartHandshake} value={stats.convertidos} label="Convertidos" />
         <CounterCard icon={Church} value={stats.igrejas} label="Igrejas cadastradas" />
+      </div>
+
+      {/* ── Church Search ── */}
+      <div className="relative z-10 w-full max-w-2xl mb-12">
+        <h2
+          className="text-lg font-bold tracking-wider uppercase text-center mb-4"
+          style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
+        >
+          Encontre sua Paroquia
+        </h2>
+        <div className="flex gap-2">
+          <div className="flex-1 relative">
+            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#7A7368' }} />
+            <input
+              type="text"
+              value={searchCity}
+              onChange={e => setSearchCity(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSearch()}
+              placeholder="Digite sua cidade..."
+              className="w-full pl-11 pr-4 py-3.5 rounded-xl text-sm"
+              style={{
+                background: 'rgba(16,16,16,0.8)',
+                border: '1px solid rgba(201,168,76,0.15)',
+                color: '#F2EDE4',
+                fontFamily: 'Poppins, sans-serif',
+                outline: 'none',
+              }}
+              onFocus={e => { e.target.style.borderColor = 'rgba(201,168,76,0.4)' }}
+              onBlur={e => { e.target.style.borderColor = 'rgba(201,168,76,0.15)' }}
+            />
+          </div>
+          <button
+            onClick={handleSearch}
+            disabled={searching || !searchCity.trim()}
+            className="px-5 rounded-xl flex items-center gap-2 text-sm font-medium transition-all"
+            style={{
+              background: 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
+              color: '#0A0A0A',
+              fontFamily: 'Poppins, sans-serif',
+              opacity: !searchCity.trim() ? 0.5 : 1,
+            }}
+          >
+            {searching ? (
+              <div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(10,10,10,0.3)', borderTopColor: '#0A0A0A' }} />
+            ) : (
+              <Search className="w-4 h-4" />
+            )}
+          </button>
+        </div>
+
+        {/* Search Results */}
+        {searched && !searching && (
+          <div className="mt-4">
+            {searchResults.length === 0 ? (
+              <p className="text-sm text-center py-4" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+                Nenhuma paroquia encontrada em &quot;{searchCity}&quot;. Cadastre-se e ajude a registrar!
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {searchResults.map(p => (
+                  <div
+                    key={p.id}
+                    className="rounded-xl p-4 transition-all"
+                    style={{
+                      background: 'rgba(16,16,16,0.7)',
+                      border: '1px solid rgba(201,168,76,0.1)',
+                    }}
+                  >
+                    <h4 className="text-sm font-bold mb-1" style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}>
+                      {p.nome}
+                    </h4>
+                    {p.diocese && (
+                      <p className="text-xs mb-1.5" style={{ color: '#7A7368' }}>{p.diocese}</p>
+                    )}
+                    <div className="flex items-center gap-1.5 text-xs mb-1" style={{ color: '#B8AFA2' }}>
+                      <MapPin className="w-3 h-3" style={{ color: '#C9A84C' }} />
+                      {p.cidade}, {p.estado}
+                    </div>
+                    {p.horarios_missa && p.horarios_missa.length > 0 && (
+                      <div className="flex items-center gap-1.5 text-xs" style={{ color: '#B8AFA2' }}>
+                        <Clock className="w-3 h-3" style={{ color: '#C9A84C' }} />
+                        {p.horarios_missa.slice(0, 2).map((h, i) => (
+                          <span key={i}>{h.dia} {h.horario}{i < Math.min(p.horarios_missa.length, 2) - 1 ? ', ' : ''}</span>
+                        ))}
+                      </div>
+                    )}
+                    {p.padre_responsavel && (
+                      <div className="flex items-center gap-1.5 text-xs mt-1" style={{ color: '#B8AFA2' }}>
+                        <Church className="w-3 h-3" style={{ color: '#C9A84C' }} />
+                        Pe. {p.padre_responsavel}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── CTA ── */}
