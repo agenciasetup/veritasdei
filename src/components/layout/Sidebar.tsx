@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: '/mandamentos', icon: Tablets, label: 'Mandamentos' },
   { href: '/oracoes', icon: BookOpen, label: 'Orações' },
   { href: '/virtudes-pecados', icon: Scale, label: 'Virtudes e Pecados' },
+  { href: '/obras-misericordia', icon: Heart, label: 'Obras de Misericórdia' },
 ]
 
 export default function Sidebar() {
