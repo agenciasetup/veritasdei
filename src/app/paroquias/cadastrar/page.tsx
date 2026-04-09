@@ -64,6 +64,16 @@ function CadastrarContent() {
   const handleFotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !user || !supabase) return
+
+    if (!file.type.startsWith('image/')) {
+      setError('Apenas imagens são permitidas.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Imagem deve ter no máximo 5MB.')
+      return
+    }
+
     setUploadingFoto(true)
     const ext = file.name.split('.').pop()
     const path = `${Date.now()}.${ext}`

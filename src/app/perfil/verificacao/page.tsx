@@ -76,6 +76,17 @@ function VerificacaoContent() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !user || !supabase) return
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+    if (!allowedTypes.includes(file.type)) {
+      setError('Formato inválido. Envie uma imagem (JPG, PNG, WebP) ou PDF.')
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Arquivo deve ter no máximo 10MB.')
+      return
+    }
+
     setUploading(true)
     setError(null)
     const ext = file.name.split('.').pop()

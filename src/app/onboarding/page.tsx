@@ -70,6 +70,9 @@ export default function OnboardingPage() {
     const file = e.target.files?.[0]
     if (!file || !user || !supabase) return
 
+    if (!file.type.startsWith('image/')) return
+    if (file.size > 2 * 1024 * 1024) return
+
     setUploadingAvatar(true)
     const ext = file.name.split('.').pop()
     const path = `${user.id}/avatar.${ext}`
