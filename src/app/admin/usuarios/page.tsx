@@ -62,7 +62,9 @@ export default function AdminUsuariosPage() {
       .select('id, name, email, role, status, vocacao, verified, cidade, estado, paroquia, plan, created_at', { count: 'exact' })
 
     if (search.trim()) {
-      query = query.or(`name.ilike.%${search.trim()}%,email.ilike.%${search.trim()}%`)
+      // Escape special PostgREST filter characters to prevent filter injection
+      const sanitized = search.trim().replace(/[%_\\]/g, c => `\\${c}`)
+      query = query.or(`name.ilike.%${sanitized}%,email.ilike.%${sanitized}%`)
     }
     if (filterVocacao) query = query.eq('vocacao', filterVocacao)
     if (filterRole) query = query.eq('role', filterRole)
