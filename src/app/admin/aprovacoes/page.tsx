@@ -178,12 +178,16 @@ export default function AdminAprovacoesPage() {
                         </span>
                       </div>
                       {v.documento_url && (
-                        <a href={v.documento_url} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs mt-2 underline"
-                          style={{ color: '#C9A84C' }}>
+                        <button
+                          onClick={async () => {
+                            const { data } = await supabase.storage.from('verificacoes').createSignedUrl(v.documento_url!, 600)
+                            if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+                          }}
+                          className="inline-flex items-center gap-1 text-xs mt-2 underline cursor-pointer"
+                          style={{ color: '#C9A84C', background: 'none', border: 'none' }}>
                           <FileText className="w-3 h-3" /> Ver documento
                           <ExternalLink className="w-3 h-3" />
-                        </a>
+                        </button>
                       )}
                       {v.notas && (
                         <p className="text-xs mt-2 p-2 rounded-lg"

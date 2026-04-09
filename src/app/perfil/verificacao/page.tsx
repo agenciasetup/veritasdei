@@ -76,12 +76,15 @@ function VerificacaoContent() {
     const file = e.target.files?.[0]
     if (!file || !user || !supabase) return
     setUploading(true)
+    setError(null)
     const ext = file.name.split('.').pop()
     const path = `${user.id}/${Date.now()}.${ext}`
-    const { error } = await supabase.storage.from('verificacoes').upload(path, file)
-    if (!error) {
-      const { data } = supabase.storage.from('verificacoes').getPublicUrl(path)
-      setDocUrl(data.publicUrl)
+    const { error: uploadError } = await supabase.storage.from('verificacoes').upload(path, file)
+    if (uploadError) {
+      setError('Erro ao enviar documento. Tente novamente.')
+    } else {
+      // Store the path — bucket is private, so getPublicUrl won't work
+      setDocUrl(path)
     }
     setUploading(false)
   }
@@ -212,7 +215,7 @@ function VerificacaoContent() {
         )}
 
         {/* Rejected */}
-        {needsVerification && !isVerified && verificacao?.status === 'rejeitada' && (
+        {needsVerification && !isVerified && verificacao?.status === 'rejeitado' && (
           <div className="space-y-6">
             <div
               className="rounded-2xl p-6"
