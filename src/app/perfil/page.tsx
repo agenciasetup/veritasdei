@@ -32,7 +32,7 @@ export default function PerfilPage() {
 
 function PerfilContent() {
   const { profile, refreshProfile, user } = useAuth()
-  const supabase = createClient()
+  const supabase = createClient()!
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [section, setSection] = useState<Section>('pessoal')

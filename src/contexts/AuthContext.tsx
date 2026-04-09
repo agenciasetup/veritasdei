@@ -32,20 +32,57 @@ interface AuthContextValue extends AuthState {
   refreshProfile: () => Promise<void>
 }
 
+const DEFAULT_STATE: AuthState = {
+  user: null,
+  profile: null,
+  session: null,
+  isAuthenticated: false,
+  isAdmin: false,
+  isLoading: false,
+  role: 'user',
+}
+
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>({
-    user: null,
-    profile: null,
-    session: null,
-    isAuthenticated: false,
-    isAdmin: false,
-    isLoading: true,
-    role: 'user',
-  })
+const noopAsync = async () => ({ error: 'Supabase not configured' as string | null })
 
+export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = createClient()
+
+  // If Supabase isn't configured (e.g. during build/prerender), render children with default state
+  if (!supabase) {
+    return (
+      <AuthContext.Provider
+        value={{
+          ...DEFAULT_STATE,
+          signUp: async () => noopAsync(),
+          signInWithPassword: async () => noopAsync(),
+          signInWithMagicLink: async () => noopAsync(),
+          resetPassword: async () => noopAsync(),
+          updatePassword: async () => noopAsync(),
+          signOut: async () => {},
+          refreshProfile: async () => {},
+        }}
+      >
+        {children}
+      </AuthContext.Provider>
+    )
+  }
+
+  return <AuthProviderInner supabase={supabase}>{children}</AuthProviderInner>
+}
+
+function AuthProviderInner({
+  children,
+  supabase,
+}: {
+  children: ReactNode
+  supabase: NonNullable<ReturnType<typeof createClient>>
+}) {
+  const [state, setState] = useState<AuthState>({
+    ...DEFAULT_STATE,
+    isLoading: true,
+  })
 
   const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
     const { data, error } = await supabase
@@ -74,10 +111,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [state.user, fetchProfile])
 
-  // Listen for auth state changes
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }: { data: { session: Session | null } }) => {
       if (session?.user) {
         const profile = await fetchProfile(session.user.id)
         setState({
@@ -95,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (_event: string, session: Session | null) => {
         if (session?.user) {
           const profile = await fetchProfile(session.user.id)
           setState({
@@ -109,13 +144,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           })
         } else {
           setState({
-            user: null,
-            profile: null,
-            session: null,
-            isAuthenticated: false,
-            isAdmin: false,
+            ...DEFAULT_STATE,
             isLoading: false,
-            role: 'user',
           })
         }
       }
@@ -161,7 +191,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updatePassword = async (password: string) => {
     const { error } = await supabase.auth.updateUser({ password })
     if (!error && state.user) {
-      // Mark password as set in profile
       await supabase
         .from('profiles')
         .update({ has_password_set: true })
