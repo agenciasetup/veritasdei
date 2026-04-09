@@ -154,7 +154,7 @@ export default function AdminConteudosPage() {
     else if (level === 'topics') { setLevel('groups'); setSelectedGroup(null) }
   }
 
-  const currentData = level === 'groups' ? groups : level === 'topics' ? topics : level === 'subtopics' ? subtopics : items
+  const currentData = (level === 'groups' ? groups : level === 'topics' ? topics : level === 'subtopics' ? subtopics : items) as unknown as Record<string, unknown>[]
   const levelLabel = level === 'groups' ? 'Grupo' : level === 'topics' ? 'Tópico' : level === 'subtopics' ? 'Sub-tópico' : 'Conteúdo'
 
   return (
@@ -220,7 +220,8 @@ export default function AdminConteudosPage() {
       {/* List */}
       {!loading && currentData.length > 0 && (
         <div className="space-y-2">
-          {currentData.map((item: Record<string, unknown>) => (
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          {currentData.map((item: any) => (
             <div key={item.id as string}
               className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group"
               style={{
