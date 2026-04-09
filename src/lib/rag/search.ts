@@ -2,7 +2,7 @@ import { generateEmbedding } from '../openai/embeddings'
 import { openai } from '../openai/client'
 import { buildRAGPrompt } from './prompt'
 import { isSensitiveTopic } from '../utils/sensitive-topics'
-import type { QueryResponse, SearchResult } from '@/types'
+import type { QueryResponse, SearchResult, AIInsight } from '@/types'
 import { createClient } from '@supabase/supabase-js'
 
 function getSupabaseAdmin() {
@@ -19,6 +19,34 @@ interface RawResult {
   text?: string
   similarity: number
   [key: string]: unknown
+}
+
+function parseAIResponse(raw: string): AIInsight | null {
+  try {
+    // Remove potential markdown code fences
+    const cleaned = raw.replace(/```json?\n?/g, '').replace(/```\n?/g, '').trim()
+    const parsed = JSON.parse(cleaned)
+
+    return {
+      summary: typeof parsed.summary === 'string' ? parsed.summary : '',
+      keyPoints: Array.isArray(parsed.keyPoints) ? parsed.keyPoints : [],
+      relatedTopics: Array.isArray(parsed.relatedTopics) ? parsed.relatedTopics : [],
+      sourceContext: typeof parsed.sourceContext === 'object' && parsed.sourceContext !== null
+        ? parsed.sourceContext
+        : {},
+    }
+  } catch {
+    // If JSON parsing fails, try to extract summary from plain text
+    if (raw.length > 50) {
+      return {
+        summary: raw,
+        keyPoints: [],
+        relatedTopics: [],
+        sourceContext: {},
+      }
+    }
+    return null
+  }
 }
 
 export async function searchCorpus(query: string): Promise<QueryResponse> {
@@ -69,15 +97,22 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
     patristicaResults.map(r => ({ reference: r.reference, text: r.text ?? '' }))
   )
 
-  // 4. Formatar com GPT-4o-mini (formatador, não autoridade)
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [{ role: 'user', content: prompt }],
-    max_tokens: 1500,
-    temperature: 0.1, // baixo: queremos consistência, não criatividade
-  })
+  // 4. Gerar explicação educativa com GPT-4o-mini
+  let insight: AIInsight | null = null
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 2500,
+      temperature: 0.3,
+    })
 
-  const _formattedResponse = completion.choices[0].message.content ?? ''
+    const rawResponse = completion.choices[0].message.content ?? ''
+    insight = parseAIResponse(rawResponse)
+  } catch {
+    // AI insight is optional — search still works without it
+    insight = null
+  }
 
   // 5. Montar resposta estruturada
   const toSearchResult = (item: RawResult, pillar: SearchResult['pillar']): SearchResult => ({
@@ -85,6 +120,7 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
     pillar,
     reference: item.reference,
     text: item.text_pt ?? item.text ?? '',
+    context: insight?.sourceContext[item.reference],
     similarity: item.similarity,
   })
 
@@ -104,7 +140,8 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
         results: patristicaResults.map(r => toSearchResult(r, 'patristica')),
       },
     ],
+    insight,
     sensitive: isSensitiveTopic(query),
-    tags: [], // implementar com extração de tags no Sprint 4
+    tags: [],
   }
 }

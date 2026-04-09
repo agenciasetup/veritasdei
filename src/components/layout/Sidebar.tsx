@@ -3,10 +3,11 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Home, Church, Droplets, ScrollText, Tablets, BookOpen, Scale, Heart } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Home, Church, Droplets, ScrollText, Tablets, BookOpen, Scale, Heart, GraduationCap } from 'lucide-react'
 
 const NAV_ITEMS = [
   { href: '/', icon: Home, label: 'Início' },
+  { href: '/trilhas', icon: GraduationCap, label: 'Trilhas' },
   { href: '/dogmas', icon: Church, label: 'Dogmas' },
   { href: '/sacramentos', icon: Droplets, label: 'Sacramentos' },
   { href: '/preceitos', icon: ScrollText, label: 'Preceitos' },
