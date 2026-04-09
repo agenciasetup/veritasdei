@@ -10,6 +10,7 @@ import RichText from '@/components/ui/RichText'
 import CatechismPopup from '@/components/ui/CatechismPopup'
 import LandingPage from '@/components/landing/LandingPage'
 import { useAuth } from '@/contexts/AuthContext'
+import { useRouter } from 'next/navigation'
 import {
   Church, Droplets, ScrollText, Tablets, BookOpen, Scale, Heart,
   Sparkles, Lightbulb, ArrowRight, AlertTriangle, ShieldAlert, BookMarked,
@@ -29,11 +30,18 @@ const FEATURES = [
 ]
 
 export default function Home() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const { isAuthenticated, isLoading: authLoading, profile } = useAuth()
+  const router = useRouter()
 
   // Show landing page for unauthenticated users
   if (!authLoading && !isAuthenticated) {
     return <LandingPage />
+  }
+
+  // Redirect to onboarding if not completed
+  if (!authLoading && isAuthenticated && profile && !profile.onboarding_completed) {
+    router.push('/onboarding')
+    return null
   }
 
   // Show loading while checking auth

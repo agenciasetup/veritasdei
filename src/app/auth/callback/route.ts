@@ -12,21 +12,23 @@ export async function GET(request: Request) {
     if (!error) {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('has_password_set, onboarding_completed')
+          .eq('id', user.id)
+          .single()
+
         // OAuth users (google, facebook, apple) don't need to set a password
         const provider = user.app_metadata?.provider
         const isOAuth = provider && provider !== 'email'
 
-        if (!isOAuth) {
-          // Only check password for email-based users (magic link / first access)
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('has_password_set')
-            .eq('id', user.id)
-            .single()
+        if (!isOAuth && profile && !profile.has_password_set) {
+          return NextResponse.redirect(`${origin}/perfil/seguranca`)
+        }
 
-          if (profile && !profile.has_password_set) {
-            return NextResponse.redirect(`${origin}/perfil/seguranca`)
-          }
+        // Redirect to onboarding if not completed
+        if (profile && !profile.onboarding_completed) {
+          return NextResponse.redirect(`${origin}/onboarding`)
         }
       }
       return NextResponse.redirect(`${origin}${next}`)

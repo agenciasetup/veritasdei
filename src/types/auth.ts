@@ -54,6 +54,7 @@ export interface Profile {
   vocacao: Vocacao
   verified: boolean
   has_password_set: boolean
+  onboarding_completed: boolean
 
   // Pessoal
   profile_image_url: string | null
