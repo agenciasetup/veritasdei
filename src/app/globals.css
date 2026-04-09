@@ -181,12 +181,13 @@ body::after {
    ═══════════════════════════════════════════════════════ */
 
 .verse-text {
-  font-family: 'Cormorant Garamond', 'Georgia', serif;
-  font-size: 1.125rem;
-  line-height: 1.85;
-  color: var(--text-primary);
-  font-style: italic;
+  font-family: 'Poppins', sans-serif;
+  font-size: 1rem;
+  font-weight: 300;
+  line-height: 1.9;
+  color: #E8E2D8;
   margin-top: 0.75rem;
+  letter-spacing: 0.01em;
 }
 
 /* ═══════════════════════════════════════════════════════
