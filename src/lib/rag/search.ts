@@ -174,7 +174,10 @@ async function searchBibliaKeyword(
 }
 
 /**
- * Vector-based Bible search with timeout handling.
+ * Vector-based Bible search.
+ * NOTE: The search_biblia function returns top-N results ordered by similarity
+ * WITHOUT a WHERE filter (so the IVFFlat index is used efficiently).
+ * We apply the threshold filter here in the app.
  */
 async function searchBibliaVector(
   supabase: AnySupabaseClient,
@@ -183,10 +186,11 @@ async function searchBibliaVector(
   matchThreshold: number = 0.45
 ): Promise<{ data: RawResult[]; error: string | null }> {
   try {
+    // Request more results than needed so we can filter by threshold
     const { data, error } = await supabase.rpc('search_biblia', {
       query_embedding: queryEmbedding,
       match_threshold: matchThreshold,
-      match_count: matchCount,
+      match_count: matchCount * 3,
     } as Record<string, unknown>)
 
     if (error) {
@@ -194,7 +198,12 @@ async function searchBibliaVector(
       return { data: [], error: error.message }
     }
 
-    return { data: (data ?? []) as RawResult[], error: null }
+    // Filter by threshold (done here since the DB function no longer has WHERE)
+    const filtered = ((data ?? []) as RawResult[])
+      .filter(r => r.similarity >= matchThreshold)
+      .slice(0, matchCount)
+
+    return { data: filtered, error: null }
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error'
     console.error('[search] search_biblia exception:', msg)
