@@ -55,7 +55,8 @@ export default function AdminAprovacoesPage() {
       .order('created_at', { ascending: false })
     setVerificacoes((data as Verificacao[]) ?? [])
     setLoading(false)
-  }, [supabase])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const fetchParoquias = useCallback(async () => {
     if (!supabase) return
@@ -67,23 +68,23 @@ export default function AdminAprovacoesPage() {
       .order('created_at', { ascending: false })
     setParoquias((data as ParoquiaPendente[]) ?? [])
     setLoading(false)
-  }, [supabase])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (tab === 'verificacoes') fetchVerificacoes()
     else fetchParoquias()
   }, [tab, fetchVerificacoes, fetchParoquias])
 
-  const handleVerificacao = async (id: string, action: 'aprovada' | 'rejeitada') => {
+  const handleVerificacao = async (id: string, action: 'aprovado' | 'rejeitado') => {
     if (!supabase || !profile) return
     await supabase.from('verificacoes').update({
       status: action,
       revisado_por: profile.id,
-      revisado_em: new Date().toISOString(),
     }).eq('id', id)
 
     // If approved, also update the user's profile
-    if (action === 'aprovada') {
+    if (action === 'aprovado') {
       const ver = verificacoes.find(v => v.id === id)
       if (ver) {
         await supabase.from('profiles').update({ verified: true }).eq('id', ver.user_id)
@@ -179,12 +180,16 @@ export default function AdminAprovacoesPage() {
                         </span>
                       </div>
                       {v.documento_url && (
-                        <a href={v.documento_url} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs mt-2 underline"
-                          style={{ color: '#C9A84C' }}>
+                        <button
+                          onClick={async () => {
+                            const { data } = await supabase.storage.from('verificacoes').createSignedUrl(v.documento_url!, 600)
+                            if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+                          }}
+                          className="inline-flex items-center gap-1 text-xs mt-2 underline cursor-pointer"
+                          style={{ color: '#C9A84C', background: 'none', border: 'none' }}>
                           <FileText className="w-3 h-3" /> Ver documento
                           <ExternalLink className="w-3 h-3" />
-                        </a>
+                        </button>
                       )}
                       {v.notas && (
                         <p className="text-xs mt-2 p-2 rounded-lg"
@@ -195,12 +200,12 @@ export default function AdminAprovacoesPage() {
                     </div>
                     {/* Actions */}
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <button onClick={() => handleVerificacao(v.id, 'aprovada')}
+                      <button onClick={() => handleVerificacao(v.id, 'aprovado')}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all"
                         style={{ background: 'rgba(76,175,80,0.1)', border: '1px solid rgba(76,175,80,0.2)', color: '#4CAF50', fontFamily: 'Poppins, sans-serif' }}>
                         <CheckCircle className="w-3.5 h-3.5" /> Aprovar
                       </button>
-                      <button onClick={() => handleVerificacao(v.id, 'rejeitada')}
+                      <button onClick={() => handleVerificacao(v.id, 'rejeitado')}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all"
                         style={{ background: 'rgba(217,79,92,0.1)', border: '1px solid rgba(217,79,92,0.2)', color: '#D94F5C', fontFamily: 'Poppins, sans-serif' }}>
                         <XCircle className="w-3.5 h-3.5" /> Rejeitar

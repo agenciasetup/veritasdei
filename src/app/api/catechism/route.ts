@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { rateLimit } from '@/lib/rate-limit'
 
 function getSupabaseAdmin() {
   return createClient(
@@ -9,6 +11,18 @@ function getSupabaseAdmin() {
 }
 
 export async function GET(request: NextRequest) {
+  // Auth check
+  const authClient = await createServerSupabaseClient()
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
+  }
+
+  // Rate limit: 30 requests per minute per user
+  if (!rateLimit(`catechism:${user.id}`, 30, 60_000)) {
+    return NextResponse.json({ error: 'Muitas requisições. Aguarde um momento.' }, { status: 429 })
+  }
+
   const ref = request.nextUrl.searchParams.get('ref')
 
   if (!ref) {

@@ -109,6 +109,9 @@ function PerfilContent() {
     const file = e.target.files?.[0]
     if (!file || !user) return
 
+    if (!file.type.startsWith('image/')) return
+    if (file.size > 2 * 1024 * 1024) return
+
     setUploadingAvatar(true)
 
     const ext = file.name.split('.').pop()

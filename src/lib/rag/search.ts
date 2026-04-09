@@ -104,19 +104,24 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
     patristicaResults.map(r => ({ reference: r.reference, text: r.text ?? '' }))
   )
 
-  let insight: AIInsight | null = null
-  try {
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 4000,
-      temperature: 0.3,
-    })
+  const totalResults = bibliaResults.length + allMagisterioResults.length + patristicaResults.length
 
-    const rawResponse = completion.choices[0].message.content ?? ''
-    insight = parseAIResponse(rawResponse)
-  } catch {
-    insight = null
+  let insight: AIInsight | null = null
+  // Only call OpenAI when we have source material to synthesize
+  if (totalResults > 0) {
+    try {
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 4000,
+        temperature: 0.3,
+      })
+
+      const rawResponse = completion.choices[0].message.content ?? ''
+      insight = parseAIResponse(rawResponse)
+    } catch {
+      insight = null
+    }
   }
 
   const toSearchResult = (item: RawResult, pillar: SearchResult['pillar']): SearchResult => ({

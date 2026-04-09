@@ -62,7 +62,9 @@ export default function AdminUsuariosPage() {
       .select('id, name, email, role, status, vocacao, verified, cidade, estado, paroquia, plan, created_at', { count: 'exact' })
 
     if (search.trim()) {
-      query = query.or(`name.ilike.%${search.trim()}%,email.ilike.%${search.trim()}%`)
+      // Escape special PostgREST filter characters to prevent filter injection
+      const sanitized = search.trim().replace(/[%_\\]/g, c => `\\${c}`)
+      query = query.or(`name.ilike.%${sanitized}%,email.ilike.%${sanitized}%`)
     }
     if (filterVocacao) query = query.eq('vocacao', filterVocacao)
     if (filterRole) query = query.eq('role', filterRole)
@@ -76,7 +78,8 @@ export default function AdminUsuariosPage() {
     setUsers((data as UserRow[]) ?? [])
     setTotal(count ?? 0)
     setLoading(false)
-  }, [supabase, search, filterVocacao, filterRole, filterStatus, page])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, filterVocacao, filterRole, filterStatus, page])
 
   useEffect(() => {
     fetchUsers()

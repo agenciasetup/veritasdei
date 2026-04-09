@@ -100,7 +100,8 @@ function AuthProviderInner({
       return null
     }
     return data as Profile
-  }, [supabase])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const refreshProfile = useCallback(async () => {
     if (!state.user) return

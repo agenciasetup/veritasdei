@@ -63,7 +63,7 @@ export default function LandingPage() {
 
     const { data } = await supabase
       .from('paroquias')
-      .select('*')
+      .select('id, nome, diocese, cidade, estado, padre_responsavel, telefone, horarios_missa, foto_url, status')
       .eq('status', 'aprovada')
       .ilike('cidade', `%${searchCity.trim()}%`)
       .limit(6)

@@ -61,7 +61,7 @@ function VerificacaoContent() {
     async function load() {
       const { data } = await supabase!
         .from('verificacoes')
-        .select('*')
+        .select('id, status, tipo, documento_url, notas, motivo_rejeicao, created_at')
         .eq('user_id', user!.id)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -70,18 +70,33 @@ function VerificacaoContent() {
       setLoading(false)
     }
     load()
-  }, [supabase, user])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !user || !supabase) return
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+    if (!allowedTypes.includes(file.type)) {
+      setError('Formato inválido. Envie uma imagem (JPG, PNG, WebP) ou PDF.')
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Arquivo deve ter no máximo 10MB.')
+      return
+    }
+
     setUploading(true)
+    setError(null)
     const ext = file.name.split('.').pop()
     const path = `${user.id}/${Date.now()}.${ext}`
-    const { error } = await supabase.storage.from('verificacoes').upload(path, file)
-    if (!error) {
-      const { data } = supabase.storage.from('verificacoes').getPublicUrl(path)
-      setDocUrl(data.publicUrl)
+    const { error: uploadError } = await supabase.storage.from('verificacoes').upload(path, file)
+    if (uploadError) {
+      setError('Erro ao enviar documento. Tente novamente.')
+    } else {
+      // Store the path — bucket is private, so getPublicUrl won't work
+      setDocUrl(path)
     }
     setUploading(false)
   }
@@ -212,7 +227,7 @@ function VerificacaoContent() {
         )}
 
         {/* Rejected */}
-        {needsVerification && !isVerified && verificacao?.status === 'rejeitada' && (
+        {needsVerification && !isVerified && verificacao?.status === 'rejeitado' && (
           <div className="space-y-6">
             <div
               className="rounded-2xl p-6"

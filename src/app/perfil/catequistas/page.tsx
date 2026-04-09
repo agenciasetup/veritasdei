@@ -53,13 +53,14 @@ function CatequistasContent() {
   useEffect(() => {
     if (!supabase || !user) return
     loadAutorizacoes()
-  }, [supabase, user])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
 
   async function loadAutorizacoes() {
     if (!supabase || !user) return
     const { data } = await supabase
       .from('catequistas_autorizados')
-      .select('*')
+      .select('id, email, nome, paroquia, autorizado_em, usado, usado_por, usado_em')
       .eq('padre_id', user.id)
       .order('autorizado_em', { ascending: false })
     setAutorizacoes((data as Autorizacao[]) ?? [])
