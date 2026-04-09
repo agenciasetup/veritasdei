@@ -157,6 +157,23 @@ export default function LandingPage() {
           <span style={{ color: '#C9A84C', opacity: 0.4, fontSize: '0.6rem' }}>&#10022;</span>
           <span className="flex-1 h-px bg-gradient-to-l from-transparent to-[rgba(201,168,76,0.15)]" />
         </div>
+        <div className="flex items-center justify-center gap-4 mb-3">
+          <Link
+            href="/privacidade"
+            className="text-xs underline transition-colors hover:opacity-80"
+            style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+          >
+            Política de Privacidade
+          </Link>
+          <span style={{ color: 'rgba(201,168,76,0.2)' }}>|</span>
+          <Link
+            href="/termos"
+            className="text-xs underline transition-colors hover:opacity-80"
+            style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+          >
+            Termos de Serviço
+          </Link>
+        </div>
         <p className="text-xs tracking-wider text-center" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
           Fiel ao Magistério. Consulte sempre as fontes.
         </p>
