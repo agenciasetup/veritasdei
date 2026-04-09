@@ -12,7 +12,7 @@ import {
 import Link from 'next/link'
 import type { HorarioMissa } from '@/types/paroquia'
 
-const DIAS = ['Domingo', 'Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado']
+const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 const ESTADOS_BR = [
   'AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA',
   'PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO',
@@ -80,7 +80,7 @@ function CadastrarContent() {
     if (!supabase || !user) return
 
     if (!nome.trim() || !cidade.trim() || !estado.trim()) {
-      setError('Nome, cidade e estado sao obrigatorios.')
+      setError('Nome, cidade e estado são obrigatórios.')
       return
     }
 
@@ -121,10 +121,10 @@ function CadastrarContent() {
       <div className="flex flex-col items-center justify-center min-h-screen px-4">
         <Church className="w-12 h-12 mb-4" style={{ color: '#7A7368', opacity: 0.5 }} />
         <p className="text-lg text-center" style={{ fontFamily: 'Cinzel, serif', color: '#7A7368' }}>
-          Apenas administradores, padres e diaconos podem cadastrar paroquias.
+          Apenas administradores, padres e diáconos podem cadastrar paróquias.
         </p>
         <Link href="/paroquias" className="mt-4 text-sm underline" style={{ color: '#C9A84C' }}>
-          Voltar para paroquias
+          Voltar para paróquias
         </Link>
       </div>
     )
@@ -138,12 +138,12 @@ function CadastrarContent() {
           className="text-2xl font-bold tracking-wider uppercase mb-2"
           style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
         >
-          Paroquia Cadastrada!
+          Paróquia Cadastrada!
         </h2>
         <p className="text-sm mb-6 text-center" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
           {profile?.role === 'admin'
-            ? 'A paroquia foi aprovada automaticamente.'
-            : 'Sua solicitacao sera analisada por um administrador.'}
+            ? 'A paróquia foi aprovada automaticamente.'
+            : 'Sua solicitação será analisada por um administrador.'}
         </p>
         <Link
           href="/paroquias"
@@ -154,7 +154,7 @@ function CadastrarContent() {
             color: '#0A0A0A',
           }}
         >
-          Ver Paroquias
+          Ver Paróquias
         </Link>
       </div>
     )
@@ -177,10 +177,10 @@ function CadastrarContent() {
           className="text-2xl md:text-3xl font-bold tracking-wider uppercase mb-2"
           style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
         >
-          Cadastrar Paroquia
+          Cadastrar Paróquia
         </h1>
         <p className="text-sm mb-8" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
-          Preencha as informacoes da paroquia. Ela sera enviada para aprovacao.
+          Preencha as informações da paróquia. Ela será enviada para aprovação.
         </p>
 
         {error && (
@@ -198,7 +198,7 @@ function CadastrarContent() {
             className="rounded-2xl p-6"
             style={{ background: 'rgba(16,16,16,0.7)', border: '1px solid rgba(201,168,76,0.1)' }}
           >
-            <SectionTitle icon={Camera} label="Foto da Paroquia" />
+            <SectionTitle icon={Camera} label="Foto da Paróquia" />
             {fotoUrl ? (
               <div className="relative w-full h-48 rounded-xl overflow-hidden">
                 <img src={fotoUrl} alt="Foto" className="w-full h-full object-cover" />
@@ -237,10 +237,10 @@ function CadastrarContent() {
             className="rounded-2xl p-6 space-y-4"
             style={{ background: 'rgba(16,16,16,0.7)', border: '1px solid rgba(201,168,76,0.1)' }}
           >
-            <SectionTitle icon={Church} label="Informacoes Basicas" />
-            <Field label="Nome da Paroquia *" value={nome} onChange={setNome} placeholder="Ex: Paroquia Sao Jose" required />
-            <Field label="Diocese" value={diocese} onChange={setDiocese} placeholder="Ex: Arquidiocese de Sao Paulo" />
-            <Field label="Padre Responsavel" value={padreResponsavel} onChange={setPadreResponsavel} placeholder="Nome do padre" />
+            <SectionTitle icon={Church} label="Informações Básicas" />
+            <Field label="Nome da Paróquia *" value={nome} onChange={setNome} placeholder="Ex: Paróquia São José" required />
+            <Field label="Diocese" value={diocese} onChange={setDiocese} placeholder="Ex: Arquidiocese de São Paulo" />
+            <Field label="Padre Responsável" value={padreResponsavel} onChange={setPadreResponsavel} placeholder="Nome do padre" />
           </div>
 
           {/* Address */}
@@ -248,8 +248,8 @@ function CadastrarContent() {
             className="rounded-2xl p-6 space-y-4"
             style={{ background: 'rgba(16,16,16,0.7)', border: '1px solid rgba(201,168,76,0.1)' }}
           >
-            <SectionTitle icon={MapPin} label="Endereco" />
-            <Field label="Endereco" value={endereco} onChange={setEndereco} placeholder="Rua, numero, bairro" />
+            <SectionTitle icon={MapPin} label="Endereço" />
+            <Field label="Endereço" value={endereco} onChange={setEndereco} placeholder="Rua, número, bairro" />
             <div className="grid grid-cols-2 gap-4">
               <Field label="Cidade *" value={cidade} onChange={setCidade} placeholder="Cidade" required />
               <div>
@@ -274,7 +274,7 @@ function CadastrarContent() {
             className="rounded-2xl p-6 space-y-4"
             style={{ background: 'rgba(16,16,16,0.7)', border: '1px solid rgba(201,168,76,0.1)' }}
           >
-            <SectionTitle icon={Clock} label="Horarios de Missa" />
+            <SectionTitle icon={Clock} label="Horários de Missa" />
             {horarios.map((h, i) => (
               <div key={i} className="flex items-center gap-3">
                 <select
@@ -301,7 +301,7 @@ function CadastrarContent() {
               className="flex items-center gap-2 text-xs"
               style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
             >
-              <Plus className="w-3.5 h-3.5" /> Adicionar horario
+              <Plus className="w-3.5 h-3.5" /> Adicionar horário
             </button>
           </div>
 
@@ -326,11 +326,11 @@ function CadastrarContent() {
             style={{ background: 'rgba(16,16,16,0.7)', border: '1px solid rgba(201,168,76,0.1)' }}
           >
             <label className="block text-xs mb-2 tracking-wider uppercase" style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}>
-              Informacoes Extras
+              Informações Extras
             </label>
             <textarea
               value={informacoesExtras} onChange={e => setInformacoesExtras(e.target.value)}
-              placeholder="Horarios de confissao, grupos, pastorais..."
+              placeholder="Horários de confissão, grupos, pastorais..."
               rows={4}
               className="w-full px-4 py-3 rounded-xl text-sm resize-none"
               style={{ background: 'rgba(10,10,10,0.6)', border: '1px solid rgba(201,168,76,0.12)', color: '#F2EDE4', fontFamily: 'Poppins, sans-serif', outline: 'none' }}
@@ -352,7 +352,7 @@ function CadastrarContent() {
             ) : (
               <>
                 <Church className="w-4 h-4" />
-                Cadastrar Paroquia
+                Cadastrar Paróquia
               </>
             )}
           </button>

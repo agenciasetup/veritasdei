@@ -8,13 +8,14 @@ import { getDisplayName } from '@/lib/greetings'
 import {
   ChevronLeft, ChevronRight, Home, Church, Droplets, ScrollText,
   Tablets, BookOpen, Scale, Heart, GraduationCap, MapPin,
-  LogIn, User, LogOut, Shield,
+  LogIn, User, LogOut, Shield, Users, CreditCard,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
   { href: '/', icon: Home, label: 'Início' },
   { href: '/paroquias', icon: MapPin, label: 'Paróquias' },
   { href: '/trilhas', icon: GraduationCap, label: 'Trilhas' },
+  { href: '/comunidade', icon: Users, label: 'Comunidade' },
   { href: '/dogmas', icon: Church, label: 'Dogmas' },
   { href: '/sacramentos', icon: Droplets, label: 'Sacramentos' },
   { href: '/preceitos', icon: ScrollText, label: 'Preceitos' },
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { href: '/oracoes', icon: BookOpen, label: 'Orações' },
   { href: '/virtudes-pecados', icon: Scale, label: 'Virtudes e Pecados' },
   { href: '/obras-misericordia', icon: Heart, label: 'Obras de Misericórdia' },
+  { href: '/carteirinha', icon: CreditCard, label: 'Carteirinha' },
 ]
 
 export default function Sidebar() {

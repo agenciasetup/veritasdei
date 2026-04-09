@@ -12,9 +12,9 @@ import {
 
 const STEPS = [
   { label: 'Perfil', desc: 'Foto e nome' },
-  { label: 'Vocacao', desc: 'Sua vocacao' },
-  { label: 'Fe', desc: 'Sacramentos' },
-  { label: 'Local', desc: 'Onde voce esta' },
+  { label: 'Vocação', desc: 'Sua vocação' },
+  { label: 'Fé', desc: 'Sacramentos' },
+  { label: 'Local', desc: 'Onde você está' },
 ]
 
 const ESTADOS_BR = [
@@ -262,7 +262,7 @@ export default function OnboardingPage() {
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                placeholder="Como voce quer ser chamado"
+                placeholder="Como você quer ser chamado"
                 className="w-full px-4 py-3 rounded-xl text-sm"
                 style={{
                   background: 'rgba(10,10,10,0.6)',
@@ -285,10 +285,10 @@ export default function OnboardingPage() {
               className="text-xl font-bold tracking-wider uppercase mb-1 text-center"
               style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
             >
-              Sua Vocacao
+              Sua Vocação
             </h2>
             <p className="text-sm mb-8 text-center" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
-              Como voce serve na Igreja
+              Como você serve na Igreja
             </p>
 
             <div className="grid grid-cols-2 gap-3">
@@ -320,10 +320,10 @@ export default function OnboardingPage() {
               className="text-xl font-bold tracking-wider uppercase mb-1 text-center"
               style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
             >
-              Sua Fe
+              Sua Fé
             </h2>
             <p className="text-sm mb-6 text-center" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
-              Sacramentos recebidos e paroquia
+              Sacramentos recebidos e paróquia
             </p>
 
             {/* Sacramentos */}
@@ -356,13 +356,13 @@ export default function OnboardingPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-xs mb-2 tracking-wider uppercase" style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}>
-                  Paroquia
+                  Paróquia
                 </label>
                 <div className="relative">
                   <Church className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#7A7368' }} />
                   <input
                     type="text" value={paroquia} onChange={e => setParoquia(e.target.value)}
-                    placeholder="Ex: Paroquia Sao Jose"
+                    placeholder="Ex: Paróquia São José"
                     className="w-full pl-10 pr-4 py-3 rounded-xl text-sm"
                     style={{ background: 'rgba(10,10,10,0.6)', border: '1px solid rgba(201,168,76,0.12)', color: '#F2EDE4', fontFamily: 'Poppins, sans-serif', outline: 'none' }}
                   />
@@ -374,7 +374,7 @@ export default function OnboardingPage() {
                 </label>
                 <input
                   type="text" value={diocese} onChange={e => setDiocese(e.target.value)}
-                  placeholder="Ex: Arquidiocese de Sao Paulo"
+                  placeholder="Ex: Arquidiocese de São Paulo"
                   className="w-full px-4 py-3 rounded-xl text-sm"
                   style={{ background: 'rgba(10,10,10,0.6)', border: '1px solid rgba(201,168,76,0.12)', color: '#F2EDE4', fontFamily: 'Poppins, sans-serif', outline: 'none' }}
                 />
@@ -390,10 +390,10 @@ export default function OnboardingPage() {
               className="text-xl font-bold tracking-wider uppercase mb-1 text-center"
               style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
             >
-              Sua Localizacao
+              Sua Localização
             </h2>
             <p className="text-sm mb-8 text-center" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
-              Para encontrar igrejas perto de voce
+              Para encontrar igrejas perto de você
             </p>
 
             <div className="space-y-4">
@@ -461,7 +461,7 @@ export default function OnboardingPage() {
               color: '#0A0A0A',
             }}
           >
-            Proximo
+            Próximo
             <ArrowRight className="w-4 h-4" />
           </button>
         ) : (

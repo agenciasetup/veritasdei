@@ -74,10 +74,10 @@ function ParoquiasContent() {
               className="text-2xl md:text-3xl font-bold tracking-wider uppercase"
               style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
             >
-              Paroquias
+              Paróquias
             </h1>
             <p className="text-sm mt-1" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
-              Encontre e cadastre paroquias catolicas
+              Encontre e cadastre paróquias católicas
             </p>
           </div>
 
@@ -92,7 +92,7 @@ function ParoquiasContent() {
               }}
             >
               <Plus className="w-4 h-4" />
-              Cadastrar Paroquia
+              Cadastrar Paróquia
             </Link>
           )}
         </div>
@@ -135,7 +135,7 @@ function ParoquiasContent() {
           <div className="text-center py-16">
             <Church className="w-12 h-12 mx-auto mb-4" style={{ color: '#7A7368', opacity: 0.5 }} />
             <p className="text-lg" style={{ fontFamily: 'Cinzel, serif', color: '#7A7368' }}>
-              Nenhuma paroquia encontrada
+              Nenhuma paróquia encontrada
             </p>
             {canCreate && (
               <Link
@@ -143,7 +143,7 @@ function ParoquiasContent() {
                 className="inline-flex items-center gap-2 mt-4 text-sm underline"
                 style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
               >
-                Cadastrar a primeira paroquia
+                Cadastrar a primeira paróquia
               </Link>
             )}
           </div>
