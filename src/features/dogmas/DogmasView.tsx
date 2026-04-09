@@ -12,7 +12,6 @@ import { TitleSlide, ExplanationSlide, VerseSlide } from '@/components/ui/SlideC
 function buildDogmaSlides(dogma: Dogma): CarouselSlide[] {
   const slides: CarouselSlide[] = []
 
-  // Slide 1: Title + short intro
   const firstSentence = dogma.explanation.split('. ')[0] + '.'
   slides.push({
     id: `${dogma.id}-title`,
@@ -25,7 +24,6 @@ function buildDogmaSlides(dogma: Dogma): CarouselSlide[] {
     ),
   })
 
-  // Slide 2: Full explanation
   slides.push({
     id: `${dogma.id}-explanation`,
     content: (
@@ -36,7 +34,6 @@ function buildDogmaSlides(dogma: Dogma): CarouselSlide[] {
     ),
   })
 
-  // Slides 3+: Each verse
   dogma.verses.forEach((v, i) => {
     slides.push({
       id: `${dogma.id}-verse-${i}`,
@@ -61,7 +58,6 @@ export default function DogmasView() {
     ? DOGMA_CATEGORIES.find(c => c.id === selectedCatId) ?? null
     : null
 
-  // State: category list → dogma list → dogma carousel
   function handleBack() {
     if (selectedDogma) {
       setSelectedDogma(null)
@@ -70,7 +66,6 @@ export default function DogmasView() {
     }
   }
 
-  // Carousel slides for current dogma
   const slides = selectedDogma ? buildDogmaSlides(selectedDogma) : []
 
   return (
@@ -79,11 +74,11 @@ export default function DogmasView() {
 
       {/* Back button */}
       {(selectedCat || selectedDogma) && (
-        <header className="relative z-10 w-full pt-6 pb-2 px-4">
+        <header className="relative z-10 w-full pt-8 pb-2 px-4 md:px-8">
           <div className="max-w-7xl mx-auto">
             <button
               onClick={handleBack}
-              className="theme-chip inline-flex items-center gap-2 !px-4 !py-2"
+              className="theme-chip inline-flex items-center gap-2 !px-5 !py-2.5"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>{selectedDogma ? selectedCat?.title : 'Categorias'}</span>
@@ -92,12 +87,9 @@ export default function DogmasView() {
         </header>
       )}
 
-      {/* Title */}
-      <section className="relative z-10 text-center px-4 pt-6 pb-6">
-        <h1
-          className="text-2xl md:text-4xl font-bold tracking-wider uppercase mb-2"
-          style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
-        >
+      {/* Page header */}
+      <section className="page-header relative z-10">
+        <h1>
           {selectedDogma
             ? selectedDogma.title
             : selectedCat
@@ -105,16 +97,13 @@ export default function DogmasView() {
               : 'Dogmas da Igreja Católica'}
         </h1>
         {!selectedDogma && (
-          <p
-            className="text-sm max-w-2xl mx-auto"
-            style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
-          >
+          <p className="subtitle">
             {selectedCat
               ? `${selectedCat.dogmas.length} dogma${selectedCat.dogmas.length > 1 ? 's' : ''} — toque para explorar`
               : 'Verdades de fé divinamente reveladas. Selecione uma categoria.'}
           </p>
         )}
-        <div className="ornament-divider max-w-xs mx-auto mt-3">
+        <div className="ornament-divider max-w-sm mx-auto mt-4">
           <span>&#10022;</span>
         </div>
       </section>
@@ -131,28 +120,28 @@ export default function DogmasView() {
 
         {/* Level 2: Dogma list within category */}
         {selectedCat && !selectedDogma && (
-          <div className="max-w-3xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="max-w-6xl mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
             {selectedCat.dogmas.map((dogma, i) => (
               <button
                 key={dogma.id}
                 onClick={() => setSelectedDogma(dogma)}
-                className="glass-card p-6 text-left transition-all duration-300 hover:scale-[1.02] fade-in cursor-pointer"
+                className="feature-card text-left fade-in"
                 style={{ animationDelay: `${i * 0.06}s` }}
               >
                 <span
-                  className="text-xs tracking-widest uppercase block mb-2"
+                  className="text-xs tracking-[0.15em] uppercase block mb-3"
                   style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
                 >
                   Dogma {dogma.id}
                 </span>
                 <h3
-                  className="text-base font-semibold leading-snug"
+                  className="text-lg font-semibold leading-snug mb-3"
                   style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
                 >
                   {dogma.title}
                 </h3>
                 <p
-                  className="text-sm mt-2 line-clamp-2"
+                  className="text-sm leading-relaxed line-clamp-2"
                   style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
                 >
                   {dogma.explanation.split('. ')[0]}.

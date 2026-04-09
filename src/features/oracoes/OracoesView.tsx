@@ -18,22 +18,22 @@ function PrayerTextSlide({ oracao }: { oracao: Oracao }) {
   }
 
   return (
-    <div className="flex flex-col justify-center min-h-[45vh]">
+    <div className="flex flex-col justify-center min-h-[58vh] py-8">
       <h3
-        className="text-sm tracking-wider uppercase mb-6 flex items-center gap-3"
+        className="text-sm tracking-[0.15em] uppercase mb-8 flex items-center gap-3"
         style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
       >
         Texto da Oração
       </h3>
       <div
-        className="text-lg leading-[2.1] whitespace-pre-line"
+        className="text-xl md:text-2xl leading-[2.2] whitespace-pre-line"
         style={{ fontFamily: 'Cormorant Garamond, serif', color: '#E8E2D8', fontWeight: 500 }}
       >
         {oracao.text}
       </div>
       <button
         onClick={handleCopy}
-        className="mt-6 self-start flex items-center gap-2 px-4 py-2 rounded-xl text-xs tracking-wider transition-all duration-200"
+        className="mt-8 self-start flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm tracking-wider transition-all duration-200"
         style={{
           background: copied ? 'rgba(201,168,76,0.15)' : 'rgba(201,168,76,0.06)',
           border: '1px solid rgba(201,168,76,0.15)',
@@ -93,11 +93,11 @@ export default function OracoesView() {
       <div className="bg-glow" />
 
       {selected && (
-        <header className="relative z-10 w-full pt-6 pb-2 px-4">
+        <header className="relative z-10 w-full pt-8 pb-2 px-4 md:px-8">
           <div className="max-w-7xl mx-auto">
             <button
               onClick={() => setSelected(null)}
-              className="theme-chip inline-flex items-center gap-2 !px-4 !py-2"
+              className="theme-chip inline-flex items-center gap-2 !px-5 !py-2.5"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Orações</span>
@@ -106,56 +106,50 @@ export default function OracoesView() {
         </header>
       )}
 
-      <section className="relative z-10 text-center px-4 pt-6 pb-6">
-        <h1
-          className="text-2xl md:text-4xl font-bold tracking-wider uppercase mb-2"
-          style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
-        >
+      <section className="page-header relative z-10">
+        <h1>
           {selected ? selected.name : 'Orações da Igreja'}
         </h1>
         {!selected && (
-          <p
-            className="text-sm max-w-2xl mx-auto"
-            style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
-          >
+          <p className="subtitle">
             As orações fundamentais da vida cristã católica.
           </p>
         )}
-        <div className="ornament-divider max-w-xs mx-auto mt-3">
+        <div className="ornament-divider max-w-sm mx-auto mt-4">
           <span>&#10022;</span>
         </div>
       </section>
 
       <main className="relative z-10 flex-1 pb-16">
         {!selected ? (
-          <div className="max-w-3xl mx-auto px-4 space-y-8">
+          <div className="max-w-6xl mx-auto px-4 md:px-8 space-y-10">
             {categories.map((cat) => {
               const items = ORACOES.filter(o => o.category === cat)
               if (!items.length) return null
               return (
                 <div key={cat}>
                   <h2
-                    className="text-xs tracking-widest uppercase mb-3 px-1"
+                    className="text-xs tracking-[0.2em] uppercase mb-5 px-1"
                     style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C', opacity: 0.7 }}
                   >
                     {CATEGORY_LABELS[cat]}
                   </h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
                     {items.map((o, i) => (
                       <button
                         key={o.id}
                         onClick={() => setSelected(o)}
-                        className="glass-card p-5 text-left transition-all duration-300 hover:scale-[1.02] fade-in cursor-pointer"
+                        className="feature-card text-left fade-in"
                         style={{ animationDelay: `${i * 0.05}s` }}
                       >
                         <h3
-                          className="text-base font-semibold leading-snug"
+                          className="text-lg font-semibold leading-snug mb-2"
                           style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
                         >
                           {o.name}
                         </h3>
                         {o.latinName && (
-                          <p className="text-xs mt-1 italic" style={{ color: '#7A7368', fontFamily: 'Cormorant Garamond, serif' }}>
+                          <p className="text-sm italic" style={{ color: '#7A7368', fontFamily: 'Cormorant Garamond, serif' }}>
                             {o.latinName}
                           </p>
                         )}

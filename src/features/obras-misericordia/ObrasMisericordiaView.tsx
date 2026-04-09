@@ -59,11 +59,11 @@ export default function ObrasMisericordiaView() {
       <div className="bg-glow" />
 
       {(selectedGroup || selectedObra) && (
-        <header className="relative z-10 w-full pt-6 pb-2 px-4">
+        <header className="relative z-10 w-full pt-8 pb-2 px-4 md:px-8">
           <div className="max-w-7xl mx-auto">
             <button
               onClick={handleBack}
-              className="theme-chip inline-flex items-center gap-2 !px-4 !py-2"
+              className="theme-chip inline-flex items-center gap-2 !px-5 !py-2.5"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>{selectedObra ? selectedGroup?.title : 'Categorias'}</span>
@@ -72,11 +72,8 @@ export default function ObrasMisericordiaView() {
         </header>
       )}
 
-      <section className="relative z-10 text-center px-4 pt-6 pb-6">
-        <h1
-          className="text-2xl md:text-4xl font-bold tracking-wider uppercase mb-2"
-          style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
-        >
+      <section className="page-header relative z-10">
+        <h1>
           {selectedObra
             ? selectedObra.name
             : selectedGroup
@@ -84,30 +81,30 @@ export default function ObrasMisericordiaView() {
               : 'Obras de Misericórdia'}
         </h1>
         {!selectedObra && (
-          <p className="text-sm max-w-2xl mx-auto" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+          <p className="subtitle">
             {selectedGroup ? selectedGroup.description : '14 ações de caridade — 7 corporais e 7 espirituais — pelas quais socorremos o próximo.'}
           </p>
         )}
-        <div className="ornament-divider max-w-xs mx-auto mt-3">
+        <div className="ornament-divider max-w-sm mx-auto mt-4">
           <span>&#10022;</span>
         </div>
       </section>
 
       <main className="relative z-10 flex-1 pb-16">
         {!selectedGroup && !selectedObra && (
-          <div className="max-w-3xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="max-w-4xl mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 gap-5 md:gap-6">
             {OBRA_GROUPS.map((g, i) => (
               <button
                 key={g.id}
                 onClick={() => setSelectedGroup(g)}
-                className="glass-card p-6 text-center transition-all duration-300 hover:scale-[1.02] fade-in cursor-pointer"
+                className="feature-card text-center flex flex-col items-center fade-in"
                 style={{ animationDelay: `${i * 0.07}s` }}
               >
-                <span className="text-3xl block mb-3">{g.icon}</span>
-                <h3 className="text-lg font-bold" style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}>
+                <span className="text-4xl block mb-5">{g.icon}</span>
+                <h3 className="text-xl font-bold mb-2" style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}>
                   {g.title}
                 </h3>
-                <p className="text-xs mt-2" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+                <p className="text-sm leading-relaxed" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
                   {g.obras.length} obras
                 </p>
               </button>
@@ -116,22 +113,22 @@ export default function ObrasMisericordiaView() {
         )}
 
         {selectedGroup && !selectedObra && (
-          <div className="max-w-3xl mx-auto px-4 space-y-3">
+          <div className="max-w-5xl mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 gap-5 md:gap-6">
             {selectedGroup.obras.map((obra, i) => (
               <button
                 key={obra.id}
                 onClick={() => setSelectedObra(obra)}
-                className="glass-card p-5 w-full text-left transition-all duration-300 hover:scale-[1.01] fade-in cursor-pointer"
+                className="feature-card text-left fade-in"
                 style={{ animationDelay: `${i * 0.05}s` }}
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-5">
                   <span
-                    className="text-xl font-bold flex-shrink-0 w-8 text-center"
-                    style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C', opacity: 0.6 }}
+                    className="text-3xl font-bold flex-shrink-0 w-12 text-center"
+                    style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C', opacity: 0.4 }}
                   >
                     {obra.id > 7 ? obra.id - 7 : obra.id}
                   </span>
-                  <h3 className="text-base font-semibold" style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}>
+                  <h3 className="text-lg font-semibold leading-snug" style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}>
                     {obra.name}
                   </h3>
                 </div>

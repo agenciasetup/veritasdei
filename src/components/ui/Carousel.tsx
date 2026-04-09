@@ -48,7 +48,7 @@ export default function Carousel({ slides, onClose }: CarouselProps) {
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4">
+    <div className="w-full max-w-5xl mx-auto px-4 md:px-6">
       {/* Viewport */}
       <div
         className="relative rounded-2xl overflow-hidden"
@@ -57,8 +57,8 @@ export default function Carousel({ slides, onClose }: CarouselProps) {
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           border: '1px solid rgba(201,168,76,0.12)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
-          minHeight: '55vh',
+          boxShadow: '0 12px 48px rgba(0,0,0,0.4)',
+          minHeight: '68vh',
         }}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
@@ -66,9 +66,9 @@ export default function Carousel({ slides, onClose }: CarouselProps) {
         {/* Single visible slide */}
         <div
           key={slides[current]?.id}
-          className="p-8 md:p-12 overflow-y-auto"
+          className="p-8 md:p-14 lg:p-20 overflow-y-auto"
           style={{
-            maxHeight: '70vh',
+            maxHeight: '80vh',
             animation: `slideIn${direction === 'right' ? 'Right' : 'Left'} 0.35s ease-out`,
           }}
         >
@@ -77,11 +77,11 @@ export default function Carousel({ slides, onClose }: CarouselProps) {
       </div>
 
       {/* Controls bar */}
-      <div className="flex items-center justify-between mt-5 gap-4">
+      <div className="flex items-center justify-between mt-6 gap-4">
         <button
           onClick={prev}
           disabled={current === 0}
-          className="w-11 h-11 flex items-center justify-center rounded-xl transition-all disabled:opacity-20 flex-shrink-0"
+          className="w-12 h-12 flex items-center justify-center rounded-xl transition-all disabled:opacity-20 flex-shrink-0"
           style={{
             background: 'rgba(201,168,76,0.08)',
             border: '1px solid rgba(201,168,76,0.15)',
@@ -93,15 +93,15 @@ export default function Carousel({ slides, onClose }: CarouselProps) {
         </button>
 
         {/* Dots */}
-        <div className="flex items-center gap-1.5 flex-wrap justify-center">
+        <div className="flex items-center gap-2 flex-wrap justify-center">
           {slides.map((_, i) => (
             <button
               key={i}
               onClick={() => go(i)}
               className="rounded-full transition-all duration-300"
               style={{
-                width: current === i ? '22px' : '7px',
-                height: '7px',
+                width: current === i ? '28px' : '8px',
+                height: '8px',
                 background: current === i ? '#C9A84C' : 'rgba(201,168,76,0.2)',
               }}
               aria-label={`Slide ${i + 1}`}
@@ -112,7 +112,7 @@ export default function Carousel({ slides, onClose }: CarouselProps) {
         <button
           onClick={next}
           disabled={current === slides.length - 1}
-          className="w-11 h-11 flex items-center justify-center rounded-xl transition-all disabled:opacity-20 flex-shrink-0"
+          className="w-12 h-12 flex items-center justify-center rounded-xl transition-all disabled:opacity-20 flex-shrink-0"
           style={{
             background: 'rgba(201,168,76,0.08)',
             border: '1px solid rgba(201,168,76,0.15)',
@@ -126,7 +126,7 @@ export default function Carousel({ slides, onClose }: CarouselProps) {
 
       {/* Counter */}
       <p
-        className="text-center mt-2 text-xs tracking-wider"
+        className="text-center mt-3 text-sm tracking-wider"
         style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
       >
         {current + 1} / {slides.length}

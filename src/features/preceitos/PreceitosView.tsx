@@ -56,11 +56,11 @@ export default function PreceitosView() {
       <div className="bg-glow" />
 
       {selected && (
-        <header className="relative z-10 w-full pt-6 pb-2 px-4">
+        <header className="relative z-10 w-full pt-8 pb-2 px-4 md:px-8">
           <div className="max-w-7xl mx-auto">
             <button
               onClick={() => setSelected(null)}
-              className="theme-chip inline-flex items-center gap-2 !px-4 !py-2"
+              className="theme-chip inline-flex items-center gap-2 !px-5 !py-2.5"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Preceitos</span>
@@ -69,52 +69,46 @@ export default function PreceitosView() {
         </header>
       )}
 
-      <section className="relative z-10 text-center px-4 pt-6 pb-6">
-        <h1
-          className="text-2xl md:text-4xl font-bold tracking-wider uppercase mb-2"
-          style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
-        >
+      <section className="page-header relative z-10">
+        <h1>
           {selected ? selected.title : 'Os Cinco Preceitos da Igreja'}
         </h1>
         {!selected && (
-          <p
-            className="text-sm max-w-2xl mx-auto"
-            style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
-          >
+          <p className="subtitle">
             O mínimo indispensável de oração e esforço moral. Toque para explorar.
           </p>
         )}
-        <div className="ornament-divider max-w-xs mx-auto mt-3">
+        <div className="ornament-divider max-w-sm mx-auto mt-4">
           <span>&#10022;</span>
         </div>
       </section>
 
       <main className="relative z-10 flex-1 pb-16">
         {!selected ? (
-          <div className="max-w-3xl mx-auto px-4 space-y-4">
+          <div className="max-w-5xl mx-auto px-4 md:px-8 space-y-5">
             {PRECEITOS.map((p, i) => (
               <button
                 key={p.id}
                 onClick={() => setSelected(p)}
-                className="glass-card p-6 w-full text-left transition-all duration-300 hover:scale-[1.01] fade-in cursor-pointer"
+                className="feature-card w-full text-left fade-in"
                 style={{ animationDelay: `${i * 0.08}s` }}
               >
-                <div className="flex items-start gap-5">
+                <div className="flex items-start gap-6">
                   <span
-                    className="text-3xl font-bold flex-shrink-0"
-                    style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C', opacity: 0.6 }}
+                    className="text-4xl font-bold flex-shrink-0 w-14 text-center pt-1"
+                    style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C', opacity: 0.5 }}
                   >
                     {p.id}
                   </span>
-                  <div>
+                  <div className="flex-1">
                     <h3
-                      className="text-base font-semibold leading-snug"
+                      className="text-lg font-semibold leading-snug mb-2"
                       style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
                     >
                       {p.title}
                     </h3>
                     <p
-                      className="text-xs mt-1"
+                      className="text-sm"
                       style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
                     >
                       {p.catechismRef}
