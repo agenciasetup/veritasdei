@@ -3,13 +3,14 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Home, Church, Droplets, ScrollText, Search } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Home, Church, Droplets, ScrollText, Tablets, BookOpen, Scale, Heart } from 'lucide-react'
 
 const NAV_ITEMS = [
   { href: '/', icon: Home, label: 'Início' },
   { href: '/dogmas', icon: Church, label: 'Dogmas' },
   { href: '/sacramentos', icon: Droplets, label: 'Sacramentos' },
   { href: '/preceitos', icon: ScrollText, label: 'Preceitos' },
+  { href: '/mandamentos', icon: Tablets, label: 'Mandamentos' },
 ]
 
 export default function Sidebar() {
