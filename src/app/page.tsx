@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import Link from 'next/link'
 import Header from '@/components/layout/Header'
 import SearchBox from '@/components/ui/SearchBox'
 import PillarCard from '@/components/ui/PillarCard'
@@ -66,6 +67,39 @@ export default function Home() {
         <div className={`w-full ${!hasResponse ? 'mt-8' : 'mt-4'}`}>
           <SearchBox onSearch={handleSearch} isLoading={isLoading} />
         </div>
+
+        {/* Feature Navigation */}
+        {!hasResponse && !isLoading && (
+          <nav className="w-full max-w-3xl mx-auto mt-10 px-4 fade-in">
+            <div className="ornament-divider mb-6">
+              <span style={{ fontSize: '0.7rem' }}>&#10022;</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {[
+                { href: '/dogmas', icon: '⛪', title: 'Dogmas', desc: '44 verdades de fé' },
+                { href: '/sacramentos', icon: '🕯', title: 'Sacramentos', desc: '7 sinais da graça' },
+                { href: '/preceitos', icon: '📜', title: 'Preceitos', desc: '5 mandamentos da Igreja' },
+              ].map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="glass-card p-5 text-center transition-all duration-300 hover:scale-[1.03] block"
+                >
+                  <span className="text-2xl block mb-2">{item.icon}</span>
+                  <h3
+                    className="text-base font-bold tracking-wide uppercase"
+                    style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
+                  >
+                    {item.title}
+                  </h3>
+                  <p className="text-xs mt-1" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+                    {item.desc}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </nav>
+        )}
 
         {error && (
           <div className="w-full max-w-3xl mx-auto mt-6 px-4">
