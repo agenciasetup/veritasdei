@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { VOCACOES, type Vocacao } from '@/types/auth'
 import { LogIn, UserPlus, Mail, Eye, EyeOff, ArrowLeft, CheckCircle } from 'lucide-react'
@@ -10,7 +10,22 @@ import Link from 'next/link'
 type Tab = 'login' | 'registro' | 'primeiro-acesso'
 
 export default function LoginPage() {
-  const [tab, setTab] = useState<Tab>('login')
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(201,168,76,0.3)', borderTopColor: '#C9A84C' }} />
+      </div>
+    }>
+      <LoginPageInner />
+    </Suspense>
+  )
+}
+
+function LoginPageInner() {
+  const searchParams = useSearchParams()
+  const initialTab = (searchParams.get('tab') as Tab) || 'login'
+
+  const [tab, setTab] = useState<Tab>(initialTab)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -20,8 +35,13 @@ export default function LoginPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const { signInWithPassword, signUp, signInWithMagicLink } = useAuth()
+  const { signInWithPassword, signUp, signInWithMagicLink, signInWithOAuth, isAuthenticated } = useAuth()
   const router = useRouter()
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated) router.push('/')
+  }, [isAuthenticated, router])
 
   const clearState = () => {
     setError(null)
@@ -73,6 +93,14 @@ export default function LoginPage() {
     } else {
       setSuccess('Link enviado! Verifique sua caixa de e-mail.')
     }
+    setLoading(false)
+  }
+
+  const handleOAuth = async (provider: 'google' | 'facebook' | 'apple') => {
+    clearState()
+    setLoading(true)
+    const { error } = await signInWithOAuth(provider)
+    if (error) setError(traduzirErro(error))
     setLoading(false)
   }
 
@@ -132,6 +160,22 @@ export default function LoginPage() {
           boxShadow: '0 12px 48px rgba(0,0,0,0.5)',
         }}
       >
+        {/* ═══ OAuth Buttons ═══ */}
+        <div className="space-y-2 mb-5">
+          <OAuthButton provider="google" onClick={() => handleOAuth('google')} disabled={loading} />
+          <OAuthButton provider="facebook" onClick={() => handleOAuth('facebook')} disabled={loading} />
+          <OAuthButton provider="apple" onClick={() => handleOAuth('apple')} disabled={loading} />
+        </div>
+
+        {/* Divider */}
+        <div className="flex items-center gap-3 mb-5">
+          <span className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.1)' }} />
+          <span className="text-xs" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+            ou com e-mail
+          </span>
+          <span className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.1)' }} />
+        </div>
+
         {/* Tabs */}
         <div className="flex gap-1 mb-6 p-1 rounded-xl" style={{ background: 'rgba(10,10,10,0.6)' }}>
           {TABS.map(({ key, label, icon }) => (
@@ -186,42 +230,16 @@ export default function LoginPage() {
         {/* ═══ LOGIN TAB ═══ */}
         {tab === 'login' && (
           <form onSubmit={handleLogin} className="space-y-4">
-            <InputField
-              label="E-mail"
-              type="email"
-              value={email}
-              onChange={setEmail}
-              placeholder="seu@email.com"
-              required
-            />
+            <InputField label="E-mail" type="email" value={email} onChange={setEmail} placeholder="seu@email.com" required />
             <div className="relative">
-              <InputField
-                label="Senha"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={setPassword}
-                placeholder="Sua senha"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-[38px] p-1"
-                style={{ color: '#7A7368' }}
-              >
+              <InputField label="Senha" type={showPassword ? 'text' : 'password'} value={password} onChange={setPassword} placeholder="Sua senha" required />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-[38px] p-1" style={{ color: '#7A7368' }}>
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-
-            <button
-              type="button"
-              onClick={() => { setTab('primeiro-acesso'); clearState() }}
-              className="text-xs underline"
-              style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
-            >
+            <button type="button" onClick={() => { setTab('primeiro-acesso'); clearState() }} className="text-xs underline" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
               Esqueci minha senha
             </button>
-
             <SubmitButton loading={loading}>Entrar</SubmitButton>
           </form>
         )}
@@ -229,50 +247,18 @@ export default function LoginPage() {
         {/* ═══ REGISTRO TAB ═══ */}
         {tab === 'registro' && (
           <form onSubmit={handleRegister} className="space-y-4">
-            <InputField
-              label="Nome completo"
-              type="text"
-              value={name}
-              onChange={setName}
-              placeholder="Seu nome"
-              required
-            />
-            <InputField
-              label="E-mail"
-              type="email"
-              value={email}
-              onChange={setEmail}
-              placeholder="seu@email.com"
-              required
-            />
+            <InputField label="Nome completo" type="text" value={name} onChange={setName} placeholder="Seu nome" required />
+            <InputField label="E-mail" type="email" value={email} onChange={setEmail} placeholder="seu@email.com" required />
             <div className="relative">
-              <InputField
-                label="Senha"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={setPassword}
-                placeholder="Mínimo 8 caracteres"
-                required
-                minLength={8}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-[38px] p-1"
-                style={{ color: '#7A7368' }}
-              >
+              <InputField label="Senha" type={showPassword ? 'text' : 'password'} value={password} onChange={setPassword} placeholder="Mínimo 8 caracteres" required minLength={8} />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-[38px] p-1" style={{ color: '#7A7368' }}>
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
 
             {/* Vocação */}
             <div>
-              <label
-                className="block text-xs mb-2 tracking-wider uppercase"
-                style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}
-              >
-                Vocação
-              </label>
+              <label className="block text-xs mb-2 tracking-wider uppercase" style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}>Vocação</label>
               <div className="grid grid-cols-2 gap-2">
                 {VOCACOES.map((v) => (
                   <button
@@ -283,9 +269,7 @@ export default function LoginPage() {
                     style={{
                       fontFamily: 'Poppins, sans-serif',
                       background: vocacao === v.value ? 'rgba(201,168,76,0.12)' : 'rgba(10,10,10,0.5)',
-                      border: vocacao === v.value
-                        ? '1px solid rgba(201,168,76,0.3)'
-                        : '1px solid rgba(201,168,76,0.08)',
+                      border: vocacao === v.value ? '1px solid rgba(201,168,76,0.3)' : '1px solid rgba(201,168,76,0.08)',
                       color: vocacao === v.value ? '#C9A84C' : '#7A7368',
                     }}
                   >
@@ -306,14 +290,7 @@ export default function LoginPage() {
             <p className="text-sm leading-relaxed mb-2" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
               Insira seu e-mail e enviaremos um link de acesso. Ideal para primeiro login ou recuperação de senha.
             </p>
-            <InputField
-              label="E-mail"
-              type="email"
-              value={email}
-              onChange={setEmail}
-              placeholder="seu@email.com"
-              required
-            />
+            <InputField label="E-mail" type="email" value={email} onChange={setEmail} placeholder="seu@email.com" required />
             <SubmitButton loading={loading}>Enviar Link de Acesso</SubmitButton>
           </form>
         )}
@@ -326,48 +303,70 @@ export default function LoginPage() {
 // Componentes internos
 // ═══════════════════════════════════════════════════════
 
+function OAuthButton({ provider, onClick, disabled }: { provider: 'google' | 'facebook' | 'apple'; onClick: () => void; disabled: boolean }) {
+  const config = {
+    google: { label: 'Continuar com Google', bg: '#ffffff', color: '#1f1f1f', icon: GoogleIcon },
+    facebook: { label: 'Continuar com Facebook', bg: '#1877F2', color: '#ffffff', icon: FacebookIcon },
+    apple: { label: 'Continuar com Apple', bg: '#000000', color: '#ffffff', icon: AppleIcon },
+  }
+
+  const { label, bg, color, icon: Icon } = config[provider]
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="w-full flex items-center justify-center gap-3 py-3 rounded-xl text-sm font-medium transition-all hover:opacity-90"
+      style={{ background: bg, color, fontFamily: 'Poppins, sans-serif', border: provider === 'apple' ? '1px solid rgba(255,255,255,0.15)' : 'none' }}
+    >
+      <Icon />
+      {label}
+    </button>
+  )
+}
+
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+    </svg>
+  )
+}
+
+function FacebookIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+    </svg>
+  )
+}
+
+function AppleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+      <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+    </svg>
+  )
+}
+
 function InputField({
   label, type, value, onChange, placeholder, required, minLength,
 }: {
-  label: string
-  type: string
-  value: string
-  onChange: (v: string) => void
-  placeholder: string
-  required?: boolean
-  minLength?: number
+  label: string; type: string; value: string; onChange: (v: string) => void; placeholder: string; required?: boolean; minLength?: number
 }) {
   return (
     <div>
-      <label
-        className="block text-xs mb-2 tracking-wider uppercase"
-        style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}
-      >
-        {label}
-      </label>
+      <label className="block text-xs mb-2 tracking-wider uppercase" style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}>{label}</label>
       <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        required={required}
-        minLength={minLength}
+        type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} required={required} minLength={minLength}
         className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200"
-        style={{
-          background: 'rgba(10,10,10,0.6)',
-          border: '1px solid rgba(201,168,76,0.12)',
-          color: '#F2EDE4',
-          fontFamily: 'Poppins, sans-serif',
-          outline: 'none',
-        }}
-        onFocus={(e) => {
-          e.target.style.borderColor = 'rgba(201,168,76,0.4)'
-          e.target.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.08)'
-        }}
-        onBlur={(e) => {
-          e.target.style.borderColor = 'rgba(201,168,76,0.12)'
-          e.target.style.boxShadow = 'none'
-        }}
+        style={{ background: 'rgba(10,10,10,0.6)', border: '1px solid rgba(201,168,76,0.12)', color: '#F2EDE4', fontFamily: 'Poppins, sans-serif', outline: 'none' }}
+        onFocus={(e) => { e.target.style.borderColor = 'rgba(201,168,76,0.4)'; e.target.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.08)' }}
+        onBlur={(e) => { e.target.style.borderColor = 'rgba(201,168,76,0.12)'; e.target.style.boxShadow = 'none' }}
       />
     </div>
   )
@@ -376,27 +375,19 @@ function InputField({
 function SubmitButton({ children, loading }: { children: React.ReactNode; loading: boolean }) {
   return (
     <button
-      type="submit"
-      disabled={loading}
+      type="submit" disabled={loading}
       className="w-full py-3 rounded-xl text-sm font-semibold tracking-wider uppercase transition-all duration-200 flex items-center justify-center gap-2"
       style={{
         fontFamily: 'Cinzel, serif',
-        background: loading
-          ? 'rgba(201,168,76,0.15)'
-          : 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
+        background: loading ? 'rgba(201,168,76,0.15)' : 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
         color: loading ? '#7A7368' : '#0A0A0A',
         border: 'none',
         cursor: loading ? 'not-allowed' : 'pointer',
       }}
     >
       {loading ? (
-        <div
-          className="w-4 h-4 border-2 rounded-full animate-spin"
-          style={{ borderColor: 'rgba(201,168,76,0.3)', borderTopColor: '#C9A84C' }}
-        />
-      ) : (
-        children
-      )}
+        <div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(201,168,76,0.3)', borderTopColor: '#C9A84C' }} />
+      ) : children}
     </button>
   )
 }

@@ -1,13 +1,22 @@
 'use client'
 
+import { useAuth } from '@/contexts/AuthContext'
+import { usePathname } from 'next/navigation'
 import Sidebar from './Sidebar'
 
+const PUBLIC_PATHS = ['/login', '/auth']
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth()
+  const pathname = usePathname()
+
+  const isPublicPage = PUBLIC_PATHS.some(p => pathname.startsWith(p))
+  const showSidebar = isAuthenticated && !isPublicPage
+
   return (
     <>
-      <Sidebar />
-      {/* Main content offset by collapsed sidebar width (64px) */}
-      <div style={{ marginLeft: '64px' }}>
+      {showSidebar && <Sidebar />}
+      <div style={{ marginLeft: showSidebar ? '64px' : '0' }}>
         {children}
       </div>
     </>
