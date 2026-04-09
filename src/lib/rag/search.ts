@@ -2,7 +2,7 @@ import { generateEmbedding } from '../openai/embeddings'
 import { openai } from '../openai/client'
 import { buildRAGPrompt } from './prompt'
 import { isSensitiveTopic } from '../utils/sensitive-topics'
-import type { QueryResponse, SearchResult, AIInsight } from '@/types'
+import type { QueryResponse, SearchResult, AIInsight, ProtestantView } from '@/types'
 import { createClient } from '@supabase/supabase-js'
 
 function getSupabaseAdmin() {
@@ -21,9 +21,19 @@ interface RawResult {
   [key: string]: unknown
 }
 
+function parseProtestantView(raw: unknown): ProtestantView | null {
+  if (!raw || typeof raw !== 'object') return null
+  const obj = raw as Record<string, unknown>
+  if (typeof obj.summary !== 'string' || typeof obj.refutation !== 'string') return null
+  return {
+    summary: obj.summary,
+    denominations: Array.isArray(obj.denominations) ? obj.denominations : [],
+    refutation: obj.refutation,
+  }
+}
+
 function parseAIResponse(raw: string): AIInsight | null {
   try {
-    // Remove potential markdown code fences
     const cleaned = raw.replace(/```json?\n?/g, '').replace(/```\n?/g, '').trim()
     const parsed = JSON.parse(cleaned)
 
@@ -34,15 +44,16 @@ function parseAIResponse(raw: string): AIInsight | null {
       sourceContext: typeof parsed.sourceContext === 'object' && parsed.sourceContext !== null
         ? parsed.sourceContext
         : {},
+      protestantView: parseProtestantView(parsed.protestantView),
     }
   } catch {
-    // If JSON parsing fails, try to extract summary from plain text
     if (raw.length > 50) {
       return {
         summary: raw,
         keyPoints: [],
         relatedTopics: [],
         sourceContext: {},
+        protestantView: null,
       }
     }
     return null
@@ -52,10 +63,8 @@ function parseAIResponse(raw: string): AIInsight | null {
 export async function searchCorpus(query: string): Promise<QueryResponse> {
   const supabase = getSupabaseAdmin()
 
-  // 1. Gerar embedding da pergunta
   const queryEmbedding = await generateEmbedding(query)
 
-  // 2. Busca paralela nos 4 pilares
   const [bibliaRaw, catecismoRaw, magisterioRaw, patristicaRaw] = await Promise.all([
     supabase.rpc('search_biblia', {
       query_embedding: queryEmbedding,
@@ -84,12 +93,10 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
   const magisterioResults: RawResult[] = magisterioRaw.data ?? []
   const patristicaResults: RawResult[] = patristicaRaw.data ?? []
 
-  // Magistério = catecismo + documentos conciliares
   const allMagisterioResults = [...catecismoResults, ...magisterioResults]
     .sort((a, b) => b.similarity - a.similarity)
     .slice(0, 5)
 
-  // 3. Montar prompt RAG
   const prompt = buildRAGPrompt(
     query,
     bibliaResults.map(r => ({ reference: r.reference, text: r.text_pt ?? r.text ?? '' })),
@@ -97,24 +104,21 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
     patristicaResults.map(r => ({ reference: r.reference, text: r.text ?? '' }))
   )
 
-  // 4. Gerar explicação educativa com GPT-4o-mini
   let insight: AIInsight | null = null
   try {
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: prompt }],
-      max_tokens: 2500,
+      max_tokens: 4000,
       temperature: 0.3,
     })
 
     const rawResponse = completion.choices[0].message.content ?? ''
     insight = parseAIResponse(rawResponse)
   } catch {
-    // AI insight is optional — search still works without it
     insight = null
   }
 
-  // 5. Montar resposta estruturada
   const toSearchResult = (item: RawResult, pillar: SearchResult['pillar']): SearchResult => ({
     id: item.id,
     pillar,
