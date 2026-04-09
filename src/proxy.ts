@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
 // Routes that don't require authentication
-const PUBLIC_ROUTES = ['/', '/login', '/auth/callback', '/auth/confirm']
+const PUBLIC_ROUTES = ['/', '/login', '/auth/callback', '/auth/confirm', '/privacidade', '/termos']
 
 export async function proxy(request: NextRequest) {
   // First, refresh the session
