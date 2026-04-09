@@ -1,22 +1,27 @@
 'use client'
 
+import { useState } from 'react'
+import { Copy, Check } from 'lucide-react'
 import type { Pillar, SearchResult } from '@/types'
 
-const PILLAR_CONFIG: Record<Pillar, { icon: string; title: string; subtitle: string }> = {
+const PILLAR_CONFIG: Record<Pillar, { icon: string; title: string; subtitle: string; accentColor: string }> = {
   biblia: {
-    icon: '\u{1F4D6}',
-    title: 'Bíblia Católica',
+    icon: '✝',
+    title: 'Bíblia Sagrada',
     subtitle: 'Escritura Sagrada',
+    accentColor: '#C9A84C',
   },
   magisterio: {
-    icon: '\u{1F4DC}',
+    icon: '⛪',
     title: 'Catecismo e Magistério',
     subtitle: 'Ensinamento da Igreja',
+    accentColor: '#8B3145',
   },
   patristica: {
-    icon: '\u{1F3DB}\uFE0F',
+    icon: '🏛️',
     title: 'Patrística',
     subtitle: 'Padres e Doutores',
+    accentColor: '#7A7368',
   },
 }
 
@@ -28,10 +33,60 @@ interface PillarCardProps {
 
 function SkeletonBlock() {
   return (
-    <div className="animate-pulse space-y-2">
-      <div className="h-4 bg-gray-200 rounded w-1/3" />
-      <div className="h-3 bg-gray-100 rounded w-full" />
-      <div className="h-3 bg-gray-100 rounded w-5/6" />
+    <div className="space-y-3 p-5">
+      <div className="skeleton h-4 w-2/5" />
+      <div className="skeleton h-3 w-full" />
+      <div className="skeleton h-3 w-4/5" />
+      <div className="skeleton h-3 w-3/5" />
+    </div>
+  )
+}
+
+function VerseBlock({ result, accentColor }: { result: SearchResult; accentColor: string }) {
+  const [copied, setCopied] = useState(false)
+
+  async function handleCopy() {
+    const textToCopy = `${result.reference}\n\n${result.text}`
+    try {
+      await navigator.clipboard.writeText(textToCopy)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Fallback for older browsers
+      const textarea = document.createElement('textarea')
+      textarea.value = textToCopy
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  return (
+    <div className="verse-block fade-in" style={{ borderLeftColor: accentColor }}>
+      {/* Copy button */}
+      <button
+        onClick={handleCopy}
+        className={`copy-btn ${copied ? 'copied' : ''}`}
+        title={copied ? 'Copiado!' : 'Copiar versículo'}
+        aria-label={copied ? 'Copiado' : 'Copiar versículo'}
+      >
+        {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+      </button>
+
+      {/* Reference — separated from text */}
+      <div className="verse-reference" style={{ color: accentColor }}>
+        <span>{result.reference}</span>
+      </div>
+
+      {/* Verse text — Bible aesthetic */}
+      <p className="verse-text">
+        &ldquo;{result.text}&rdquo;
+      </p>
     </div>
   )
 }
@@ -40,48 +95,54 @@ export default function PillarCard({ pillar, results, isLoading }: PillarCardPro
   const config = PILLAR_CONFIG[pillar]
 
   return (
-    <div className="rounded-xl border bg-white p-5" style={{ borderColor: '#E5E7EB' }}>
-      <div className="flex items-start gap-3 mb-4">
-        <span className="text-2xl" role="img" aria-label={config.title}>
+    <div className="glass-card p-6 md:p-8 fade-in">
+      {/* Pillar Header */}
+      <div className="flex items-center gap-4 mb-6">
+        <span
+          className="text-2xl flex items-center justify-center w-12 h-12 rounded-xl"
+          style={{
+            background: `rgba(201, 168, 76, 0.08)`,
+            border: `1px solid rgba(201, 168, 76, 0.12)`,
+          }}
+          role="img"
+          aria-label={config.title}
+        >
           {config.icon}
         </span>
         <div>
-          <h2
-            className="text-lg font-semibold"
-            style={{ fontFamily: 'Crimson Pro, serif', color: '#5C2D0E' }}
-          >
+          <h2 className="pillar-title text-xl md:text-2xl">
             {config.title}
           </h2>
-          <p className="text-xs text-gray-500">{config.subtitle}</p>
+          <p className="pillar-subtitle mt-0.5">{config.subtitle}</p>
         </div>
       </div>
 
+      {/* Ornamental divider */}
+      <div className="ornament-divider">
+        <span>&#10022;</span>
+      </div>
+
+      {/* Content */}
       {isLoading ? (
         <div className="space-y-4">
           <SkeletonBlock />
           <SkeletonBlock />
         </div>
       ) : results.length === 0 ? (
-        <p className="text-sm text-gray-400 italic">
+        <p
+          className="text-center py-8 italic"
+          style={{ color: '#7A7368', fontFamily: 'Cormorant Garamond, serif', fontSize: '1.1rem' }}
+        >
           Nenhuma fonte encontrada para este tema neste pilar.
         </p>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {results.map((result) => (
-            <div key={result.id} className="border-l-2 pl-3" style={{ borderColor: '#D4A96A' }}>
-              <p
-                className="text-sm font-medium mb-1"
-                style={{ color: '#5C2D0E' }}
-              >
-                {result.reference}
-              </p>
-              <p
-                className="text-sm leading-relaxed italic text-gray-700"
-                style={{ fontFamily: 'Crimson Pro, serif' }}
-              >
-                {result.text}
-              </p>
-            </div>
+            <VerseBlock
+              key={result.id}
+              result={result}
+              accentColor={config.accentColor}
+            />
           ))}
         </div>
       )}
