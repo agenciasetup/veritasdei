@@ -78,12 +78,22 @@ function VerseBlock({ result, accentColor }: { result: SearchResult; accentColor
         {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
       </button>
 
-      {/* Reference — separated from text */}
+      {/* Context note — why this source matters */}
+      {result.context && (
+        <p
+          className="text-xs mb-3 leading-relaxed"
+          style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif', fontStyle: 'italic' }}
+        >
+          {result.context}
+        </p>
+      )}
+
+      {/* Reference */}
       <div className="verse-reference" style={{ color: accentColor }}>
         <span>{result.reference}</span>
       </div>
 
-      {/* Verse text — Bible aesthetic */}
+      {/* Verse text */}
       <p className="verse-text">
         &ldquo;{result.text}&rdquo;
       </p>
