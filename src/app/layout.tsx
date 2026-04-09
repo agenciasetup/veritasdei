@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import "./globals.css"
+import AppShell from "@/components/layout/AppShell"
 
 export const metadata: Metadata = {
   title: "Veritas Dei — O que a Igreja ensina",
@@ -27,7 +28,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col">
-        {children}
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   )
