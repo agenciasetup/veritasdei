@@ -83,7 +83,7 @@ export default function SacramentosView() {
 
       {/* Back */}
       {selected && (
-        <header className="relative z-10 w-full pt-20 pb-2 px-4">
+        <header className="relative z-10 w-full pt-6 pb-2 px-4">
           <div className="max-w-7xl mx-auto">
             <button
               onClick={() => setSelected(null)}
