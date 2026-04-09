@@ -18,11 +18,18 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin()
 
-    // Try exact match on reference field in catecismo table
+    // Extract paragraph number from references like "CIC § 1030", "CIC §1030", "§ 1030", "1030"
+    const numberMatch = ref.match(/(\d+)/)
+    if (!numberMatch) {
+      return NextResponse.json({ error: 'Could not parse paragraph number' }, { status: 400 })
+    }
+
+    const paragraphNumber = parseInt(numberMatch[1], 10)
+
     const { data, error } = await supabase
       .from('catecismo')
-      .select('reference, text')
-      .ilike('reference', `%${ref.replace('CIC § ', '').replace('CIC §', '').trim()}%`)
+      .select('paragraph, text, section')
+      .eq('paragraph', paragraphNumber)
       .limit(1)
 
     if (error) {
@@ -34,8 +41,9 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      reference: data[0].reference,
+      reference: `CIC § ${data[0].paragraph}`,
       text: data[0].text,
+      section: data[0].section,
     })
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
