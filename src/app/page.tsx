@@ -34,7 +34,6 @@ export default function Home() {
       const data: QueryResponse = await res.json()
       setResponse(data)
 
-      // Scroll suave para os resultados
       setTimeout(() => {
         resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }, 100)
@@ -48,43 +47,94 @@ export default function Home() {
   const hasResponse = response !== null
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <Header />
+    <div className="flex flex-col min-h-screen relative">
+      {/* Background glow */}
+      <div className="bg-glow" />
 
-      <main className={`flex-1 flex flex-col px-4 pb-12 ${!hasResponse ? 'justify-center' : 'pt-6'}`}>
-        <div className={!hasResponse ? 'mb-8' : 'mb-8'}>
+      {/* ══════════════════════════════════════════════
+          HERO — Search section (90vh when no results)
+          ══════════════════════════════════════════════ */}
+      <section
+        className={`relative z-10 flex flex-col items-center transition-all duration-700 ease-out ${
+          !hasResponse
+            ? 'min-h-[90vh] justify-center'
+            : 'pt-6'
+        }`}
+      >
+        <Header />
+
+        <div className={`w-full ${!hasResponse ? 'mt-8' : 'mt-4'}`}>
           <SearchBox onSearch={handleSearch} isLoading={isLoading} />
         </div>
 
         {error && (
-          <div className="w-full max-w-2xl mx-auto mb-6">
-            <p className="text-sm text-red-600 text-center">{error}</p>
+          <div className="w-full max-w-3xl mx-auto mt-6 px-4">
+            <div
+              className="glass-card px-6 py-4 text-center"
+              style={{ borderColor: 'rgba(107, 29, 42, 0.3)' }}
+            >
+              <p
+                className="text-sm"
+                style={{ color: '#8B3145', fontFamily: 'Poppins, sans-serif' }}
+              >
+                {error}
+              </p>
+            </div>
           </div>
         )}
+      </section>
 
-        {(hasResponse || isLoading) && (
-          <div ref={resultsRef} className="w-full max-w-4xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {PILLAR_ORDER.map((pillar) => {
-                const pillarData = response?.pillars.find(p => p.pillar === pillar)
-                return (
+      {/* ══════════════════════════════════════════════
+          RESULTS — Pillar cards
+          ══════════════════════════════════════════════ */}
+      {(hasResponse || isLoading) && (
+        <section ref={resultsRef} className="relative z-10 w-full px-4 md:px-8 pb-16 mt-8">
+          {/* Section header */}
+          <div className="max-w-7xl mx-auto mb-8">
+            <div className="ornament-divider">
+              <span style={{ fontSize: '0.8rem' }}>&#9766;</span>
+            </div>
+          </div>
+
+          {/* Pillar grid — large, spacious blocks */}
+          <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+            {PILLAR_ORDER.map((pillar, i) => {
+              const pillarData = response?.pillars.find(p => p.pillar === pillar)
+              return (
+                <div
+                  key={pillar}
+                  className="fade-in"
+                  style={{ animationDelay: `${i * 0.15}s` }}
+                >
                   <PillarCard
-                    key={pillar}
                     pillar={pillar}
                     results={pillarData?.results ?? []}
                     isLoading={isLoading}
                   />
-                )
-              })}
-            </div>
-
-            <DisclaimerBanner visible={response?.sensitive ?? false} />
+                </div>
+              )
+            })}
           </div>
-        )}
-      </main>
 
-      <footer className="py-4 text-center text-xs text-gray-400">
-        Veritas Dei — A IA organiza, não ensina. Consulte sempre as fontes.
+          <DisclaimerBanner visible={response?.sensitive ?? false} />
+        </section>
+      )}
+
+      {/* ══════════════════════════════════════════════
+          FOOTER
+          ══════════════════════════════════════════════ */}
+      <footer className="relative z-10 py-8 text-center mt-auto">
+        <div className="flex items-center justify-center gap-3 mb-2 max-w-[200px] mx-auto">
+          <span className="flex-1 h-px bg-gradient-to-r from-transparent to-[rgba(201,168,76,0.15)]" />
+          <span style={{ color: '#C9A84C', opacity: 0.4, fontSize: '0.6rem' }}>&#10022;</span>
+          <span className="flex-1 h-px bg-gradient-to-l from-transparent to-[rgba(201,168,76,0.15)]" />
+        </div>
+        <p
+          className="text-xs tracking-wider"
+          style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif', letterSpacing: '0.1em' }}
+        >
+          Veritas Dei — A IA organiza, não ensina. Consulte sempre as fontes.
+        </p>
       </footer>
     </div>
   )
