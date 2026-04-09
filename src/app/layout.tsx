@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import "./globals.css"
 import AppShell from "@/components/layout/AppShell"
+import { AuthProvider } from "@/contexts/AuthContext"
 
 export const metadata: Metadata = {
   title: "Veritas Dei — O que a Igreja ensina",
@@ -28,7 +29,9 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col">
-        <AppShell>{children}</AppShell>
+        <AuthProvider>
+          <AppShell>{children}</AppShell>
+        </AuthProvider>
       </body>
     </html>
   )
