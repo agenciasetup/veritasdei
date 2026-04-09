@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: '/preceitos', icon: ScrollText, label: 'Preceitos' },
   { href: '/mandamentos', icon: Tablets, label: 'Mandamentos' },
   { href: '/oracoes', icon: BookOpen, label: 'Orações' },
+  { href: '/virtudes-pecados', icon: Scale, label: 'Virtudes e Pecados' },
 ]
 
 export default function Sidebar() {
