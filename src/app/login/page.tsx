@@ -163,8 +163,6 @@ function LoginPageInner() {
         {/* ═══ OAuth Buttons ═══ */}
         <div className="space-y-2 mb-5">
           <OAuthButton provider="google" onClick={() => handleOAuth('google')} disabled={loading} />
-          <OAuthButton provider="facebook" onClick={() => handleOAuth('facebook')} disabled={loading} />
-          <OAuthButton provider="apple" onClick={() => handleOAuth('apple')} disabled={loading} />
         </div>
 
         {/* Divider */}
