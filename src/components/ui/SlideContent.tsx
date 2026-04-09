@@ -16,10 +16,10 @@ export function TitleSlide({
   description: string
 }) {
   return (
-    <div className="flex flex-col items-center justify-center text-center min-h-[45vh]">
+    <div className="flex flex-col items-center justify-center text-center min-h-[58vh] py-8">
       {/* Number badge */}
       <span
-        className="inline-block px-4 py-1.5 rounded-full text-xs tracking-widest uppercase mb-6"
+        className="inline-block px-5 py-2 rounded-full text-xs tracking-[0.2em] uppercase mb-8"
         style={{
           background: 'rgba(201,168,76,0.1)',
           border: '1px solid rgba(201,168,76,0.2)',
@@ -32,7 +32,7 @@ export function TitleSlide({
 
       {/* Title */}
       <h2
-        className="text-2xl md:text-3xl font-bold leading-tight mb-4"
+        className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mb-5"
         style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
       >
         {title}
@@ -40,23 +40,23 @@ export function TitleSlide({
 
       {subtitle && (
         <p
-          className="text-sm italic mb-4"
-          style={{ color: '#7A7368', fontFamily: 'Cormorant Garamond, serif', fontSize: '1rem' }}
+          className="text-base italic mb-5"
+          style={{ color: '#7A7368', fontFamily: 'Cormorant Garamond, serif', fontSize: '1.1rem' }}
         >
           {subtitle}
         </p>
       )}
 
       {/* Ornament */}
-      <div className="flex items-center gap-3 my-4 w-48">
+      <div className="flex items-center gap-4 my-6 w-56">
         <span className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.2)' }} />
-        <Scroll className="w-4 h-4" style={{ color: '#C9A84C', opacity: 0.5 }} />
+        <Scroll className="w-5 h-5" style={{ color: '#C9A84C', opacity: 0.5 }} />
         <span className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.2)' }} />
       </div>
 
       {/* Short description */}
       <p
-        className="text-base leading-relaxed max-w-md"
+        className="text-lg md:text-xl leading-relaxed max-w-lg"
         style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif', fontWeight: 300 }}
       >
         {description}
@@ -74,11 +74,11 @@ export function ExplanationSlide({
   text: string
 }) {
   return (
-    <div className="flex flex-col justify-center min-h-[45vh]">
-      <div className="flex items-center gap-3 mb-6">
+    <div className="flex flex-col justify-center min-h-[58vh] py-8">
+      <div className="flex items-center gap-3 mb-8">
         <BookOpen className="w-5 h-5" style={{ color: '#C9A84C' }} />
         <h3
-          className="text-sm tracking-wider uppercase"
+          className="text-sm tracking-[0.15em] uppercase"
           style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
         >
           {title}
@@ -86,7 +86,7 @@ export function ExplanationSlide({
       </div>
 
       <p
-        className="text-lg leading-[2] tracking-wide"
+        className="text-lg md:text-xl leading-[2.1] tracking-wide"
         style={{
           color: '#E8E2D8',
           fontFamily: 'Poppins, sans-serif',
@@ -119,11 +119,11 @@ export function VerseSlide({
   }
 
   return (
-    <div className="flex flex-col justify-center min-h-[45vh]">
-      <div className="flex items-center gap-3 mb-6">
+    <div className="flex flex-col justify-center min-h-[58vh] py-8">
+      <div className="flex items-center gap-3 mb-8">
         <Quote className="w-5 h-5" style={{ color: '#8B3145' }} />
         <h3
-          className="text-sm tracking-wider uppercase"
+          className="text-sm tracking-[0.15em] uppercase"
           style={{ fontFamily: 'Cinzel, serif', color: '#8B3145' }}
         >
           Fundamentação Bíblica
@@ -132,7 +132,7 @@ export function VerseSlide({
 
       {/* Reference */}
       <span
-        className="text-base font-semibold tracking-wider uppercase mb-4 block"
+        className="text-lg font-semibold tracking-wider uppercase mb-6 block"
         style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
       >
         {reference}
@@ -140,12 +140,12 @@ export function VerseSlide({
 
       {/* Verse text */}
       <blockquote
-        className="text-xl md:text-2xl leading-[1.9] italic"
+        className="text-2xl md:text-3xl leading-[1.8] italic"
         style={{
           color: '#E8E2D8',
           fontFamily: 'Cormorant Garamond, serif',
           borderLeft: '3px solid rgba(107,29,42,0.5)',
-          paddingLeft: '1.5rem',
+          paddingLeft: '2rem',
         }}
       >
         &ldquo;{text}&rdquo;
@@ -154,7 +154,7 @@ export function VerseSlide({
       {/* Copy */}
       <button
         onClick={handleCopy}
-        className="mt-6 self-start flex items-center gap-2 px-4 py-2 rounded-xl text-xs tracking-wider transition-all duration-200"
+        className="mt-8 self-start flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm tracking-wider transition-all duration-200"
         style={{
           background: copied ? 'rgba(201,168,76,0.15)' : 'rgba(201,168,76,0.06)',
           border: '1px solid rgba(201,168,76,0.15)',
@@ -162,7 +162,7 @@ export function VerseSlide({
           fontFamily: 'Poppins, sans-serif',
         }}
       >
-        {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+        {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
         {copied ? 'Copiado' : 'Copiar versículo'}
       </button>
     </div>
@@ -178,26 +178,26 @@ export function DetailSlide({
   items: { label: string; value: string }[]
 }) {
   return (
-    <div className="flex flex-col justify-center min-h-[45vh]">
+    <div className="flex flex-col justify-center min-h-[58vh] py-8">
       <h3
-        className="text-sm tracking-wider uppercase mb-6 flex items-center gap-3"
+        className="text-sm tracking-[0.15em] uppercase mb-8 flex items-center gap-3"
         style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
       >
         <Scroll className="w-5 h-5" />
         {title}
       </h3>
 
-      <div className="space-y-5">
+      <div className="space-y-7">
         {items.map((item) => (
           <div key={item.label}>
             <span
-              className="text-xs tracking-wider uppercase block mb-1.5"
+              className="text-xs tracking-[0.15em] uppercase block mb-2"
               style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C', opacity: 0.8 }}
             >
               {item.label}
             </span>
             <p
-              className="text-base leading-relaxed"
+              className="text-lg leading-relaxed"
               style={{ color: '#E8E2D8', fontFamily: 'Poppins, sans-serif', fontWeight: 300 }}
             >
               {item.value}
@@ -218,24 +218,24 @@ export function ListSlide({
   items: string[]
 }) {
   return (
-    <div className="flex flex-col justify-center min-h-[45vh]">
+    <div className="flex flex-col justify-center min-h-[58vh] py-8">
       <h3
-        className="text-sm tracking-wider uppercase mb-6 flex items-center gap-3"
+        className="text-sm tracking-[0.15em] uppercase mb-8 flex items-center gap-3"
         style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
       >
         <BookOpen className="w-5 h-5" />
         {title}
       </h3>
 
-      <ul className="space-y-3">
+      <ul className="space-y-4">
         {items.map((item, i) => (
           <li
             key={i}
-            className="flex items-start gap-3 text-base leading-relaxed"
+            className="flex items-start gap-4 text-lg leading-relaxed"
             style={{ color: '#E8E2D8', fontFamily: 'Poppins, sans-serif', fontWeight: 300 }}
           >
             <span
-              className="mt-2 w-1.5 h-1.5 rounded-full flex-shrink-0"
+              className="mt-2.5 w-2 h-2 rounded-full flex-shrink-0"
               style={{ background: '#C9A84C' }}
             />
             {item}

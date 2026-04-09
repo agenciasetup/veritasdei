@@ -60,11 +60,11 @@ export default function VirtudesPecadosView() {
       <div className="bg-glow" />
 
       {(selectedGroup || selectedItem) && (
-        <header className="relative z-10 w-full pt-6 pb-2 px-4">
+        <header className="relative z-10 w-full pt-8 pb-2 px-4 md:px-8">
           <div className="max-w-7xl mx-auto">
             <button
               onClick={handleBack}
-              className="theme-chip inline-flex items-center gap-2 !px-4 !py-2"
+              className="theme-chip inline-flex items-center gap-2 !px-5 !py-2.5"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>{selectedItem ? selectedGroup?.title : 'Categorias'}</span>
@@ -73,11 +73,8 @@ export default function VirtudesPecadosView() {
         </header>
       )}
 
-      <section className="relative z-10 text-center px-4 pt-6 pb-6">
-        <h1
-          className="text-2xl md:text-4xl font-bold tracking-wider uppercase mb-2"
-          style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
-        >
+      <section className="page-header relative z-10">
+        <h1>
           {selectedItem
             ? selectedItem.name
             : selectedGroup
@@ -85,30 +82,30 @@ export default function VirtudesPecadosView() {
               : 'Virtudes e Pecados'}
         </h1>
         {!selectedItem && (
-          <p className="text-sm max-w-2xl mx-auto" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+          <p className="subtitle">
             {selectedGroup ? selectedGroup.description : 'As virtudes que nos aproximam de Deus e os vícios que nos afastam.'}
           </p>
         )}
-        <div className="ornament-divider max-w-xs mx-auto mt-3">
+        <div className="ornament-divider max-w-sm mx-auto mt-4">
           <span>&#10022;</span>
         </div>
       </section>
 
       <main className="relative z-10 flex-1 pb-16">
         {!selectedGroup && !selectedItem && (
-          <div className="max-w-3xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="max-w-5xl mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-3 gap-5 md:gap-6">
             {GROUPS.map((g, i) => (
               <button
                 key={g.id}
                 onClick={() => setSelectedGroup(g)}
-                className="glass-card p-6 text-center transition-all duration-300 hover:scale-[1.02] fade-in cursor-pointer"
+                className="feature-card text-center flex flex-col items-center fade-in"
                 style={{ animationDelay: `${i * 0.07}s` }}
               >
-                <span className="text-3xl block mb-3">{g.icon}</span>
-                <h3 className="text-base font-bold" style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}>
+                <span className="text-4xl block mb-5">{g.icon}</span>
+                <h3 className="text-xl font-bold mb-2" style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}>
                   {g.title}
                 </h3>
-                <p className="text-xs mt-2" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+                <p className="text-sm" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
                   {g.items.length} itens
                 </p>
               </button>
@@ -117,23 +114,23 @@ export default function VirtudesPecadosView() {
         )}
 
         {selectedGroup && !selectedItem && (
-          <div className="max-w-3xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="max-w-5xl mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 gap-5 md:gap-6">
             {selectedGroup.items.map((item, i) => (
               <button
                 key={item.id}
                 onClick={() => setSelectedItem(item)}
-                className="glass-card p-5 text-left transition-all duration-300 hover:scale-[1.02] fade-in cursor-pointer"
+                className="feature-card text-left fade-in"
                 style={{ animationDelay: `${i * 0.05}s` }}
               >
-                <h3 className="text-base font-semibold" style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}>
+                <h3 className="text-lg font-semibold mb-2" style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}>
                   {item.name}
                 </h3>
                 {item.opposite && (
-                  <p className="text-xs mt-1" style={{ color: '#8B3145', fontFamily: 'Poppins, sans-serif' }}>
+                  <p className="text-sm mb-3" style={{ color: '#8B3145', fontFamily: 'Poppins, sans-serif' }}>
                     Oposto: {item.opposite}
                   </p>
                 )}
-                <p className="text-sm mt-2 line-clamp-2" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+                <p className="text-sm leading-relaxed line-clamp-2" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
                   {item.explanation.split('. ')[0]}.
                 </p>
               </button>
