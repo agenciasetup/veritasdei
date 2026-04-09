@@ -118,7 +118,7 @@ export default function PillarCard({ pillar, results, isLoading }: PillarCardPro
       </div>
 
       {/* Ornamental divider */}
-      <div className="ornament-divider">
+      <div className="ornament-divider" style={{ margin: '1rem 0' }}>
         <span>&#10022;</span>
       </div>
 
