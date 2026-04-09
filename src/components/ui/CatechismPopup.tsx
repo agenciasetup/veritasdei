@@ -11,6 +11,7 @@ interface CatechismPopupProps {
 
 export default function CatechismPopup({ reference, onClose, anchorRect }: CatechismPopupProps) {
   const [text, setText] = useState<string | null>(null)
+  const [section, setSection] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -26,6 +27,7 @@ export default function CatechismPopup({ reference, onClose, anchorRect }: Catec
         }
         const data = await res.json()
         setText(data.text)
+        if (data.section) setSection(data.section)
       } catch {
         setError(true)
       } finally {
@@ -119,7 +121,7 @@ export default function CatechismPopup({ reference, onClose, anchorRect }: Catec
                 {reference}
               </h3>
               <p className="text-xs" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
-                Catecismo da Igreja Católica
+                {section || 'Catecismo da Igreja Católica'}
               </p>
             </div>
           </div>
