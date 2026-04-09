@@ -31,7 +31,7 @@ function ParoquiasContent() {
     async function load() {
       const { data } = await supabase!
         .from('paroquias')
-        .select('*')
+        .select('id, nome, diocese, cidade, estado, padre_responsavel, telefone, horarios_missa, foto_url, status, criado_por')
         .order('created_at', { ascending: false })
       setParoquias((data as Paroquia[]) ?? [])
       setLoading(false)

@@ -61,7 +61,7 @@ function VerificacaoContent() {
     async function load() {
       const { data } = await supabase!
         .from('verificacoes')
-        .select('*')
+        .select('id, status, tipo, documento_url, notas, motivo_rejeicao, created_at')
         .eq('user_id', user!.id)
         .order('created_at', { ascending: false })
         .limit(1)
