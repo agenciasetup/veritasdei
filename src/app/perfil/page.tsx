@@ -12,9 +12,11 @@ import { VocacaoIcon } from '@/components/icons/VocacaoIcons'
 import {
   User, Camera, Save, Church, MapPin, Heart, BookOpen,
   CheckCircle, Phone, Calendar, Shield, AtSign, GraduationCap,
+  Share2, CreditCard,
 } from 'lucide-react'
 import Link from 'next/link'
 
+type MainTab = 'editar' | 'carteirinha'
 type Section = 'pessoal' | 'endereco' | 'fe' | 'social'
 
 const SECTIONS: { key: Section; label: string; icon: React.ElementType }[] = [
@@ -37,6 +39,7 @@ function PerfilContent() {
   const supabase = createClient()!
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const [mainTab, setMainTab] = useState<MainTab>('editar')
   const [section, setSection] = useState<Section>('pessoal')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -270,20 +273,25 @@ function PerfilContent() {
           </Link>
         )}
 
-        {/* Section Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          {SECTIONS.map(({ key, label, icon: Icon }) => (
+        {/* Main Tab Bar */}
+        <div className="flex gap-3 mb-6">
+          {([
+            { key: 'editar' as MainTab, label: 'Editar Perfil', icon: User },
+            { key: 'carteirinha' as MainTab, label: 'Carteirinha', icon: CreditCard },
+          ]).map(({ key, label, icon: Icon }) => (
             <button
               key={key}
-              onClick={() => setSection(key)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs whitespace-nowrap transition-all"
+              onClick={() => setMainTab(key)}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold tracking-wider uppercase transition-all"
               style={{
-                fontFamily: 'Poppins, sans-serif',
-                background: section === key ? 'rgba(201,168,76,0.12)' : 'rgba(16,16,16,0.6)',
-                border: section === key
-                  ? '1px solid rgba(201,168,76,0.25)'
+                fontFamily: 'Cinzel, serif',
+                background: mainTab === key
+                  ? 'linear-gradient(135deg, rgba(201,168,76,0.18) 0%, rgba(201,168,76,0.08) 100%)'
+                  : 'rgba(16,16,16,0.6)',
+                border: mainTab === key
+                  ? '1px solid rgba(201,168,76,0.35)'
                   : '1px solid rgba(201,168,76,0.08)',
-                color: section === key ? '#C9A84C' : '#7A7368',
+                color: mainTab === key ? '#C9A84C' : '#7A7368',
               }}
             >
               <Icon className="w-4 h-4" />
@@ -292,287 +300,323 @@ function PerfilContent() {
           ))}
         </div>
 
-        {/* Content Card */}
-        <div
-          className="rounded-2xl p-6 md:p-8"
-          style={{
-            background: 'rgba(16,16,16,0.8)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(201,168,76,0.15)',
-            boxShadow: '0 12px 48px rgba(0,0,0,0.4)',
-          }}
-        >
-          {/* ═══ DADOS PESSOAIS ═══ */}
-          {section === 'pessoal' && (
-            <div className="space-y-5">
-              <SectionTitle icon={User} title="Dados Pessoais" />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormInput
-                  label="Nome completo"
-                  value={(form.name as string) ?? ''}
-                  onChange={(v) => updateField('name', v)}
-                />
-                <FormSelect
-                  label="Gênero"
-                  value={form.genero ?? ''}
-                  onChange={(v) => updateField('genero', v || null)}
-                  options={[
-                    { value: '', label: 'Selecione' },
-                    { value: 'masculino', label: 'Masculino' },
-                    { value: 'feminino', label: 'Feminino' },
-                  ]}
-                />
-                <FormInput
-                  label="Data de nascimento"
-                  type="date"
-                  value={form.data_nascimento ?? ''}
-                  onChange={(v) => updateField('data_nascimento', v || null)}
-                />
-              </div>
-
-              {/* Vocação */}
-              <div>
-                <label
-                  className="block text-xs mb-3 tracking-wider uppercase"
-                  style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}
-                >
-                  Vocação
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                  {VOCACOES.map((v) => (
-                    <button
-                      key={v.value}
-                      type="button"
-                      onClick={() => updateField('vocacao', v.value)}
-                      className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs transition-all"
-                      style={{
-                        fontFamily: 'Poppins, sans-serif',
-                        background: form.vocacao === v.value ? 'rgba(201,168,76,0.12)' : 'rgba(10,10,10,0.5)',
-                        border: form.vocacao === v.value
-                          ? '1px solid rgba(201,168,76,0.3)'
-                          : '1px solid rgba(201,168,76,0.08)',
-                        color: form.vocacao === v.value ? '#C9A84C' : '#7A7368',
-                      }}
-                    >
-                      <VocacaoIcon vocacao={v.value} size={16} />
-                      {v.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ═══ ENDEREÇO ═══ */}
-          {section === 'endereco' && (
-            <div className="space-y-5">
-              <SectionTitle icon={MapPin} title="Endereço" />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormInput
-                  label="Endereço"
-                  value={(form.endereco as string) ?? ''}
-                  onChange={(v) => updateField('endereco', v)}
-                  className="md:col-span-2"
-                />
-                <FormInput
-                  label="Cidade"
-                  value={(form.cidade as string) ?? ''}
-                  onChange={(v) => updateField('cidade', v)}
-                />
-                <FormInput
-                  label="Estado"
-                  value={(form.estado as string) ?? ''}
-                  onChange={(v) => updateField('estado', v)}
-                />
-                <FormInput
-                  label="País"
-                  value={(form.pais as string) ?? 'Brasil'}
-                  onChange={(v) => updateField('pais', v)}
-                />
-                <FormInput
-                  label="CEP"
-                  value={(form.cep as string) ?? ''}
-                  onChange={(v) => updateField('cep', v)}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* ═══ VIDA DE FÉ ═══ */}
-          {section === 'fe' && (
-            <div className="space-y-5">
-              <SectionTitle icon={Church} title="Vida de Fé" />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormInput
-                  label="Paróquia"
-                  value={(form.paroquia as string) ?? ''}
-                  onChange={(v) => updateField('paroquia', v)}
-                  placeholder="Ex: Paróquia São José"
-                />
-                <FormInput
-                  label="Diocese"
-                  value={(form.diocese as string) ?? ''}
-                  onChange={(v) => updateField('diocese', v)}
-                  placeholder="Ex: Diocese de São Paulo"
-                />
-                <FormInput
-                  label="Há quanto tempo é Católico?"
-                  value={(form.tempo_catolico as string) ?? ''}
-                  onChange={(v) => updateField('tempo_catolico', v)}
-                  placeholder="Ex: Desde nascimento, 5 anos..."
-                />
-                <FormInput
-                  label="Pastoral"
-                  value={(form.pastoral as string) ?? ''}
-                  onChange={(v) => updateField('pastoral', v)}
-                  placeholder="Ex: Pastoral da Juventude"
-                />
-                <FormInput
-                  label="Comunidade / Movimento"
-                  value={(form.comunidade as string) ?? ''}
-                  onChange={(v) => updateField('comunidade', v)}
-                  placeholder="Ex: Canção Nova, Opus Dei..."
-                />
-              </div>
-
-              {/* Veio de outra religião */}
-              <div
-                className="flex items-center gap-3 p-4 rounded-xl"
-                style={{ background: 'rgba(10,10,10,0.5)', border: '1px solid rgba(201,168,76,0.08)' }}
-              >
+        {/* ═══════════════════════════════════════ */}
+        {/* EDITAR PERFIL TAB                      */}
+        {/* ═══════════════════════════════════════ */}
+        {mainTab === 'editar' && (
+          <>
+            {/* Section Tabs */}
+            <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+              {SECTIONS.map(({ key, label, icon: Icon }) => (
                 <button
-                  type="button"
-                  onClick={() => updateField('veio_de_outra_religiao', !form.veio_de_outra_religiao)}
-                  className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-all"
+                  key={key}
+                  onClick={() => setSection(key)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs whitespace-nowrap transition-all"
                   style={{
-                    background: form.veio_de_outra_religiao ? '#C9A84C' : 'transparent',
-                    border: form.veio_de_outra_religiao ? 'none' : '2px solid rgba(201,168,76,0.3)',
+                    fontFamily: 'Poppins, sans-serif',
+                    background: section === key ? 'rgba(201,168,76,0.12)' : 'rgba(16,16,16,0.6)',
+                    border: section === key
+                      ? '1px solid rgba(201,168,76,0.25)'
+                      : '1px solid rgba(201,168,76,0.08)',
+                    color: section === key ? '#C9A84C' : '#7A7368',
                   }}
                 >
-                  {form.veio_de_outra_religiao && (
-                    <CheckCircle className="w-3.5 h-3.5" style={{ color: '#0A0A0A' }} />
-                  )}
+                  <Icon className="w-4 h-4" />
+                  {label}
                 </button>
-                <span className="text-sm" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
-                  Veio de outra religião?
-                </span>
-              </div>
-
-              {form.veio_de_outra_religiao && (
-                <FormInput
-                  label="Qual religião?"
-                  value={(form.religiao_anterior as string) ?? ''}
-                  onChange={(v) => updateField('religiao_anterior', v)}
-                  placeholder="Ex: Protestantismo, Espiritismo..."
-                />
-              )}
-
-              {/* Sacramentos */}
-              <div>
-                <label
-                  className="block text-xs mb-3 tracking-wider uppercase flex items-center gap-2"
-                  style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}
-                >
-                  <BookOpen className="w-4 h-4" />
-                  Sacramentos Recebidos
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {SACRAMENTOS.map((s) => {
-                    const checked = ((form.sacramentos ?? []) as Sacramento[]).includes(s.value)
-                    return (
-                      <button
-                        key={s.value}
-                        type="button"
-                        onClick={() => toggleSacramento(s.value)}
-                        className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all text-left"
-                        style={{
-                          fontFamily: 'Poppins, sans-serif',
-                          background: checked ? 'rgba(201,168,76,0.1)' : 'rgba(10,10,10,0.4)',
-                          border: checked
-                            ? '1px solid rgba(201,168,76,0.25)'
-                            : '1px solid rgba(201,168,76,0.06)',
-                          color: checked ? '#C9A84C' : '#7A7368',
-                        }}
-                      >
-                        <div
-                          className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
-                          style={{
-                            background: checked ? '#C9A84C' : 'transparent',
-                            border: checked ? 'none' : '2px solid rgba(201,168,76,0.25)',
-                          }}
-                        >
-                          {checked && <CheckCircle className="w-3 h-3" style={{ color: '#0A0A0A' }} />}
-                        </div>
-                        {s.label}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
+              ))}
             </div>
-          )}
 
-          {/* ═══ SOCIAL ═══ */}
-          {section === 'social' && (
-            <div className="space-y-5">
-              <SectionTitle icon={Heart} title="Redes Sociais" />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormInput
-                  label="Instagram"
-                  value={(form.instagram as string) ?? ''}
-                  onChange={(v) => updateField('instagram', v)}
-                  placeholder="@seuperfil"
-                  icon={<AtSign className="w-4 h-4" />}
-                />
-                <FormInput
-                  label="WhatsApp"
-                  value={(form.whatsapp as string) ?? ''}
-                  onChange={(v) => updateField('whatsapp', v)}
-                  placeholder="(11) 99999-9999"
-                  icon={<Phone className="w-4 h-4" />}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Save Button */}
-          <div className="mt-8 flex justify-end">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold tracking-wider uppercase transition-all"
+            {/* Content Card */}
+            <div
+              className="rounded-2xl p-6 md:p-8"
               style={{
-                fontFamily: 'Cinzel, serif',
-                background: saved
-                  ? 'rgba(76,175,80,0.15)'
-                  : saving
-                    ? 'rgba(201,168,76,0.15)'
-                    : 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
-                color: saved ? '#66BB6A' : saving ? '#7A7368' : '#0A0A0A',
-                border: saved ? '1px solid rgba(76,175,80,0.3)' : 'none',
+                background: 'rgba(16,16,16,0.8)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(201,168,76,0.15)',
+                boxShadow: '0 12px 48px rgba(0,0,0,0.4)',
               }}
             >
-              {saved ? (
-                <>
-                  <CheckCircle className="w-4 h-4" /> Salvo!
-                </>
-              ) : saving ? (
-                <div
-                  className="w-4 h-4 border-2 rounded-full animate-spin"
-                  style={{ borderColor: 'rgba(201,168,76,0.3)', borderTopColor: '#C9A84C' }}
-                />
-              ) : (
-                <>
-                  <Save className="w-4 h-4" /> Salvar Perfil
-                </>
+              {/* ═══ DADOS PESSOAIS ═══ */}
+              {section === 'pessoal' && (
+                <div className="space-y-5">
+                  <SectionTitle icon={User} title="Dados Pessoais" />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormInput
+                      label="Nome completo"
+                      value={(form.name as string) ?? ''}
+                      onChange={(v) => updateField('name', v)}
+                    />
+                    <FormSelect
+                      label="Gênero"
+                      value={form.genero ?? ''}
+                      onChange={(v) => updateField('genero', v || null)}
+                      options={[
+                        { value: '', label: 'Selecione' },
+                        { value: 'masculino', label: 'Masculino' },
+                        { value: 'feminino', label: 'Feminino' },
+                      ]}
+                    />
+                    <FormInput
+                      label="Data de nascimento"
+                      type="date"
+                      value={form.data_nascimento ?? ''}
+                      onChange={(v) => updateField('data_nascimento', v || null)}
+                    />
+                  </div>
+
+                  {/* Vocação */}
+                  <div>
+                    <label
+                      className="block text-xs mb-3 tracking-wider uppercase"
+                      style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}
+                    >
+                      Vocação
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                      {VOCACOES.map((v) => (
+                        <button
+                          key={v.value}
+                          type="button"
+                          onClick={() => updateField('vocacao', v.value)}
+                          className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs transition-all"
+                          style={{
+                            fontFamily: 'Poppins, sans-serif',
+                            background: form.vocacao === v.value ? 'rgba(201,168,76,0.12)' : 'rgba(10,10,10,0.5)',
+                            border: form.vocacao === v.value
+                              ? '1px solid rgba(201,168,76,0.3)'
+                              : '1px solid rgba(201,168,76,0.08)',
+                            color: form.vocacao === v.value ? '#C9A84C' : '#7A7368',
+                          }}
+                        >
+                          <VocacaoIcon vocacao={v.value} size={16} />
+                          {v.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               )}
-            </button>
-          </div>
-        </div>
+
+              {/* ═══ ENDEREÇO ═══ */}
+              {section === 'endereco' && (
+                <div className="space-y-5">
+                  <SectionTitle icon={MapPin} title="Endereço" />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormInput
+                      label="Endereço"
+                      value={(form.endereco as string) ?? ''}
+                      onChange={(v) => updateField('endereco', v)}
+                      className="md:col-span-2"
+                    />
+                    <FormInput
+                      label="Cidade"
+                      value={(form.cidade as string) ?? ''}
+                      onChange={(v) => updateField('cidade', v)}
+                    />
+                    <FormInput
+                      label="Estado"
+                      value={(form.estado as string) ?? ''}
+                      onChange={(v) => updateField('estado', v)}
+                    />
+                    <FormInput
+                      label="País"
+                      value={(form.pais as string) ?? 'Brasil'}
+                      onChange={(v) => updateField('pais', v)}
+                    />
+                    <FormInput
+                      label="CEP"
+                      value={(form.cep as string) ?? ''}
+                      onChange={(v) => updateField('cep', v)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* ═══ VIDA DE FÉ ═══ */}
+              {section === 'fe' && (
+                <div className="space-y-5">
+                  <SectionTitle icon={Church} title="Vida de Fé" />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormInput
+                      label="Paróquia"
+                      value={(form.paroquia as string) ?? ''}
+                      onChange={(v) => updateField('paroquia', v)}
+                      placeholder="Ex: Paróquia São José"
+                    />
+                    <FormInput
+                      label="Diocese"
+                      value={(form.diocese as string) ?? ''}
+                      onChange={(v) => updateField('diocese', v)}
+                      placeholder="Ex: Diocese de São Paulo"
+                    />
+                    <FormInput
+                      label="Há quanto tempo é Católico?"
+                      value={(form.tempo_catolico as string) ?? ''}
+                      onChange={(v) => updateField('tempo_catolico', v)}
+                      placeholder="Ex: Desde nascimento, 5 anos..."
+                    />
+                    <FormInput
+                      label="Pastoral"
+                      value={(form.pastoral as string) ?? ''}
+                      onChange={(v) => updateField('pastoral', v)}
+                      placeholder="Ex: Pastoral da Juventude"
+                    />
+                    <FormInput
+                      label="Comunidade / Movimento"
+                      value={(form.comunidade as string) ?? ''}
+                      onChange={(v) => updateField('comunidade', v)}
+                      placeholder="Ex: Canção Nova, Opus Dei..."
+                    />
+                  </div>
+
+                  {/* Veio de outra religião */}
+                  <div
+                    className="flex items-center gap-3 p-4 rounded-xl"
+                    style={{ background: 'rgba(10,10,10,0.5)', border: '1px solid rgba(201,168,76,0.08)' }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => updateField('veio_de_outra_religiao', !form.veio_de_outra_religiao)}
+                      className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-all"
+                      style={{
+                        background: form.veio_de_outra_religiao ? '#C9A84C' : 'transparent',
+                        border: form.veio_de_outra_religiao ? 'none' : '2px solid rgba(201,168,76,0.3)',
+                      }}
+                    >
+                      {form.veio_de_outra_religiao && (
+                        <CheckCircle className="w-3.5 h-3.5" style={{ color: '#0A0A0A' }} />
+                      )}
+                    </button>
+                    <span className="text-sm" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
+                      Veio de outra religião?
+                    </span>
+                  </div>
+
+                  {form.veio_de_outra_religiao && (
+                    <FormInput
+                      label="Qual religião?"
+                      value={(form.religiao_anterior as string) ?? ''}
+                      onChange={(v) => updateField('religiao_anterior', v)}
+                      placeholder="Ex: Protestantismo, Espiritismo..."
+                    />
+                  )}
+
+                  {/* Sacramentos */}
+                  <div>
+                    <label
+                      className="block text-xs mb-3 tracking-wider uppercase flex items-center gap-2"
+                      style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}
+                    >
+                      <BookOpen className="w-4 h-4" />
+                      Sacramentos Recebidos
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {SACRAMENTOS.map((s) => {
+                        const checked = ((form.sacramentos ?? []) as Sacramento[]).includes(s.value)
+                        return (
+                          <button
+                            key={s.value}
+                            type="button"
+                            onClick={() => toggleSacramento(s.value)}
+                            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all text-left"
+                            style={{
+                              fontFamily: 'Poppins, sans-serif',
+                              background: checked ? 'rgba(201,168,76,0.1)' : 'rgba(10,10,10,0.4)',
+                              border: checked
+                                ? '1px solid rgba(201,168,76,0.25)'
+                                : '1px solid rgba(201,168,76,0.06)',
+                              color: checked ? '#C9A84C' : '#7A7368',
+                            }}
+                          >
+                            <div
+                              className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
+                              style={{
+                                background: checked ? '#C9A84C' : 'transparent',
+                                border: checked ? 'none' : '2px solid rgba(201,168,76,0.25)',
+                              }}
+                            >
+                              {checked && <CheckCircle className="w-3 h-3" style={{ color: '#0A0A0A' }} />}
+                            </div>
+                            {s.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ═══ SOCIAL ═══ */}
+              {section === 'social' && (
+                <div className="space-y-5">
+                  <SectionTitle icon={Heart} title="Redes Sociais" />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormInput
+                      label="Instagram"
+                      value={(form.instagram as string) ?? ''}
+                      onChange={(v) => updateField('instagram', v)}
+                      placeholder="@seuperfil"
+                      icon={<AtSign className="w-4 h-4" />}
+                    />
+                    <FormInput
+                      label="WhatsApp"
+                      value={(form.whatsapp as string) ?? ''}
+                      onChange={(v) => updateField('whatsapp', v)}
+                      placeholder="(11) 99999-9999"
+                      icon={<Phone className="w-4 h-4" />}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Save Button */}
+              <div className="mt-8 flex justify-end">
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold tracking-wider uppercase transition-all"
+                  style={{
+                    fontFamily: 'Cinzel, serif',
+                    background: saved
+                      ? 'rgba(76,175,80,0.15)'
+                      : saving
+                        ? 'rgba(201,168,76,0.15)'
+                        : 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
+                    color: saved ? '#66BB6A' : saving ? '#7A7368' : '#0A0A0A',
+                    border: saved ? '1px solid rgba(76,175,80,0.3)' : 'none',
+                  }}
+                >
+                  {saved ? (
+                    <>
+                      <CheckCircle className="w-4 h-4" /> Salvo!
+                    </>
+                  ) : saving ? (
+                    <div
+                      className="w-4 h-4 border-2 rounded-full animate-spin"
+                      style={{ borderColor: 'rgba(201,168,76,0.3)', borderTopColor: '#C9A84C' }}
+                    />
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" /> Salvar Perfil
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ═══════════════════════════════════════ */}
+        {/* CARTEIRINHA TAB                        */}
+        {/* ═══════════════════════════════════════ */}
+        {mainTab === 'carteirinha' && (
+          <CarteirinhaCard profile={profile} />
+        )}
       </div>
     </div>
   )
@@ -688,6 +732,224 @@ function FormSelect({
           </option>
         ))}
       </select>
+    </div>
+  )
+}
+
+function CarteirinhaCard({ profile }: { profile: ReturnType<typeof useAuth>['profile'] }) {
+  const vocacaoLabel = VOCACOES.find(v => v.value === profile?.vocacao)?.label ?? 'Leigo(a)'
+  const sacramentosRecebidos = (profile?.sacramentos ?? []) as string[]
+  const memberSince = profile?.created_at
+    ? new Date(profile.created_at).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+    : ''
+
+  const handleShare = async () => {
+    const text = `Carteirinha Catolica - ${profile?.name ?? 'Membro'} | Veritas Dei`
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Carteirinha Catolica', text })
+      } catch { /* user cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(text)
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-6">
+      {/* Card */}
+      <div
+        className="w-full max-w-md rounded-2xl overflow-hidden"
+        style={{
+          background: 'linear-gradient(145deg, #F2EDE4 0%, #E8E0D0 100%)',
+          border: '2px solid #C9A84C',
+          boxShadow: '0 4px 24px rgba(201,168,76,0.18), 0 1px 0 rgba(201,168,76,0.3) inset',
+        }}
+      >
+        {/* Ornamental outer border effect */}
+        <div
+          style={{
+            border: '3px solid transparent',
+            borderImage: 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 40%, #C9A84C 60%, #A88B3A 100%) 1',
+            margin: '4px',
+            borderRadius: '12px',
+          }}
+        >
+          {/* Header bar */}
+          <div
+            className="flex items-center justify-center gap-3 py-4 px-6"
+            style={{
+              background: 'linear-gradient(135deg, #6B1D2A 0%, #8B2D3A 50%, #6B1D2A 100%)',
+              borderBottom: '2px solid #C9A84C',
+            }}
+          >
+            <span style={{ fontSize: '1.4rem', color: '#C9A84C' }}>&#10013;</span>
+            <div className="text-center">
+              <h3
+                className="text-lg font-bold tracking-[0.2em] uppercase"
+                style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
+              >
+                Veritas Dei
+              </h3>
+              <p
+                className="text-[10px] tracking-[0.15em] uppercase"
+                style={{ fontFamily: 'Poppins, sans-serif', color: 'rgba(201,168,76,0.7)' }}
+              >
+                Carteirinha Catolica
+              </p>
+            </div>
+            <span style={{ fontSize: '1.4rem', color: '#C9A84C' }}>&#10013;</span>
+          </div>
+
+          {/* Body */}
+          <div className="px-6 py-5 space-y-4">
+            {/* Avatar + Name */}
+            <div className="flex items-center gap-4">
+              <div
+                className="w-16 h-16 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: profile?.profile_image_url ? 'transparent' : 'rgba(107,29,42,0.08)',
+                  border: '2px solid #C9A84C',
+                }}
+              >
+                {profile?.profile_image_url ? (
+                  <img
+                    src={profile.profile_image_url}
+                    alt="Avatar"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User className="w-7 h-7" style={{ color: '#6B1D2A' }} />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4
+                  className="text-lg font-bold truncate"
+                  style={{ fontFamily: 'Cinzel, serif', color: '#2A1F14' }}
+                >
+                  {profile?.name ?? 'Membro'}
+                </h4>
+                <p
+                  className="text-sm"
+                  style={{ fontFamily: 'Poppins, sans-serif', color: '#6B1D2A' }}
+                >
+                  {vocacaoLabel}
+                </p>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, #C9A84C, transparent)' }} />
+
+            {/* Details */}
+            <div className="space-y-3">
+              {profile?.paroquia && (
+                <div className="flex items-start gap-2.5">
+                  <Church className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#6B1D2A' }} />
+                  <div>
+                    <p
+                      className="text-[10px] tracking-wider uppercase"
+                      style={{ fontFamily: 'Cinzel, serif', color: '#8B7355' }}
+                    >
+                      Paroquia
+                    </p>
+                    <p
+                      className="text-sm"
+                      style={{ fontFamily: 'Poppins, sans-serif', color: '#2A1F14' }}
+                    >
+                      {profile.paroquia}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {profile?.diocese && (
+                <div className="flex items-start gap-2.5">
+                  <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#6B1D2A' }} />
+                  <div>
+                    <p
+                      className="text-[10px] tracking-wider uppercase"
+                      style={{ fontFamily: 'Cinzel, serif', color: '#8B7355' }}
+                    >
+                      Diocese
+                    </p>
+                    <p
+                      className="text-sm"
+                      style={{ fontFamily: 'Poppins, sans-serif', color: '#2A1F14' }}
+                    >
+                      {profile.diocese}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Sacramentos */}
+            {sacramentosRecebidos.length > 0 && (
+              <div>
+                <p
+                  className="text-[10px] tracking-wider uppercase mb-2"
+                  style={{ fontFamily: 'Cinzel, serif', color: '#8B7355' }}
+                >
+                  Sacramentos Recebidos
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {sacramentosRecebidos.map((s) => {
+                    const label = SACRAMENTOS.find(sac => sac.value === s)?.label ?? s
+                    return (
+                      <span
+                        key={s}
+                        className="text-[11px] px-2.5 py-1 rounded-full"
+                        style={{
+                          fontFamily: 'Poppins, sans-serif',
+                          background: 'rgba(107,29,42,0.08)',
+                          border: '1px solid rgba(201,168,76,0.3)',
+                          color: '#6B1D2A',
+                        }}
+                      >
+                        {label}
+                      </span>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Divider */}
+            <div style={{ height: '1px', background: 'linear-gradient(to right, transparent, #C9A84C, transparent)' }} />
+
+            {/* Footer */}
+            <div className="flex items-center justify-between">
+              <p
+                className="text-[10px] tracking-wider uppercase"
+                style={{ fontFamily: 'Cinzel, serif', color: '#8B7355' }}
+              >
+                {memberSince ? `Membro desde ${memberSince}` : 'Membro'}
+              </p>
+              <div
+                className="w-6 h-6 rounded-full flex items-center justify-center"
+                style={{ background: 'rgba(107,29,42,0.06)', border: '1px solid rgba(201,168,76,0.25)' }}
+              >
+                <span style={{ fontSize: '0.7rem', color: '#C9A84C' }}>&#10013;</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Share button */}
+      <button
+        onClick={handleShare}
+        className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold tracking-wider uppercase transition-all hover:opacity-90"
+        style={{
+          fontFamily: 'Cinzel, serif',
+          background: 'linear-gradient(135deg, rgba(201,168,76,0.15) 0%, rgba(201,168,76,0.08) 100%)',
+          border: '1px solid rgba(201,168,76,0.3)',
+          color: '#C9A84C',
+        }}
+      >
+        <Share2 className="w-4 h-4" />
+        Compartilhar Carteirinha
+      </button>
     </div>
   )
 }

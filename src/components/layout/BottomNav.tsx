@@ -25,7 +25,6 @@ const MORE_ITEMS = [
   { href: '/virtudes-pecados', icon: Scale, label: 'Virtudes' },
   { href: '/obras-misericordia', icon: Heart, label: 'Misericórdia' },
   { href: '/comunidade', icon: LayoutGrid, label: 'Comunidade' },
-  { href: '/carteirinha', icon: User, label: 'Carteirinha' },
 ]
 
 export default function BottomNav() {
