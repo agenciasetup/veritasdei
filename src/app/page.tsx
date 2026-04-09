@@ -188,7 +188,7 @@ export default function Home() {
 
           {/* Two-column layout: Catholic summary + Protestant view */}
           {insight && insight.summary && (
-            <div className="max-w-7xl mx-auto mb-10 grid grid-cols-1 xl:grid-cols-5 gap-6 fade-in">
+            <div className="mb-10 grid grid-cols-1 xl:grid-cols-5 gap-6 fade-in">
 
               {/* ── Catholic Summary Card (3/5) ── */}
               <div
@@ -384,7 +384,7 @@ export default function Home() {
 
           {/* ── Loading state ── */}
           {isLoading && (
-            <div className="max-w-7xl mx-auto mb-10 grid grid-cols-1 xl:grid-cols-5 gap-6">
+            <div className="mb-10 grid grid-cols-1 xl:grid-cols-5 gap-6">
               <div
                 className="xl:col-span-3 rounded-2xl p-7 md:p-10"
                 style={{ background: 'rgba(16,16,16,0.8)', border: '1px solid rgba(201,168,76,0.1)' }}
@@ -428,7 +428,7 @@ export default function Home() {
           )}
 
           {/* ── Section divider: Sources ── */}
-          <div className="max-w-4xl mx-auto mb-6">
+          <div className="mb-6">
             <h3
               className="text-xs tracking-[0.2em] uppercase text-center"
               style={{ fontFamily: 'Cinzel, serif', color: '#7A7368' }}
