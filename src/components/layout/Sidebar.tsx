@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: '/sacramentos', icon: Droplets, label: 'Sacramentos' },
   { href: '/preceitos', icon: ScrollText, label: 'Preceitos' },
   { href: '/mandamentos', icon: Tablets, label: 'Mandamentos' },
+  { href: '/oracoes', icon: BookOpen, label: 'Orações' },
 ]
 
 export default function Sidebar() {
