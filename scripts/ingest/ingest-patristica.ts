@@ -9,7 +9,7 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const OPENAI_KEY = process.env.OPENAI_API_KEY!
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
-const openai = new OpenAI({ apiKey: OPENAI_KEY })
+const openai = new OpenAI({ apiKey: OPENAI_KEY, timeout: 60000 })
 
 interface PatristicEntry {
   author: string
