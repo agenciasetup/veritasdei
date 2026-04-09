@@ -60,41 +60,70 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen relative">
-      {/* Background glow */}
       <div className="bg-glow" />
 
       {/* ══════════════════════════════════════════════
-          HERO — Search section
+          HERO — Full header when no results
           ══════════════════════════════════════════════ */}
-      <section
-        className={`relative z-10 flex flex-col items-center transition-all duration-700 ease-out ${
-          !hasResponse
-            ? 'min-h-[85vh] justify-center'
-            : 'pt-6'
-        }`}
-      >
-        <Header />
+      {!hasResponse && !isLoading && (
+        <section className="relative z-10 flex flex-col items-center min-h-[85vh] justify-center transition-all duration-700 ease-out">
+          <Header />
+          <div className="w-full mt-10">
+            <SearchBox onSearch={handleSearch} isLoading={isLoading} />
+          </div>
+        </section>
+      )}
 
-        <div className={`w-full ${!hasResponse ? 'mt-10' : 'mt-4'}`}>
-          <SearchBox onSearch={handleSearch} isLoading={isLoading} />
-        </div>
-
-        {error && (
-          <div className="w-full max-w-3xl mx-auto mt-6 px-4">
-            <div
-              className="glass-card px-6 py-4 text-center"
-              style={{ borderColor: 'rgba(107, 29, 42, 0.3)' }}
+      {/* ══════════════════════════════════════════════
+          COMPACT SEARCH — When results are showing
+          ══════════════════════════════════════════════ */}
+      {(hasResponse || isLoading) && (
+        <section className="relative z-10 w-full pt-5 pb-4 px-4 md:px-8"
+          style={{
+            background: 'rgba(10,10,10,0.85)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            borderBottom: '1px solid rgba(201,168,76,0.08)',
+            position: 'sticky',
+            top: 0,
+            zIndex: 50,
+          }}
+        >
+          <div className="flex items-center gap-4 max-w-full mx-auto">
+            <span
+              className="text-lg font-bold tracking-widest uppercase flex-shrink-0 hidden md:block"
+              style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
             >
-              <p
-                className="text-sm"
-                style={{ color: '#8B3145', fontFamily: 'Poppins, sans-serif' }}
-              >
-                {error}
-              </p>
+              Veritas Dei
+            </span>
+            <span
+              className="flex-shrink-0 md:hidden"
+              style={{ color: '#C9A84C', fontSize: '1.2rem' }}
+            >
+              ✝
+            </span>
+            <div className="flex-1">
+              <SearchBox onSearch={handleSearch} isLoading={isLoading} hideChips />
             </div>
           </div>
-        )}
-      </section>
+        </section>
+      )}
+
+      {error && (
+        <div className="relative z-10 w-full max-w-3xl mx-auto mt-6 px-4">
+          <div
+            className="glass-card px-6 py-4 text-center"
+            style={{ borderColor: 'rgba(107, 29, 42, 0.3)' }}
+          >
+            <p
+              className="text-sm"
+              style={{ color: '#8B3145', fontFamily: 'Poppins, sans-serif' }}
+            >
+              {error}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ══════════════════════════════════════════════
           FEATURE NAVIGATION — All 7 features
@@ -146,26 +175,18 @@ export default function Home() {
       )}
 
       {/* ══════════════════════════════════════════════
-          RESULTS — Pillar cards
+          RESULTS — Pillar cards (full width)
           ══════════════════════════════════════════════ */}
       {(hasResponse || isLoading) && (
-        <section ref={resultsRef} className="relative z-10 w-full px-4 md:px-8 pb-16 mt-8">
-          {/* Section header */}
-          <div className="max-w-7xl mx-auto mb-8">
-            <div className="ornament-divider">
-              <span style={{ fontSize: '0.8rem' }}>&#9766;</span>
-            </div>
-          </div>
-
-          {/* Pillar grid */}
-          <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+        <section ref={resultsRef} className="relative z-10 w-full px-4 md:px-6 lg:px-8 pb-16 pt-6 flex-1">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 md:gap-6 h-full" style={{ alignItems: 'start' }}>
             {PILLAR_ORDER.map((pillar, i) => {
               const pillarData = response?.pillars.find(p => p.pillar === pillar)
               return (
                 <div
                   key={pillar}
                   className="fade-in"
-                  style={{ animationDelay: `${i * 0.15}s` }}
+                  style={{ animationDelay: `${i * 0.1}s` }}
                 >
                   <PillarCard
                     pillar={pillar}

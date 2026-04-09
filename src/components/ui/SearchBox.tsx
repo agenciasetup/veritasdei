@@ -15,9 +15,10 @@ const THEME_CHIPS = [
 interface SearchBoxProps {
   onSearch: (query: string) => void
   isLoading: boolean
+  hideChips?: boolean
 }
 
-export default function SearchBox({ onSearch, isLoading }: SearchBoxProps) {
+export default function SearchBox({ onSearch, isLoading, hideChips }: SearchBoxProps) {
   const [query, setQuery] = useState('')
 
   function handleSubmit(e: React.FormEvent) {
@@ -33,7 +34,7 @@ export default function SearchBox({ onSearch, isLoading }: SearchBoxProps) {
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4">
+    <div className={`w-full ${hideChips ? '' : 'max-w-3xl mx-auto px-4'}`}>
       <form onSubmit={handleSubmit} className="relative">
         <div className="relative">
           <Search
@@ -78,18 +79,20 @@ export default function SearchBox({ onSearch, isLoading }: SearchBoxProps) {
         </div>
       )}
 
-      <div className="mt-6 flex flex-wrap gap-3 justify-center">
-        {THEME_CHIPS.map((theme) => (
-          <button
-            key={theme}
-            onClick={() => handleChipClick(theme)}
-            disabled={isLoading}
-            className="theme-chip"
-          >
-            {theme}
-          </button>
-        ))}
-      </div>
+      {!hideChips && (
+        <div className="mt-6 flex flex-wrap gap-3 justify-center">
+          {THEME_CHIPS.map((theme) => (
+            <button
+              key={theme}
+              onClick={() => handleChipClick(theme)}
+              disabled={isLoading}
+              className="theme-chip"
+            >
+              {theme}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
