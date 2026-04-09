@@ -12,15 +12,18 @@ import LandingPage from '@/components/landing/LandingPage'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { getGreeting } from '@/lib/greetings'
+import SantoDoDia from '@/components/ui/SantoDoDia'
 import {
   Church, Droplets, ScrollText, Tablets, BookOpen, Scale, Heart,
   Sparkles, Lightbulb, ArrowRight, AlertTriangle, ShieldAlert, BookMarked,
+  GraduationCap, MapPin, Users,
 } from 'lucide-react'
 import type { QueryResponse, Pillar } from '@/types'
 
 const PILLAR_ORDER: Pillar[] = ['biblia', 'magisterio', 'patristica']
 
 const FEATURES = [
+  { href: '/trilhas', icon: GraduationCap, title: 'Trilhas', desc: 'Formação católica passo a passo' },
   { href: '/dogmas', icon: Church, title: 'Dogmas', desc: '44 verdades de fé reveladas' },
   { href: '/sacramentos', icon: Droplets, title: 'Sacramentos', desc: '7 sinais eficazes da graça' },
   { href: '/preceitos', icon: ScrollText, title: 'Preceitos', desc: '5 mandamentos da Igreja' },
@@ -28,11 +31,20 @@ const FEATURES = [
   { href: '/oracoes', icon: BookOpen, title: 'Orações', desc: '8 orações fundamentais' },
   { href: '/virtudes-pecados', icon: Scale, title: 'Virtudes e Pecados', desc: '14 virtudes e vícios capitais' },
   { href: '/obras-misericordia', icon: Heart, title: 'Obras de Misericórdia', desc: '14 ações de caridade' },
+  { href: '/paroquias', icon: MapPin, title: 'Paróquias', desc: 'Encontre igrejas perto de você' },
+  { href: '/comunidade', icon: Users, title: 'Comunidade', desc: 'Conecte-se com outros católicos' },
 ]
 
 export default function Home() {
   const { isAuthenticated, isLoading: authLoading, profile } = useAuth()
   const router = useRouter()
+
+  // All hooks must be called before any conditional returns
+  const [response, setResponse] = useState<QueryResponse | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const resultsRef = useRef<HTMLDivElement>(null)
+  const [catechismPopup, setCatechismPopup] = useState<{ ref: string; rect: DOMRect | null } | null>(null)
 
   // Show landing page for unauthenticated users
   if (!authLoading && !isAuthenticated) {
@@ -58,11 +70,6 @@ export default function Home() {
       </div>
     )
   }
-  const [response, setResponse] = useState<QueryResponse | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const resultsRef = useRef<HTMLDivElement>(null)
-  const [catechismPopup, setCatechismPopup] = useState<{ ref: string; rect: DOMRect | null } | null>(null)
 
   async function handleSearch(query: string) {
     setIsLoading(true)
@@ -184,32 +191,46 @@ export default function Home() {
       {!hasResponse && !isLoading && (
         <section className="relative z-10 w-full px-4 md:px-8 pb-16 fade-in">
           <div className="max-w-6xl mx-auto">
+            {/* Santo do Dia */}
+            <div className="max-w-2xl mx-auto mb-10">
+              <SantoDoDia />
+            </div>
+
             <div className="ornament-divider max-w-sm mx-auto mb-10">
               <span style={{ fontSize: '0.7rem' }}>&#10022;</span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 md:gap-6">
+
+            {/* Section Title */}
+            <h2
+              className="text-center text-xs tracking-[0.2em] uppercase mb-6"
+              style={{ fontFamily: 'Cinzel, serif', color: '#7A7368' }}
+            >
+              Explore a Fé Católica
+            </h2>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5">
               {FEATURES.map((item, i) => {
                 const Icon = item.icon
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="feature-card group text-center flex flex-col items-center fade-in"
-                    style={{ animationDelay: `${i * 0.06}s` }}
+                    className="feature-card group text-center flex flex-col items-center fade-in !p-5 md:!p-6"
+                    style={{ animationDelay: `${i * 0.04}s` }}
                   >
                     <div
-                      className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 transition-all duration-300 group-hover:scale-110"
+                      className="w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition-all duration-300 group-hover:scale-110"
                       style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.15)' }}
                     >
-                      <Icon className="w-6 h-6" style={{ color: '#C9A84C' }} />
+                      <Icon className="w-5 h-5" style={{ color: '#C9A84C' }} />
                     </div>
                     <h3
-                      className="text-lg font-bold tracking-wide uppercase mb-2"
+                      className="text-sm font-bold tracking-wide uppercase mb-1"
                       style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
                     >
                       {item.title}
                     </h3>
-                    <p className="text-sm leading-relaxed" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+                    <p className="text-xs leading-relaxed" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
                       {item.desc}
                     </p>
                   </Link>

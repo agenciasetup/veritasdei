@@ -4,7 +4,10 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { Users, Church, HeartHandshake, UserPlus, LogIn, MapPin, Clock, Search } from 'lucide-react'
+import {
+  Users, Church, HeartHandshake, UserPlus, LogIn, MapPin, Clock, Search,
+  BookOpen, GraduationCap, CreditCard, MessageSquare, Crown,
+} from 'lucide-react'
 import type { Paroquia } from '@/types/paroquia'
 
 interface Stats {
@@ -119,7 +122,7 @@ export default function LandingPage() {
       >
         A maior comunidade católica digital do Brasil.
         <br />
-        Encontre igrejas, missas e católicos perto de você.
+        Estudo, formação, comunidade e fé — tudo em um só lugar.
       </p>
 
       {/* ── Counters ── */}
@@ -131,13 +134,51 @@ export default function LandingPage() {
         <CounterCard icon={Church} value={stats.igrejas} label="Igrejas cadastradas" />
       </div>
 
+      {/* ── Value Propositions ── */}
+      <div className="relative z-10 w-full max-w-4xl mb-12 px-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {[
+            { icon: CreditCard, title: 'Carteirinha Católica', desc: 'Sua identidade católica digital com sacramentos, paróquia e vocação.' },
+            { icon: BookOpen, title: 'Biblioteca da Fé', desc: 'Bíblia, Catecismo, Magistério e Patrística em um só lugar.' },
+            { icon: GraduationCap, title: 'Formação Católica', desc: 'Trilhas de estudo: Mariologia, Escatologia, Apologética e mais.' },
+            { icon: Search, title: 'Busca Inteligente', desc: 'Pergunte qualquer dúvida e receba respostas com fontes da Igreja.' },
+            { icon: Church, title: 'Encontre Paróquias', desc: 'Mapa de igrejas, horários de missa e padres de todo o Brasil.' },
+            { icon: MessageSquare, title: 'Comunidade Católica', desc: 'Conecte-se com outros fiéis, compartilhe reflexões e testemunhos.' },
+          ].map(({ icon: Icon, title, desc }) => (
+            <div
+              key={title}
+              className="flex items-start gap-3 p-4 rounded-xl"
+              style={{
+                background: 'rgba(16,16,16,0.5)',
+                border: '1px solid rgba(201,168,76,0.08)',
+              }}
+            >
+              <div
+                className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.15)' }}
+              >
+                <Icon className="w-4 h-4" style={{ color: '#C9A84C' }} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold mb-0.5" style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}>
+                  {title}
+                </h3>
+                <p className="text-xs leading-relaxed" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+                  {desc}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* ── Church Search ── */}
       <div className="relative z-10 w-full max-w-2xl mb-12">
         <h2
           className="text-lg font-bold tracking-wider uppercase text-center mb-4"
           style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
         >
-          Encontre sua Paroquia
+          Encontre sua Paróquia
         </h2>
         <div className="flex gap-2">
           <div className="flex-1 relative">
@@ -184,7 +225,7 @@ export default function LandingPage() {
           <div className="mt-4">
             {searchResults.length === 0 ? (
               <p className="text-sm text-center py-4" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
-                Nenhuma paroquia encontrada em &quot;{searchCity}&quot;. Cadastre-se e ajude a registrar!
+                Nenhuma paróquia encontrada em &quot;{searchCity}&quot;. Cadastre-se e ajude a registrar!
               </p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -264,7 +305,7 @@ export default function LandingPage() {
         className="relative z-10 text-xs text-center mt-8 max-w-sm"
         style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif', lineHeight: 1.7 }}
       >
-        Cadastre-se e garanta seu perfil católico.
+        Cadastre-se e garanta sua carteirinha católica digital.
         <br />
         Ajude a construir o maior censo católico do Brasil.
       </p>

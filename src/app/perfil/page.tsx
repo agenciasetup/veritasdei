@@ -264,7 +264,7 @@ function PerfilContent() {
                 Autorizar Catequistas
               </span>
               <span className="text-xs" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
-                Registre emails de catequistas para verificacao automatica
+                Registre e-mails de catequistas para verificação automática
               </span>
             </div>
           </Link>

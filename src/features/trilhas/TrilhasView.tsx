@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { BookOpen, Church, Droplets, Shield, Heart, GraduationCap, Flame } from 'lucide-react'
+import { BookOpen, Church, Droplets, Shield, Heart, GraduationCap, Flame, Crown, Star, Globe, ScrollText, Sparkles } from 'lucide-react'
 
 interface TrailStep {
   label: string
@@ -111,6 +111,96 @@ const TRAILS: Trail[] = [
       { label: 'O Santo Rosário', href: '/oracoes', description: 'A devoção mariana por excelência' },
     ],
   },
+  {
+    id: 'mariologia',
+    icon: <Crown className="w-7 h-7" />,
+    title: 'Mariologia',
+    subtitle: 'A Virgem Maria na fé católica',
+    description: 'Estudo aprofundado sobre Nossa Senhora: os 4 dogmas marianos, as aparições, devoções e o papel de Maria na história da salvação.',
+    difficulty: 'Intermediário',
+    color: '#4A90D9',
+    steps: [
+      { label: 'Dogmas Marianos', href: '/dogmas', description: 'Imaculada Conceição, Assunção, Maternidade Divina, Virgindade Perpétua' },
+      { label: 'O Santo Rosário', href: '/oracoes', description: 'Mistérios Gozosos, Luminosos, Dolorosos e Gloriosos' },
+      { label: 'Aparições Marianas', href: '/dogmas', description: 'Fátima, Lourdes, Guadalupe, Aparecida' },
+      { label: 'Maria na Sagrada Escritura', href: '/sacramentos', description: 'Maria no Antigo e Novo Testamento' },
+    ],
+  },
+  {
+    id: 'josefologia',
+    icon: <Star className="w-7 h-7" />,
+    title: 'Josefologia',
+    subtitle: 'São José, Patrono da Igreja Universal',
+    description: 'Conheça o esposo da Virgem Maria e pai adotivo de Jesus. Estude suas virtudes, privilégios e a devoção josefina na tradição católica.',
+    difficulty: 'Intermediário',
+    color: '#8B6914',
+    steps: [
+      { label: 'São José na Escritura', href: '/dogmas', description: 'O justo que acolheu o mistério' },
+      { label: 'Virtudes de São José', href: '/virtudes-pecados', description: 'Silêncio, obediência, trabalho e fé' },
+      { label: 'Devoção Josefina', href: '/oracoes', description: 'Orações e consagração a São José' },
+      { label: 'Documentos Magisteriais', href: '/dogmas', description: 'Patris Corde, Redemptoris Custos' },
+    ],
+  },
+  {
+    id: 'escatologia',
+    icon: <Sparkles className="w-7 h-7" />,
+    title: 'Escatologia Católica',
+    subtitle: 'As últimas realidades',
+    description: 'Morte, Juízo, Purgatório, Inferno e Céu. Estude o que a Igreja ensina sobre os novíssimos e o fim dos tempos.',
+    difficulty: 'Avançado',
+    color: '#6B1D2A',
+    steps: [
+      { label: 'Os Novíssimos', href: '/dogmas', description: 'Morte, Juízo, Inferno e Paraíso' },
+      { label: 'O Purgatório', href: '/dogmas', description: 'Fundamentação bíblica e dogmática' },
+      { label: 'Escatologia Individual', href: '/dogmas', description: 'O juízo particular da alma' },
+      { label: 'Escatologia Universal', href: '/dogmas', description: 'A segunda vinda de Cristo e o juízo final' },
+    ],
+  },
+  {
+    id: 'missa',
+    icon: <ScrollText className="w-7 h-7" />,
+    title: 'A Santa Missa',
+    subtitle: 'Entendendo a liturgia',
+    description: 'Compreenda cada parte da Santa Missa: ritos iniciais, liturgia da Palavra, liturgia eucarística e ritos finais.',
+    difficulty: 'Iniciante',
+    color: '#C9A84C',
+    steps: [
+      { label: 'Ritos Iniciais', href: '/sacramentos', description: 'Entrada, saudação, ato penitencial, glória' },
+      { label: 'Liturgia da Palavra', href: '/sacramentos', description: 'Leituras, salmo, evangelho, homilia' },
+      { label: 'Liturgia Eucarística', href: '/sacramentos', description: 'Ofertório, consagração, comunhão' },
+      { label: 'O Sacramento da Eucaristia', href: '/sacramentos', description: 'Presença Real de Cristo' },
+    ],
+  },
+  {
+    id: 'perscrutacao',
+    icon: <BookOpen className="w-7 h-7" />,
+    title: 'Perscrutação das Escrituras',
+    subtitle: 'Lectio Divina e estudo bíblico',
+    description: 'Aprenda os métodos católicos de leitura da Bíblia: Lectio Divina, os quatro sentidos da Escritura e a hermenêutica católica.',
+    difficulty: 'Avançado',
+    color: '#8B3145',
+    steps: [
+      { label: 'Lectio Divina', href: '/oracoes', description: 'Leitura, meditação, oração, contemplação' },
+      { label: 'Os 4 Sentidos da Escritura', href: '/dogmas', description: 'Literal, alegórico, moral e anagógico' },
+      { label: 'Hermenêutica Católica', href: '/dogmas', description: 'Interpretar à luz da Tradição e do Magistério' },
+      { label: 'Livros Deuterocanônicos', href: '/dogmas', description: 'Os livros que os protestantes removeram' },
+    ],
+  },
+  {
+    id: 'latim',
+    icon: <Globe className="w-7 h-7" />,
+    title: 'Latim Eclesiástico',
+    subtitle: 'A língua da Igreja',
+    description: 'Introdução ao latim utilizado na liturgia, documentos pontifícios e orações tradicionais da Igreja.',
+    difficulty: 'Avançado',
+    color: '#C9A84C',
+    steps: [
+      { label: 'Orações em Latim', href: '/oracoes', description: 'Pater Noster, Ave Maria, Gloria Patri' },
+      { label: 'Vocabulário Litúrgico', href: '/sacramentos', description: 'Termos essenciais da Missa e Sacramentos' },
+      { label: 'Expressões Clássicas', href: '/dogmas', description: 'Ex cathedra, filioque, transubstantiatio...' },
+      { label: 'Cantos Gregorianos', href: '/oracoes', description: 'Salve Regina, Tantum Ergo, Adoro Te Devote' },
+    ],
+  },
 ]
 
 const DIFFICULTY_COLORS: Record<string, string> = {
@@ -127,7 +217,7 @@ export default function TrilhasView() {
       <section className="page-header relative z-10">
         <h1>Trilhas de Aprendizado</h1>
         <p className="subtitle">
-          Caminhos estruturados para aprender a fé católica passo a passo. Escolha uma trilha e comece sua jornada.
+          Caminhos estruturados para aprender a fé católica passo a passo. De iniciante a avançado, escolha uma trilha e comece sua jornada de formação.
         </p>
         <div className="ornament-divider max-w-sm mx-auto mt-4">
           <span>&#10022;</span>

@@ -478,3 +478,56 @@ body::after {
     padding: 2.5rem;
   }
 }
+
+/* ═══════════════════════════════════════════════════════
+   MOBILE BOTTOM NAV SPACING
+   ═══════════════════════════════════════════════════════ */
+
+@media (max-width: 767px) {
+  .pb-bottom-nav {
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .pb-bottom-nav {
+    padding-bottom: 0 !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   TOUCH & MOBILE OPTIMIZATIONS
+   ═══════════════════════════════════════════════════════ */
+
+@media (max-width: 767px) {
+  /* Ensure touch targets are at least 44px */
+  button, a, [role="button"] {
+    min-height: 44px;
+  }
+
+  /* Prevent text size adjustment on rotation */
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Smooth momentum scrolling */
+  .overflow-y-auto, .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   COMING SOON BADGE
+   ═══════════════════════════════════════════════════════ */
+
+.badge-coming-soon {
+  background: linear-gradient(135deg, rgba(201,168,76,0.12) 0%, rgba(107,29,42,0.08) 100%);
+  border: 1px solid rgba(201,168,76,0.2);
+  color: #C9A84C;
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+}
