@@ -6,7 +6,9 @@ import { createClient } from '@/lib/supabase/client'
 import AuthGuard from '@/components/auth/AuthGuard'
 import Link from 'next/link'
 import type { Paroquia } from '@/types/paroquia'
-import { Church, MapPin, Clock, Phone, Plus, CheckCircle, XCircle, Hourglass } from 'lucide-react'
+import { Church, MapPin, Clock, Phone, Plus, CheckCircle, XCircle, Hourglass, ChevronLeft, ChevronRight } from 'lucide-react'
+
+const PAGE_SIZE = 18
 
 export default function ParoquiasPage() {
   return (
@@ -22,6 +24,8 @@ function ParoquiasContent() {
   const [paroquias, setParoquias] = useState<Paroquia[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [page, setPage] = useState(0)
+  const [total, setTotal] = useState(0)
 
   const canCreate = profile?.role === 'admin' || profile?.vocacao === 'padre' || profile?.vocacao === 'diacono'
   const isAdmin = profile?.role === 'admin'
@@ -29,16 +33,21 @@ function ParoquiasContent() {
   useEffect(() => {
     if (!supabase) return
     async function load() {
-      const { data } = await supabase!
+      setLoading(true)
+      const { data, count } = await supabase!
         .from('paroquias')
-        .select('id, nome, diocese, cidade, estado, padre_responsavel, telefone, horarios_missa, foto_url, status, criado_por')
+        .select('id, nome, diocese, cidade, estado, padre_responsavel, telefone, horarios_missa, foto_url, status, criado_por', { count: 'exact' })
         .order('created_at', { ascending: false })
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
       setParoquias((data as Paroquia[]) ?? [])
+      setTotal(count ?? 0)
       setLoading(false)
     }
     load()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [page])
+
+  const totalPages = Math.ceil(total / PAGE_SIZE)
 
   const handleApprove = async (id: string) => {
     if (!supabase || !profile) return
@@ -258,6 +267,27 @@ function ParoquiasContent() {
                 )}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-8">
+            <p className="text-xs" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+              Página {page + 1} de {totalPages} ({total} paróquias)
+            </p>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
+                className="p-2 rounded-lg transition-all disabled:opacity-30"
+                style={{ background: 'rgba(201,168,76,0.08)', color: '#C9A84C' }}>
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
+                className="p-2 rounded-lg transition-all disabled:opacity-30"
+                style={{ background: 'rgba(201,168,76,0.08)', color: '#C9A84C' }}>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
       </div>
