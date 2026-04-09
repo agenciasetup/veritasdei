@@ -8,6 +8,8 @@ import PillarCard from '@/components/ui/PillarCard'
 import DisclaimerBanner from '@/components/ui/DisclaimerBanner'
 import RichText from '@/components/ui/RichText'
 import CatechismPopup from '@/components/ui/CatechismPopup'
+import LandingPage from '@/components/landing/LandingPage'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   Church, Droplets, ScrollText, Tablets, BookOpen, Scale, Heart,
   Sparkles, Lightbulb, ArrowRight, AlertTriangle, ShieldAlert, BookMarked,
@@ -27,6 +29,26 @@ const FEATURES = [
 ]
 
 export default function Home() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth()
+
+  // Show landing page for unauthenticated users
+  if (!authLoading && !isAuthenticated) {
+    return <LandingPage />
+  }
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center gap-4">
+          <div
+            className="w-8 h-8 border-2 rounded-full animate-spin"
+            style={{ borderColor: 'rgba(201,168,76,0.2)', borderTopColor: '#C9A84C' }}
+          />
+        </div>
+      </div>
+    )
+  }
   const [response, setResponse] = useState<QueryResponse | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

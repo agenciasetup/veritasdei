@@ -22,10 +22,13 @@ interface AuthState {
   role: UserRole
 }
 
+type OAuthProvider = 'google' | 'facebook' | 'apple'
+
 interface AuthContextValue extends AuthState {
   signUp: (email: string, password: string, name: string) => Promise<{ error: string | null }>
   signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>
   signInWithMagicLink: (email: string) => Promise<{ error: string | null }>
+  signInWithOAuth: (provider: OAuthProvider) => Promise<{ error: string | null }>
   resetPassword: (email: string) => Promise<{ error: string | null }>
   updatePassword: (password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
@@ -58,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           signUp: async () => noopAsync(),
           signInWithPassword: async () => noopAsync(),
           signInWithMagicLink: async () => noopAsync(),
+          signInWithOAuth: async () => noopAsync(),
           resetPassword: async () => noopAsync(),
           updatePassword: async () => noopAsync(),
           signOut: async () => {},
@@ -171,6 +175,16 @@ function AuthProviderInner({
     return { error: error?.message ?? null }
   }
 
+  const signInWithOAuth = async (provider: OAuthProvider) => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+    return { error: error?.message ?? null }
+  }
+
   const signInWithMagicLink = async (email: string) => {
     const { error } = await supabase.auth.signInWithOtp({
       email,
@@ -210,6 +224,7 @@ function AuthProviderInner({
         signUp,
         signInWithPassword,
         signInWithMagicLink,
+        signInWithOAuth,
         resetPassword,
         updatePassword,
         signOut,
