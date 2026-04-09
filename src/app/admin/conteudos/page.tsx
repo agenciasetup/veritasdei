@@ -77,7 +77,8 @@ export default function AdminConteudosPage() {
     }
 
     setLoading(false)
-  }, [supabase, level, selectedGroup, selectedTopic, selectedSubtopic])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [level, selectedGroup, selectedTopic, selectedSubtopic])
 
   useEffect(() => { fetchData() }, [fetchData])
 

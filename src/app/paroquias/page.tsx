@@ -37,7 +37,8 @@ function ParoquiasContent() {
       setLoading(false)
     }
     load()
-  }, [supabase])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleApprove = async (id: string) => {
     if (!supabase || !profile) return

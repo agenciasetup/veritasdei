@@ -70,7 +70,8 @@ function VerificacaoContent() {
       setLoading(false)
     }
     load()
-  }, [supabase, user])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]

@@ -78,7 +78,8 @@ export default function AdminUsuariosPage() {
     setUsers((data as UserRow[]) ?? [])
     setTotal(count ?? 0)
     setLoading(false)
-  }, [supabase, search, filterVocacao, filterRole, filterStatus, page])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, filterVocacao, filterRole, filterStatus, page])
 
   useEffect(() => {
     fetchUsers()

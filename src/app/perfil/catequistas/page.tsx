@@ -53,7 +53,8 @@ function CatequistasContent() {
   useEffect(() => {
     if (!supabase || !user) return
     loadAutorizacoes()
-  }, [supabase, user])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
 
   async function loadAutorizacoes() {
     if (!supabase || !user) return

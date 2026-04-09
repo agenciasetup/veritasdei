@@ -55,7 +55,8 @@ export default function AdminAprovacoesPage() {
       .order('created_at', { ascending: false })
     setVerificacoes((data as Verificacao[]) ?? [])
     setLoading(false)
-  }, [supabase])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const fetchParoquias = useCallback(async () => {
     if (!supabase) return
@@ -67,7 +68,8 @@ export default function AdminAprovacoesPage() {
       .order('created_at', { ascending: false })
     setParoquias((data as ParoquiaPendente[]) ?? [])
     setLoading(false)
-  }, [supabase])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (tab === 'verificacoes') fetchVerificacoes()
