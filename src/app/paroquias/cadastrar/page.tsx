@@ -116,42 +116,49 @@ function CadastrarContent() {
     setSaving(true)
     setError(null)
 
-    const enderecoFormatado = [rua, numero, bairro].filter(Boolean).join(', ')
+    try {
+      const enderecoFormatado = [rua, numero, bairro].filter(Boolean).join(', ')
 
-    const { error: insertError } = await supabase.from('paroquias').insert({
-      nome: nome.trim(),
-      diocese: diocese.trim() || null,
-      endereco: enderecoFormatado || null,
-      rua: rua.trim() || null,
-      numero: numero.trim() || null,
-      bairro: bairro.trim() || null,
-      complemento: complemento.trim() || null,
-      cidade: cidade.trim(),
-      estado,
-      pais: pais.trim() || null,
-      cep: cep.trim() || null,
-      latitude,
-      longitude,
-      padre_responsavel: padreResponsavel.trim() || null,
-      telefone: telefone.trim() || null,
-      email: email.trim() || null,
-      foto_url: fotoUrl,
-      instagram: instagramHandle.trim() || null,
-      facebook: facebookHandle.trim() || null,
-      site: site.trim() || null,
-      informacoes_extras: informacoesExtras.trim() || null,
-      horarios_missa: horarios,
-      criado_por: user.id,
-    })
+      const { error: insertError } = await supabase.from('paroquias').insert({
+        nome: nome.trim(),
+        diocese: diocese.trim() || null,
+        endereco: enderecoFormatado || null,
+        rua: rua.trim() || null,
+        numero: numero.trim() || null,
+        bairro: bairro.trim() || null,
+        complemento: complemento.trim() || null,
+        cidade: cidade.trim(),
+        estado,
+        pais: pais.trim() || null,
+        cep: cep.trim() || null,
+        latitude,
+        longitude,
+        padre_responsavel: padreResponsavel.trim() || null,
+        telefone: telefone.trim() || null,
+        email: email.trim() || null,
+        foto_url: fotoUrl,
+        instagram: instagramHandle.trim() || null,
+        facebook: facebookHandle.trim() || null,
+        site: site.trim() || null,
+        informacoes_extras: informacoesExtras.trim() || null,
+        horarios_missa: horarios,
+        criado_por: user.id,
+      })
 
-    if (insertError) {
-      setError(insertError.message)
+      if (insertError) {
+        console.error('[cadastrar] Insert error:', insertError)
+        setError(insertError.message)
+        setSaving(false)
+        return
+      }
+
+      setSuccess(true)
+    } catch (err) {
+      console.error('[cadastrar] Unexpected error:', err)
+      setError('Erro inesperado ao salvar. Tente novamente.')
+    } finally {
       setSaving(false)
-      return
     }
-
-    setSuccess(true)
-    setSaving(false)
   }
 
   if (!canCreate) {
