@@ -8,7 +8,9 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import type { Trail } from './trails1'
+
+// Legacy imports for fallback
+import type { Trail as LegacyTrail } from './trails1'
 import { TRAILS_1 } from './trails1'
 import { TRAILS_2 } from './trails2'
 import { TRAILS_3 } from './trails3'
@@ -16,10 +18,59 @@ import { TRAILS_4 } from './trails4'
 import { TRAILS_5 } from './trails5'
 import { TRAILS_6 } from './trails6'
 
-const ALL_TRAILS: Trail[] = [
+const LEGACY_TRAILS: LegacyTrail[] = [
   ...TRAILS_1, ...TRAILS_2, ...TRAILS_3,
   ...TRAILS_4, ...TRAILS_5, ...TRAILS_6,
 ]
+
+interface DBTrail {
+  id: string
+  title: string
+  subtitle: string | null
+  description: string | null
+  difficulty: string
+  color: string
+  icon_name: string
+  sort_order: number
+}
+
+interface DBTrailStep {
+  id: string
+  trail_id: string
+  label: string
+  description: string | null
+  content_subtopic_id: string | null
+  custom_content: string | null
+  sort_order: number
+}
+
+interface ContentItem {
+  id: string
+  kind: string
+  title: string | null
+  body: string
+  reference: string | null
+  sort_order: number
+}
+
+// Unified trail type for rendering
+interface Trail {
+  id: string
+  title: string
+  subtitle: string
+  description: string
+  difficulty: string
+  color: string
+  iconName: string
+  steps: TrailStep[]
+}
+
+interface TrailStep {
+  label: string
+  description: string
+  content: string
+  contentSubtopicId?: string | null
+}
 
 const ICON_MAP: Record<string, React.ElementType> = {
   GraduationCap, Droplets, Church, Heart, Shield,
@@ -33,11 +84,77 @@ const DIFFICULTY_COLORS: Record<string, string> = {
 }
 
 export default function TrilhasView() {
+  const [trails, setTrails] = useState<Trail[]>([])
+  const [loading, setLoading] = useState(true)
   const [openTrailId, setOpenTrailId] = useState<string | null>(null)
   const [expandedStep, setExpandedStep] = useState<number | null>(null)
   const [completedSteps, setCompletedSteps] = useState<Record<string, number[]>>({})
+  const [stepContent, setStepContent] = useState<Record<string, string>>({}) // subtopic_id -> rendered text
   const { user } = useAuth()
 
+  // Load trails from DB, fallback to legacy
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) {
+      setTrails(LEGACY_TRAILS.map(t => ({ ...t, steps: t.steps.map(s => ({ ...s, contentSubtopicId: null })) })))
+      setLoading(false)
+      return
+    }
+
+    async function loadTrails() {
+      const supabase = createClient()!
+      // Try DB trails first
+      const { data: dbTrails, error } = await supabase
+        .from('trails')
+        .select('*')
+        .eq('visible', true)
+        .order('sort_order')
+
+      if (error || !dbTrails || dbTrails.length === 0) {
+        // Fallback to legacy hardcoded trails
+        setTrails(LEGACY_TRAILS.map(t => ({ ...t, steps: t.steps.map(s => ({ ...s, contentSubtopicId: null })) })))
+        setLoading(false)
+        return
+      }
+
+      // Load steps for all trails
+      const trailIds = dbTrails.map((t: DBTrail) => t.id)
+      const { data: allSteps } = await supabase
+        .from('trail_steps')
+        .select('*')
+        .in('trail_id', trailIds)
+        .order('sort_order')
+
+      const stepsByTrail: Record<string, DBTrailStep[]> = {}
+      ;(allSteps ?? []).forEach((s: DBTrailStep) => {
+        if (!stepsByTrail[s.trail_id]) stepsByTrail[s.trail_id] = []
+        stepsByTrail[s.trail_id].push(s)
+      })
+
+      const mappedTrails: Trail[] = dbTrails.map((t: DBTrail) => ({
+        id: t.id,
+        title: t.title,
+        subtitle: t.subtitle || '',
+        description: t.description || '',
+        difficulty: t.difficulty,
+        color: t.color,
+        iconName: t.icon_name,
+        steps: (stepsByTrail[t.id] || []).map(s => ({
+          label: s.label,
+          description: s.description || '',
+          content: s.custom_content || '',
+          contentSubtopicId: s.content_subtopic_id,
+        })),
+      }))
+
+      setTrails(mappedTrails)
+      setLoading(false)
+    }
+
+    loadTrails()
+  }, [])
+
+  // Load user progress
   useEffect(() => {
     if (!user) return
     const supabase = createClient()
@@ -56,6 +173,43 @@ export default function TrilhasView() {
         setCompletedSteps(map)
       })
   }, [user])
+
+  // Load content for linked subtopics
+  const loadSubtopicContent = useCallback(async (subtopicId: string) => {
+    if (stepContent[subtopicId]) return // Already loaded
+    const supabase = createClient()
+    if (!supabase) return
+
+    const { data: items } = await supabase
+      .from('content_items')
+      .select('*')
+      .eq('subtopic_id', subtopicId)
+      .eq('visible', true)
+      .order('sort_order')
+
+    if (!items || items.length === 0) return
+
+    // Build text content from items
+    const parts: string[] = []
+    ;(items as ContentItem[]).forEach(item => {
+      if (item.kind === 'text' && item.body) {
+        if (item.title) parts.push(item.title.toUpperCase())
+        parts.push(item.body)
+      } else if (item.kind === 'verse' && item.body) {
+        parts.push(`${item.reference || ''}\n"${item.body}"`)
+      } else if (item.kind === 'definition') {
+        parts.push(`${item.title || ''}: ${item.body}`)
+      } else if (item.kind === 'list') {
+        if (item.title) parts.push(item.title.toUpperCase())
+        parts.push(item.body)
+      } else if (item.kind === 'prayer') {
+        if (item.title) parts.push(item.title.toUpperCase())
+        parts.push(item.body)
+      }
+    })
+
+    setStepContent(prev => ({ ...prev, [subtopicId]: parts.join('\n\n') }))
+  }, [stepContent])
 
   const toggleStepComplete = useCallback(async (trailId: string, stepIndex: number) => {
     if (!user) return
@@ -86,7 +240,16 @@ export default function TrilhasView() {
     }
   }, [user, completedSteps])
 
-  const openTrail = ALL_TRAILS.find(t => t.id === openTrailId)
+  const openTrail = trails.find(t => t.id === openTrailId)
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-8 h-8 border-2 rounded-full animate-spin"
+          style={{ borderColor: 'rgba(201,168,76,0.2)', borderTopColor: '#C9A84C' }} />
+      </div>
+    )
+  }
 
   // ─── TRAIL DETAIL VIEW ───
   if (openTrail) {
@@ -138,6 +301,10 @@ export default function TrilhasView() {
             {openTrail.steps.map((step, si) => {
               const isExpanded = expandedStep === si
               const isDone = completed.includes(si)
+              const displayContent = step.contentSubtopicId
+                ? (stepContent[step.contentSubtopicId] || step.content || 'Carregando conteúdo...')
+                : step.content
+
               return (
                 <div
                   key={si}
@@ -148,7 +315,12 @@ export default function TrilhasView() {
                   }}
                 >
                   <button
-                    onClick={() => setExpandedStep(isExpanded ? null : si)}
+                    onClick={() => {
+                      setExpandedStep(isExpanded ? null : si)
+                      if (!isExpanded && step.contentSubtopicId) {
+                        loadSubtopicContent(step.contentSubtopicId)
+                      }
+                    }}
                     className="w-full flex items-center gap-3 p-4 text-left transition-colors"
                   >
                     <span
@@ -175,7 +347,7 @@ export default function TrilhasView() {
                   {isExpanded && (
                     <div className="px-4 pb-4">
                       <div className="rounded-xl p-5 mb-4" style={{ background: 'rgba(22,18,14,0.6)', border: '1px solid rgba(201,168,76,0.06)' }}>
-                        {step.content.split('\n\n').map((paragraph, pi) => (
+                        {displayContent.split('\n\n').map((paragraph, pi) => (
                           <p key={pi} className="text-sm leading-relaxed mb-3 last:mb-0" style={{ color: '#E8E2D8', fontFamily: 'Poppins, sans-serif', fontWeight: 300 }}>
                             {paragraph}
                           </p>
@@ -221,7 +393,7 @@ export default function TrilhasView() {
 
       <main className="relative z-10 flex-1 pb-16 px-4 md:px-8">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {ALL_TRAILS.map((trail, i) => {
+          {trails.map((trail, i) => {
             const Icon = ICON_MAP[trail.iconName] ?? BookOpen
             const completed = completedSteps[trail.id] ?? []
             const progress = trail.steps.length > 0
@@ -250,7 +422,7 @@ export default function TrilhasView() {
 
                 <span
                   className="self-start text-xs px-3 py-1 rounded-full mb-4"
-                  style={{ background: DIFFICULTY_COLORS[trail.difficulty], color: trail.color, fontFamily: 'Poppins, sans-serif' }}
+                  style={{ background: DIFFICULTY_COLORS[trail.difficulty] || DIFFICULTY_COLORS['Iniciante'], color: trail.color, fontFamily: 'Poppins, sans-serif' }}
                 >
                   {trail.difficulty}
                 </span>

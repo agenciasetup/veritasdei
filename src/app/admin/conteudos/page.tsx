@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   FileText, ChevronRight, Plus, Pencil, Trash2, Eye, EyeOff,
-  ArrowLeft, Save, X, Image, GripVertical,
+  ArrowLeft, Save, X, Image, GripVertical, Download,
 } from 'lucide-react'
 
 type Level = 'groups' | 'topics' | 'subtopics' | 'items'
@@ -19,11 +19,12 @@ const KIND_OPTIONS = [
   { value: 'verse', label: 'Versículo' },
   { value: 'prayer', label: 'Oração' },
   { value: 'definition', label: 'Definição' },
+  { value: 'list', label: 'Lista (itens separados por \\n)' },
   { value: 'quote', label: 'Citação' },
   { value: 'image', label: 'Imagem' },
 ]
 
-const BODY_MAX = 2000
+const BODY_MAX = 10000
 const TITLE_MAX = 120
 const SUBTITLE_MAX = 200
 const DESC_MAX = 500
@@ -48,6 +49,25 @@ export default function AdminConteudosPage() {
   const [editing, setEditing] = useState<Record<string, string | number | boolean | null> | null>(null)
   const [editMode, setEditMode] = useState<'create' | 'edit'>('create')
   const [saving, setSaving] = useState(false)
+
+  // Seed state
+  const [seeding, setSeeding] = useState(false)
+  const [seedMessage, setSeedMessage] = useState<string | null>(null)
+
+  const handleSeed = async () => {
+    if (!confirm('Importar todo o conteúdo padrão? Isso só funciona se o banco estiver vazio.')) return
+    setSeeding(true)
+    setSeedMessage(null)
+    try {
+      const res = await fetch('/api/admin/seed', { method: 'POST' })
+      const data = await res.json()
+      setSeedMessage(data.message || (data.error ?? 'Erro desconhecido'))
+      if (data.success) fetchData()
+    } catch {
+      setSeedMessage('Erro de rede ao importar')
+    }
+    setSeeding(false)
+  }
 
   // Breadcrumb
   const breadcrumb = [
@@ -188,13 +208,31 @@ export default function AdminConteudosPage() {
             {level === 'groups' ? 'Conteúdos' : selectedGroup?.title}
           </h1>
         </div>
-        <button onClick={openCreate}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium transition-all"
-          style={{ background: 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)', color: '#0A0A0A', fontFamily: 'Poppins, sans-serif' }}>
-          <Plus className="w-4 h-4" />
-          Novo {levelLabel}
-        </button>
+        <div className="flex items-center gap-2">
+          {level === 'groups' && groups.length === 0 && (
+            <button onClick={handleSeed} disabled={seeding}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium transition-all"
+              style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.2)', color: '#C9A84C', fontFamily: 'Poppins, sans-serif', opacity: seeding ? 0.5 : 1 }}>
+              {seeding ? <div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(201,168,76,0.2)', borderTopColor: '#C9A84C' }} /> : <Download className="w-4 h-4" />}
+              {seeding ? 'Importando...' : 'Importar Conteúdo Padrão'}
+            </button>
+          )}
+          <button onClick={openCreate}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium transition-all"
+            style={{ background: 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)', color: '#0A0A0A', fontFamily: 'Poppins, sans-serif' }}>
+            <Plus className="w-4 h-4" />
+            Novo {levelLabel}
+          </button>
+        </div>
       </div>
+
+      {/* Seed message */}
+      {seedMessage && (
+        <div className="mb-4 px-4 py-3 rounded-xl text-sm"
+          style={{ background: seedMessage.includes('sucesso') ? 'rgba(76,175,80,0.1)' : 'rgba(217,79,92,0.1)', border: seedMessage.includes('sucesso') ? '1px solid rgba(76,175,80,0.2)' : '1px solid rgba(217,79,92,0.2)', color: seedMessage.includes('sucesso') ? '#66BB6A' : '#D94F5C', fontFamily: 'Poppins, sans-serif' }}>
+          {seedMessage}
+        </div>
+      )}
 
       {/* Loading */}
       {loading && (

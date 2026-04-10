@@ -121,6 +121,50 @@ export default function Sidebar() {
           <>
             {isAuthenticated && profile ? (
               <>
+                {/* Admin Link (only for admins) */}
+                {profile.role === 'admin' && (
+                  <Link
+                    href="/admin/conteudos"
+                    title="Admin"
+                    className="flex items-center gap-3 rounded-xl transition-all duration-200 group relative mb-1"
+                    style={{
+                      padding: expanded ? '10px 14px' : '10px 0',
+                      justifyContent: expanded ? 'flex-start' : 'center',
+                      background: pathname.startsWith('/admin') ? 'rgba(201,168,76,0.1)' : 'transparent',
+                      color: pathname.startsWith('/admin') ? '#C9A84C' : '#C9A84C',
+                    }}
+                  >
+                    <Shield className="w-[18px] h-[18px] flex-shrink-0" />
+                    {expanded && (
+                      <span
+                        className="text-sm whitespace-nowrap font-medium"
+                        style={{ fontFamily: 'Poppins, sans-serif' }}
+                      >
+                        Admin
+                      </span>
+                    )}
+                    {pathname.startsWith('/admin') && (
+                      <span
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full"
+                        style={{ height: '20px', background: '#C9A84C' }}
+                      />
+                    )}
+                    {!expanded && (
+                      <span
+                        className="absolute left-full ml-3 px-3 py-1.5 rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200"
+                        style={{
+                          background: 'rgba(10,10,10,0.95)',
+                          border: '1px solid rgba(201,168,76,0.15)',
+                          color: '#C9A84C',
+                          fontFamily: 'Poppins, sans-serif',
+                        }}
+                      >
+                        Admin
+                      </span>
+                    )}
+                  </Link>
+                )}
+
                 {/* Profile Link */}
                 <Link
                   href="/perfil"
