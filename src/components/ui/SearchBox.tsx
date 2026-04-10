@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Search, Loader2 } from 'lucide-react'
 
 const THEME_CHIPS = [
@@ -12,6 +12,18 @@ const THEME_CHIPS = [
   'Salvação',
 ]
 
+/** Rotating placeholder questions */
+const PLACEHOLDERS = [
+  'Por que rezamos para os santos?',
+  'O que é a Eucaristia de verdade?',
+  'A Bíblia fala do Purgatório?',
+  'Maria teve outros filhos?',
+  'Por que confessar para um padre?',
+  'O que significa Sola Scriptura?',
+  'Pedro foi o primeiro Papa?',
+  'O que a Igreja ensina sobre...',
+]
+
 interface SearchBoxProps {
   onSearch: (query: string) => void
   isLoading: boolean
@@ -20,6 +32,20 @@ interface SearchBoxProps {
 
 export default function SearchBox({ onSearch, isLoading, hideChips }: SearchBoxProps) {
   const [query, setQuery] = useState('')
+  const [placeholderIndex, setPlaceholderIndex] = useState(0)
+
+  // Rotate placeholder every 4 seconds when not in compact mode
+  useEffect(() => {
+    if (hideChips) return
+    const interval = setInterval(() => {
+      setPlaceholderIndex(i => (i + 1) % PLACEHOLDERS.length)
+    }, 4000)
+    return () => clearInterval(interval)
+  }, [hideChips])
+
+  const placeholder = hideChips
+    ? 'Pesquisar na fé católica...'
+    : PLACEHOLDERS[placeholderIndex]
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -45,7 +71,7 @@ export default function SearchBox({ onSearch, isLoading, hideChips }: SearchBoxP
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="O que você quer entender sobre a fé?"
+            placeholder={placeholder}
             disabled={isLoading}
             className="search-input w-full pl-14 pr-16 py-5 text-lg rounded-2xl"
           />
