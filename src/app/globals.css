@@ -587,3 +587,82 @@ main, [role="main"] {
   }
 }
 
+/* ═══════════════════════════════════════════════════════
+   KEYBOARD FOCUS — Visible focus ring for accessibility
+   ═══════════════════════════════════════════════════════ */
+
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Remove outline for mouse/touch interactions */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SKIP LINK — For keyboard-only users
+   ═══════════════════════════════════════════════════════ */
+
+.skip-link {
+  position: fixed;
+  top: -100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  padding: 0.75rem 1.5rem;
+  background: var(--gold);
+  color: #0A0A0A;
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 0 0 8px 8px;
+  transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* ═══════════════════════════════════════════════════════
+   INTERACTIVE HOVER MICROINTERACTIONS
+   ═══════════════════════════════════════════════════════ */
+
+/* Subtle glow on interactive cards */
+.feature-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  opacity: 0;
+  background: radial-gradient(
+    circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(201,168,76,0.06) 0%,
+    transparent 60%
+  );
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.feature-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card:hover::after {
+  opacity: 1;
+}
+
+/* Glass card press feedback */
+.glass-card:active,
+.feature-card:active {
+  transform: scale(0.985);
+}
+
+/* Theme chip press feedback */
+.theme-chip:active:not(:disabled) {
+  transform: scale(0.95);
+}
+

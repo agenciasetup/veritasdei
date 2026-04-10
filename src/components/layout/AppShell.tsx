@@ -26,7 +26,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <Sidebar />
         </div>
       )}
-      <div className={`${showChrome ? 'md:ml-16 pb-bottom-nav' : ''}`}>
+      <div id="main-content" className={`${showChrome ? 'md:ml-16 pb-bottom-nav' : ''}`}>
         {children}
       </div>
       {/* Bottom nav only on mobile */}

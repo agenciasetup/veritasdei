@@ -29,6 +29,9 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col">
+        <a href="#main-content" className="skip-link">
+          Pular para o conteúdo
+        </a>
         <AuthProvider>
           <AppShell>{children}</AppShell>
         </AuthProvider>

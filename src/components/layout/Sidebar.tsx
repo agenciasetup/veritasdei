@@ -61,6 +61,7 @@ export default function Sidebar() {
 
   return (
     <nav
+      aria-label="Menu lateral"
       className="fixed top-0 left-0 z-[100] h-full flex flex-col transition-all duration-300 ease-out"
       style={{
         width: expanded ? '220px' : '64px',
