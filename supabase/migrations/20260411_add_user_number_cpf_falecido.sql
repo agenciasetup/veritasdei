@@ -57,5 +57,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 10. Update RLS policies to allow reading user_number and cpf
--- (existing SELECT policies should already cover new columns)
+-- 10. Allow anonymous users to read profiles (needed for landing page counter)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'profiles' AND policyname = 'profiles_anon_count') THEN
+    CREATE POLICY "profiles_anon_count" ON profiles FOR SELECT TO anon USING (true);
+  END IF;
+END $$;
