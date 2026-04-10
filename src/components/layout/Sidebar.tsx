@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { getDisplayName } from '@/lib/greetings'
 import {
   ChevronLeft, ChevronRight, Home, Church, Droplets, ScrollText,
-  Tablets, BookOpen, Scale, Heart, GraduationCap, MapPin,
+  Tablets, BookOpen, Scale, Heart, GraduationCap, MapPin, Map,
   LogIn, User, LogOut, Shield, Users,
 } from 'lucide-react'
 
@@ -35,6 +35,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Aprender',
     items: [
       { href: '/trilhas', icon: GraduationCap, label: 'Trilhas de Estudo' },
+      { href: '/mapa', icon: Map, label: 'Mapa da Fé' },
       { href: '/dogmas', icon: Church, label: 'Dogmas' },
       { href: '/sacramentos', icon: Droplets, label: 'Sacramentos' },
     ],
