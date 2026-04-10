@@ -14,6 +14,7 @@ import WelcomeGreeting from '@/components/dashboard/WelcomeGreeting'
 import IceBreakers from '@/components/dashboard/IceBreakers'
 import ContinueLearning from '@/components/dashboard/ContinueLearning'
 import FeatureGrid from '@/components/dashboard/FeatureGrid'
+import ProgressOverview from '@/components/dashboard/ProgressOverview'
 import SearchResults from '@/components/dashboard/SearchResults'
 
 import type { QueryResponse } from '@/types'
@@ -121,6 +122,9 @@ export default function Home() {
 
           {/* Continue where you left off */}
           <ContinueLearning userId={user?.id} />
+
+          {/* Study progress overview */}
+          <ProgressOverview userId={user?.id} />
         </section>
       )}
 
