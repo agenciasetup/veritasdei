@@ -29,17 +29,14 @@ export default function LandingPage() {
     const supabase = createClient()
     if (!supabase) return
 
-    // Run all 3 queries in parallel instead of sequential
-    // Católicos: only count profiles with CPF filled AND not falecido
-    Promise.all([
-      supabase.from('profiles').select('*', { count: 'exact', head: true }).not('cpf', 'is', null).eq('falecido', false),
-      supabase.from('profiles').select('*', { count: 'exact', head: true }).not('cpf', 'is', null).eq('falecido', false).eq('veio_de_outra_religiao', true),
-      supabase.from('paroquias').select('*', { count: 'exact', head: true }).eq('status', 'aprovada'),
-    ]).then(([totalRes, convertidosRes, igrejasRes]) => {
+    // Use SECURITY DEFINER function — bypasses RLS safely, returns only counts
+    supabase.rpc('get_landing_stats').then((res: { data: Stats[] | null; error: unknown }) => {
+      if (res.error || !res.data || res.data.length === 0) return
+      const row = res.data[0]
       setStats({
-        catolicos: totalRes.count ?? 0,
-        convertidos: convertidosRes.count ?? 0,
-        igrejas: igrejasRes.count ?? 0,
+        catolicos: Number(row.catolicos) || 0,
+        convertidos: Number(row.convertidos) || 0,
+        igrejas: Number(row.igrejas) || 0,
       })
     }).catch(() => {
       // Stats are non-critical — show zeros on failure
