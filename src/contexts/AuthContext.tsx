@@ -76,6 +76,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthProviderInner supabase={supabase}>{children}</AuthProviderInner>
 }
 
+function getBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL
+  if (typeof window !== 'undefined') return window.location.origin
+  return ''
+}
+
 function AuthProviderInner({
   children,
   supabase,
@@ -151,10 +157,10 @@ function AuthProviderInner({
     // Safety timeout — if auth takes too long, stop blocking the UI
     const timeout = setTimeout(() => {
       if (mountedRef.current && !initDoneRef.current) {
-        console.warn('[Auth] Init timed out after 10s')
+        console.warn('[Auth] Init timed out after 5s')
         setState(prev => prev.isLoading ? { ...prev, isLoading: false } : prev)
       }
-    }, 10000)
+    }, 5000)
 
     // Initial session check
     supabase.auth.getSession().then(async ({ data: { session } }: { data: { session: Session | null } }) => {
@@ -190,7 +196,7 @@ function AuthProviderInner({
       password,
       options: {
         data: { name },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${getBaseUrl()}/auth/callback`,
       },
     })
     return { error: error?.message ?? null }
@@ -205,7 +211,7 @@ function AuthProviderInner({
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${getBaseUrl()}/auth/callback`,
       },
     })
     return { error: error?.message ?? null }
@@ -215,7 +221,7 @@ function AuthProviderInner({
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${getBaseUrl()}/auth/callback`,
       },
     })
     return { error: error?.message ?? null }
@@ -223,7 +229,7 @@ function AuthProviderInner({
 
   const resetPassword = async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/perfil/seguranca`,
+      redirectTo: `${getBaseUrl()}/auth/callback?next=/perfil/seguranca`,
     })
     return { error: error?.message ?? null }
   }

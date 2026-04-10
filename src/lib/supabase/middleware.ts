@@ -11,9 +11,14 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse
   }
 
-  // Skip auth refresh for API routes and public pages
+  // Skip auth refresh for API routes, auth routes, and public pages
   const path = request.nextUrl.pathname
-  if (path.startsWith('/api/') || path === '/privacidade' || path === '/termos') {
+  if (
+    path.startsWith('/api/') ||
+    path.startsWith('/auth/') ||
+    path === '/privacidade' ||
+    path === '/termos'
+  ) {
     return supabaseResponse
   }
 
