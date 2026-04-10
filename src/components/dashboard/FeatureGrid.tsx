@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import {
   GraduationCap, Church, Droplets, Tablets, BookOpen, MapPin,
-  ScrollText, Scale, Heart, Users,
+  ScrollText, Scale, Heart, Users, Map,
 } from 'lucide-react'
 
 /* ─── Primary features (larger cards, always visible) ─── */
@@ -58,6 +58,7 @@ const SECONDARY_FEATURES = [
   { href: '/virtudes-pecados', icon: Scale, title: 'Virtudes e Pecados', desc: 'Virtudes e vícios capitais' },
   { href: '/obras-misericordia', icon: Heart, title: 'Obras de Misericórdia', desc: '14 ações de caridade' },
   { href: '/comunidade', icon: Users, title: 'Comunidade', desc: 'Conecte-se com católicos' },
+  { href: '/mapa', icon: Map, title: 'Mapa da Fé', desc: 'Visualize sua jornada' },
 ]
 
 export default function FeatureGrid() {

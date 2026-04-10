@@ -93,7 +93,7 @@ export default function Home() {
   const hasResponse = response !== null
 
   return (
-    <div className="flex flex-col min-h-screen relative">
+    <main className="flex flex-col min-h-screen relative" role="main">
       <div className="bg-glow" />
 
       {/* Catechism Popup */}
@@ -207,6 +207,6 @@ export default function Home() {
           Veritas Dei — Fiel ao Magistério. Consulte sempre as fontes.
         </p>
       </footer>
-    </div>
+    </main>
   )
 }
