@@ -8,7 +8,8 @@ import { getDisplayName } from '@/lib/greetings'
 import {
   ChevronLeft, ChevronRight, Home, Church, Droplets, ScrollText,
   Tablets, BookOpen, Scale, Heart, GraduationCap, MapPin, Map,
-  LogIn, User, LogOut, Shield, Users,
+  LogIn, User, LogOut, Shield, Users, Cross, ClipboardCheck, BookMarked,
+  Calendar, Library,
 } from 'lucide-react'
 
 /* ─── Navigation structure with groups ─── */
@@ -26,6 +27,7 @@ interface NavGroup {
 
 const NAV_MAIN: NavItem[] = [
   { href: '/', icon: Home, label: 'Início' },
+  { href: '/calendario', icon: Calendar, label: 'Calendário Litúrgico' },
   { href: '/paroquias', icon: MapPin, label: 'Paróquias' },
   { href: '/comunidade', icon: Users, label: 'Comunidade' },
 ]
@@ -38,6 +40,16 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/mapa', icon: Map, label: 'Mapa da Fé' },
       { href: '/dogmas', icon: Church, label: 'Dogmas' },
       { href: '/sacramentos', icon: Droplets, label: 'Sacramentos' },
+      { href: '/catecismo-pio-x', icon: BookMarked, label: 'Catecismo Pio X' },
+      { href: '/sao-tomas', icon: Library, label: 'São Tomás de Aquino' },
+    ],
+  },
+  {
+    label: 'Oração e Sacramentos',
+    items: [
+      { href: '/rosario', icon: Cross, label: 'Santo Rosário' },
+      { href: '/exame-consciencia', icon: ClipboardCheck, label: 'Exame de Consciência' },
+      { href: '/oracoes', icon: BookOpen, label: 'Orações' },
     ],
   },
   {
@@ -45,7 +57,6 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/mandamentos', icon: Tablets, label: 'Mandamentos' },
       { href: '/preceitos', icon: ScrollText, label: 'Preceitos' },
-      { href: '/oracoes', icon: BookOpen, label: 'Orações' },
       { href: '/virtudes-pecados', icon: Scale, label: 'Virtudes e Pecados' },
       { href: '/obras-misericordia', icon: Heart, label: 'Misericórdia' },
     ],

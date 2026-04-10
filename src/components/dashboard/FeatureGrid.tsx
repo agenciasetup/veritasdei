@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import {
   GraduationCap, Church, Droplets, Tablets, BookOpen, MapPin,
-  ScrollText, Scale, Heart, Users, Map,
+  ScrollText, Scale, Heart, Users, Map, Cross, ClipboardCheck, Library,
 } from 'lucide-react'
 
 /* ─── Primary features (larger cards, always visible) ─── */
@@ -37,11 +37,25 @@ const PRIMARY_FEATURES = [
     accent: '#C9A84C',
   },
   {
+    href: '/rosario',
+    icon: Cross,
+    title: 'Santo Rosário',
+    desc: 'Reze o terço meditando os mistérios',
+    accent: '#D9C077',
+  },
+  {
     href: '/oracoes',
     icon: BookOpen,
     title: 'Orações',
     desc: 'As 8 orações fundamentais da fé',
     accent: '#D9C077',
+  },
+  {
+    href: '/exame-consciencia',
+    icon: ClipboardCheck,
+    title: 'Exame de Consciência',
+    desc: 'Prepare-se para a confissão',
+    accent: '#8B3145',
   },
   {
     href: '/paroquias',
@@ -54,6 +68,8 @@ const PRIMARY_FEATURES = [
 
 /* ─── Secondary features (smaller, below the fold) ─── */
 const SECONDARY_FEATURES = [
+  { href: '/catecismo-pio-x', icon: ScrollText, title: 'Catecismo Pio X', desc: 'Doutrina cristã em perguntas e respostas' },
+  { href: '/sao-tomas', icon: Library, title: 'São Tomás', desc: 'Estude a Suma Teológica' },
   { href: '/preceitos', icon: ScrollText, title: 'Preceitos', desc: '5 mandamentos da Igreja' },
   { href: '/virtudes-pecados', icon: Scale, title: 'Virtudes e Pecados', desc: 'Virtudes e vícios capitais' },
   { href: '/obras-misericordia', icon: Heart, title: 'Obras de Misericórdia', desc: '14 ações de caridade' },
