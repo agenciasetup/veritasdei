@@ -11,7 +11,7 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse
   }
 
-  // Skip auth refresh for API routes and public pages — they handle auth themselves
+  // Skip auth refresh for API routes and public pages
   const path = request.nextUrl.pathname
   if (path.startsWith('/api/') || path === '/privacidade' || path === '/termos') {
     return supabaseResponse
@@ -38,11 +38,12 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // Refresh the session — this is critical for Server Components
+  // getUser() validates the session server-side and refreshes tokens if needed.
+  // This is critical — without it, server components see stale/expired sessions.
   try {
     await supabase.auth.getUser()
-  } catch {
-    // Don't block page load if auth refresh fails
+  } catch (err) {
+    console.error('[Middleware] Auth refresh failed:', err)
   }
 
   return supabaseResponse
