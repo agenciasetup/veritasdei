@@ -30,9 +30,10 @@ export default function LandingPage() {
     if (!supabase) return
 
     // Run all 3 queries in parallel instead of sequential
+    // Católicos: only count profiles with CPF filled AND not falecido
     Promise.all([
-      supabase.from('profiles').select('*', { count: 'exact', head: true }),
-      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('veio_de_outra_religiao', true),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).not('cpf', 'is', null).eq('falecido', false),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).not('cpf', 'is', null).eq('falecido', false).eq('veio_de_outra_religiao', true),
       supabase.from('paroquias').select('*', { count: 'exact', head: true }).eq('status', 'aprovada'),
     ]).then(([totalRes, convertidosRes, igrejasRes]) => {
       setStats({

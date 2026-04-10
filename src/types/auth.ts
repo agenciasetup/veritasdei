@@ -46,8 +46,10 @@ export const SACRAMENTOS: { value: Sacramento; label: string }[] = [
 
 export interface Profile {
   id: string
+  user_number: number | null
   name: string | null
   email: string
+  cpf: string | null
   role: UserRole
   status: AccountStatus
   plan: PlanKey
@@ -55,6 +57,7 @@ export interface Profile {
   verified: boolean
   has_password_set: boolean
   onboarding_completed: boolean
+  falecido: boolean
 
   // Pessoal
   profile_image_url: string | null
