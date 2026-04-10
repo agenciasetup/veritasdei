@@ -60,6 +60,8 @@ export default function GooglePlacesAutocomplete({ onSelect }: Props) {
       })
 
       if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        console.error('[GooglePlacesAutocomplete]', res.status, errData)
         setSuggestions([])
         return
       }

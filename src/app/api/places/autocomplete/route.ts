@@ -18,24 +18,66 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ suggestions: [] })
   }
 
-  const res = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
+  // Try Places API (New) first, fallback to legacy
+  const body: Record<string, unknown> = {
+    input: input.trim(),
+    languageCode: 'pt-BR',
+  }
+  if (sessionToken) {
+    body.sessionToken = sessionToken
+  }
+
+  let res = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': apiKey,
     },
-    body: JSON.stringify({
-      input: input.trim(),
-      sessionToken,
-      languageCode: 'pt-BR',
-      includedPrimaryTypes: ['street_address', 'premise', 'subpremise', 'route', 'church'],
-    }),
+    body: JSON.stringify(body),
   })
 
+  // If New API fails, try legacy Places Autocomplete
   if (!res.ok) {
-    const text = await res.text()
-    console.error('[places/autocomplete] Google API error:', res.status, text)
-    return NextResponse.json({ error: 'Erro na busca de endereço.' }, { status: 502 })
+    const errText = await res.text()
+    console.error('[places/autocomplete] New API error:', res.status, errText)
+
+    const legacyUrl = new URL('https://maps.googleapis.com/maps/api/place/autocomplete/json')
+    legacyUrl.searchParams.set('input', input.trim())
+    legacyUrl.searchParams.set('key', apiKey)
+    legacyUrl.searchParams.set('language', 'pt-BR')
+    if (sessionToken) legacyUrl.searchParams.set('sessiontoken', sessionToken)
+
+    res = await fetch(legacyUrl.toString())
+
+    if (!res.ok) {
+      const legacyErr = await res.text()
+      console.error('[places/autocomplete] Legacy API error:', res.status, legacyErr)
+      return NextResponse.json(
+        { error: 'Erro na busca de endereço.', debug: { newApi: errText, legacyApi: legacyErr } },
+        { status: 502 },
+      )
+    }
+
+    // Legacy API response format is different
+    const legacyData = await res.json()
+    if (legacyData.status !== 'OK' && legacyData.status !== 'ZERO_RESULTS') {
+      console.error('[places/autocomplete] Legacy API status:', legacyData.status, legacyData.error_message)
+      return NextResponse.json(
+        { error: legacyData.error_message ?? 'Erro na busca.', debug: { status: legacyData.status } },
+        { status: 502 },
+      )
+    }
+
+    const legacySuggestions = (legacyData.predictions ?? []).map(
+      (p: { place_id: string; description: string; structured_formatting?: { main_text?: string; secondary_text?: string } }) => ({
+        placeId: p.place_id,
+        description: p.description,
+        mainText: p.structured_formatting?.main_text ?? '',
+        secondaryText: p.structured_formatting?.secondary_text ?? '',
+      }),
+    )
+
+    return NextResponse.json({ suggestions: legacySuggestions, api: 'legacy' })
   }
 
   const data = await res.json()
