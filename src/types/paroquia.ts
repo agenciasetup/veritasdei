@@ -10,8 +10,13 @@ export interface Paroquia {
   nome: string
   diocese: string | null
   endereco: string | null
+  rua: string | null
+  numero: string | null
+  bairro: string | null
+  complemento: string | null
   cidade: string
   estado: string
+  pais: string | null
   cep: string | null
   latitude: number | null
   longitude: number | null
