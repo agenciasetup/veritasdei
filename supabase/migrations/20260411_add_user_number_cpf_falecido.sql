@@ -57,14 +57,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 10. Secure function for landing page counter (SECURITY DEFINER bypasses RLS, returns only counts)
-CREATE OR REPLACE FUNCTION get_landing_stats()
-RETURNS TABLE (catolicos bigint, convertidos bigint, igrejas bigint)
-LANGUAGE sql SECURITY DEFINER STABLE
-AS $$
-  SELECT
-    (SELECT COUNT(*) FROM profiles WHERE cpf IS NOT NULL AND falecido = false),
-    (SELECT COUNT(*) FROM profiles WHERE cpf IS NOT NULL AND falecido = false AND veio_de_outra_religiao = true),
-    (SELECT COUNT(*) FROM paroquias WHERE status = 'aprovada');
-$$;
-GRANT EXECUTE ON FUNCTION get_landing_stats TO anon, authenticated;
+-- 10. Allow anonymous users to read profiles (needed for landing page counter)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'profiles' AND policyname = 'profiles_anon_count') THEN
+    CREATE POLICY "profiles_anon_count" ON profiles FOR SELECT TO anon USING (true);
+  END IF;
+END $$;
