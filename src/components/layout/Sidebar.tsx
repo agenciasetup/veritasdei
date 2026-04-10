@@ -11,18 +11,44 @@ import {
   LogIn, User, LogOut, Shield, Users,
 } from 'lucide-react'
 
-const NAV_ITEMS = [
+/* ─── Navigation structure with groups ─── */
+
+interface NavItem {
+  href: string
+  icon: React.ElementType
+  label: string
+}
+
+interface NavGroup {
+  label: string
+  items: NavItem[]
+}
+
+const NAV_MAIN: NavItem[] = [
   { href: '/', icon: Home, label: 'Início' },
   { href: '/paroquias', icon: MapPin, label: 'Paróquias' },
-  { href: '/trilhas', icon: GraduationCap, label: 'Trilhas' },
   { href: '/comunidade', icon: Users, label: 'Comunidade' },
-  { href: '/dogmas', icon: Church, label: 'Dogmas' },
-  { href: '/sacramentos', icon: Droplets, label: 'Sacramentos' },
-  { href: '/preceitos', icon: ScrollText, label: 'Preceitos' },
-  { href: '/mandamentos', icon: Tablets, label: 'Mandamentos' },
-  { href: '/oracoes', icon: BookOpen, label: 'Orações' },
-  { href: '/virtudes-pecados', icon: Scale, label: 'Virtudes e Pecados' },
-  { href: '/obras-misericordia', icon: Heart, label: 'Obras de Misericórdia' },
+]
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: 'Aprender',
+    items: [
+      { href: '/trilhas', icon: GraduationCap, label: 'Trilhas de Estudo' },
+      { href: '/dogmas', icon: Church, label: 'Dogmas' },
+      { href: '/sacramentos', icon: Droplets, label: 'Sacramentos' },
+    ],
+  },
+  {
+    label: 'Referência',
+    items: [
+      { href: '/mandamentos', icon: Tablets, label: 'Mandamentos' },
+      { href: '/preceitos', icon: ScrollText, label: 'Preceitos' },
+      { href: '/oracoes', icon: BookOpen, label: 'Orações' },
+      { href: '/virtudes-pecados', icon: Scale, label: 'Virtudes e Pecados' },
+      { href: '/obras-misericordia', icon: Heart, label: 'Misericórdia' },
+    ],
+  },
 ]
 
 export default function Sidebar() {
@@ -43,7 +69,7 @@ export default function Sidebar() {
         borderRight: '1px solid rgba(201,168,76,0.08)',
       }}
     >
-      {/* Logo area */}
+      {/* Logo */}
       <div className="flex items-center justify-center h-16 flex-shrink-0">
         {expanded ? (
           <span
@@ -57,119 +83,75 @@ export default function Sidebar() {
         )}
       </div>
 
-      {/* Divider */}
       <div className="mx-3 h-px" style={{ background: 'rgba(201,168,76,0.1)' }} />
 
-      {/* Nav items */}
-      <div className="flex-1 flex flex-col gap-1 px-2 pt-4 overflow-y-auto">
-        {NAV_ITEMS.map((item) => {
-          const isActive = pathname === item.href
-          const Icon = item.icon
-          return (
-            <Link
+      {/* Scrollable nav area */}
+      <div className="flex-1 flex flex-col px-2 pt-3 overflow-y-auto">
+
+        {/* ── Main nav items ── */}
+        <div className="flex flex-col gap-0.5">
+          {NAV_MAIN.map((item) => (
+            <SidebarLink
               key={item.href}
-              href={item.href}
-              title={item.label}
-              className="flex items-center gap-3 rounded-xl transition-all duration-200 group relative"
-              style={{
-                padding: expanded ? '10px 14px' : '10px 0',
-                justifyContent: expanded ? 'flex-start' : 'center',
-                background: isActive ? 'rgba(201,168,76,0.1)' : 'transparent',
-                color: isActive ? '#C9A84C' : '#7A7368',
-              }}
-            >
-              <Icon className="w-[18px] h-[18px] flex-shrink-0" />
-              {expanded && (
-                <span
-                  className="text-sm whitespace-nowrap"
-                  style={{ fontFamily: 'Poppins, sans-serif' }}
-                >
-                  {item.label}
-                </span>
-              )}
-              {/* Active indicator */}
-              {isActive && (
-                <span
-                  className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full"
-                  style={{ height: '20px', background: '#C9A84C' }}
+              item={item}
+              pathname={pathname}
+              expanded={expanded}
+            />
+          ))}
+        </div>
+
+        {/* ── Grouped sections ── */}
+        {NAV_GROUPS.map((group) => (
+          <div key={group.label} className="mt-4">
+            {/* Group label */}
+            {expanded ? (
+              <p
+                className="text-[10px] tracking-[0.15em] uppercase px-3 mb-1.5"
+                style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+              >
+                {group.label}
+              </p>
+            ) : (
+              <div className="mx-3 h-px my-2" style={{ background: 'rgba(201,168,76,0.06)' }} />
+            )}
+            <div className="flex flex-col gap-0.5">
+              {group.items.map((item) => (
+                <SidebarLink
+                  key={item.href}
+                  item={item}
+                  pathname={pathname}
+                  expanded={expanded}
                 />
-              )}
-              {/* Tooltip when collapsed */}
-              {!expanded && (
-                <span
-                  className="absolute left-full ml-3 px-3 py-1.5 rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200"
-                  style={{
-                    background: 'rgba(10,10,10,0.95)',
-                    border: '1px solid rgba(201,168,76,0.15)',
-                    color: '#C9A84C',
-                    fontFamily: 'Poppins, sans-serif',
-                  }}
-                >
-                  {item.label}
-                </span>
-              )}
-            </Link>
-          )
-        })}
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* User Section */}
+      {/* ── User section ── */}
       <div className="flex-shrink-0 px-2 pb-2">
-        <div className="mx-1 h-px mb-3" style={{ background: 'rgba(201,168,76,0.1)' }} />
+        <div className="mx-1 h-px mb-2" style={{ background: 'rgba(201,168,76,0.1)' }} />
 
         {!isLoading && (
           <>
             {isAuthenticated && profile ? (
               <>
-                {/* Admin Link (only for admins) */}
+                {/* Admin */}
                 {profile.role === 'admin' && (
-                  <Link
-                    href="/admin/conteudos"
-                    title="Admin"
-                    className="flex items-center gap-3 rounded-xl transition-all duration-200 group relative mb-1"
-                    style={{
-                      padding: expanded ? '10px 14px' : '10px 0',
-                      justifyContent: expanded ? 'flex-start' : 'center',
-                      background: pathname.startsWith('/admin') ? 'rgba(201,168,76,0.1)' : 'transparent',
-                      color: pathname.startsWith('/admin') ? '#C9A84C' : '#C9A84C',
-                    }}
-                  >
-                    <Shield className="w-[18px] h-[18px] flex-shrink-0" />
-                    {expanded && (
-                      <span
-                        className="text-sm whitespace-nowrap font-medium"
-                        style={{ fontFamily: 'Poppins, sans-serif' }}
-                      >
-                        Admin
-                      </span>
-                    )}
-                    {pathname.startsWith('/admin') && (
-                      <span
-                        className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full"
-                        style={{ height: '20px', background: '#C9A84C' }}
-                      />
-                    )}
-                    {!expanded && (
-                      <span
-                        className="absolute left-full ml-3 px-3 py-1.5 rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200"
-                        style={{
-                          background: 'rgba(10,10,10,0.95)',
-                          border: '1px solid rgba(201,168,76,0.15)',
-                          color: '#C9A84C',
-                          fontFamily: 'Poppins, sans-serif',
-                        }}
-                      >
-                        Admin
-                      </span>
-                    )}
-                  </Link>
+                  <SidebarLink
+                    item={{ href: '/admin/conteudos', icon: Shield, label: 'Admin' }}
+                    pathname={pathname}
+                    expanded={expanded}
+                    matchPrefix="/admin"
+                    forceGold
+                  />
                 )}
 
-                {/* Profile Link */}
+                {/* Profile */}
                 <Link
                   href="/perfil"
                   title="Meu Perfil"
-                  className="flex items-center gap-3 rounded-xl transition-all duration-200 group relative mb-1"
+                  className="flex items-center gap-3 rounded-xl transition-all duration-200 group relative mb-0.5"
                   style={{
                     padding: expanded ? '10px 14px' : '10px 0',
                     justifyContent: expanded ? 'flex-start' : 'center',
@@ -188,39 +170,11 @@ export default function Sidebar() {
                     <User className="w-[18px] h-[18px] flex-shrink-0" />
                   )}
                   {expanded && (
-                    <div className="flex-1 min-w-0">
-                      <span
-                        className="text-sm whitespace-nowrap block truncate"
-                        style={{ fontFamily: 'Poppins, sans-serif' }}
-                      >
-                        {getDisplayName(profile.vocacao, profile.name) || 'Meu Perfil'}
-                      </span>
-                      {profile.role === 'admin' && (
-                        <span className="flex items-center gap-1 text-[10px]" style={{ color: '#C9A84C' }}>
-                          <Shield className="w-2.5 h-2.5" /> Admin
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  {pathname === '/perfil' && (
-                    <span
-                      className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full"
-                      style={{ height: '20px', background: '#C9A84C' }}
-                    />
-                  )}
-                  {!expanded && (
-                    <span
-                      className="absolute left-full ml-3 px-3 py-1.5 rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200"
-                      style={{
-                        background: 'rgba(10,10,10,0.95)',
-                        border: '1px solid rgba(201,168,76,0.15)',
-                        color: '#C9A84C',
-                        fontFamily: 'Poppins, sans-serif',
-                      }}
-                    >
-                      Meu Perfil
+                    <span className="text-sm whitespace-nowrap truncate" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                      {getDisplayName(profile.vocacao, profile.name) || 'Meu Perfil'}
                     </span>
                   )}
+                  <SidebarTooltip expanded={expanded} label="Meu Perfil" />
                 </Link>
 
                 {/* Logout */}
@@ -240,65 +194,24 @@ export default function Sidebar() {
                       Sair
                     </span>
                   )}
-                  {!expanded && (
-                    <span
-                      className="absolute left-full ml-3 px-3 py-1.5 rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200"
-                      style={{
-                        background: 'rgba(10,10,10,0.95)',
-                        border: '1px solid rgba(201,168,76,0.15)',
-                        color: '#C9A84C',
-                        fontFamily: 'Poppins, sans-serif',
-                      }}
-                    >
-                      Sair
-                    </span>
-                  )}
+                  <SidebarTooltip expanded={expanded} label="Sair" />
                 </button>
               </>
             ) : (
-              /* Login Button */
-              <Link
-                href="/login"
-                title="Entrar"
-                className="flex items-center gap-3 rounded-xl transition-all duration-200 group relative"
-                style={{
-                  padding: expanded ? '10px 14px' : '10px 0',
-                  justifyContent: expanded ? 'flex-start' : 'center',
-                  background: pathname === '/login' ? 'rgba(201,168,76,0.1)' : 'transparent',
-                  color: pathname === '/login' ? '#C9A84C' : '#C9A84C',
-                }}
-              >
-                <LogIn className="w-[18px] h-[18px] flex-shrink-0" />
-                {expanded && (
-                  <span
-                    className="text-sm whitespace-nowrap font-medium"
-                    style={{ fontFamily: 'Poppins, sans-serif' }}
-                  >
-                    Entrar
-                  </span>
-                )}
-                {!expanded && (
-                  <span
-                    className="absolute left-full ml-3 px-3 py-1.5 rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200"
-                    style={{
-                      background: 'rgba(10,10,10,0.95)',
-                      border: '1px solid rgba(201,168,76,0.15)',
-                      color: '#C9A84C',
-                      fontFamily: 'Poppins, sans-serif',
-                    }}
-                  >
-                    Entrar
-                  </span>
-                )}
-              </Link>
+              <SidebarLink
+                item={{ href: '/login', icon: LogIn, label: 'Entrar' }}
+                pathname={pathname}
+                expanded={expanded}
+                forceGold
+              />
             )}
           </>
         )}
       </div>
 
-      {/* Expand/Collapse toggle */}
+      {/* Collapse toggle */}
       <div className="flex-shrink-0 px-2 pb-4">
-        <div className="mx-1 h-px mb-3" style={{ background: 'rgba(201,168,76,0.1)' }} />
+        <div className="mx-1 h-px mb-2" style={{ background: 'rgba(201,168,76,0.1)' }} />
         <button
           onClick={() => setExpanded(!expanded)}
           className="w-full flex items-center gap-3 rounded-xl py-2 transition-all duration-200"
@@ -320,5 +233,74 @@ export default function Sidebar() {
         </button>
       </div>
     </nav>
+  )
+}
+
+/* ─── Reusable sidebar link ─── */
+
+function SidebarLink({
+  item,
+  pathname,
+  expanded,
+  matchPrefix,
+  forceGold,
+}: {
+  item: NavItem
+  pathname: string
+  expanded: boolean
+  matchPrefix?: string
+  forceGold?: boolean
+}) {
+  const isActive = matchPrefix
+    ? pathname.startsWith(matchPrefix)
+    : pathname === item.href
+  const Icon = item.icon
+  const textColor = forceGold ? '#C9A84C' : isActive ? '#C9A84C' : '#7A7368'
+
+  return (
+    <Link
+      href={item.href}
+      title={item.label}
+      className="flex items-center gap-3 rounded-xl transition-all duration-200 group relative"
+      style={{
+        padding: expanded ? '10px 14px' : '10px 0',
+        justifyContent: expanded ? 'flex-start' : 'center',
+        background: isActive ? 'rgba(201,168,76,0.1)' : 'transparent',
+        color: textColor,
+      }}
+    >
+      <Icon className="w-[18px] h-[18px] flex-shrink-0" />
+      {expanded && (
+        <span className="text-sm whitespace-nowrap truncate" style={{ fontFamily: 'Poppins, sans-serif' }}>
+          {item.label}
+        </span>
+      )}
+      {isActive && (
+        <span
+          className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full"
+          style={{ height: '20px', background: '#C9A84C' }}
+        />
+      )}
+      <SidebarTooltip expanded={expanded} label={item.label} />
+    </Link>
+  )
+}
+
+/* ─── Tooltip for collapsed state ─── */
+
+function SidebarTooltip({ expanded, label }: { expanded: boolean; label: string }) {
+  if (expanded) return null
+  return (
+    <span
+      className="absolute left-full ml-3 px-3 py-1.5 rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200"
+      style={{
+        background: 'rgba(10,10,10,0.95)',
+        border: '1px solid rgba(201,168,76,0.15)',
+        color: '#C9A84C',
+        fontFamily: 'Poppins, sans-serif',
+      }}
+    >
+      {label}
+    </span>
   )
 }
