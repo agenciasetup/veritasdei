@@ -12,8 +12,9 @@ import { VocacaoIcon } from '@/components/icons/VocacaoIcons'
 import {
   User, Camera, Save, Church, MapPin, Heart, BookOpen,
   CheckCircle, Phone, Calendar, Shield, AtSign, GraduationCap,
-  Share2, CreditCard,
+  Share2, CreditCard, FileText,
 } from 'lucide-react'
+import { isValidCpf, maskCpf, stripCpf } from '@/lib/utils/cpf'
 import Link from 'next/link'
 
 type MainTab = 'editar' | 'carteirinha'
@@ -48,10 +49,14 @@ function PerfilContent() {
   // Form state
   const [form, setForm] = useState<ProfileUpdate>({})
 
+  const [cpfDisplay, setCpfDisplay] = useState('')
+  const [cpfError, setCpfError] = useState('')
+
   useEffect(() => {
     if (profile) {
       setForm({
         name: profile.name ?? '',
+        cpf: profile.cpf ?? '',
         vocacao: profile.vocacao,
         genero: profile.genero,
         data_nascimento: profile.data_nascimento,
@@ -71,6 +76,7 @@ function PerfilContent() {
         religiao_anterior: profile.religiao_anterior ?? '',
         comunidade: profile.comunidade ?? '',
       })
+      setCpfDisplay(profile.cpf ? maskCpf(profile.cpf) : '')
     }
   }, [profile])
 
@@ -89,11 +95,25 @@ function PerfilContent() {
 
   const handleSave = async () => {
     if (!user) return
+
+    // Validate CPF if provided
+    const cpfRaw = stripCpf(cpfDisplay)
+    if (cpfRaw.length > 0 && !isValidCpf(cpfRaw)) {
+      setCpfError('CPF inválido. Verifique os dígitos.')
+      return
+    }
+    setCpfError('')
+
     setSaving(true)
+
+    const updateData = {
+      ...form,
+      cpf: cpfRaw.length === 11 ? cpfRaw : null,
+    }
 
     const { error } = await supabase
       .from('profiles')
-      .update(form)
+      .update(updateData)
       .eq('id', user.id)
 
     if (!error) {
@@ -345,12 +365,76 @@ function PerfilContent() {
                 <div className="space-y-5">
                   <SectionTitle icon={User} title="Dados Pessoais" />
 
+                  {/* User ID badge */}
+                  {profile?.user_number && (
+                    <div
+                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
+                      style={{
+                        background: 'rgba(201,168,76,0.08)',
+                        border: '1px solid rgba(201,168,76,0.15)',
+                        color: '#C9A84C',
+                        fontFamily: 'Poppins, sans-serif',
+                      }}
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      ID: #{String(profile.user_number).padStart(6, '0')}
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormInput
                       label="Nome completo"
                       value={(form.name as string) ?? ''}
                       onChange={(v) => updateField('name', v)}
                     />
+                    <div>
+                      <label
+                        className="block text-xs mb-2 tracking-wider uppercase"
+                        style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}
+                      >
+                        CPF <span style={{ color: '#C9A84C', fontSize: '10px' }}>(obrigatório para contagem)</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#7A7368' }}>
+                          <FileText className="w-4 h-4" />
+                        </span>
+                        <input
+                          type="text"
+                          value={cpfDisplay}
+                          onChange={(e) => {
+                            const masked = maskCpf(e.target.value)
+                            setCpfDisplay(masked)
+                            setCpfError('')
+                          }}
+                          placeholder="000.000.000-00"
+                          maxLength={14}
+                          className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200"
+                          style={{
+                            background: 'rgba(10,10,10,0.6)',
+                            border: cpfError
+                              ? '1px solid rgba(220,38,38,0.5)'
+                              : '1px solid rgba(201,168,76,0.12)',
+                            color: '#F2EDE4',
+                            fontFamily: 'Poppins, sans-serif',
+                            outline: 'none',
+                            paddingLeft: '2.5rem',
+                          }}
+                          onFocus={(e) => {
+                            e.target.style.borderColor = cpfError ? 'rgba(220,38,38,0.7)' : 'rgba(201,168,76,0.4)'
+                            e.target.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.08)'
+                          }}
+                          onBlur={(e) => {
+                            e.target.style.borderColor = cpfError ? 'rgba(220,38,38,0.5)' : 'rgba(201,168,76,0.12)'
+                            e.target.style.boxShadow = 'none'
+                          }}
+                        />
+                      </div>
+                      {cpfError && (
+                        <p className="text-xs mt-1.5" style={{ color: '#EF4444', fontFamily: 'Poppins, sans-serif' }}>
+                          {cpfError}
+                        </p>
+                      )}
+                    </div>
                     <FormSelect
                       label="Gênero"
                       value={form.genero ?? ''}
@@ -922,12 +1006,22 @@ function CarteirinhaCard({ profile }: { profile: ReturnType<typeof useAuth>['pro
 
             {/* Footer */}
             <div className="flex items-center justify-between">
-              <p
-                className="text-[10px] tracking-wider uppercase"
-                style={{ fontFamily: 'Cinzel, serif', color: '#8B7355' }}
-              >
-                {memberSince ? `Membro desde ${memberSince}` : 'Membro'}
-              </p>
+              <div>
+                {profile?.user_number && (
+                  <p
+                    className="text-[10px] tracking-wider uppercase font-bold"
+                    style={{ fontFamily: 'Cinzel, serif', color: '#6B1D2A' }}
+                  >
+                    ID #{String(profile.user_number).padStart(6, '0')}
+                  </p>
+                )}
+                <p
+                  className="text-[10px] tracking-wider uppercase"
+                  style={{ fontFamily: 'Cinzel, serif', color: '#8B7355' }}
+                >
+                  {memberSince ? `Membro desde ${memberSince}` : 'Membro'}
+                </p>
+              </div>
               <div
                 className="w-6 h-6 rounded-full flex items-center justify-center"
                 style={{ background: 'rgba(107,29,42,0.06)', border: '1px solid rgba(201,168,76,0.25)' }}
