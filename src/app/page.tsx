@@ -14,6 +14,8 @@ import WelcomeGreeting from '@/components/dashboard/WelcomeGreeting'
 import IceBreakers from '@/components/dashboard/IceBreakers'
 import ContinueLearning from '@/components/dashboard/ContinueLearning'
 import FeatureGrid from '@/components/dashboard/FeatureGrid'
+import ProgressOverview from '@/components/dashboard/ProgressOverview'
+import StudyStreak from '@/components/dashboard/StudyStreak'
 import SearchResults from '@/components/dashboard/SearchResults'
 
 import type { QueryResponse } from '@/types'
@@ -91,7 +93,7 @@ export default function Home() {
   const hasResponse = response !== null
 
   return (
-    <div className="flex flex-col min-h-screen relative">
+    <main className="flex flex-col min-h-screen relative" role="main">
       <div className="bg-glow" />
 
       {/* Catechism Popup */}
@@ -121,6 +123,12 @@ export default function Home() {
 
           {/* Continue where you left off */}
           <ContinueLearning userId={user?.id} />
+
+          {/* Study progress overview */}
+          <ProgressOverview userId={user?.id} />
+
+          {/* Study streak */}
+          <StudyStreak userId={user?.id} />
         </section>
       )}
 
@@ -199,6 +207,6 @@ export default function Home() {
           Veritas Dei — Fiel ao Magistério. Consulte sempre as fontes.
         </p>
       </footer>
-    </div>
+    </main>
   )
 }

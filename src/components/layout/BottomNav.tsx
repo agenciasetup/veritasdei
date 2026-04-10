@@ -21,6 +21,7 @@ export default function BottomNav() {
 
   return (
     <nav
+      aria-label="Navegação principal"
       className="fixed bottom-0 left-0 right-0 z-[100] flex items-center justify-around md:hidden"
       style={{
         background: 'rgba(10,10,10,0.95)',
@@ -68,6 +69,8 @@ export default function BottomNav() {
           <Link
             key={item.href}
             href={item.href}
+            aria-label={item.label}
+            aria-current={isActive ? 'page' : undefined}
             className="flex flex-col items-center gap-0.5 py-2 px-3 transition-colors relative"
             style={{ color: isActive ? '#C9A84C' : '#7A7368' }}
           >
