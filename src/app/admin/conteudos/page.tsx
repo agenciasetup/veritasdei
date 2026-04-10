@@ -54,12 +54,16 @@ export default function AdminConteudosPage() {
   const [seeding, setSeeding] = useState(false)
   const [seedMessage, setSeedMessage] = useState<string | null>(null)
 
-  const handleSeed = async () => {
-    if (!confirm('Importar todo o conteúdo padrão? Isso só funciona se o banco estiver vazio.')) return
+  const handleSeed = async (force = false) => {
+    const msg = force
+      ? 'ATENÇÃO: Isso vai DELETAR TODO o conteúdo existente e reimportar do zero. Continuar?'
+      : 'Importar todo o conteúdo padrão?'
+    if (!confirm(msg)) return
     setSeeding(true)
     setSeedMessage(null)
     try {
-      const res = await fetch('/api/admin/seed', { method: 'POST' })
+      const url = force ? '/api/admin/seed?force=true' : '/api/admin/seed'
+      const res = await fetch(url, { method: 'POST' })
       const data = await res.json()
       setSeedMessage(data.message || (data.error ?? 'Erro desconhecido'))
       if (data.success) fetchData()
@@ -209,12 +213,12 @@ export default function AdminConteudosPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          {level === 'groups' && groups.length === 0 && (
-            <button onClick={handleSeed} disabled={seeding}
+          {level === 'groups' && (
+            <button onClick={() => handleSeed(groups.length > 0)} disabled={seeding}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium transition-all"
               style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.2)', color: '#C9A84C', fontFamily: 'Poppins, sans-serif', opacity: seeding ? 0.5 : 1 }}>
               {seeding ? <div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(201,168,76,0.2)', borderTopColor: '#C9A84C' }} /> : <Download className="w-4 h-4" />}
-              {seeding ? 'Importando...' : 'Importar Conteúdo Padrão'}
+              {seeding ? 'Importando...' : groups.length > 0 ? 'Re-importar Conteúdo' : 'Importar Conteúdo Padrão'}
             </button>
           )}
           <button onClick={openCreate}
