@@ -12,7 +12,7 @@ import LandingPage from '@/components/landing/LandingPage'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import { getGreeting } from '@/lib/greetings'
-import SantoDoDia from '@/components/ui/SantoDoDia'
+// SantoDoDia moved to LiturgicalBar in AppShell
 import {
   Church, Droplets, ScrollText, Tablets, BookOpen, Scale, Heart,
   Sparkles, Lightbulb, ArrowRight, AlertTriangle, ShieldAlert, BookMarked,
@@ -191,15 +191,6 @@ export default function Home() {
       {!hasResponse && !isLoading && (
         <section className="relative z-10 w-full px-4 md:px-8 pb-16 fade-in">
           <div className="max-w-6xl mx-auto">
-            {/* Santo do Dia */}
-            <div className="max-w-2xl mx-auto mb-10">
-              <SantoDoDia />
-            </div>
-
-            <div className="ornament-divider max-w-sm mx-auto mb-10">
-              <span style={{ fontSize: '0.7rem' }}>&#10022;</span>
-            </div>
-
             {/* Section Title */}
             <h2
               className="text-center text-xs tracking-[0.2em] uppercase mb-6"
