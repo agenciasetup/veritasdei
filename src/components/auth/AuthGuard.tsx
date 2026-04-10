@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -12,16 +12,20 @@ interface AuthGuardProps {
 export default function AuthGuard({ children, requireAdmin = false }: AuthGuardProps) {
   const { isAuthenticated, isAdmin, isLoading } = useAuth()
   const router = useRouter()
+  const redirectedRef = useRef(false)
 
   useEffect(() => {
     if (isLoading) return
+    if (redirectedRef.current) return
 
     if (!isAuthenticated) {
+      redirectedRef.current = true
       router.push('/login')
       return
     }
 
     if (requireAdmin && !isAdmin) {
+      redirectedRef.current = true
       router.push('/')
     }
   }, [isAuthenticated, isAdmin, isLoading, requireAdmin, router])

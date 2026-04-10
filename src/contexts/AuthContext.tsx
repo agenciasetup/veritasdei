@@ -6,6 +6,7 @@ import {
   useEffect,
   useState,
   useCallback,
+  useRef,
   type ReactNode,
 } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -52,7 +53,6 @@ const noopAsync = async () => ({ error: 'Supabase not configured' as string | nu
 export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = createClient()
 
-  // If Supabase isn't configured (e.g. during build/prerender), render children with default state
   if (!supabase) {
     return (
       <AuthContext.Provider
@@ -88,25 +88,53 @@ function AuthProviderInner({
     isLoading: true,
   })
 
-  const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
+  const mountedRef = useRef(true)
+  const initDoneRef = useRef(false)
 
-    if (error) {
-      console.error('Error fetching profile:', error.message)
+  const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+
+      if (error) {
+        console.error('[Auth] Error fetching profile:', error.message)
+        return null
+      }
+      return data as Profile
+    } catch (err) {
+      console.error('[Auth] Profile fetch exception:', err)
       return null
     }
-    return data as Profile
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [supabase])
+
+  const setAuthState = useCallback(async (session: Session | null) => {
+    if (!mountedRef.current) return
+
+    if (session?.user) {
+      const profile = await fetchProfile(session.user.id)
+      if (!mountedRef.current) return
+      setState({
+        user: session.user,
+        profile,
+        session,
+        isAuthenticated: true,
+        isAdmin: profile?.role === 'admin',
+        isLoading: false,
+        role: profile?.role ?? 'user',
+      })
+    } else {
+      setState({ ...DEFAULT_STATE, isLoading: false })
+    }
+  }, [fetchProfile])
 
   const refreshProfile = useCallback(async () => {
-    if (!state.user) return
-    const profile = await fetchProfile(state.user.id)
-    if (profile) {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.user || !mountedRef.current) return
+    const profile = await fetchProfile(session.user.id)
+    if (profile && mountedRef.current) {
       setState(prev => ({
         ...prev,
         profile,
@@ -114,67 +142,47 @@ function AuthProviderInner({
         role: profile.role,
       }))
     }
-  }, [state.user, fetchProfile])
+  }, [supabase, fetchProfile])
 
   useEffect(() => {
-    // Timeout: if auth takes longer than 8s, stop loading and show page
-    const timeout = setTimeout(() => {
-      setState(prev => {
-        if (prev.isLoading) {
-          console.warn('[AuthProvider] Auth check timed out after 8s')
-          return { ...prev, isLoading: false }
-        }
-        return prev
-      })
-    }, 8000)
+    mountedRef.current = true
+    initDoneRef.current = false
 
+    // Safety timeout — if auth takes too long, stop blocking the UI
+    const timeout = setTimeout(() => {
+      if (mountedRef.current && !initDoneRef.current) {
+        console.warn('[Auth] Init timed out after 10s')
+        setState(prev => prev.isLoading ? { ...prev, isLoading: false } : prev)
+      }
+    }, 10000)
+
+    // Initial session check
     supabase.auth.getSession().then(async ({ data: { session } }: { data: { session: Session | null } }) => {
-      if (session?.user) {
-        const profile = await fetchProfile(session.user.id)
-        setState({
-          user: session.user,
-          profile,
-          session,
-          isAuthenticated: true,
-          isAdmin: profile?.role === 'admin',
-          isLoading: false,
-          role: profile?.role ?? 'user',
-        })
-      } else {
+      initDoneRef.current = true
+      await setAuthState(session)
+    }).catch((err: unknown) => {
+      console.error('[Auth] getSession failed:', err)
+      initDoneRef.current = true
+      if (mountedRef.current) {
         setState(prev => ({ ...prev, isLoading: false }))
       }
-    }).catch((err: unknown) => {
-      console.error('[AuthProvider] getSession failed:', err)
-      setState(prev => ({ ...prev, isLoading: false }))
     })
 
+    // Listen for auth changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event: string, session: Session | null) => {
-        if (session?.user) {
-          const profile = await fetchProfile(session.user.id)
-          setState({
-            user: session.user,
-            profile,
-            session,
-            isAuthenticated: true,
-            isAdmin: profile?.role === 'admin',
-            isLoading: false,
-            role: profile?.role ?? 'user',
-          })
-        } else {
-          setState({
-            ...DEFAULT_STATE,
-            isLoading: false,
-          })
-        }
+      async (event: string, session: Session | null) => {
+        // Skip INITIAL_SESSION since we handle it above via getSession
+        if (event === 'INITIAL_SESSION') return
+        await setAuthState(session)
       }
     )
 
     return () => {
+      mountedRef.current = false
       clearTimeout(timeout)
       subscription.unsubscribe()
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [supabase, setAuthState])
 
   const signUp = async (email: string, password: string, name: string) => {
     const { error } = await supabase.auth.signUp({
@@ -232,7 +240,13 @@ function AuthProviderInner({
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    // Clear local state immediately to avoid stale UI
+    setState({ ...DEFAULT_STATE, isLoading: false })
+    try {
+      await supabase.auth.signOut()
+    } catch (err) {
+      console.error('[Auth] signOut error:', err)
+    }
   }
 
   return (

@@ -18,7 +18,8 @@ export async function createServerSupabaseClient() {
               cookieStore.set(name, value, options)
             )
           } catch {
-            // setAll can fail in Server Components — safe to ignore
+            // This fails in Server Components (read-only cookies) — expected.
+            // Middleware handles token refresh so this is safe to ignore.
           }
         },
       },
