@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import type { HorarioMissa } from '@/types/paroquia'
+import GooglePlacesAutocomplete, { type AddressData } from '@/components/GooglePlacesAutocomplete'
 
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 const ESTADOS_BR = [
@@ -40,10 +41,16 @@ function CadastrarContent() {
 
   const [nome, setNome] = useState('')
   const [diocese, setDiocese] = useState('')
-  const [endereco, setEndereco] = useState('')
+  const [rua, setRua] = useState('')
+  const [numero, setNumero] = useState('')
+  const [bairro, setBairro] = useState('')
+  const [complemento, setComplemento] = useState('')
   const [cidade, setCidade] = useState('')
   const [estado, setEstado] = useState('')
+  const [pais, setPais] = useState('')
   const [cep, setCep] = useState('')
+  const [latitude, setLatitude] = useState<number | null>(null)
+  const [longitude, setLongitude] = useState<number | null>(null)
   const [padreResponsavel, setPadreResponsavel] = useState('')
   const [telefone, setTelefone] = useState('')
   const [email, setEmail] = useState('')
@@ -54,6 +61,18 @@ function CadastrarContent() {
   const [informacoesExtras, setInformacoesExtras] = useState('')
   const [horarios, setHorarios] = useState<HorarioMissa[]>([{ dia: 'Domingo', horario: '08:00' }])
   const [error, setError] = useState<string | null>(null)
+
+  const handlePlaceSelect = (data: AddressData) => {
+    setRua(data.rua)
+    setNumero(data.numero)
+    setBairro(data.bairro)
+    setCidade(data.cidade)
+    setEstado(data.estado)
+    setPais(data.pais)
+    setCep(data.cep)
+    setLatitude(data.latitude)
+    setLongitude(data.longitude)
+  }
 
   const addHorario = () => setHorarios(prev => [...prev, { dia: 'Domingo', horario: '08:00' }])
   const removeHorario = (i: number) => setHorarios(prev => prev.filter((_, idx) => idx !== i))
@@ -97,13 +116,22 @@ function CadastrarContent() {
     setSaving(true)
     setError(null)
 
+    const enderecoFormatado = [rua, numero, bairro].filter(Boolean).join(', ')
+
     const { error: insertError } = await supabase.from('paroquias').insert({
       nome: nome.trim(),
       diocese: diocese.trim() || null,
-      endereco: endereco.trim() || null,
+      endereco: enderecoFormatado || null,
+      rua: rua.trim() || null,
+      numero: numero.trim() || null,
+      bairro: bairro.trim() || null,
+      complemento: complemento.trim() || null,
       cidade: cidade.trim(),
       estado,
+      pais: pais.trim() || null,
       cep: cep.trim() || null,
+      latitude,
+      longitude,
       padre_responsavel: padreResponsavel.trim() || null,
       telefone: telefone.trim() || null,
       email: email.trim() || null,
@@ -259,7 +287,25 @@ function CadastrarContent() {
             style={{ background: 'rgba(16,16,16,0.7)', border: '1px solid rgba(201,168,76,0.1)' }}
           >
             <SectionTitle icon={MapPin} label="Endereço" />
-            <Field label="Endereço" value={endereco} onChange={setEndereco} placeholder="Rua, número, bairro" />
+
+            <div>
+              <label className="block text-xs mb-2 tracking-wider uppercase" style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}>
+                Buscar Endereço
+              </label>
+              <GooglePlacesAutocomplete onSelect={handlePlaceSelect} />
+              <p className="text-xs mt-1.5" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+                Selecione uma sugestão para preencher os campos automaticamente
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_120px] gap-4">
+              <Field label="Rua" value={rua} onChange={setRua} placeholder="Nome da rua" />
+              <Field label="Número" value={numero} onChange={setNumero} placeholder="Nº" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Bairro" value={bairro} onChange={setBairro} placeholder="Bairro" />
+              <Field label="Complemento" value={complemento} onChange={setComplemento} placeholder="Apto, sala, bloco..." />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Cidade *" value={cidade} onChange={setCidade} placeholder="Cidade" required />
               <div>
@@ -276,7 +322,10 @@ function CadastrarContent() {
                 </select>
               </div>
             </div>
-            <Field label="CEP" value={cep} onChange={setCep} placeholder="00000-000" />
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="País" value={pais} onChange={setPais} placeholder="País" />
+              <Field label="CEP" value={cep} onChange={setCep} placeholder="00000-000" />
+            </div>
           </div>
 
           {/* Horários de Missa */}
