@@ -4,11 +4,12 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useEffect } from 'react'
-import { Users, FileText, CheckSquare, ArrowLeft, Shield } from 'lucide-react'
+import { Users, FileText, CheckSquare, ArrowLeft, Shield, GraduationCap } from 'lucide-react'
 
 const ADMIN_NAV = [
   { href: '/admin/usuarios', icon: Users, label: 'Usuários' },
   { href: '/admin/conteudos', icon: FileText, label: 'Conteúdos' },
+  { href: '/admin/trilhas', icon: GraduationCap, label: 'Trilhas' },
   { href: '/admin/aprovacoes', icon: CheckSquare, label: 'Aprovações' },
 ]
 
