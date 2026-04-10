@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { usePathname } from 'next/navigation'
 import Sidebar from './Sidebar'
 import BottomNav from './BottomNav'
+import LiturgicalBar from './LiturgicalBar'
 
 const PUBLIC_PATHS = ['/login', '/auth', '/privacidade', '/termos', '/onboarding']
 
@@ -12,21 +13,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
   const isPublicPage = PUBLIC_PATHS.some(p => pathname.startsWith(p))
-  const showSidebar = isAuthenticated && !isPublicPage
+  const showChrome = isAuthenticated && !isPublicPage
 
   return (
     <>
+      {/* Liturgical bar at the very top */}
+      {showChrome && <LiturgicalBar />}
+
       {/* Sidebar only on md+ screens */}
-      {showSidebar && (
+      {showChrome && (
         <div className="hidden md:block">
           <Sidebar />
         </div>
       )}
-      <div className={`${showSidebar ? 'md:ml-16 pb-bottom-nav' : ''}`}>
+      <div className={`${showChrome ? 'md:ml-16 pb-bottom-nav' : ''}`}>
         {children}
       </div>
       {/* Bottom nav only on mobile */}
-      {showSidebar && <BottomNav />}
+      {showChrome && <BottomNav />}
     </>
   )
 }
