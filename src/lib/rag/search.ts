@@ -2,6 +2,7 @@ import { generateEmbedding } from '../openai/embeddings'
 import { openai } from '../openai/client'
 import { buildRAGPrompt } from './prompt'
 import { disambiguateQuery } from './disambiguation'
+import { understandQuery, searchKnowledgeBase, extractBibleRefsFromKnowledge } from './query-understanding'
 import { isSensitiveTopic } from '../utils/sensitive-topics'
 import type { QueryResponse, SearchResult, AIInsight, ProtestantView } from '@/types'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
@@ -333,44 +334,126 @@ function groupRelatedVerses(results: RawResult[]): RawResult[] {
 export async function searchCorpus(query: string): Promise<QueryResponse> {
   const supabase = getSupabaseAdmin()
 
-  // 1. Disambiguate names and enrich query
-  const disambiguation = disambiguateQuery(query)
-  const searchQuery = disambiguation.wasDisambiguated
-    ? disambiguation.enrichedQuery
-    : query
-
   console.log('[search] Query:', query)
-  if (disambiguation.wasDisambiguated) {
-    console.log('[search] Disambiguated:', {
-      enrichedQuery: searchQuery.substring(0, 100),
-      notes: disambiguation.promptNotes.length,
-      books: disambiguation.preferredBooks,
-      testament: disambiguation.testamentFilter,
+
+  // ============================================================
+  // PHASE 1: Understand the question (AI + Knowledge Base)
+  // Run AI understanding and keyword disambiguation in parallel.
+  // AI understanding is the PRIMARY source of truth for the topic;
+  // keyword disambiguation is the FALLBACK.
+  // ============================================================
+  const [aiUnderstanding, disambiguation] = await Promise.all([
+    understandQuery(query),
+    Promise.resolve(disambiguateQuery(query)),
+  ])
+
+  // Determine the search query: AI understanding takes priority
+  let searchQuery: string
+  let promptNotes: string[] = []
+  let mustIncludeRefs: string[] = []
+  let preferredBooks: string[] = []
+  let testamentFilter: string | null = null
+  let knowledgeContext: string | null = null
+  let objectionContext: string | null = null
+
+  if (aiUnderstanding) {
+    // AI understood the question — use its refined search query
+    searchQuery = aiUnderstanding.searchQuery
+    objectionContext = aiUnderstanding.objectionContext
+
+    console.log('[search] AI Understanding:', {
+      primaryTopic: aiUnderstanding.primaryTopic,
+      searchQuery: searchQuery.substring(0, 100),
+      isObjection: aiUnderstanding.isObjection,
+      objection: aiUnderstanding.objectionContext?.substring(0, 80),
+      keywords: aiUnderstanding.knowledgeKeywords,
     })
+
+    // Search the curated knowledge base for the identified topic
+    const knowledgeMatches = await searchKnowledgeBase(
+      supabase,
+      aiUnderstanding.knowledgeKeywords,
+      aiUnderstanding.primaryTopic,
+    )
+
+    if (knowledgeMatches.length > 0) {
+      // Extract curated Bible references from knowledge base
+      const knowledgeRefs = extractBibleRefsFromKnowledge(knowledgeMatches)
+      mustIncludeRefs.push(...knowledgeRefs)
+
+      // Use the core teaching as context for the RAG prompt
+      knowledgeContext = knowledgeMatches
+        .map(m => `[${m.topic}] ${m.core_teaching}`)
+        .join('\n\n')
+
+      console.log(`[search] Knowledge base: ${knowledgeMatches.length} matches, ${knowledgeRefs.length} curated refs`)
+    }
+
+    // Still merge disambiguation data as supplementary context
+    if (disambiguation.wasDisambiguated) {
+      promptNotes.push(...disambiguation.promptNotes)
+      preferredBooks.push(...disambiguation.preferredBooks)
+      if (disambiguation.testamentFilter) {
+        testamentFilter = disambiguation.testamentFilter
+      }
+      // Only add disambiguation must-include refs if they don't conflict
+      // with the AI-identified topic
+      if (knowledgeMatches.length === 0) {
+        mustIncludeRefs.push(...disambiguation.mustIncludeRefs)
+      }
+    }
+  } else {
+    // AI understanding failed — fall back to keyword disambiguation
+    console.warn('[search] AI understanding failed, using keyword disambiguation fallback')
+    searchQuery = disambiguation.wasDisambiguated
+      ? disambiguation.enrichedQuery
+      : query
+    promptNotes = disambiguation.promptNotes
+    mustIncludeRefs = disambiguation.mustIncludeRefs
+    preferredBooks = disambiguation.preferredBooks
+    testamentFilter = disambiguation.testamentFilter
+
+    if (disambiguation.wasDisambiguated) {
+      console.log('[search] Disambiguated (fallback):', {
+        enrichedQuery: searchQuery.substring(0, 100),
+        notes: disambiguation.promptNotes.length,
+        books: disambiguation.preferredBooks,
+        testament: disambiguation.testamentFilter,
+      })
+    }
   }
 
-  // 2. Generate embedding for the enriched query
+  // Deduplicate must-include refs
+  mustIncludeRefs = [...new Set(mustIncludeRefs)]
+
+  // ============================================================
+  // PHASE 2: Generate embedding from the REFINED query
+  // The searchQuery is now focused on the true topic, not polluted
+  // by surface-level keywords like "idolatria" when the topic is
+  // actually "Eucaristia".
+  // ============================================================
   let queryEmbedding: number[]
   try {
     queryEmbedding = await generateEmbedding(searchQuery)
   } catch (err) {
     console.error('[search] Embedding generation failed:', err)
-    // If embedding fails, we can still do keyword search for Bible
     queryEmbedding = []
   }
 
-  // 3. Execute all searches in parallel
+  // ============================================================
+  // PHASE 3: Execute all searches in parallel
+  // ============================================================
   const hasEmbedding = queryEmbedding.length > 0
-  const hasMustInclude = disambiguation.mustIncludeRefs.length > 0
+  const hasMustInclude = mustIncludeRefs.length > 0
 
   const [bibliaVectorResult, catecismoRaw, magisterioRaw, patristicaRaw, bibliaKeywordResult, mustIncludeResult] =
     await Promise.all([
-      // Vector search for Bible
+      // Vector search for Bible (using refined embedding)
       hasEmbedding
         ? searchBibliaVector(supabase, queryEmbedding, 7, 0.42)
         : Promise.resolve({ data: [] as RawResult[], error: 'No embedding' }),
 
-      // Catecismo vector search (small table, reliable)
+      // Catecismo vector search
       hasEmbedding
         ? supabase.rpc('search_catecismo', {
             query_embedding: queryEmbedding,
@@ -388,7 +471,7 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
           } as Record<string, unknown>)
         : Promise.resolve({ data: [], error: null }),
 
-      // Patristica vector search (tiny table, reliable)
+      // Patristica vector search
       hasEmbedding
         ? supabase.rpc('search_patristica', {
             query_embedding: queryEmbedding,
@@ -397,34 +480,36 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
           } as Record<string, unknown>)
         : Promise.resolve({ data: [], error: null }),
 
-      // Keyword fallback for Bible (always runs as backup)
+      // Keyword fallback for Bible (uses original query for keyword extraction)
       searchBibliaKeyword(
         supabase,
-        query,
-        disambiguation.preferredBooks,
-        disambiguation.testamentFilter,
+        aiUnderstanding ? aiUnderstanding.searchQuery : query,
+        preferredBooks,
+        testamentFilter,
         8
       ),
 
-      // Must-include references: fetch essential verses by exact reference
+      // Must-include references from knowledge base + disambiguation
       hasMustInclude
-        ? fetchMustIncludeVerses(supabase, disambiguation.mustIncludeRefs)
+        ? fetchMustIncludeVerses(supabase, mustIncludeRefs)
         : Promise.resolve([] as RawResult[]),
     ])
 
-  // Log errors from other searches
+  // Log errors
   if (catecismoRaw.error) console.error('[search] catecismo error:', catecismoRaw.error)
   if (magisterioRaw.error) console.error('[search] magisterio error:', magisterioRaw.error)
   if (patristicaRaw.error) console.error('[search] patristica error:', patristicaRaw.error)
 
-  // 4. Combine Bible results: must-include + vector + keyword
+  // ============================================================
+  // PHASE 4: Combine & deduplicate results
+  // Must-include from knowledge base gets top priority.
+  // ============================================================
   const bibliaVectorResults = bibliaVectorResult.data
   const bibliaKeywordResults = bibliaKeywordResult
 
-  // Must-include verses get top priority (theologically essential)
   const allBibliaSources = [
-    ...mustIncludeResult,      // Priority 1: essential verses for the topic
-    ...bibliaVectorResults,    // Priority 2: semantically similar
+    ...mustIncludeResult,      // Priority 1: curated essential verses
+    ...bibliaVectorResults,    // Priority 2: semantically similar (from refined query)
     ...bibliaKeywordResults,   // Priority 3: keyword matches
   ]
 
@@ -437,7 +522,6 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
     bibliaResults = []
   }
 
-  // Group related verses
   bibliaResults = groupRelatedVerses(bibliaResults)
 
   const catecismoResults: RawResult[] = catecismoRaw.data ?? []
@@ -448,20 +532,24 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
     .sort((a, b) => b.similarity - a.similarity)
     .slice(0, 5)
 
-  // 5. Build prompt with disambiguation context
+  // ============================================================
+  // PHASE 5: Build RAG prompt with full context
+  // Includes: knowledge base context, objection info, disambiguation
+  // ============================================================
   const prompt = buildRAGPrompt(
     query,
     bibliaResults.map(r => ({ reference: r.reference, text: r.text_pt ?? r.text ?? '' })),
     allMagisterioResults.map(r => ({ reference: r.reference, text: r.text ?? '' })),
     patristicaResults.map(r => ({ reference: r.reference, text: r.text ?? '' })),
-    disambiguation.promptNotes
+    promptNotes,
+    knowledgeContext,
+    objectionContext,
   )
 
   const totalResults = bibliaResults.length + allMagisterioResults.length + patristicaResults.length
   console.log(`[search] Total results: ${totalResults} (biblia: ${bibliaResults.length}, magistério: ${allMagisterioResults.length}, patrística: ${patristicaResults.length})`)
 
   let insight: AIInsight | null = null
-  // Only call OpenAI when we have source material to synthesize
   if (totalResults > 0) {
     try {
       const completion = await openai.chat.completions.create({

@@ -3,10 +3,20 @@ export function buildRAGPrompt(
   bibliaResults: Array<{ reference: string; text: string }>,
   magisterioResults: Array<{ reference: string; text: string }>,
   patristicaResults: Array<{ reference: string; text: string }>,
-  disambiguationNotes: string[] = []
+  disambiguationNotes: string[] = [],
+  knowledgeContext: string | null = null,
+  objectionContext: string | null = null,
 ): string {
   const disambiguationSection = disambiguationNotes.length > 0
     ? `\nNOTAS DE DESAMBIGUAÇÃO (SIGA RIGOROSAMENTE):\n${disambiguationNotes.map((n, i) => `${i + 1}. ${n}`).join('\n')}\n`
+    : ''
+
+  const knowledgeSection = knowledgeContext
+    ? `\nBASE DE CONHECIMENTO CURADA (use como guia teológico principal):\n${knowledgeContext}\n`
+    : ''
+
+  const objectionSection = objectionContext
+    ? `\nOBJEÇÃO IDENTIFICADA NA PERGUNTA:\nO usuário levanta a seguinte objeção/dúvida: "${objectionContext}"\nIMPORTANTE: Responda PRIMEIRO o tema central com clareza, e DEPOIS aborde a objeção diretamente, mostrando por que ela não procede à luz da doutrina católica.\n`
     : ''
 
   return `Você é um professor de teologia católica fiel ao Magistério da Igreja.
@@ -19,6 +29,12 @@ IDENTIDADE:
 - NÃO invente informações. Baseie-se nos trechos fornecidos.
 - Use formatação rica: **negrito** para termos importantes, *itálico* para ênfase, quebre em parágrafos com \\n\\n.
 
+REGRA CRÍTICA DE COERÊNCIA:
+- Todos os versículos, parágrafos do catecismo e citações patrísticas devem estar DIRETAMENTE relacionados ao TEMA CENTRAL da pergunta.
+- NÃO cite fontes que só tangenciam o tema ou que se relacionam apenas com palavras isoladas da pergunta.
+- Se a pergunta menciona "idolatria" mas o tema é Eucaristia, os versículos devem ser sobre EUCARISTIA, não sobre idolatria.
+- Prefira QUALIDADE sobre QUANTIDADE: 5 versículos bem contextualizados valem mais que 10 soltos.
+${knowledgeSection}${objectionSection}
 REGRAS DE QUALIDADE PARA VERSÍCULOS:
 - NUNCA jogue versículos soltos sem explicação. Cada versículo citado DEVE ser contextualizado.
 - Explique QUEM está falando, PARA QUEM, em qual CONTEXTO histórico e teológico.
@@ -54,7 +70,7 @@ ${patristicaResults.length > 0
 
 Responda OBRIGATORIAMENTE em JSON puro (sem markdown fences, sem backticks):
 {
-  "summary": "Explicação católica detalhada com formatação rica.\\n\\nUse **negrito** para termos-chave. Use *itálico* para ênfase. Separe parágrafos com \\n\\n. Comece respondendo a pergunta diretamente. Cite fontes com [Referência]. Explique o PORQUÊ, não apenas o quê. Contextualize cada versículo: quem fala, para quem, em que contexto. Conecte os versículos entre si formando um argumento coerente. Mínimo 3 parágrafos bem desenvolvidos.",
+  "summary": "Explicação católica detalhada com formatação rica.\\n\\nUse **negrito** para termos-chave. Use *itálico* para ênfase. Separe parágrafos com \\n\\n. Comece respondendo a pergunta diretamente. Cite fontes com [Referência]. Explique o PORQUÊ, não apenas o quê. Contextualize cada versículo: quem fala, para quem, em que contexto. Conecte os versículos entre si formando um argumento coerente. Mínimo 3 parágrafos bem desenvolvidos.${objectionContext ? ' INCLUA um parágrafo específico abordando a objeção levantada pelo usuário.' : ''}",
   "keyPoints": ["Ponto 1 — máximo 1 frase clara", "Ponto 2", "Ponto 3", "Ponto 4"],
   "relatedTopics": ["Tema 1", "Tema 2", "Tema 3"],
   "sourceContext": {
