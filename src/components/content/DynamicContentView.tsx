@@ -9,6 +9,8 @@ import {
   type ContentSubtopic,
   type ContentItem,
 } from '@/lib/content/useContentGroup'
+import { useContentProgress } from '@/lib/content/useContentProgress'
+import { useAuth } from '@/contexts/AuthContext'
 import ImmersiveReader from './ImmersiveReader'
 
 // ─── Loading spinner ───
@@ -40,6 +42,8 @@ export default function DynamicContentView({ groupSlug }: { groupSlug: string })
   const { group, topics, loading: groupLoading } = useContentGroup(groupSlug)
   const [selectedTopic, setSelectedTopic] = useState<ContentTopic | null>(null)
   const [selectedSubtopic, setSelectedSubtopic] = useState<(ContentSubtopic & { items: ContentItem[] }) | null>(null)
+  const { user } = useAuth()
+  const { isStudied, markStudied } = useContentProgress(user?.id, groupSlug)
 
   const { subtopics, loading: topicLoading } = useTopicFullContent(selectedTopic?.id ?? null)
 
@@ -193,6 +197,8 @@ export default function DynamicContentView({ groupSlug }: { groupSlug: string })
             subtitle={currentSubtopic.subtitle || undefined}
             description={currentSubtopic.description || undefined}
             items={currentSubtopic.items}
+            onMarkStudied={user ? () => markStudied(currentSubtopic.id) : undefined}
+            isStudied={isStudied(currentSubtopic.id)}
           />
         )}
       </main>
