@@ -128,31 +128,25 @@ function getFallbackData(): LiturgicalData {
 }
 
 export default function SantoDoDia() {
-  const [data, setData] = useState<LiturgicalData>({
-    saintName: '',
-    saintTitle: '',
-    feastType: '',
-    liturgicalColor: 'verde',
-    date: '',
-    loading: true,
-    error: false,
-  })
+  // Show fallback data IMMEDIATELY — no loading spinner
+  const [data, setData] = useState<LiturgicalData>(getFallbackData)
 
   useEffect(() => {
-    // Try to fetch from the Liturgical Calendar API
+    // Try to enrich with API data in background (non-blocking)
+    const controller = new AbortController()
+
     async function fetchLiturgical() {
       try {
         const now = new Date()
         const year = now.getFullYear()
         const url = `https://litcal.johnromanodorazio.com/api/dev/calendar?year=${year}&locale=pt_BR&returntype=json`
 
-        const res = await fetch(url, { signal: AbortSignal.timeout(5000) })
-        if (!res.ok) throw new Error('API error')
+        const res = await fetch(url, { signal: controller.signal })
+        if (!res.ok) return
 
         const json = await res.json()
         const today = now.toISOString().split('T')[0]
 
-        // Find today's celebration in the API response
         const events = json?.LitCal ?? json?.litcal ?? {}
         let bestMatch: { name: string; grade: number; color: string } | null = null
 
@@ -183,16 +177,18 @@ export default function SantoDoDia() {
             loading: false,
             error: false,
           })
-          return
         }
       } catch {
-        // API failed, use fallback
+        // API failed — fallback is already showing
       }
-
-      setData(getFallbackData())
     }
 
-    fetchLiturgical()
+    // Small delay so it doesn't compete with critical page loads
+    const timer = setTimeout(fetchLiturgical, 2000)
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
   }, [])
 
   const hoje = new Date().toLocaleDateString('pt-BR', {
@@ -202,21 +198,6 @@ export default function SantoDoDia() {
   })
 
   const colorInfo = COLOR_MAP[data.liturgicalColor] ?? COLOR_MAP.verde
-
-  if (data.loading) {
-    return (
-      <div className="rounded-2xl p-6 md:p-7"
-        style={{ background: 'rgba(16,16,16,0.75)', border: '1px solid rgba(201,168,76,0.12)' }}>
-        <div className="flex items-center gap-3">
-          <div className="skeleton w-11 h-11 !rounded-xl" />
-          <div className="space-y-2 flex-1">
-            <div className="skeleton h-4 w-48" />
-            <div className="skeleton h-3 w-32" />
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div

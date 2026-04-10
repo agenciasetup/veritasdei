@@ -117,6 +117,17 @@ function AuthProviderInner({
   }, [state.user, fetchProfile])
 
   useEffect(() => {
+    // Timeout: if auth takes longer than 8s, stop loading and show page
+    const timeout = setTimeout(() => {
+      setState(prev => {
+        if (prev.isLoading) {
+          console.warn('[AuthProvider] Auth check timed out after 8s')
+          return { ...prev, isLoading: false }
+        }
+        return prev
+      })
+    }, 8000)
+
     supabase.auth.getSession().then(async ({ data: { session } }: { data: { session: Session | null } }) => {
       if (session?.user) {
         const profile = await fetchProfile(session.user.id)
@@ -132,6 +143,9 @@ function AuthProviderInner({
       } else {
         setState(prev => ({ ...prev, isLoading: false }))
       }
+    }).catch((err: unknown) => {
+      console.error('[AuthProvider] getSession failed:', err)
+      setState(prev => ({ ...prev, isLoading: false }))
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -156,7 +170,10 @@ function AuthProviderInner({
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      clearTimeout(timeout)
+      subscription.unsubscribe()
+    }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const signUp = async (email: string, password: string, name: string) => {
