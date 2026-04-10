@@ -29,29 +29,21 @@ export default function LandingPage() {
     const supabase = createClient()
     if (!supabase) return
 
-    async function fetchStats() {
-      const { count: total } = await supabase!
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-
-      const { count: convertidos } = await supabase!
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('veio_de_outra_religiao', true)
-
-      const { count: igrejas } = await supabase!
-        .from('paroquias')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'aprovada')
-
+    // Run all 3 queries in parallel instead of sequential
+    Promise.all([
+      supabase.from('profiles').select('*', { count: 'exact', head: true }),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('veio_de_outra_religiao', true),
+      supabase.from('paroquias').select('*', { count: 'exact', head: true }).eq('status', 'aprovada'),
+    ]).then(([totalRes, convertidosRes, igrejasRes]) => {
       setStats({
-        catolicos: total ?? 0,
-        convertidos: convertidos ?? 0,
-        igrejas: igrejas ?? 0,
+        catolicos: totalRes.count ?? 0,
+        convertidos: convertidosRes.count ?? 0,
+        igrejas: igrejasRes.count ?? 0,
       })
-    }
+    }).catch(() => {
+      // Stats are non-critical — show zeros on failure
+    })
 
-    fetchStats()
     setTimeout(() => setAnimated(true), 100)
   }, [])
 

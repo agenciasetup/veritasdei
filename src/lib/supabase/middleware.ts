@@ -11,6 +11,12 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse
   }
 
+  // Skip auth refresh for API routes and public pages — they handle auth themselves
+  const path = request.nextUrl.pathname
+  if (path.startsWith('/api/') || path === '/privacidade' || path === '/termos') {
+    return supabaseResponse
+  }
+
   const supabase = createServerClient(
     supabaseUrl,
     supabaseAnonKey,
@@ -20,7 +26,7 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
+          cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           )
           supabaseResponse = NextResponse.next({ request })
@@ -33,7 +39,11 @@ export async function updateSession(request: NextRequest) {
   )
 
   // Refresh the session — this is critical for Server Components
-  await supabase.auth.getUser()
+  try {
+    await supabase.auth.getUser()
+  } catch {
+    // Don't block page load if auth refresh fails
+  }
 
   return supabaseResponse
 }
