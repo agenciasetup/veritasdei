@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   GraduationCap, Plus, Pencil, Trash2, Eye, EyeOff,
-  Save, X, ChevronDown, ChevronUp, GripVertical, Link2, FileText,
+  Save, X, ChevronDown, ChevronUp, GripVertical, Link2, FileText, Download,
 } from 'lucide-react'
 
 interface Trail {
@@ -64,6 +64,10 @@ export default function AdminTrilhasPage() {
   const [contentSubtopics, setContentSubtopics] = useState<ContentSubtopic[]>([])
   const [selectedGroupId, setSelectedGroupId] = useState<string>('')
   const [selectedTopicId, setSelectedTopicId] = useState<string>('')
+
+  // Seed state
+  const [seedingTrails, setSeedingTrails] = useState(false)
+  const [seedMsg, setSeedMsg] = useState<string | null>(null)
 
   // Ensure tables exist
   const [tablesReady, setTablesReady] = useState(false)
@@ -161,6 +165,22 @@ export default function AdminTrilhasPage() {
     if (!supabase) return
     await supabase.from('trails').update({ visible: !current }).eq('id', id)
     fetchTrails()
+  }
+
+  const handleSeedTrails = async () => {
+    if (!confirm('Importar as trilhas padrão? (substitui existentes)')) return
+    setSeedingTrails(true)
+    setSeedMsg(null)
+    try {
+      const res = await fetch('/api/admin/seed?trails=true', { method: 'POST' })
+      const data = await res.json()
+      setSeedMsg(data.message || data.error || 'Erro desconhecido')
+      if (data.success) fetchTrails()
+      if (data.sql) setSeedMsg(data.error + '\n\nVeja o SQL necessário no console.')
+    } catch {
+      setSeedMsg('Erro de rede')
+    }
+    setSeedingTrails(false)
   }
 
   // Step CRUD
@@ -268,12 +288,28 @@ CREATE POLICY "Admin manage trail_steps" ON trail_steps FOR ALL USING (
             Trilhas de Aprendizado
           </h1>
         </div>
-        <button onClick={() => { setEditingTrail({ title: '', difficulty: 'Iniciante', color: '#C9A84C', icon_name: 'GraduationCap', sort_order: 0, visible: true }); setTrailMode('create') }}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium"
-          style={{ background: 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)', color: '#0A0A0A', fontFamily: 'Poppins, sans-serif' }}>
-          <Plus className="w-4 h-4" /> Nova Trilha
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={handleSeedTrails} disabled={seedingTrails}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium transition-all"
+            style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.2)', color: '#C9A84C', fontFamily: 'Poppins, sans-serif', opacity: seedingTrails ? 0.5 : 1 }}>
+            {seedingTrails ? <div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(201,168,76,0.2)', borderTopColor: '#C9A84C' }} /> : <Download className="w-4 h-4" />}
+            {seedingTrails ? 'Importando...' : 'Importar Trilhas Padrão'}
+          </button>
+          <button onClick={() => { setEditingTrail({ title: '', difficulty: 'Iniciante', color: '#C9A84C', icon_name: 'GraduationCap', sort_order: 0, visible: true }); setTrailMode('create') }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium"
+            style={{ background: 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)', color: '#0A0A0A', fontFamily: 'Poppins, sans-serif' }}>
+            <Plus className="w-4 h-4" /> Nova Trilha
+          </button>
+        </div>
       </div>
+
+      {/* Seed message */}
+      {seedMsg && (
+        <div className="mb-4 px-4 py-3 rounded-xl text-sm"
+          style={{ background: seedMsg.includes('sucesso') ? 'rgba(76,175,80,0.1)' : 'rgba(217,79,92,0.1)', border: seedMsg.includes('sucesso') ? '1px solid rgba(76,175,80,0.2)' : '1px solid rgba(217,79,92,0.2)', color: seedMsg.includes('sucesso') ? '#66BB6A' : '#D94F5C', fontFamily: 'Poppins, sans-serif' }}>
+          {seedMsg}
+        </div>
+      )}
 
       {/* Loading */}
       {loading && (

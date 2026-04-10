@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 
 // Import all hardcoded data
@@ -10,7 +10,15 @@ import { ORACOES } from '@/features/oracoes/data'
 import { GROUPS as VP_GROUPS } from '@/features/virtudes-pecados/data'
 import { OBRA_GROUPS } from '@/features/obras-misericordia/data'
 
-export async function POST() {
+// Import legacy trails
+import { TRAILS_1 } from '@/features/trilhas/trails1'
+import { TRAILS_2 } from '@/features/trilhas/trails2'
+import { TRAILS_3 } from '@/features/trilhas/trails3'
+import { TRAILS_4 } from '@/features/trilhas/trails4'
+import { TRAILS_5 } from '@/features/trilhas/trails5'
+import { TRAILS_6 } from '@/features/trilhas/trails6'
+
+export async function POST(request: NextRequest) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
@@ -18,43 +26,63 @@ export async function POST() {
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'admin') return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
+  const { searchParams } = new URL(request.url)
+  const force = searchParams.get('force') === 'true'
+  const seedTrails = searchParams.get('trails') === 'true'
+
+  // If seeding trails
+  if (seedTrails) {
+    return await handleSeedTrails(supabase)
+  }
+
   // Check if already seeded
   const { data: existing } = await supabase.from('content_groups').select('id').limit(1)
   if (existing && existing.length > 0) {
-    return NextResponse.json({ error: 'Conteúdo já existe. Delete antes de re-importar.' }, { status: 400 })
+    if (force) {
+      // Delete all content in reverse order (items → subtopics → topics → groups)
+      await supabase.from('content_items').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+      await supabase.from('content_subtopics').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+      await supabase.from('content_topics').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+      await supabase.from('content_groups').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+    } else {
+      return NextResponse.json({ error: 'Conteúdo já existe. Use ?force=true para re-importar (apaga tudo e reimporta).' }, { status: 400 })
+    }
   }
 
   const errors: string[] = []
 
-  async function createGroup(slug: string, title: string, subtitle: string, description: string, icon: string, sortOrder: number) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async function createGroup(slug: string, title: string, subtitle: string, description: string, icon: string, sortOrder: number): Promise<string | null> {
     const { data, error } = await supabase.from('content_groups').insert({
       slug, title, subtitle, description, icon, sort_order: sortOrder, visible: true,
     }).select('id').single()
-    if (error) { errors.push(`Group ${slug}: ${error.message}`); return null }
+    if (error) { errors.push(`Group [${slug}]: ${error.message}`); return null }
     return data.id as string
   }
 
-  async function createTopic(groupId: string, slug: string, title: string, subtitle: string | null, description: string | null, icon: string | null, sortOrder: number) {
+  async function createTopic(groupId: string, slug: string, title: string, subtitle: string | null, description: string | null, icon: string | null, sortOrder: number): Promise<string | null> {
     const { data, error } = await supabase.from('content_topics').insert({
       group_id: groupId, slug, title, subtitle, description, icon, sort_order: sortOrder, visible: true,
     }).select('id').single()
-    if (error) { errors.push(`Topic ${slug}: ${error.message}`); return null }
+    if (error) { errors.push(`Topic [${slug}]: ${error.message}`); return null }
     return data.id as string
   }
 
-  async function createSubtopic(topicId: string, slug: string, title: string, subtitle: string | null, description: string | null, sortOrder: number) {
+  async function createSubtopic(topicId: string, slug: string, title: string, subtitle: string | null, description: string | null, sortOrder: number): Promise<string | null> {
     const { data, error } = await supabase.from('content_subtopics').insert({
       topic_id: topicId, slug, title, subtitle, description, sort_order: sortOrder, visible: true,
     }).select('id').single()
-    if (error) { errors.push(`Subtopic ${slug}: ${error.message}`); return null }
+    if (error) { errors.push(`Subtopic [${slug}]: ${error.message}`); return null }
     return data.id as string
   }
 
   async function createItem(subtopicId: string, kind: string, title: string | null, body: string, reference: string | null, sortOrder: number) {
+    // Use 'text' as fallback for 'list' kind (DB constraint may not include 'list')
+    const safeKind = kind === 'list' ? 'text' : kind
     const { error } = await supabase.from('content_items').insert({
-      subtopic_id: subtopicId, kind, title, body, reference, sort_order: sortOrder, visible: true,
+      subtopic_id: subtopicId, kind: safeKind, title, body, reference, sort_order: sortOrder, visible: true,
     })
-    if (error) errors.push(`Item ${title || kind}: ${error.message}`)
+    if (error) errors.push(`Item [${title || safeKind}]: ${error.message}`)
   }
 
   function slugify(text: string): string {
@@ -95,7 +123,8 @@ export async function POST() {
       await createItem(subId, 'definition', 'Matéria', sac.matter, null, order++)
       await createItem(subId, 'definition', 'Forma', sac.form, null, order++)
       await createItem(subId, 'definition', 'Ministro', sac.minister, null, order++)
-      await createItem(subId, 'list', 'Efeitos', sac.effects.join('\n'), null, order++)
+      // Store effects as text (DB constraint doesn't allow 'list' kind)
+      await createItem(subId, 'text', 'Efeitos', sac.effects.map((e, i) => `${i + 1}. ${e}`).join('\n'), null, order++)
       for (const v of sac.verses) {
         await createItem(subId, 'verse', null, v.text, v.reference, order++)
       }
@@ -203,7 +232,109 @@ export async function POST() {
   }
 
   if (errors.length > 0) {
-    return NextResponse.json({ success: false, errors, message: `Importado com ${errors.length} erro(s)` })
+    return NextResponse.json({ success: false, errors, message: `Importado com ${errors.length} erro(s). Detalhes: ${errors.slice(0, 5).join('; ')}` })
   }
   return NextResponse.json({ success: true, message: 'Conteúdo importado com sucesso!' })
+}
+
+// ─── Seed legacy trails ───
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function handleSeedTrails(supabase: any) {
+  const ALL_TRAILS = [
+    ...TRAILS_1, ...TRAILS_2, ...TRAILS_3,
+    ...TRAILS_4, ...TRAILS_5, ...TRAILS_6,
+  ]
+
+  // Check if trails table exists
+  const { error: checkError } = await supabase.from('trails').select('id').limit(1)
+  if (checkError && checkError.code === '42P01') {
+    return NextResponse.json({
+      error: 'Tabela "trails" não existe. Execute o SQL de migração no Supabase SQL Editor primeiro.',
+      sql: `-- Execute no Supabase SQL Editor:
+
+CREATE TABLE IF NOT EXISTS trails (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  subtitle TEXT,
+  description TEXT,
+  difficulty TEXT DEFAULT 'Iniciante',
+  color TEXT DEFAULT '#C9A84C',
+  icon_name TEXT DEFAULT 'GraduationCap',
+  sort_order INTEGER DEFAULT 0,
+  visible BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS trail_steps (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  trail_id UUID REFERENCES trails(id) ON DELETE CASCADE,
+  label TEXT NOT NULL,
+  description TEXT,
+  content_subtopic_id UUID REFERENCES content_subtopics(id) ON DELETE SET NULL,
+  custom_content TEXT,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE trails ENABLE ROW LEVEL SECURITY;
+ALTER TABLE trail_steps ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public read trails" ON trails FOR SELECT USING (visible = true);
+CREATE POLICY "Admin manage trails" ON trails FOR ALL USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);
+
+CREATE POLICY "Public read trail_steps" ON trail_steps FOR SELECT USING (true);
+CREATE POLICY "Admin manage trail_steps" ON trail_steps FOR ALL USING (
+  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+);`
+    }, { status: 400 })
+  }
+
+  // Check if already seeded
+  const { data: existingTrails } = await supabase.from('trails').select('id').limit(1)
+  if (existingTrails && existingTrails.length > 0) {
+    // Delete existing
+    await supabase.from('trail_steps').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+    await supabase.from('trails').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+  }
+
+  const errors: string[] = []
+
+  for (let ti = 0; ti < ALL_TRAILS.length; ti++) {
+    const trail = ALL_TRAILS[ti]
+    const { data: trailData, error: trailError } = await supabase.from('trails').insert({
+      title: trail.title,
+      subtitle: trail.subtitle,
+      description: trail.description,
+      difficulty: trail.difficulty,
+      color: trail.color,
+      icon_name: trail.iconName,
+      sort_order: ti + 1,
+      visible: true,
+    }).select('id').single()
+
+    if (trailError) {
+      errors.push(`Trail [${trail.title}]: ${trailError.message}`)
+      continue
+    }
+
+    for (let si = 0; si < trail.steps.length; si++) {
+      const step = trail.steps[si]
+      const { error: stepError } = await supabase.from('trail_steps').insert({
+        trail_id: trailData.id,
+        label: step.label,
+        description: step.description,
+        custom_content: step.content,
+        sort_order: si + 1,
+      })
+      if (stepError) errors.push(`Step [${step.label}]: ${stepError.message}`)
+    }
+  }
+
+  if (errors.length > 0) {
+    return NextResponse.json({ success: false, errors, message: `Trilhas importadas com ${errors.length} erro(s). ${errors.slice(0, 3).join('; ')}` })
+  }
+  return NextResponse.json({ success: true, message: `${ALL_TRAILS.length} trilhas importadas com sucesso!` })
 }
