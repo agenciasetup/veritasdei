@@ -212,6 +212,93 @@ async function searchBibliaVector(
 }
 
 /**
+ * Fetch specific Bible verses by their exact reference.
+ * Used for "must-include" verses for theological topics
+ * (e.g., Mt 26,26 for Eucharist queries).
+ */
+async function fetchMustIncludeVerses(
+  supabase: AnySupabaseClient,
+  refs: string[],
+): Promise<RawResult[]> {
+  if (refs.length === 0) return []
+
+  try {
+    // References contain commas (e.g., "Mt 26,26") which can confuse
+    // PostgREST's .in() filter. Use .or() with individual eq conditions instead.
+    const orFilter = refs.map(r => `reference.eq.${r}`).join(',')
+    const { data, error } = await supabase
+      .from('biblia')
+      .select('id, reference, text_pt, book, chapter, verse, testament')
+      .or(orFilter)
+
+    if (error) {
+      console.error('[search] Must-include fetch error:', error.message)
+      // Fallback: try fetching by book/chapter/verse individually
+      return fetchMustIncludeByParts(supabase, refs)
+    }
+
+    console.log(`[search] Must-include: requested ${refs.length}, found ${(data ?? []).length}`)
+    return ((data ?? []) as RawResult[]).map(r => ({
+      ...r,
+      similarity: 0.95, // High priority — these are theologically essential
+    }))
+  } catch (err) {
+    console.error('[search] Must-include exception:', err)
+    return []
+  }
+}
+
+/**
+ * Fallback: fetch must-include verses by parsing book_abbr/chapter/verse.
+ * Used when .or() fails due to comma escaping issues in PostgREST.
+ */
+async function fetchMustIncludeByParts(
+  supabase: AnySupabaseClient,
+  refs: string[],
+): Promise<RawResult[]> {
+  // Parse refs like "Mt 26,26" → { book_abbr: "Mt", chapter: 26, verse: 26 }
+  const parsed = refs.map(ref => {
+    const match = ref.match(/^(\d?\s*\w+)\s+(\d+),(\d+)$/)
+    if (!match) return null
+    return { book_abbr: match[1].trim(), chapter: parseInt(match[2]), verse: parseInt(match[3]) }
+  }).filter(Boolean)
+
+  if (parsed.length === 0) return []
+
+  // Group by book to minimize queries
+  const byBook = new Map<string, Array<{ chapter: number; verse: number }>>()
+  for (const p of parsed) {
+    if (!p) continue
+    const key = p.book_abbr
+    if (!byBook.has(key)) byBook.set(key, [])
+    byBook.get(key)!.push({ chapter: p.chapter, verse: p.verse })
+  }
+
+  const results: RawResult[] = []
+  for (const [bookAbbr, verses] of byBook.entries()) {
+    const chapters = [...new Set(verses.map(v => v.chapter))]
+    const verseNums = verses.map(v => v.verse)
+
+    const { data } = await supabase
+      .from('biblia')
+      .select('id, reference, text_pt, book, chapter, verse, testament')
+      .eq('book_abbr', bookAbbr)
+      .in('chapter', chapters)
+      .in('verse', verseNums)
+
+    if (data) {
+      results.push(...(data as RawResult[]).map(r => ({
+        ...r,
+        similarity: 0.95,
+      })))
+    }
+  }
+
+  console.log(`[search] Must-include (by parts): found ${results.length}`)
+  return results
+}
+
+/**
  * Deduplicate results by reference, keeping the highest similarity.
  */
 function deduplicateResults(results: RawResult[]): RawResult[] {
@@ -274,10 +361,11 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
 
   // 3. Execute all searches in parallel
   const hasEmbedding = queryEmbedding.length > 0
+  const hasMustInclude = disambiguation.mustIncludeRefs.length > 0
 
-  const [bibliaVectorResult, catecismoRaw, magisterioRaw, patristicaRaw, bibliaKeywordResult] =
+  const [bibliaVectorResult, catecismoRaw, magisterioRaw, patristicaRaw, bibliaKeywordResult, mustIncludeResult] =
     await Promise.all([
-      // Vector search for Bible (may timeout)
+      // Vector search for Bible
       hasEmbedding
         ? searchBibliaVector(supabase, queryEmbedding, 7, 0.42)
         : Promise.resolve({ data: [] as RawResult[], error: 'No embedding' }),
@@ -317,6 +405,11 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
         disambiguation.testamentFilter,
         8
       ),
+
+      // Must-include references: fetch essential verses by exact reference
+      hasMustInclude
+        ? fetchMustIncludeVerses(supabase, disambiguation.mustIncludeRefs)
+        : Promise.resolve([] as RawResult[]),
     ])
 
   // Log errors from other searches
@@ -324,22 +417,23 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
   if (magisterioRaw.error) console.error('[search] magisterio error:', magisterioRaw.error)
   if (patristicaRaw.error) console.error('[search] patristica error:', patristicaRaw.error)
 
-  // 4. Combine Bible results: vector + keyword fallback
+  // 4. Combine Bible results: must-include + vector + keyword
   const bibliaVectorResults = bibliaVectorResult.data
   const bibliaKeywordResults = bibliaKeywordResult
 
+  // Must-include verses get top priority (theologically essential)
+  const allBibliaSources = [
+    ...mustIncludeResult,      // Priority 1: essential verses for the topic
+    ...bibliaVectorResults,    // Priority 2: semantically similar
+    ...bibliaKeywordResults,   // Priority 3: keyword matches
+  ]
+
   let bibliaResults: RawResult[]
-  if (bibliaVectorResults.length > 0) {
-    // Vector search succeeded — merge with keyword results for diversity
-    console.log(`[search] Bible vector: ${bibliaVectorResults.length}, keyword: ${bibliaKeywordResults.length}`)
-    const combined = [...bibliaVectorResults, ...bibliaKeywordResults]
-    bibliaResults = deduplicateResults(combined).slice(0, 7)
-  } else if (bibliaKeywordResults.length > 0) {
-    // Vector search failed — use keyword results
-    console.log(`[search] Bible vector failed, using ${bibliaKeywordResults.length} keyword results`)
-    bibliaResults = bibliaKeywordResults.slice(0, 7)
+  if (allBibliaSources.length > 0) {
+    console.log(`[search] Bible sources: must-include=${mustIncludeResult.length}, vector=${bibliaVectorResults.length}, keyword=${bibliaKeywordResults.length}`)
+    bibliaResults = deduplicateResults(allBibliaSources).slice(0, 10)
   } else {
-    console.warn('[search] No Bible results from vector or keyword search')
+    console.warn('[search] No Bible results from any source')
     bibliaResults = []
   }
 
