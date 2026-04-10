@@ -9,87 +9,7 @@ import {
   type ContentSubtopic,
   type ContentItem,
 } from '@/lib/content/useContentGroup'
-import Carousel from '@/components/ui/Carousel'
-import type { CarouselSlide } from '@/components/ui/Carousel'
-import { TitleSlide, ExplanationSlide, DetailSlide, ListSlide, VerseSlide } from '@/components/ui/SlideContent'
-import PrayerTextSlide from './PrayerTextSlide'
-
-// ─── Build carousel slides from content items ───
-function buildSlides(subtopic: ContentSubtopic, items: ContentItem[]): CarouselSlide[] {
-  const slides: CarouselSlide[] = []
-
-  // Title slide from subtopic metadata
-  slides.push({
-    id: `${subtopic.id}-title`,
-    content: (
-      <TitleSlide
-        number={subtopic.subtitle || ''}
-        title={subtopic.title}
-        description={subtopic.description || ''}
-      />
-    ),
-  })
-
-  // Group consecutive definitions into a single DetailSlide
-  let i = 0
-  while (i < items.length) {
-    const item = items[i]
-
-    if (item.kind === 'definition') {
-      const definitions: { label: string; value: string }[] = []
-      while (i < items.length && items[i].kind === 'definition') {
-        definitions.push({ label: items[i].title || '', value: items[i].body })
-        i++
-      }
-      slides.push({
-        id: `${subtopic.id}-defs-${slides.length}`,
-        content: <DetailSlide title="Elementos Essenciais" items={definitions} />,
-      })
-      continue
-    }
-
-    if (item.kind === 'text') {
-      slides.push({
-        id: `${subtopic.id}-text-${item.id}`,
-        content: <ExplanationSlide title={item.title || 'Explicação'} text={item.body} />,
-      })
-    } else if (item.kind === 'verse') {
-      slides.push({
-        id: `${subtopic.id}-verse-${item.id}`,
-        content: (
-          <VerseSlide
-            reference={item.reference || ''}
-            text={item.body}
-            copyText={`${subtopic.title}\n\n${item.reference}: "${item.body}"`}
-          />
-        ),
-      })
-    } else if (item.kind === 'list') {
-      slides.push({
-        id: `${subtopic.id}-list-${item.id}`,
-        content: <ListSlide title={item.title || 'Lista'} items={item.body.split('\n').filter(Boolean)} />,
-      })
-    } else if (item.kind === 'prayer') {
-      slides.push({
-        id: `${subtopic.id}-prayer-${item.id}`,
-        content: <PrayerTextSlide name={item.title || subtopic.title} text={item.body} />,
-      })
-    } else if (item.kind === 'image' && item.image_url) {
-      slides.push({
-        id: `${subtopic.id}-img-${item.id}`,
-        content: (
-          <div className="flex flex-col items-center justify-center min-h-[58vh] py-8">
-            <img src={item.image_url} alt={item.title || ''} className="max-w-full max-h-[50vh] rounded-2xl object-contain" />
-            {item.title && <p className="text-sm mt-4" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>{item.title}</p>}
-          </div>
-        ),
-      })
-    }
-    i++
-  }
-
-  return slides
-}
+import ImmersiveReader from './ImmersiveReader'
 
 // ─── Loading spinner ───
 function Loader() {
@@ -139,7 +59,6 @@ export default function DynamicContentView({ groupSlug }: { groupSlug: string })
   }
 
   const currentSubtopic = selectedSubtopic || singleSubtopic
-  const slides = currentSubtopic ? buildSlides(currentSubtopic, currentSubtopic.items) : []
 
   if (groupLoading) return <Loader />
   if (!group) return <EmptyState />
@@ -267,9 +186,14 @@ export default function DynamicContentView({ groupSlug }: { groupSlug: string })
         {/* Loading subtopics */}
         {selectedTopic && topicLoading && <Loader />}
 
-        {/* Level 3: Carousel */}
-        {currentSubtopic && slides.length > 0 && (
-          <Carousel slides={slides} onClose={handleBack} />
+        {/* Level 3: Immersive Reader (replaces carousel) */}
+        {currentSubtopic && currentSubtopic.items.length > 0 && (
+          <ImmersiveReader
+            title={currentSubtopic.title}
+            subtitle={currentSubtopic.subtitle || undefined}
+            description={currentSubtopic.description || undefined}
+            items={currentSubtopic.items}
+          />
         )}
       </main>
     </div>
