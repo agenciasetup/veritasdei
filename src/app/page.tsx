@@ -15,6 +15,7 @@ import IceBreakers from '@/components/dashboard/IceBreakers'
 import ContinueLearning from '@/components/dashboard/ContinueLearning'
 import FeatureGrid from '@/components/dashboard/FeatureGrid'
 import ProgressOverview from '@/components/dashboard/ProgressOverview'
+import StudyStreak from '@/components/dashboard/StudyStreak'
 import SearchResults from '@/components/dashboard/SearchResults'
 
 import type { QueryResponse } from '@/types'
@@ -125,6 +126,9 @@ export default function Home() {
 
           {/* Study progress overview */}
           <ProgressOverview userId={user?.id} />
+
+          {/* Study streak */}
+          <StudyStreak userId={user?.id} />
         </section>
       )}
 
