@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import {
   ReactFlow,
   MiniMap,
@@ -22,6 +22,7 @@ import { nodeTypes } from '../nodes/nodeTypes'
 import { edgeTypes } from '../edges/edgeTypes'
 import { VERBUM_COLORS } from '../design-tokens'
 import CanvasBackground from './CanvasBackground'
+import LayerControls from './LayerControls'
 import ContextMenu from './ContextMenu'
 import AddNodePanel, { type AddNodePayload } from '../panels/AddNodePanel'
 import ConnectionTypeSelector from '../panels/ConnectionTypeSelector'
@@ -101,6 +102,12 @@ function VerbumCanvasInner() {
   // Proposals state
   const [proposals, setProposals] = useState<ConnectionProposal[]>([])
   const [proposalsVisible, setProposalsVisible] = useState(false)
+
+  // Layer visibility
+  const [visibleLayers, setVisibleLayers] = useState<number[]>([0, 1, 2, 3, 4, 5])
+
+  // Focus mode (Alt+click)
+  const [focusNodeId, setFocusNodeId] = useState<string | null>(null)
 
   const onConnect: OnConnect = useCallback(
     (connection) => {
@@ -456,6 +463,104 @@ function VerbumCanvasInner() {
     []
   )
 
+  // Toggle layer visibility
+  const onToggleLayer = useCallback((layerId: number) => {
+    setVisibleLayers((prev) =>
+      prev.includes(layerId) ? prev.filter((l) => l !== layerId) : [...prev, layerId]
+    )
+  }, [])
+
+  // Handle node click for focus mode (Alt+click)
+  const onNodeClick = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      if (event.altKey) {
+        setFocusNodeId((prev) => (prev === node.id ? null : node.id))
+      }
+    },
+    []
+  )
+
+  // Attach keyboard listener for focus mode ESC
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setFocusNodeId(null)
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
+
+  // Apply layer filtering and focus mode to nodes
+  const filteredNodes = useMemo(() => {
+    return nodes.map((node) => {
+      const layerId = (node.data as Record<string, unknown>)?.layer_id as number ?? 0
+      const isLayerVisible = visibleLayers.includes(layerId)
+
+      // Focus mode: dim non-connected nodes
+      let isFocused = true
+      if (focusNodeId) {
+        const connectedNodeIds = new Set<string>()
+        connectedNodeIds.add(focusNodeId)
+        edges.forEach((e) => {
+          if (e.source === focusNodeId) connectedNodeIds.add(e.target)
+          if (e.target === focusNodeId) connectedNodeIds.add(e.source)
+        })
+        isFocused = connectedNodeIds.has(node.id)
+      }
+
+      return {
+        ...node,
+        hidden: !isLayerVisible,
+        style: {
+          ...node.style,
+          opacity: isFocused ? 1 : 0.15,
+          transition: 'opacity 0.3s ease',
+        },
+      }
+    })
+  }, [nodes, visibleLayers, focusNodeId, edges])
+
+  // Apply layer filtering to edges
+  const filteredEdges = useMemo(() => {
+    const hiddenNodeIds = new Set(
+      nodes
+        .filter((n) => {
+          const layerId = (n.data as Record<string, unknown>)?.layer_id as number ?? 0
+          return !visibleLayers.includes(layerId)
+        })
+        .map((n) => n.id)
+    )
+
+    return edges.map((edge) => {
+      const sourceHidden = hiddenNodeIds.has(edge.source)
+      const targetHidden = hiddenNodeIds.has(edge.target)
+
+      // Focus mode
+      let isFocused = true
+      if (focusNodeId) {
+        isFocused = edge.source === focusNodeId || edge.target === focusNodeId
+      }
+
+      if (sourceHidden && targetHidden) {
+        return { ...edge, hidden: true }
+      }
+      if (sourceHidden || targetHidden) {
+        // Cross-layer edge: show as dotted
+        return {
+          ...edge,
+          style: { ...edge.style, strokeDasharray: '4 4', opacity: isFocused ? 0.4 : 0.1 },
+        }
+      }
+      return {
+        ...edge,
+        style: {
+          ...edge.style,
+          opacity: isFocused ? 1 : 0.1,
+          transition: 'opacity 0.3s ease',
+        },
+      }
+    })
+  }, [edges, nodes, visibleLayers, focusNodeId])
+
   const defaultViewport = useMemo(() => ({ x: 0, y: 0, zoom: 0.8 }), [])
 
   return (
@@ -463,13 +568,15 @@ function VerbumCanvasInner() {
       <CanvasBackground />
 
       <ReactFlow
-        nodes={nodes}
-        edges={edges}
+        nodes={filteredNodes}
+        edges={filteredEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}
         onPaneContextMenu={onPaneContextMenu}
+        onPaneClick={() => focusNodeId && setFocusNodeId(null)}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         defaultViewport={defaultViewport}
@@ -512,6 +619,27 @@ function VerbumCanvasInner() {
           }}
         />
       </ReactFlow>
+
+      {/* Layer controls */}
+      <LayerControls
+        visibleLayers={visibleLayers}
+        onToggleLayer={onToggleLayer}
+      />
+
+      {/* Focus mode indicator */}
+      {focusNodeId && (
+        <div
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-lg text-xs"
+          style={{
+            background: VERBUM_COLORS.ui_bg,
+            border: `1px solid ${VERBUM_COLORS.ui_gold}`,
+            color: VERBUM_COLORS.ui_gold,
+            fontFamily: 'Poppins, sans-serif',
+          }}
+        >
+          Modo Foco ativo — ESC para sair
+        </div>
+      )}
 
       {/* Context menu */}
       <ContextMenu

@@ -666,3 +666,54 @@ main, [role="main"] {
   transform: scale(0.95);
 }
 
+/* ═══════════════════════════════════════════════════════
+   VERBUM — Canvas & React Flow Overrides
+   ═══════════════════════════════════════════════════════ */
+
+.verbum-flow .react-flow__node {
+  cursor: grab;
+}
+
+.verbum-flow .react-flow__node:active {
+  cursor: grabbing;
+}
+
+.verbum-flow .react-flow__handle {
+  width: 8px;
+  height: 8px;
+  background: rgba(201, 168, 76, 0.3);
+  border: 1px solid rgba(201, 168, 76, 0.5);
+  transition: all 0.2s;
+}
+
+.verbum-flow .react-flow__handle:hover {
+  background: #C9A84C;
+  transform: scale(1.3);
+}
+
+.verbum-flow .react-flow__edge-path {
+  transition: stroke-width 0.2s;
+}
+
+.verbum-flow .react-flow__edge:hover .react-flow__edge-path {
+  stroke-width: 3px;
+}
+
+.verbum-flow .react-flow__controls button {
+  background: rgba(10, 8, 6, 0.92);
+  border-bottom: 1px solid rgba(58, 42, 16, 0.3);
+  color: #A89060;
+  fill: #A89060;
+}
+
+.verbum-flow .react-flow__controls button:hover {
+  background: rgba(201, 168, 76, 0.1);
+  color: #C9A84C;
+  fill: #C9A84C;
+}
+
+.verbum-flow .react-flow__selection {
+  background: rgba(201, 168, 76, 0.05);
+  border: 1px dashed rgba(201, 168, 76, 0.3);
+}
+
