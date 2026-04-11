@@ -154,27 +154,35 @@ function AuthProviderInner({
     mountedRef.current = true
     initDoneRef.current = false
 
-    // Safety timeout — if auth takes too long, stop blocking the UI.
-    // 15s is generous but avoids false timeouts on slow networks.
-    const timeout = setTimeout(() => {
-      if (mountedRef.current && !initDoneRef.current) {
-        console.warn('[Auth] Init timed out after 15s — unblocking UI')
-        // Do NOT set initDoneRef.current = true here.
-        // Let INITIAL_SESSION still process if it arrives later,
-        // so the user can recover without a hard refresh.
+    // ─── Direct initialization with timeout ───
+    // Don't rely on INITIAL_SESSION event — call getSession() directly
+    // with a 10s timeout. If it hangs (Supabase latency, network), we
+    // fall back to no-session state instead of blocking the UI forever.
+    async function initAuth() {
+      try {
+        const { data: { session } } = await Promise.race([
+          supabase.auth.getSession(),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('getSession_timeout')), 10000)
+          ),
+        ])
+        if (!mountedRef.current) return
+        initDoneRef.current = true
+        await setAuthState(session)
+      } catch (err) {
+        console.warn('[Auth] Init failed or timed out:', err)
+        if (!mountedRef.current) return
+        initDoneRef.current = true
         setState(prev => prev.isLoading ? { ...prev, isLoading: false } : prev)
       }
-    }, 15000)
+    }
 
-    // Listen for auth changes FIRST so we don't miss events from getSession
+    // Listen for future auth changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: string, session: Session | null) => {
-        if (event === 'INITIAL_SESSION') {
-          // Always process — even if UI was already unblocked by timeout
-          initDoneRef.current = true
-          await setAuthState(session)
-          return
-        }
+        // Skip INITIAL_SESSION — we handle init directly above
+        if (event === 'INITIAL_SESSION') return
+
         if (event === 'SIGNED_OUT') {
           setState({ ...DEFAULT_STATE, isLoading: false })
           return
@@ -185,18 +193,10 @@ function AuthProviderInner({
       }
     )
 
-    // getSession triggers INITIAL_SESSION event above
-    supabase.auth.getSession().catch((err: unknown) => {
-      console.error('[Auth] getSession failed:', err)
-      initDoneRef.current = true
-      if (mountedRef.current) {
-        setState(prev => ({ ...prev, isLoading: false }))
-      }
-    })
+    initAuth()
 
     return () => {
       mountedRef.current = false
-      clearTimeout(timeout)
       subscription.unsubscribe()
     }
   }, [supabase, setAuthState])
@@ -206,12 +206,17 @@ function AuthProviderInner({
     const handleVisibility = async () => {
       if (document.visibilityState === 'visible') {
         try {
-          const { data: { session } } = await supabase.auth.getSession()
+          const { data: { session } } = await Promise.race([
+            supabase.auth.getSession(),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error('visibility_refresh_timeout')), 5000)
+            ),
+          ])
           if (session && mountedRef.current) {
             await setAuthState(session)
           }
-        } catch (err) {
-          console.warn('[Auth] Visibility refresh failed:', err)
+        } catch {
+          // Timeout or error — session will refresh on next interaction
         }
       }
     }
