@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Search, BookOpen, User, Church, Sparkles, ChevronRight } from 'lucide-react'
 import { VERBUM_COLORS } from '../design-tokens'
+import { SessionExpiredError } from '@/lib/supabase/query'
 import { resolveIdentity, searchCanonicalEntities } from '../services/identity.service'
 import {
   searchByText,
@@ -116,7 +117,8 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
               controller.signal.addEventListener('abort', () => { clearTimeout(t); reject(new Error('aborted')) })
             }),
           ])
-        } catch {
+        } catch (err) {
+          if (err instanceof SessionExpiredError) throw err
           // Identity resolution failed — continue with other searches
         }
         if (controller.signal.aborted) return
@@ -146,7 +148,8 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
                 })
               }
             }
-          } catch {
+          } catch (err) {
+            if (err instanceof SessionExpiredError) throw err
             // Continue without canonical results
           }
         }
@@ -199,7 +202,8 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
                 })
               }
             }
-          } catch {
+          } catch (err) {
+            if (err instanceof SessionExpiredError) throw err
             // Continue without bible results
           }
         }
@@ -230,6 +234,15 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
           setResults(allResults)
         }
       } catch (err) {
+        if (err instanceof SessionExpiredError) {
+          setResults([{
+            kind: 'manual',
+            title: 'Sessão expirada',
+            subtitle: 'Sua sessão expirou. Clique para recarregar a página.',
+            data: { sessionExpired: true },
+          }])
+          return
+        }
         // Catch-all for unexpected errors
         console.error('[AddNodePanel] doSearch error:', err)
         if (!controller.signal.aborted) {
@@ -323,6 +336,12 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
           layerId: 4,
         })
         onClose()
+        return
+      }
+
+      // Session expired — reload
+      if (result.data && typeof result.data === 'object' && 'sessionExpired' in (result.data as Record<string, unknown>)) {
+        window.location.reload()
         return
       }
 

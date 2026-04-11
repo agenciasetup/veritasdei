@@ -158,17 +158,19 @@ function AuthProviderInner({
     // 15s is generous but avoids false timeouts on slow networks.
     const timeout = setTimeout(() => {
       if (mountedRef.current && !initDoneRef.current) {
-        console.warn('[Auth] Init timed out after 5s — unblocking UI')
-        initDoneRef.current = true
+        console.warn('[Auth] Init timed out after 15s — unblocking UI')
+        // Do NOT set initDoneRef.current = true here.
+        // Let INITIAL_SESSION still process if it arrives later,
+        // so the user can recover without a hard refresh.
         setState(prev => prev.isLoading ? { ...prev, isLoading: false } : prev)
       }
-    }, 5000)
+    }, 15000)
 
     // Listen for auth changes FIRST so we don't miss events from getSession
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: string, session: Session | null) => {
         if (event === 'INITIAL_SESSION') {
-          // This fires from getSession — use it as our primary init signal
+          // Always process — even if UI was already unblocked by timeout
           initDoneRef.current = true
           await setAuthState(session)
           return
@@ -201,14 +203,21 @@ function AuthProviderInner({
 
   // Refresh session when tab becomes visible again (prevents inactive-tab token expiry)
   useEffect(() => {
-    const handleVisibility = () => {
+    const handleVisibility = async () => {
       if (document.visibilityState === 'visible') {
-        supabase.auth.getSession().catch(() => {})
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          if (session && mountedRef.current) {
+            await setAuthState(session)
+          }
+        } catch (err) {
+          console.warn('[Auth] Visibility refresh failed:', err)
+        }
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)
     return () => document.removeEventListener('visibilitychange', handleVisibility)
-  }, [supabase])
+  }, [supabase, setAuthState])
 
   const signUp = async (email: string, password: string, name: string) => {
     const { error } = await supabase.auth.signUp({
