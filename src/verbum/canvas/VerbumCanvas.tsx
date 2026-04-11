@@ -324,10 +324,13 @@ function VerbumCanvasInner() {
     return () => window.removeEventListener('beforeunload', handler)
   }, [saveStatus])
 
-  // ─── Cleanup debounce timers on unmount ───
+  // ─── Cleanup all timers on unmount ───
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+      if (proposalTimerRef.current) clearTimeout(proposalTimerRef.current)
+      if (longPressRef.current) clearTimeout(longPressRef.current)
+      proposalAbortRef.current?.abort()
       Object.values(positionDebounceRef.current).forEach(clearTimeout)
       positionDebounceRef.current = {}
     }
@@ -861,8 +864,15 @@ function VerbumCanvasInner() {
   const SaveIcon = saveStatus === 'saved' ? Cloud : saveStatus === 'saving' ? Save : saveStatus === 'unsaved' ? CloudOff : CloudOff
   const saveLabel = saveStatus === 'saved' ? 'Salvo' : saveStatus === 'saving' ? 'Salvando...' : saveStatus === 'unsaved' ? 'Não salvo' : ''
 
+  // ─── Redirect unauthenticated users ───
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/login')
+    }
+  }, [authLoading, user, router])
+
   // ─── Loading & Error states ───
-  if (authLoading || (canvasLoading && !currentFlow)) {
+  if (authLoading || !user || (canvasLoading && !currentFlow)) {
     return (
       <div className="relative w-full h-full flex flex-col items-center justify-center gap-3" style={{ background: VERBUM_COLORS.canvas_bg }}>
         <CanvasBackground />
@@ -875,7 +885,7 @@ function VerbumCanvasInner() {
             className="text-xs tracking-widest uppercase mt-3"
             style={{ fontFamily: 'Cinzel, serif', color: VERBUM_COLORS.text_muted }}
           >
-            {authLoading ? 'Autenticando...' : 'Carregando mapa...'}
+            {authLoading ? 'Autenticando...' : !user ? 'Redirecionando...' : 'Carregando mapa...'}
           </div>
         </div>
       </div>
