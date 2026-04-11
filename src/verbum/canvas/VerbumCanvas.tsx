@@ -27,7 +27,10 @@ import AddNodePanel, { type AddNodePayload } from '../panels/AddNodePanel'
 import ConnectionTypeSelector from '../panels/ConnectionTypeSelector'
 import EdgeDetailPanel from '../panels/EdgeDetailPanel'
 import { getConnectionExplanation } from '../services/openai.service'
+import { proposeConnections } from '../services/connection.service'
+import ProposalsPanel, { ProposalsBadge } from '../panels/ProposalsPanel'
 import type {
+  ConnectionProposal,
   TrinitasNodeData,
   ContextMenuAction,
   RelationType,
@@ -94,6 +97,10 @@ function VerbumCanvasInner() {
 
   // Loading state for AI explanations
   const [isGenerating, setIsGenerating] = useState(false)
+
+  // Proposals state
+  const [proposals, setProposals] = useState<ConnectionProposal[]>([])
+  const [proposalsVisible, setProposalsVisible] = useState(false)
 
   const onConnect: OnConnect = useCallback(
     (connection) => {
@@ -371,9 +378,82 @@ function VerbumCanvasInner() {
         data,
       }
 
-      setNodes((nds) => [...nds, newNode])
+      setNodes((nds) => {
+        const updated = [...nds, newNode]
+
+        // Trigger auto-connection in background (non-blocking)
+        const existingSimpleNodes = updated
+          .filter((n) => n.id !== newId)
+          .map((n) => ({
+            id: n.id,
+            title: ((n.data as Record<string, unknown>)?.title as string) ||
+                   ((n.data as Record<string, unknown>)?.display_name as string) || n.id,
+            type: n.type || 'unknown',
+            ref: (n.data as Record<string, unknown>)?.bible_reference as string | undefined,
+          }))
+
+        proposeConnections(
+          {
+            id: newId,
+            title: (data.title as string) || payload.title,
+            type: nodeType,
+            ref: (data.bible_reference as string) || undefined,
+          },
+          existingSimpleNodes
+        ).then((newProposals) => {
+          if (newProposals.length > 0) {
+            setProposals((prev) => [...prev, ...newProposals])
+          }
+        })
+
+        return updated
+      })
     },
     [setNodes]
+  )
+
+  // Approve a proposal: create edge
+  const onApproveProposal = useCallback(
+    (proposal: ConnectionProposal) => {
+      const edgeId = `edge-${Date.now()}`
+      // Find the new node that triggered this proposal (last added non-canonical)
+      const sourceNode = nodes.find((n) => {
+        const title = ((n.data as Record<string, unknown>)?.title as string) || ''
+        return title && n.id !== proposal.target_node_id
+      })
+
+      const newEdge: Edge = {
+        id: edgeId,
+        source: sourceNode?.id || nodes[nodes.length - 1]?.id || '',
+        target: proposal.target_node_id,
+        type: proposal.relation_type,
+        data: {
+          relation_type: proposal.relation_type,
+          status: 'aprovada' as EdgeStatus,
+          magisterial_weight: proposal.magisterial_weight,
+          theological_name: proposal.theological_name,
+          explanation_short: proposal.explanation_short,
+          explanation_full: proposal.explanation_full,
+          sources: proposal.sources,
+          source_name: sourceNode
+            ? ((sourceNode.data as Record<string, unknown>)?.title as string) || ''
+            : '',
+          target_name: proposal.target_node_title,
+        },
+      }
+
+      setEdges((eds) => [...eds, newEdge])
+      setProposals((prev) => prev.filter((p) => p !== proposal))
+    },
+    [nodes, setEdges]
+  )
+
+  // Reject a proposal: just remove it
+  const onRejectProposal = useCallback(
+    (proposal: ConnectionProposal) => {
+      setProposals((prev) => prev.filter((p) => p !== proposal))
+    },
+    []
   )
 
   const defaultViewport = useMemo(() => ({ x: 0, y: 0, zoom: 0.8 }), [])
@@ -477,6 +557,19 @@ function VerbumCanvasInner() {
         onClose={() => setEdgeDetail({ visible: false, edgeId: null, data: null })}
         onApprove={onApproveEdge}
         onReject={onRejectEdge}
+      />
+
+      {/* Proposals badge + panel */}
+      <ProposalsBadge
+        count={proposals.length}
+        onClick={() => setProposalsVisible(true)}
+      />
+      <ProposalsPanel
+        proposals={proposals}
+        visible={proposalsVisible}
+        onClose={() => setProposalsVisible(false)}
+        onApprove={onApproveProposal}
+        onReject={onRejectProposal}
       />
 
       {/* AI generating indicator */}
