@@ -78,10 +78,12 @@ const INITIAL_NODES: Node[] = [
 ]
 
 function VerbumCanvasInner() {
-  const { user } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
   const searchParams = useSearchParams()
   const router = useRouter()
   const flowIdParam = searchParams.get('flow')
+  const [canvasLoading, setCanvasLoading] = useState(true)
+  const [canvasError, setCanvasError] = useState<string | null>(null)
 
   const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES)
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
@@ -148,6 +150,15 @@ function VerbumCanvasInner() {
   nodesRef.current = nodes
   edgesRef.current = edges
 
+  // ─── Reset init when flow ID changes (prevents loading loop) ───
+  const prevFlowIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (flowIdParam !== prevFlowIdRef.current) {
+      prevFlowIdRef.current = flowIdParam
+      initDoneRef.current = false
+    }
+  }, [flowIdParam])
+
   // ─── Load or create flow on mount ───
   useEffect(() => {
     if (!user?.id || initDoneRef.current) return
@@ -155,12 +166,18 @@ function VerbumCanvasInner() {
 
     async function initFlow() {
       isLoadingRef.current = true
+      setCanvasLoading(true)
+      setCanvasError(null)
 
       try {
         if (flowIdParam) {
           // Load existing flow
           const flow = await getFlow(flowIdParam)
-          if (cancelled || !flow) return
+          if (cancelled) return
+          if (!flow) {
+            setCanvasError('Fluxo não encontrado.')
+            return
+          }
 
           setCurrentFlow(flow)
           setFlowName(flow.name)
@@ -225,14 +242,18 @@ function VerbumCanvasInner() {
           setCurrentFlow(newFlow)
           setFlowName(newFlow.name)
           setSaveStatus('saved')
-          // Update URL without full navigation — preserves back button
-          router.replace(`/verbum/canvas?flow=${newFlow.id}`)
+          // Update URL without triggering re-render — prevents re-initialization loop
+          window.history.replaceState({}, '', `/verbum/canvas?flow=${newFlow.id}`)
         }
       } catch (err) {
         console.error('initFlow error:', err)
+        if (!cancelled) {
+          setCanvasError('Erro ao carregar o fluxo. Tente novamente.')
+        }
       } finally {
         isLoadingRef.current = false
         initDoneRef.current = true
+        if (!cancelled) setCanvasLoading(false)
       }
     }
 
@@ -818,6 +839,59 @@ function VerbumCanvasInner() {
   // Save status indicator
   const SaveIcon = saveStatus === 'saved' ? Cloud : saveStatus === 'saving' ? Save : saveStatus === 'unsaved' ? CloudOff : CloudOff
   const saveLabel = saveStatus === 'saved' ? 'Salvo' : saveStatus === 'saving' ? 'Salvando...' : saveStatus === 'unsaved' ? 'Não salvo' : ''
+
+  // ─── Loading & Error states ───
+  if (authLoading || (canvasLoading && !currentFlow)) {
+    return (
+      <div className="relative w-full h-full flex flex-col items-center justify-center gap-3" style={{ background: VERBUM_COLORS.canvas_bg }}>
+        <CanvasBackground />
+        <div className="z-10 text-center">
+          <div
+            className="w-8 h-8 border-2 rounded-full animate-spin mx-auto"
+            style={{ borderColor: 'rgba(201,168,76,0.3)', borderTopColor: '#C9A84C' }}
+          />
+          <div
+            className="text-xs tracking-widest uppercase mt-3"
+            style={{ fontFamily: 'Cinzel, serif', color: VERBUM_COLORS.text_muted }}
+          >
+            {authLoading ? 'Autenticando...' : 'Carregando mapa...'}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (canvasError) {
+    return (
+      <div className="relative w-full h-full flex flex-col items-center justify-center gap-4" style={{ background: VERBUM_COLORS.canvas_bg }}>
+        <CanvasBackground />
+        <div className="z-10 text-center">
+          <div className="text-sm mb-2" style={{ fontFamily: 'Cinzel, serif', color: VERBUM_COLORS.ui_gold }}>
+            Verbum
+          </div>
+          <div className="text-xs mb-4" style={{ color: VERBUM_COLORS.text_muted, fontFamily: 'Poppins, sans-serif' }}>
+            {canvasError}
+          </div>
+          <button
+            onClick={() => {
+              initDoneRef.current = false
+              setCanvasError(null)
+              setCanvasLoading(true)
+            }}
+            className="px-4 py-2 rounded-xl text-xs font-medium transition-colors"
+            style={{
+              background: 'rgba(201,168,76,0.15)',
+              border: '1px solid #C9A84C',
+              color: '#C9A84C',
+              fontFamily: 'Poppins, sans-serif',
+            }}
+          >
+            Tentar Novamente
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div

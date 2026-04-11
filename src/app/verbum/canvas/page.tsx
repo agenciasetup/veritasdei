@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import Verbum from '@/verbum'
+import VerbumCanvasLoading from './loading'
 
 export const metadata: Metadata = {
   title: 'Verbum — Mappa Fidei | Veritas Dei',
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function VerbumCanvasPage() {
   return (
-    <Suspense>
+    <Suspense fallback={<VerbumCanvasLoading />}>
       <Verbum />
     </Suspense>
   )
