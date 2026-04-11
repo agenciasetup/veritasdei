@@ -38,6 +38,7 @@ export async function getUserFlows(userId: string): Promise<VerbumFlow[]> {
     .select('*')
     .eq('user_id', userId)
     .order('updated_at', { ascending: false })
+    .limit(100)
 
   if (error) {
     console.error('getUserFlows error:', error)
@@ -92,20 +93,20 @@ export async function duplicateFlow(flowId: string, userId: string, newName: str
   const newFlow = await createFlow(userId, newName, source.description || undefined)
   if (!newFlow) return null
 
-  // Copy nodes
+  // Copy nodes — batch insert instead of N+1 loop
   const { data: sourceNodes } = await supabase
     .from('verbum_nodes')
     .select('*')
     .eq('flow_id', flowId)
+    .limit(5000)
+
+  const idMap: Record<string, string> = {}
 
   if (sourceNodes && sourceNodes.length > 0) {
-    const idMap: Record<string, string> = {}
-
-    for (const node of sourceNodes) {
+    const newNodes = sourceNodes.map((node: Record<string, unknown>) => {
       const newId = crypto.randomUUID()
-      idMap[node.id] = newId
-
-      await supabase.from('verbum_nodes').insert({
+      idMap[node.id as string] = newId
+      return {
         id: newId,
         user_id: userId,
         flow_id: newFlow.id,
@@ -127,36 +128,39 @@ export async function duplicateFlow(flowId: string, userId: string, newName: str
         is_canonical: false,
         is_shared: false,
         sources: node.sources,
-      })
-    }
+      }
+    })
 
-    // Copy edges with remapped IDs
+    await supabase.from('verbum_nodes').insert(newNodes)
+
+    // Copy edges — batch insert with remapped IDs
     const { data: sourceEdges } = await supabase
       .from('verbum_edges')
       .select('*')
       .eq('flow_id', flowId)
+      .limit(10000)
 
-    if (sourceEdges) {
-      for (const edge of sourceEdges) {
-        const newSource = idMap[edge.source_node_id]
-        const newTarget = idMap[edge.target_node_id]
-        if (newSource && newTarget) {
-          await supabase.from('verbum_edges').insert({
-            user_id: userId,
-            flow_id: newFlow.id,
-            source_node_id: newSource,
-            target_node_id: newTarget,
-            relation_type: edge.relation_type,
-            magisterial_weight: edge.magisterial_weight,
-            ai_explanation: edge.ai_explanation,
-            ai_explanation_short: edge.ai_explanation_short,
-            theological_name: edge.theological_name,
-            sources: edge.sources,
-            status: edge.status,
-            is_auto_generated: false,
-            is_shared: false,
-          })
-        }
+    if (sourceEdges && sourceEdges.length > 0) {
+      const newEdges = sourceEdges
+        .filter((edge: Record<string, unknown>) => idMap[edge.source_node_id as string] && idMap[edge.target_node_id as string])
+        .map((edge: Record<string, unknown>) => ({
+          user_id: userId,
+          flow_id: newFlow.id,
+          source_node_id: idMap[edge.source_node_id as string],
+          target_node_id: idMap[edge.target_node_id as string],
+          relation_type: edge.relation_type,
+          magisterial_weight: edge.magisterial_weight,
+          ai_explanation: edge.ai_explanation,
+          ai_explanation_short: edge.ai_explanation_short,
+          theological_name: edge.theological_name,
+          sources: edge.sources,
+          status: edge.status,
+          is_auto_generated: false,
+          is_shared: false,
+        }))
+
+      if (newEdges.length > 0) {
+        await supabase.from('verbum_edges').insert(newEdges)
       }
     }
   }
@@ -190,14 +194,10 @@ export async function getPublicFlows(
 
   const orderCol = sortBy === 'recent' ? 'created_at' : sortBy === 'popular' ? 'clone_count' : 'node_count'
 
-  const { count } = await supabase
+  // Single query with count — avoids separate count query
+  const { data, count, error } = await supabase
     .from('verbum_flows')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_public', true)
-
-  const { data, error } = await supabase
-    .from('verbum_flows')
-    .select('*')
+    .select('*', { count: 'exact' })
     .eq('is_public', true)
     .order(orderCol, { ascending: false })
     .range(offset, offset + limit - 1)
@@ -210,7 +210,7 @@ export async function getPublicFlows(
   return { flows: (data || []) as VerbumFlow[], total: count || 0 }
 }
 
-export async function searchPublicFlows(query: string, limit = 20): Promise<VerbumFlow[]> {
+export async function searchPublicFlows(query: string, limit = 20, offset = 0): Promise<VerbumFlow[]> {
   supabase ??= createClient()
   if (!supabase)return []
 
@@ -220,7 +220,7 @@ export async function searchPublicFlows(query: string, limit = 20): Promise<Verb
     .eq('is_public', true)
     .or(`name.ilike.%${sanitizePostgrestFilter(query)}%,description.ilike.%${sanitizePostgrestFilter(query)}%`)
     .order('clone_count', { ascending: false })
-    .limit(limit)
+    .range(offset, offset + limit - 1)
 
   return (data || []) as VerbumFlow[]
 }
@@ -275,6 +275,7 @@ export async function getFlowShares(flowId: string): Promise<VerbumFlowShare[]> 
     .select('*')
     .eq('flow_id', flowId)
     .order('created_at', { ascending: false })
+    .limit(50)
 
   return (data || []) as VerbumFlowShare[]
 }
@@ -345,6 +346,7 @@ export async function getUserFavorites(userId: string): Promise<string[]> {
     .from('verbum_flow_favorites')
     .select('flow_id')
     .eq('user_id', userId)
+    .limit(200)
 
   return (data || []).map((d: { flow_id: string }) => d.flow_id)
 }
@@ -360,6 +362,7 @@ export async function loadFlowNodes(flowId: string) {
     .select('*')
     .eq('flow_id', flowId)
     .order('created_at')
+    .limit(5000)
 
   return data || []
 }
@@ -374,6 +377,7 @@ export async function loadFlowEdges(flowId: string) {
     .eq('flow_id', flowId)
     .neq('status', 'rejeitada')
     .order('created_at')
+    .limit(10000)
 
   return data || []
 }
