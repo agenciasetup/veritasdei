@@ -7,12 +7,33 @@ import type { SumaArticle } from '../data/types'
 interface ArticleViewProps {
   article: SumaArticle
   partAbbr: string
+  highlight?: string
+  /** When true, start with all sections open */
+  expandAll?: boolean
 }
 
 type ArticleSection = 'objections' | 'sedContra' | 'respondeo' | 'replies'
 
-export default function ArticleView({ article, partAbbr }: ArticleViewProps) {
-  const [openSections, setOpenSections] = useState<Set<ArticleSection>>(new Set(['respondeo']))
+function highlightText(text: string, term?: string) {
+  if (!term || term.length < 2) return text
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(`(${escaped})`, 'gi')
+  const parts = text.split(regex)
+  return parts.map((part, i) =>
+    regex.test(part) ? (
+      <mark key={i} style={{ background: 'rgba(201,168,76,0.3)', color: '#F2EDE4', borderRadius: '2px', padding: '0 2px' }}>
+        {part}
+      </mark>
+    ) : (
+      part
+    )
+  )
+}
+
+export default function ArticleView({ article, partAbbr, highlight, expandAll }: ArticleViewProps) {
+  const [openSections, setOpenSections] = useState<Set<ArticleSection>>(
+    new Set(expandAll ? ['objections', 'sedContra', 'respondeo', 'replies'] : ['respondeo'])
+  )
 
   function toggleSection(s: ArticleSection) {
     setOpenSections(prev => {
@@ -44,13 +65,12 @@ export default function ArticleView({ article, partAbbr }: ArticleViewProps) {
           className="text-base font-semibold leading-snug"
           style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
         >
-          {article.title}
+          {highlightText(article.title, highlight)}
         </h3>
       </div>
 
       {/* Sections */}
       <div className="space-y-px">
-        {/* Objeções */}
         <CollapsibleSection
           title="Objeções"
           isOpen={openSections.has('objections')}
@@ -69,13 +89,12 @@ export default function ArticleView({ article, partAbbr }: ArticleViewProps) {
                 className="text-sm leading-[1.9]"
                 style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif', fontWeight: 300 }}
               >
-                {obj}
+                {highlightText(obj, highlight)}
               </p>
             </div>
           ))}
         </CollapsibleSection>
 
-        {/* Sed Contra */}
         <CollapsibleSection
           title="Sed Contra"
           isOpen={openSections.has('sedContra')}
@@ -86,11 +105,10 @@ export default function ArticleView({ article, partAbbr }: ArticleViewProps) {
             className="text-sm leading-[1.9] italic"
             style={{ color: '#B8AFA2', fontFamily: 'Cormorant Garamond, serif' }}
           >
-            {article.sedContra}
+            {highlightText(article.sedContra, highlight)}
           </p>
         </CollapsibleSection>
 
-        {/* Respondeo (corpo do artigo) */}
         <CollapsibleSection
           title="Respondeo"
           subtitle="Corpo do artigo"
@@ -103,11 +121,10 @@ export default function ArticleView({ article, partAbbr }: ArticleViewProps) {
             className="text-sm leading-[1.9]"
             style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif', fontWeight: 300 }}
           >
-            {article.respondeo}
+            {highlightText(article.respondeo, highlight)}
           </p>
         </CollapsibleSection>
 
-        {/* Respostas às objeções */}
         {article.replies.length > 0 && (
           <CollapsibleSection
             title="Respostas às Objeções"
@@ -127,7 +144,7 @@ export default function ArticleView({ article, partAbbr }: ArticleViewProps) {
                   className="text-sm leading-[1.9]"
                   style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif', fontWeight: 300 }}
                 >
-                  {reply}
+                  {highlightText(reply, highlight)}
                 </p>
               </div>
             ))}
