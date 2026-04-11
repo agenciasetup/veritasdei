@@ -19,7 +19,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Plus, HelpCircle, Save, Cloud, CloudOff, Share2 } from 'lucide-react'
 
 import { useAuth } from '@/contexts/AuthContext'
@@ -80,6 +80,7 @@ const INITIAL_NODES: Node[] = [
 function VerbumCanvasInner() {
   const { user } = useAuth()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const flowIdParam = searchParams.get('flow')
 
   const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES)
@@ -107,6 +108,7 @@ function VerbumCanvasInner() {
   // Connection type selector state
   const [pendingConnection, setPendingConnection] = useState<Connection | null>(null)
   const [connectionSelector, setConnectionSelector] = useState(false)
+  const [showHelpTip, setShowHelpTip] = useState(false)
 
   // Edge detail panel state
   const [edgeDetail, setEdgeDetail] = useState<{
@@ -137,6 +139,8 @@ function VerbumCanvasInner() {
   const positionDebounceRef = useRef<Record<string, NodeJS.Timeout>>({})
   const isLoadingRef = useRef(false)
   const initDoneRef = useRef(false)
+  const addingNodeRef = useRef(false)
+  const longPressRef = useRef<NodeJS.Timeout | null>(null)
 
   // Refs to avoid stale closures in triggerSave
   const nodesRef = useRef(nodes)
@@ -151,7 +155,6 @@ function VerbumCanvasInner() {
 
     async function initFlow() {
       isLoadingRef.current = true
-      initDoneRef.current = true
 
       try {
         if (flowIdParam) {
@@ -170,10 +173,10 @@ function VerbumCanvasInner() {
           ])
           if (cancelled) return
 
-          // Convert DB nodes to React Flow nodes
+          // Convert DB nodes to React Flow nodes (filter out Trinitas to avoid duplicate)
           const loadedNodes: Node[] = [
             ...INITIAL_NODES,
-            ...dbNodes.map((n: Record<string, unknown>) => ({
+            ...dbNodes.filter((n: Record<string, unknown>) => n.id !== TRINITAS_NODE_ID).map((n: Record<string, unknown>) => ({
               id: n.id as string,
               type: n.node_type as string,
               position: { x: n.pos_x as number, y: n.pos_y as number },
@@ -222,13 +225,14 @@ function VerbumCanvasInner() {
           setCurrentFlow(newFlow)
           setFlowName(newFlow.name)
           setSaveStatus('saved')
-          // Update URL without navigation
-          window.history.replaceState({}, '', `/verbum/canvas?flow=${newFlow.id}`)
+          // Update URL without full navigation — preserves back button
+          router.replace(`/verbum/canvas?flow=${newFlow.id}`)
         }
       } catch (err) {
         console.error('initFlow error:', err)
       } finally {
         isLoadingRef.current = false
+        initDoneRef.current = true
       }
     }
 
@@ -295,6 +299,15 @@ function VerbumCanvasInner() {
     return () => window.removeEventListener('beforeunload', handler)
   }, [saveStatus])
 
+  // ─── Cleanup debounce timers on unmount ───
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+      Object.values(positionDebounceRef.current).forEach(clearTimeout)
+      positionDebounceRef.current = {}
+    }
+  }, [])
+
   const onConnect: OnConnect = useCallback(
     (connection) => {
       if (connection.source && connection.target && !isReadOnly) {
@@ -351,7 +364,7 @@ function VerbumCanvasInner() {
           target_node_id: pendingConnection.target,
           relation_type: relationType,
           status: 'proposta',
-        })
+        }).catch(() => setSaveStatus('unsaved'))
       }
 
       setIsGenerating(true)
@@ -400,7 +413,7 @@ function VerbumCanvasInner() {
               ai_explanation: explanation.explanation_full,
               sources: explanation.sources,
               magisterial_weight: explanation.magisterial_weight,
-            })
+            }).catch(() => setSaveStatus('unsaved'))
           }
         } else {
           setEdges((eds) =>
@@ -453,24 +466,42 @@ function VerbumCanvasInner() {
 
   const onApproveEdge = useCallback(() => {
     if (!edgeDetail.edgeId) return
+    const approvedEdgeId = edgeDetail.edgeId
     setEdges((eds) =>
-      eds.map((e) =>
-        e.id === edgeDetail.edgeId
-          ? {
-              ...e,
-              type: (e.data as Record<string, unknown>)?.relation_type as string || e.type,
-              animated: false,
-              data: { ...e.data, status: 'aprovada' },
-            }
-          : e
-      )
+      eds.map((e) => {
+        if (e.id !== approvedEdgeId) return e
+        const eData = e.data as Record<string, unknown> | undefined
+
+        // Persist approval to DB
+        if (currentFlow && user?.id) {
+          saveFlowEdge(currentFlow.id, user.id, {
+            id: approvedEdgeId,
+            source_node_id: e.source,
+            target_node_id: e.target,
+            relation_type: (eData?.relation_type as string) || 'doutrina',
+            theological_name: eData?.theological_name as string | null,
+            ai_explanation_short: eData?.explanation_short as string | null,
+            ai_explanation: eData?.explanation_full as string | null,
+            sources: eData?.sources as unknown[] | undefined,
+            magisterial_weight: eData?.magisterial_weight as number | undefined,
+            status: 'aprovada',
+          }).catch(() => setSaveStatus('unsaved'))
+        }
+
+        return {
+          ...e,
+          type: (eData?.relation_type as string) || e.type,
+          animated: false,
+          data: { ...e.data, status: 'aprovada' },
+        }
+      })
     )
     setEdgeDetail((s) => ({
       ...s,
       data: s.data ? { ...s.data, status: 'aprovada' } : null,
     }))
     triggerSave()
-  }, [edgeDetail.edgeId, setEdges, triggerSave])
+  }, [edgeDetail.edgeId, setEdges, triggerSave, currentFlow, user?.id])
 
   const onRejectEdge = useCallback(() => {
     if (!edgeDetail.edgeId) return
@@ -503,6 +534,11 @@ function VerbumCanvasInner() {
 
   const onAddNode = useCallback(
     (payload: AddNodePayload) => {
+      // Prevent double-click creating duplicate nodes
+      if (addingNodeRef.current) return
+      addingNodeRef.current = true
+      setTimeout(() => { addingNodeRef.current = false }, 500)
+
       const newId = crypto.randomUUID()
       const pos = insertPositionRef.current
 
@@ -593,7 +629,7 @@ function VerbumCanvasInner() {
           pos_y: pos.y,
           is_canonical: (data.is_canonical as boolean) || false,
           canonical_entity_id: data.canonical_entity_id as string | null,
-        })
+        }).catch(() => setSaveStatus('unsaved'))
       }
 
       setNodes((nds) => {
@@ -621,6 +657,8 @@ function VerbumCanvasInner() {
           if (newProposals.length > 0) {
             setProposals((prev) => [...prev, ...newProposals])
           }
+        }).catch((err) => {
+          console.error('[Verbum] proposeConnections failed:', err)
         })
 
         return updated
@@ -634,14 +672,12 @@ function VerbumCanvasInner() {
   const onApproveProposal = useCallback(
     (proposal: ConnectionProposal) => {
       const edgeId = crypto.randomUUID()
-      const sourceNode = nodes.find((n) => {
-        const title = ((n.data as Record<string, unknown>)?.title as string) || ''
-        return title && n.id !== proposal.target_node_id
-      })
+      const sourceId = proposal.source_node_id
+      const sourceNode = nodes.find((n) => n.id === sourceId)
 
       const newEdge: Edge = {
         id: edgeId,
-        source: sourceNode?.id || nodes[nodes.length - 1]?.id || '',
+        source: sourceId,
         target: proposal.target_node_id,
         type: proposal.relation_type,
         data: {
@@ -652,9 +688,7 @@ function VerbumCanvasInner() {
           explanation_short: proposal.explanation_short,
           explanation_full: proposal.explanation_full,
           sources: proposal.sources,
-          source_name: sourceNode
-            ? ((sourceNode.data as Record<string, unknown>)?.title as string) || ''
-            : '',
+          source_name: proposal.source_node_title,
           target_name: proposal.target_node_title,
         },
       }
@@ -666,7 +700,7 @@ function VerbumCanvasInner() {
       if (currentFlow && user?.id) {
         saveFlowEdge(currentFlow.id, user.id, {
           id: edgeId,
-          source_node_id: sourceNode?.id || nodes[nodes.length - 1]?.id || '',
+          source_node_id: sourceId,
           target_node_id: proposal.target_node_id,
           relation_type: proposal.relation_type,
           magisterial_weight: proposal.magisterial_weight,
@@ -675,7 +709,7 @@ function VerbumCanvasInner() {
           ai_explanation: proposal.explanation_full,
           sources: proposal.sources,
           status: 'aprovada',
-        })
+        }).catch(() => setSaveStatus('unsaved'))
       }
       triggerSave()
     },
@@ -786,7 +820,27 @@ function VerbumCanvasInner() {
   const saveLabel = saveStatus === 'saved' ? 'Salvo' : saveStatus === 'saving' ? 'Salvando...' : saveStatus === 'unsaved' ? 'Não salvo' : ''
 
   return (
-    <div className="relative w-full h-full" style={{ background: VERBUM_COLORS.canvas_bg }}>
+    <div
+      className="relative w-full h-full"
+      style={{ background: VERBUM_COLORS.canvas_bg }}
+      onTouchStart={(e) => {
+        if (isReadOnly || e.touches.length !== 1) return
+        const touch = e.touches[0]
+        const tx = touch.clientX
+        const ty = touch.clientY
+        longPressRef.current = setTimeout(() => {
+          const flowPos = screenToFlowPosition({ x: tx, y: ty })
+          insertPositionRef.current = flowPos
+          setContextMenu({ x: tx, y: ty, flowX: flowPos.x, flowY: flowPos.y })
+        }, 500)
+      }}
+      onTouchEnd={() => {
+        if (longPressRef.current) { clearTimeout(longPressRef.current); longPressRef.current = null }
+      }}
+      onTouchMove={() => {
+        if (longPressRef.current) { clearTimeout(longPressRef.current); longPressRef.current = null }
+      }}
+    >
       <CanvasBackground />
 
       <ReactFlow
@@ -828,6 +882,7 @@ function VerbumCanvasInner() {
             background: VERBUM_COLORS.ui_bg,
             border: `1px solid ${VERBUM_COLORS.ui_border}`,
             borderRadius: '8px',
+            marginBottom: 'env(safe-area-inset-bottom, 0px)',
           }}
           pannable
           zoomable
@@ -839,6 +894,7 @@ function VerbumCanvasInner() {
             background: VERBUM_COLORS.ui_bg,
             border: `1px solid ${VERBUM_COLORS.ui_border}`,
             borderRadius: '8px',
+            marginBottom: 'env(safe-area-inset-bottom, 0px)',
           }}
         />
       </ReactFlow>
@@ -848,6 +904,7 @@ function VerbumCanvasInner() {
         className="fixed top-0 left-0 right-0 z-[200] flex items-center justify-between px-4 py-2"
         style={{
           background: 'linear-gradient(to bottom, rgba(10,8,6,0.95) 0%, rgba(10,8,6,0.7) 80%, transparent 100%)',
+          paddingTop: 'max(0.5rem, env(safe-area-inset-top))',
           pointerEvents: 'none',
         }}
       >
@@ -866,7 +923,7 @@ function VerbumCanvasInner() {
             Verbum
           </Link>
           <span
-            className="text-xs font-semibold truncate max-w-[200px]"
+            className="text-xs font-semibold truncate max-w-[120px] sm:max-w-[200px] md:max-w-[300px]"
             style={{ fontFamily: 'Cinzel, serif', color: VERBUM_COLORS.ui_gold, letterSpacing: '0.06em' }}
           >
             {flowName}
@@ -926,13 +983,17 @@ function VerbumCanvasInner() {
             </button>
           )}
 
-          {/* Help hint */}
+          {/* Help hint — click toggle for touch, hover for desktop */}
           <div className="relative group">
-            <button className="p-1.5 rounded-lg" style={{ color: VERBUM_COLORS.text_muted }}>
+            <button
+              className="p-1.5 rounded-lg"
+              style={{ color: VERBUM_COLORS.text_muted }}
+              onClick={() => setShowHelpTip((v) => !v)}
+            >
               <HelpCircle className="w-4 h-4" />
             </button>
             <div
-              className="absolute right-0 top-full mt-2 w-56 rounded-xl p-4 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200"
+              className={`absolute right-0 top-full mt-2 w-56 rounded-xl p-4 transition-opacity duration-200 ${showHelpTip ? 'opacity-100 pointer-events-auto' : 'opacity-0 group-hover:opacity-100 pointer-events-none'}`}
               style={{
                 background: VERBUM_COLORS.ui_bg,
                 border: `1px solid ${VERBUM_COLORS.ui_border}`,

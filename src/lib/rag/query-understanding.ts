@@ -11,6 +11,7 @@
  */
 
 import { openai } from '../openai/client'
+import { sanitizeIlike, sanitizePostgrestFilter } from '../utils/sanitize'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export interface QueryUnderstanding {
@@ -119,7 +120,7 @@ export async function searchKnowledgeBase(
     const { data: topicMatch } = await supabase
       .from('ai_knowledge_base')
       .select('topic, category, core_teaching, bible_references, summary, keywords')
-      .ilike('topic', `%${primaryTopic}%`)
+      .ilike('topic', `%${sanitizeIlike(primaryTopic)}%`)
       .limit(2)
 
     if (topicMatch && topicMatch.length > 0) {
@@ -147,7 +148,7 @@ export async function searchKnowledgeBase(
       const { data: textMatch } = await supabase
         .from('ai_knowledge_base')
         .select('topic, category, core_teaching, bible_references, summary, keywords')
-        .or(`summary.ilike.%${searchTerm}%,core_teaching.ilike.%${searchTerm}%`)
+        .or(`summary.ilike.%${sanitizePostgrestFilter(searchTerm)}%,core_teaching.ilike.%${sanitizePostgrestFilter(searchTerm)}%`)
         .limit(2)
 
       if (textMatch && textMatch.length > 0) {

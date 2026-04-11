@@ -49,7 +49,7 @@ export default function EdgeDetailPanel({ visible, onClose, data, onApprove, onR
           transition={{ duration: 0.25, ease: 'easeOut' }}
           className="fixed right-0 top-0 h-full z-[350] overflow-y-auto"
           style={{
-            width: 380,
+            width: 'min(380px, 100vw)',
             background: VERBUM_COLORS.ui_bg,
             borderLeft: `1px solid ${VERBUM_COLORS.ui_border}`,
             boxShadow: '-8px 0 32px rgba(0, 0, 0, 0.5)',

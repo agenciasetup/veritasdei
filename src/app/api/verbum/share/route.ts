@@ -71,12 +71,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create share' }, { status: 500 })
     }
 
+    // Generic message to prevent email enumeration
     return NextResponse.json({
       success: true,
       share,
-      message: targetProfile
-        ? 'Convite enviado! O usuário verá no dashboard.'
-        : 'Convite registrado. Quando o email se cadastrar, receberá o fluxo.',
+      message: 'Convite enviado com sucesso!',
     })
   } catch (error) {
     console.error('Share API error:', error)

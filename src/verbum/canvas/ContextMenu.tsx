@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { VERBUM_COLORS } from '../design-tokens'
 import type { ContextMenuAction } from '../types/verbum.types'
@@ -19,7 +20,18 @@ const MENU_ITEMS: { action: ContextMenuAction; icon: string; label: string }[] =
   { action: 'conceito', icon: '✨', label: 'Inserir da Tradição' },
 ]
 
+const MENU_WIDTH = 240
+const MENU_HEIGHT = 200 // approximate: header + 4 items
+
 export default function ContextMenu({ x, y, visible, onSelect, onClose }: ContextMenuProps) {
+  // Clamp position so menu stays within viewport
+  const position = useMemo(() => {
+    if (typeof window === 'undefined') return { left: x, top: y }
+    const clampedX = Math.min(x, window.innerWidth - MENU_WIDTH - 8)
+    const clampedY = Math.min(y, window.innerHeight - MENU_HEIGHT - 8)
+    return { left: Math.max(8, clampedX), top: Math.max(8, clampedY) }
+  }, [x, y])
+
   return (
     <AnimatePresence>
       {visible && (
@@ -34,8 +46,8 @@ export default function ContextMenu({ x, y, visible, onSelect, onClose }: Contex
             transition={{ duration: 0.15 }}
             className="fixed z-[201] rounded-xl overflow-hidden"
             style={{
-              left: x,
-              top: y,
+              left: position.left,
+              top: position.top,
               background: VERBUM_COLORS.ui_bg,
               border: `1px solid ${VERBUM_COLORS.ui_border}`,
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6)',

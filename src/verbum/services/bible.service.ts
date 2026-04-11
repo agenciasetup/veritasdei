@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { sanitizeIlike, sanitizePostgrestFilter } from '@/lib/utils/sanitize'
 import type { BibleVerse } from '../types/verbum.types'
 
 // Lazy-init: deferred from module import to prevent premature Supabase auth init.
@@ -215,7 +216,7 @@ export async function searchByReference(reference: string): Promise<BibleVerse |
   const { data: data3 } = await supabase
     .from('biblia')
     .select('book, book_abbr, chapter, verse, reference, text_pt, text_latin, testament')
-    .ilike('book', `%${parsed.book_abbr}%`)
+    .ilike('book', `%${sanitizeIlike(parsed.book_abbr)}%`)
     .eq('chapter', parsed.chapter)
     .eq('verse', parsed.verse)
     .limit(1)
@@ -267,7 +268,7 @@ export async function searchByRange(reference: string): Promise<BibleVerse[]> {
   const { data: data3 } = await supabase
     .from('biblia')
     .select('book, book_abbr, chapter, verse, reference, text_pt, text_latin, testament')
-    .ilike('book', `%${parsed.book_abbr}%`)
+    .ilike('book', `%${sanitizeIlike(parsed.book_abbr)}%`)
     .eq('chapter', parsed.chapter)
     .gte('verse', parsed.verseStart)
     .lte('verse', parsed.verseEnd)
@@ -291,7 +292,7 @@ export async function searchByText(query: string, limit = 8): Promise<BibleVerse
   const { data } = await supabase
     .from('biblia')
     .select('book, book_abbr, chapter, verse, reference, text_pt, text_latin, testament')
-    .ilike('text_pt', `%${query}%`)
+    .ilike('text_pt', `%${sanitizeIlike(query)}%`)
     .limit(limit)
 
   if (data && data.length > 0) {
@@ -307,7 +308,7 @@ export async function searchByText(query: string, limit = 8): Promise<BibleVerse
       const { data: wordData } = await supabase
         .from('biblia')
         .select('book, book_abbr, chapter, verse, reference, text_pt, text_latin, testament')
-        .ilike('text_pt', `%${word}%`)
+        .ilike('text_pt', `%${sanitizeIlike(word)}%`)
         .limit(limit)
 
       if (wordData) {
@@ -341,7 +342,7 @@ export async function searchByText(query: string, limit = 8): Promise<BibleVerse
   const { data: fallback } = await supabase
     .from('biblia')
     .select('book, book_abbr, chapter, verse, reference, text_pt, text_latin, testament')
-    .ilike('text_pt', `%${mainWord}%`)
+    .ilike('text_pt', `%${sanitizeIlike(mainWord)}%`)
     .limit(limit)
 
   return (fallback || []).map(mapToVerse)
@@ -359,7 +360,7 @@ export async function searchByBook(bookQuery: string, chapter?: number, limit = 
   let query = supabase
     .from('biblia')
     .select('book, book_abbr, chapter, verse, reference, text_pt, text_latin, testament')
-    .or(`book.ilike.%${bookQuery}%,book_abbr.ilike.%${bookQuery}%,book_abbr.ilike.%${resolvedAbbr}%`)
+    .or(`book.ilike.%${sanitizePostgrestFilter(bookQuery)}%,book_abbr.ilike.%${sanitizePostgrestFilter(bookQuery)}%,book_abbr.ilike.%${sanitizePostgrestFilter(resolvedAbbr)}%`)
 
   if (chapter) {
     query = query.eq('chapter', chapter)

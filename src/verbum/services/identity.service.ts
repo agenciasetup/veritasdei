@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { sanitizePostgrestFilter } from '@/lib/utils/sanitize'
 import type {
   CanonicalEntity,
   IdentityResult,
@@ -69,11 +70,11 @@ export async function resolveIdentity(input: string): Promise<IdentityResult> {
     }
   }
 
-  // 4. Search biblia by text content
-  const verses = await searchByText(original, 5)
-
-  // 5. Search ai_knowledge_base by keywords
-  const knowledge = await searchKnowledgeBase(normalized)
+  // 4 & 5. Search biblia + knowledge base in parallel
+  const [verses, knowledge] = await Promise.all([
+    searchByText(original, 5),
+    searchKnowledgeBase(normalized),
+  ])
 
   return {
     type: 'new',
@@ -130,25 +131,14 @@ async function searchKnowledgeBase(normalized: string): Promise<KnowledgeBaseEnt
   supabase ??= createClient()
   if (!supabase)return []
 
-  // Try keyword match
+  // Single query: keyword array match OR topic ilike — avoids two sequential queries
   const { data } = await supabase
     .from('ai_knowledge_base')
     .select('category, topic, core_teaching, bible_references, keywords')
-    .contains('keywords', [normalized])
+    .or(`keywords.cs.{${sanitizePostgrestFilter(normalized)}},topic.ilike.%${sanitizePostgrestFilter(normalized)}%`)
     .limit(3)
 
-  if (data && data.length > 0) {
-    return data as KnowledgeBaseEntry[]
-  }
-
-  // Fallback: ILIKE on topic
-  const { data: topicMatch } = await supabase
-    .from('ai_knowledge_base')
-    .select('category, topic, core_teaching, bible_references, keywords')
-    .ilike('topic', `%${normalized}%`)
-    .limit(3)
-
-  return (topicMatch || []) as KnowledgeBaseEntry[]
+  return (data || []) as KnowledgeBaseEntry[]
 }
 
 /**
@@ -165,7 +155,7 @@ export async function searchCanonicalEntities(query: string): Promise<CanonicalE
   const { data } = await supabase
     .from('verbum_canonical_entities')
     .select('*')
-    .or(`display_name.ilike.%${query}%,canonical_name.ilike.%${normalized}%`)
+    .or(`display_name.ilike.%${sanitizePostgrestFilter(query)}%,canonical_name.ilike.%${sanitizePostgrestFilter(normalized)}%`)
     .limit(5)
 
   return (data || []) as CanonicalEntity[]

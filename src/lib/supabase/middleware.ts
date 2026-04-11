@@ -11,10 +11,12 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse
   }
 
-  // Skip auth refresh for API routes, auth routes, and public pages
+  // Skip auth refresh for public API routes, auth routes, and public pages.
+  // Keep refresh for /api/verbum/ and /api/admin/ to prevent stale tokens.
   const path = request.nextUrl.pathname
+  const isProtectedApi = path.startsWith('/api/verbum/') || path.startsWith('/api/admin/')
   if (
-    path.startsWith('/api/') ||
+    (path.startsWith('/api/') && !isProtectedApi) ||
     path.startsWith('/auth/') ||
     path === '/privacidade' ||
     path === '/termos'
@@ -47,8 +49,13 @@ export async function updateSession(request: NextRequest) {
   // This is critical — without it, server components see stale/expired sessions.
   try {
     await supabase.auth.getUser()
-  } catch (err) {
-    console.error('[Middleware] Auth refresh failed:', err)
+  } catch {
+    // Retry once on failure before giving up
+    try {
+      await supabase.auth.getUser()
+    } catch (retryErr) {
+      console.error('[Middleware] Auth refresh failed after retry:', retryErr)
+    }
   }
 
   return supabaseResponse
