@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useState, useRef, lazy, Suspense } from 'react'
 import {
   ReactFlow,
   MiniMap,
@@ -20,7 +20,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, HelpCircle, Save, Cloud, CloudOff, Share2 } from 'lucide-react'
+import { ArrowLeft, Plus, HelpCircle, Save, Cloud, CloudOff, Share2, Sparkles } from 'lucide-react'
 
 import { useAuth } from '@/contexts/AuthContext'
 import { nodeTypes } from '../nodes/nodeTypes'
@@ -32,7 +32,7 @@ import ContextMenu from './ContextMenu'
 import AddNodePanel, { type AddNodePayload } from '../panels/AddNodePanel'
 import ConnectionTypeSelector from '../panels/ConnectionTypeSelector'
 import EdgeDetailPanel from '../panels/EdgeDetailPanel'
-import ShareModal from '../panels/ShareModal'
+// ShareModal lazy-loaded above
 import { getConnectionExplanation } from '../services/openai.service'
 import { proposeConnections } from '../services/connection.service'
 import {
@@ -46,7 +46,9 @@ import {
   deleteFlowEdge,
   updateNodePosition as persistNodePosition,
 } from '../services/flow.service'
-import ProposalsPanel, { ProposalsBadge } from '../panels/ProposalsPanel'
+import { ProposalsBadge } from '../panels/ProposalsPanel'
+const ProposalsPanel = lazy(() => import('../panels/ProposalsPanel'))
+const ShareModal = lazy(() => import('../panels/ShareModal'))
 import type {
   ConnectionProposal,
   TrinitasNodeData,
@@ -130,6 +132,7 @@ function VerbumCanvasInner() {
   }>({ visible: false, edgeId: null, data: null })
 
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isProposing, setIsProposing] = useState(false)
   const [proposals, setProposals] = useState<ConnectionProposal[]>([])
   const [proposalsVisible, setProposalsVisible] = useState(false)
   const [visibleLayers, setVisibleLayers] = useState<number[]>([0, 1, 2, 3, 4, 5])
@@ -566,6 +569,7 @@ function VerbumCanvasInner() {
     proposalTimerRef.current = setTimeout(async () => {
       const controller = new AbortController()
       proposalAbortRef.current = controller
+      setIsProposing(true)
 
       try {
         const currentNodes = nodesRef.current
@@ -590,6 +594,8 @@ function VerbumCanvasInner() {
         if (!(err instanceof DOMException && (err as DOMException).name === 'AbortError')) {
           console.error('[Verbum] proposeConnections failed:', err)
         }
+      } finally {
+        setIsProposing(false)
       }
     }, 1500)
   }, [])
@@ -1044,6 +1050,14 @@ function VerbumCanvasInner() {
         </div>
 
         <div className="flex items-center gap-2" style={{ pointerEvents: 'auto' }}>
+          {/* Proposing indicator */}
+          {isProposing && (
+            <div className="flex items-center gap-1 text-[10px]" style={{ color: VERBUM_COLORS.edge_proposta, fontFamily: 'Poppins, sans-serif' }}>
+              <Sparkles className="w-3 h-3 animate-pulse" />
+              Analisando...
+            </div>
+          )}
+
           {/* Save status */}
           {currentFlow && saveStatus !== 'offline' && (
             <div className="flex items-center gap-1 text-[10px]" style={{ color: VERBUM_COLORS.text_muted, fontFamily: 'Poppins, sans-serif' }}>
@@ -1176,25 +1190,29 @@ function VerbumCanvasInner() {
       />
 
       <ProposalsBadge count={proposals.length} onClick={() => setProposalsVisible(true)} />
-      <ProposalsPanel
-        proposals={proposals}
-        visible={proposalsVisible}
-        onClose={() => setProposalsVisible(false)}
-        onApprove={onApproveProposal}
-        onReject={onRejectProposal}
-      />
+      <Suspense fallback={null}>
+        <ProposalsPanel
+          proposals={proposals}
+          visible={proposalsVisible}
+          onClose={() => setProposalsVisible(false)}
+          onApprove={onApproveProposal}
+          onReject={onRejectProposal}
+        />
+      </Suspense>
 
       {/* Share modal */}
       {currentFlow && (
-        <ShareModal
-          visible={shareModalVisible}
-          flow={currentFlow}
-          onClose={() => setShareModalVisible(false)}
-          onTogglePublic={async (isPublic) => {
-            await updateFlow(currentFlow.id, { is_public: isPublic })
-            setCurrentFlow({ ...currentFlow, is_public: isPublic })
-          }}
-        />
+        <Suspense fallback={null}>
+          <ShareModal
+            visible={shareModalVisible}
+            flow={currentFlow}
+            onClose={() => setShareModalVisible(false)}
+            onTogglePublic={async (isPublic) => {
+              await updateFlow(currentFlow.id, { is_public: isPublic })
+              setCurrentFlow({ ...currentFlow, is_public: isPublic })
+            }}
+          />
+        </Suspense>
       )}
 
       {isGenerating && (
@@ -1208,6 +1226,21 @@ function VerbumCanvasInner() {
           }}
         >
           Gerando explicação teológica...
+        </div>
+      )}
+
+      {/* Performance warning for large graphs */}
+      {nodes.length > 200 && (
+        <div
+          className="fixed bottom-16 left-1/2 -translate-x-1/2 z-[500] px-4 py-2 rounded-lg text-xs"
+          style={{
+            background: 'rgba(212,136,74,0.15)',
+            border: `1px solid ${VERBUM_COLORS.edge_proposta}`,
+            color: VERBUM_COLORS.edge_proposta,
+            fontFamily: 'Poppins, sans-serif',
+          }}
+        >
+          {nodes.length} nós — performance pode ser afetada
         </div>
       )}
     </div>
