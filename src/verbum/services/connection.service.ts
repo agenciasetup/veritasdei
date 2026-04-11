@@ -36,7 +36,7 @@ export async function proposeConnections(
       newNodeTitle: newNode.title,
       newNodeType: newNode.type,
       newNodeRef: newNode.ref,
-      existingNodes: existingNodes.slice(0, 50).map((n) => ({
+      existingNodes: existingNodes.slice(0, 20).map((n) => ({
         id: n.id,
         title: n.title,
         type: n.type,
@@ -77,77 +77,86 @@ async function checkTypologyRegistry(
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
 
-  // Check if new node matches a type alias
-  const { data: typeMatches } = await supabase
-    .from('verbum_typology_registry')
-    .select('*')
-    .contains('aliases_type', [normalized])
-
   const proposals: ConnectionProposal[] = []
 
-  if (typeMatches && typeMatches.length > 0) {
-    for (const match of typeMatches) {
-      // Find if any existing node matches the antitype aliases
-      const antitypeNode = existingNodes.find((en) => {
-        const enNorm = en.title.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        return (match.aliases_antitype as string[]).some((alias) => {
-          const aliasNorm = alias.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-          return enNorm.includes(aliasNorm) || aliasNorm.includes(enNorm)
-        })
-      })
+  try {
+    // Check if new node matches a type alias
+    const { data: typeMatches } = await supabase
+      .from('verbum_typology_registry')
+      .select('*')
+      .contains('aliases_type', [normalized])
+      .limit(10)
 
-      if (antitypeNode) {
-        proposals.push({
-          source_node_id: newNode.id,
-          source_node_title: newNode.title,
-          target_node_id: antitypeNode.id,
-          target_node_title: antitypeNode.title,
-          relation_type: match.relation_type as RelationType,
-          confidence: 1.0,
-          theological_name: match.theological_name,
-          explanation_short: match.explanation_short,
-          explanation_full: match.explanation_pt,
-          magisterial_weight: match.magisterial_weight,
-          sources: (match.sources as VerbumSource[]) || [],
-          source: 'registry',
+    if (typeMatches && typeMatches.length > 0) {
+      for (const match of typeMatches) {
+        const antitypeNode = existingNodes.find((en) => {
+          const enNorm = en.title.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          return (match.aliases_antitype as string[]).some((alias) => {
+            const aliasNorm = alias.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            return enNorm.includes(aliasNorm) || aliasNorm.includes(enNorm)
+          })
         })
+
+        if (antitypeNode) {
+          proposals.push({
+            source_node_id: newNode.id,
+            source_node_title: newNode.title,
+            target_node_id: antitypeNode.id,
+            target_node_title: antitypeNode.title,
+            relation_type: match.relation_type as RelationType,
+            confidence: 1.0,
+            theological_name: match.theological_name,
+            explanation_short: match.explanation_short,
+            explanation_full: match.explanation_pt,
+            magisterial_weight: match.magisterial_weight,
+            sources: (match.sources as VerbumSource[]) || [],
+            source: 'registry',
+          })
+        }
       }
     }
+  } catch {
+    console.warn('[Verbum] typology type-alias lookup failed')
   }
 
-  // Also check if new node matches an antitype alias
-  const { data: antitypeMatches } = await supabase
-    .from('verbum_typology_registry')
-    .select('*')
-    .contains('aliases_antitype', [normalized])
+  try {
+    // Also check if new node matches an antitype alias
+    const { data: antitypeMatches } = await supabase
+      .from('verbum_typology_registry')
+      .select('*')
+      .contains('aliases_antitype', [normalized])
+      .limit(10)
 
-  if (antitypeMatches && antitypeMatches.length > 0) {
-    for (const match of antitypeMatches) {
-      const typeNode = existingNodes.find((en) => {
-        const enNorm = en.title.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        return (match.aliases_type as string[]).some((alias) => {
-          const aliasNorm = alias.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-          return enNorm.includes(aliasNorm) || aliasNorm.includes(enNorm)
+    if (antitypeMatches && antitypeMatches.length > 0) {
+      for (const match of antitypeMatches) {
+        const typeNode = existingNodes.find((en) => {
+          const enNorm = en.title.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          return (match.aliases_type as string[]).some((alias) => {
+            const aliasNorm = alias.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            return enNorm.includes(aliasNorm) || aliasNorm.includes(enNorm)
+          })
         })
-      })
 
-      if (typeNode) {
-        proposals.push({
-          source_node_id: newNode.id,
-          source_node_title: newNode.title,
-          target_node_id: typeNode.id,
-          target_node_title: typeNode.title,
-          relation_type: match.relation_type as RelationType,
-          confidence: 1.0,
-          theological_name: match.theological_name,
-          explanation_short: match.explanation_short,
-          explanation_full: match.explanation_pt,
-          magisterial_weight: match.magisterial_weight,
-          sources: (match.sources as VerbumSource[]) || [],
-          source: 'registry',
-        })
+        if (typeNode) {
+          proposals.push({
+            source_node_id: newNode.id,
+            source_node_title: newNode.title,
+            target_node_id: typeNode.id,
+            target_node_title: typeNode.title,
+            relation_type: match.relation_type as RelationType,
+            confidence: 1.0,
+            theological_name: match.theological_name,
+            explanation_short: match.explanation_short,
+            explanation_full: match.explanation_pt,
+            magisterial_weight: match.magisterial_weight,
+            sources: (match.sources as VerbumSource[]) || [],
+            source: 'registry',
+          })
+        }
       }
     }
+  } catch {
+    console.warn('[Verbum] typology antitype-alias lookup failed')
   }
 
   return proposals

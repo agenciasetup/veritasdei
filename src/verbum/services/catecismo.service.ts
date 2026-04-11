@@ -41,6 +41,7 @@ export async function searchByText(query: string, limit = 5) {
  * Get multiple catecismo paragraphs by their numbers.
  */
 export async function getParagraphs(paragraphs: number[]) {
+  supabase ??= createClient()
   if (!supabase || paragraphs.length === 0) return []
 
   const { data } = await supabase

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import { sanitizeIlike, sanitizePostgrestFilter } from '@/lib/utils/sanitize'
+import { withTimeout } from '@/lib/utils/with-timeout'
 import type { BibleVerse } from '../types/verbum.types'
 
 // Lazy-init: deferred from module import to prevent premature Supabase auth init.
@@ -288,36 +289,48 @@ export async function searchByText(query: string, limit = 8): Promise<BibleVerse
   const words = query.trim().split(/\s+/).filter(w => w.length > 2)
   if (words.length === 0) return []
 
-  // Full query match first
-  const { data } = await supabase
-    .from('biblia')
-    .select('book, book_abbr, chapter, verse, reference, text_pt, text_latin, testament')
-    .ilike('text_pt', `%${sanitizeIlike(query)}%`)
-    .limit(limit)
+  // Full query match first (5s timeout per query)
+  const { data } = await withTimeout(
+    supabase
+      .from('biblia')
+      .select('book, book_abbr, chapter, verse, reference, text_pt, text_latin, testament')
+      .ilike('text_pt', `%${sanitizeIlike(query)}%`)
+      .limit(limit),
+    5000,
+    { data: null, error: null } as Awaited<ReturnType<typeof supabase.from>>
+  )
 
   if (data && data.length > 0) {
     return data.map(mapToVerse)
   }
 
-  // Multi-word search: try each word and aggregate
+  // Multi-word search: run in parallel with per-query error handling
   if (words.length >= 2) {
     const allResults: BibleVerse[] = []
     const seenRefs = new Set<string>()
 
-    for (const word of words.sort((a, b) => b.length - a.length).slice(0, 3)) {
-      const { data: wordData } = await supabase
-        .from('biblia')
-        .select('book, book_abbr, chapter, verse, reference, text_pt, text_latin, testament')
-        .ilike('text_pt', `%${sanitizeIlike(word)}%`)
-        .limit(limit)
+    const wordResults = await Promise.allSettled(
+      words.sort((a, b) => b.length - a.length).slice(0, 3).map(async (word) => {
+        try {
+          const { data: wordData } = await supabase
+            .from('biblia')
+            .select('book, book_abbr, chapter, verse, reference, text_pt, text_latin, testament')
+            .ilike('text_pt', `%${sanitizeIlike(word)}%`)
+            .limit(limit)
+          return wordData || []
+        } catch {
+          return []
+        }
+      })
+    )
 
-      if (wordData) {
-        for (const row of wordData) {
-          const ref = row.reference as string
-          if (!seenRefs.has(ref)) {
-            seenRefs.add(ref)
-            allResults.push(mapToVerse(row))
-          }
+    for (const result of wordResults) {
+      const rows = result.status === 'fulfilled' ? result.value : []
+      for (const row of rows) {
+        const ref = (row as Record<string, unknown>).reference as string
+        if (!seenRefs.has(ref)) {
+          seenRefs.add(ref)
+          allResults.push(mapToVerse(row))
         }
       }
       if (allResults.length >= limit) break
@@ -337,13 +350,17 @@ export async function searchByText(query: string, limit = 8): Promise<BibleVerse
     return allResults.slice(0, limit)
   }
 
-  // Single word fallback
+  // Single word fallback (5s timeout)
   const mainWord = words.sort((a, b) => b.length - a.length)[0]
-  const { data: fallback } = await supabase
-    .from('biblia')
-    .select('book, book_abbr, chapter, verse, reference, text_pt, text_latin, testament')
-    .ilike('text_pt', `%${sanitizeIlike(mainWord)}%`)
-    .limit(limit)
+  const { data: fallback } = await withTimeout(
+    supabase
+      .from('biblia')
+      .select('book, book_abbr, chapter, verse, reference, text_pt, text_latin, testament')
+      .ilike('text_pt', `%${sanitizeIlike(mainWord)}%`)
+      .limit(limit),
+    5000,
+    { data: null, error: null } as Awaited<ReturnType<typeof supabase.from>>
+  )
 
   return (fallback || []).map(mapToVerse)
 }

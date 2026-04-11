@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useState, useRef, lazy, Suspense } from 'react'
 import {
   ReactFlow,
   MiniMap,
@@ -20,7 +20,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, HelpCircle, Save, Cloud, CloudOff, Share2 } from 'lucide-react'
+import { ArrowLeft, Plus, HelpCircle, Save, Cloud, CloudOff, Share2, Sparkles } from 'lucide-react'
 
 import { useAuth } from '@/contexts/AuthContext'
 import { nodeTypes } from '../nodes/nodeTypes'
@@ -32,7 +32,7 @@ import ContextMenu from './ContextMenu'
 import AddNodePanel, { type AddNodePayload } from '../panels/AddNodePanel'
 import ConnectionTypeSelector from '../panels/ConnectionTypeSelector'
 import EdgeDetailPanel from '../panels/EdgeDetailPanel'
-import ShareModal from '../panels/ShareModal'
+// ShareModal lazy-loaded above
 import { getConnectionExplanation } from '../services/openai.service'
 import { proposeConnections } from '../services/connection.service'
 import {
@@ -46,7 +46,9 @@ import {
   deleteFlowEdge,
   updateNodePosition as persistNodePosition,
 } from '../services/flow.service'
-import ProposalsPanel, { ProposalsBadge } from '../panels/ProposalsPanel'
+import { ProposalsBadge } from '../panels/ProposalsPanel'
+const ProposalsPanel = lazy(() => import('../panels/ProposalsPanel'))
+const ShareModal = lazy(() => import('../panels/ShareModal'))
 import type {
   ConnectionProposal,
   TrinitasNodeData,
@@ -78,10 +80,12 @@ const INITIAL_NODES: Node[] = [
 ]
 
 function VerbumCanvasInner() {
-  const { user } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
   const searchParams = useSearchParams()
   const router = useRouter()
   const flowIdParam = searchParams.get('flow')
+  const [canvasLoading, setCanvasLoading] = useState(true)
+  const [canvasError, setCanvasError] = useState<string | null>(null)
 
   const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES)
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
@@ -128,6 +132,7 @@ function VerbumCanvasInner() {
   }>({ visible: false, edgeId: null, data: null })
 
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isProposing, setIsProposing] = useState(false)
   const [proposals, setProposals] = useState<ConnectionProposal[]>([])
   const [proposalsVisible, setProposalsVisible] = useState(false)
   const [visibleLayers, setVisibleLayers] = useState<number[]>([0, 1, 2, 3, 4, 5])
@@ -141,12 +146,25 @@ function VerbumCanvasInner() {
   const initDoneRef = useRef(false)
   const addingNodeRef = useRef(false)
   const longPressRef = useRef<NodeJS.Timeout | null>(null)
+  const proposalTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const proposalAbortRef = useRef<AbortController | null>(null)
 
-  // Refs to avoid stale closures in triggerSave
+  // Refs to avoid stale closures — updated via useEffect (not during render)
   const nodesRef = useRef(nodes)
   const edgesRef = useRef(edges)
-  nodesRef.current = nodes
-  edgesRef.current = edges
+  const currentFlowRef = useRef(currentFlow)
+  useEffect(() => { nodesRef.current = nodes }, [nodes])
+  useEffect(() => { edgesRef.current = edges }, [edges])
+  useEffect(() => { currentFlowRef.current = currentFlow }, [currentFlow])
+
+  // ─── Reset init when flow ID changes (prevents loading loop) ───
+  const prevFlowIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (flowIdParam !== prevFlowIdRef.current) {
+      prevFlowIdRef.current = flowIdParam
+      initDoneRef.current = false
+    }
+  }, [flowIdParam])
 
   // ─── Load or create flow on mount ───
   useEffect(() => {
@@ -155,12 +173,18 @@ function VerbumCanvasInner() {
 
     async function initFlow() {
       isLoadingRef.current = true
+      setCanvasLoading(true)
+      setCanvasError(null)
 
       try {
         if (flowIdParam) {
           // Load existing flow
           const flow = await getFlow(flowIdParam)
-          if (cancelled || !flow) return
+          if (cancelled) return
+          if (!flow) {
+            setCanvasError('Fluxo não encontrado.')
+            return
+          }
 
           setCurrentFlow(flow)
           setFlowName(flow.name)
@@ -225,14 +249,18 @@ function VerbumCanvasInner() {
           setCurrentFlow(newFlow)
           setFlowName(newFlow.name)
           setSaveStatus('saved')
-          // Update URL without full navigation — preserves back button
-          router.replace(`/verbum/canvas?flow=${newFlow.id}`)
+          // Update URL without triggering re-render — prevents re-initialization loop
+          window.history.replaceState({}, '', `/verbum/canvas?flow=${newFlow.id}`)
         }
       } catch (err) {
         console.error('initFlow error:', err)
+        if (!cancelled) {
+          setCanvasError('Erro ao carregar o fluxo. Tente novamente.')
+        }
       } finally {
         isLoadingRef.current = false
         initDoneRef.current = true
+        if (!cancelled) setCanvasLoading(false)
       }
     }
 
@@ -241,9 +269,10 @@ function VerbumCanvasInner() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, flowIdParam])
 
-  // ─── Auto-save debounced ───
+  // ─── Auto-save debounced (stable — uses refs to avoid dependency cascades) ───
   const triggerSave = useCallback(() => {
-    if (!currentFlow || !user?.id || isReadOnly || isLoadingRef.current) return
+    const flow = currentFlowRef.current
+    if (!flow || !user?.id || isReadOnly || isLoadingRef.current) return
     setSaveStatus('unsaved')
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
@@ -251,7 +280,7 @@ function VerbumCanvasInner() {
       setSaveStatus('saving')
       try {
         const userNodes = nodesRef.current.filter(n => n.id !== TRINITAS_NODE_ID)
-        await updateFlow(currentFlow.id, {
+        await updateFlow(flow.id, {
           node_count: userNodes.length,
           edge_count: edgesRef.current.length,
         })
@@ -260,18 +289,17 @@ function VerbumCanvasInner() {
         setSaveStatus('unsaved')
       }
     }, 2000)
-  }, [currentFlow, user?.id, isReadOnly])
+  }, [user?.id, isReadOnly])
 
   // ─── Persist node position on drag ───
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
       onNodesChange(changes)
 
-      if (!currentFlow || !user?.id || isReadOnly) return
+      if (!currentFlowRef.current || !user?.id || isReadOnly) return
 
       for (const change of changes) {
         if (change.type === 'position' && change.position && change.dragging === false && change.id !== TRINITAS_NODE_ID) {
-          // Debounce position updates per node to avoid flooding
           const nodeId = change.id
           const pos = change.position
           if (positionDebounceRef.current[nodeId]) {
@@ -285,7 +313,7 @@ function VerbumCanvasInner() {
         }
       }
     },
-    [onNodesChange, currentFlow, user?.id, isReadOnly, triggerSave]
+    [onNodesChange, user?.id, isReadOnly, triggerSave]
   )
 
   // ─── beforeunload warning ───
@@ -299,10 +327,13 @@ function VerbumCanvasInner() {
     return () => window.removeEventListener('beforeunload', handler)
   }, [saveStatus])
 
-  // ─── Cleanup debounce timers on unmount ───
+  // ─── Cleanup all timers on unmount ───
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+      if (proposalTimerRef.current) clearTimeout(proposalTimerRef.current)
+      if (longPressRef.current) clearTimeout(longPressRef.current)
+      proposalAbortRef.current?.abort()
       Object.values(positionDebounceRef.current).forEach(clearTimeout)
       positionDebounceRef.current = {}
     }
@@ -528,6 +559,47 @@ function VerbumCanvasInner() {
     [screenToFlowPosition, isReadOnly]
   )
 
+  // ─── Debounced AI proposal scheduling (outside render cycle) ───
+  const scheduleProposalCheck = useCallback((newNode: { id: string; title: string; type: string; ref?: string }) => {
+    // Cancel any pending proposal check
+    if (proposalTimerRef.current) clearTimeout(proposalTimerRef.current)
+    proposalAbortRef.current?.abort()
+
+    // Debounce: wait 1.5s after last node add before calling AI
+    proposalTimerRef.current = setTimeout(async () => {
+      const controller = new AbortController()
+      proposalAbortRef.current = controller
+      setIsProposing(true)
+
+      try {
+        const currentNodes = nodesRef.current
+        const existingSimpleNodes = currentNodes
+          .filter((n) => n.id !== newNode.id)
+          .map((n) => ({
+            id: n.id,
+            title: ((n.data as Record<string, unknown>)?.title as string) ||
+                   ((n.data as Record<string, unknown>)?.display_name as string) || n.id,
+            type: n.type || 'unknown',
+            ref: (n.data as Record<string, unknown>)?.bible_reference as string | undefined,
+          }))
+
+        if (controller.signal.aborted) return
+
+        const newProposals = await proposeConnections(newNode, existingSimpleNodes)
+
+        if (!controller.signal.aborted && newProposals.length > 0) {
+          setProposals((prev) => [...prev, ...newProposals])
+        }
+      } catch (err) {
+        if (!(err instanceof DOMException && (err as DOMException).name === 'AbortError')) {
+          console.error('[Verbum] proposeConnections failed:', err)
+        }
+      } finally {
+        setIsProposing(false)
+      }
+    }, 1500)
+  }, [])
+
   const onContextMenuSelect = useCallback((action: ContextMenuAction) => {
     setAddPanel({ visible: true, mode: action })
   }, [])
@@ -632,36 +704,15 @@ function VerbumCanvasInner() {
         }).catch(() => setSaveStatus('unsaved'))
       }
 
-      setNodes((nds) => {
-        const updated = [...nds, newNode]
+      // Clean state update — no side effects inside setNodes
+      setNodes((nds) => [...nds, newNode])
 
-        const existingSimpleNodes = updated
-          .filter((n) => n.id !== newId)
-          .map((n) => ({
-            id: n.id,
-            title: ((n.data as Record<string, unknown>)?.title as string) ||
-                   ((n.data as Record<string, unknown>)?.display_name as string) || n.id,
-            type: n.type || 'unknown',
-            ref: (n.data as Record<string, unknown>)?.bible_reference as string | undefined,
-          }))
-
-        proposeConnections(
-          {
-            id: newId,
-            title: (data.title as string) || payload.title,
-            type: nodeType,
-            ref: (data.bible_reference as string) || undefined,
-          },
-          existingSimpleNodes
-        ).then((newProposals) => {
-          if (newProposals.length > 0) {
-            setProposals((prev) => [...prev, ...newProposals])
-          }
-        }).catch((err) => {
-          console.error('[Verbum] proposeConnections failed:', err)
-        })
-
-        return updated
+      // Schedule AI proposal check OUTSIDE the render cycle (debounced)
+      scheduleProposalCheck({
+        id: newId,
+        title: (data.title as string) || payload.title,
+        type: nodeType,
+        ref: (data.bible_reference as string) || undefined,
       })
 
       triggerSave()
@@ -819,6 +870,66 @@ function VerbumCanvasInner() {
   const SaveIcon = saveStatus === 'saved' ? Cloud : saveStatus === 'saving' ? Save : saveStatus === 'unsaved' ? CloudOff : CloudOff
   const saveLabel = saveStatus === 'saved' ? 'Salvo' : saveStatus === 'saving' ? 'Salvando...' : saveStatus === 'unsaved' ? 'Não salvo' : ''
 
+  // ─── Redirect unauthenticated users ───
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/login')
+    }
+  }, [authLoading, user, router])
+
+  // ─── Loading & Error states ───
+  if (authLoading || !user || (canvasLoading && !currentFlow)) {
+    return (
+      <div className="relative w-full h-full flex flex-col items-center justify-center gap-3" style={{ background: VERBUM_COLORS.canvas_bg }}>
+        <CanvasBackground />
+        <div className="z-10 text-center">
+          <div
+            className="w-8 h-8 border-2 rounded-full animate-spin mx-auto"
+            style={{ borderColor: 'rgba(201,168,76,0.3)', borderTopColor: '#C9A84C' }}
+          />
+          <div
+            className="text-xs tracking-widest uppercase mt-3"
+            style={{ fontFamily: 'Cinzel, serif', color: VERBUM_COLORS.text_muted }}
+          >
+            {authLoading ? 'Autenticando...' : !user ? 'Redirecionando...' : 'Carregando mapa...'}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (canvasError) {
+    return (
+      <div className="relative w-full h-full flex flex-col items-center justify-center gap-4" style={{ background: VERBUM_COLORS.canvas_bg }}>
+        <CanvasBackground />
+        <div className="z-10 text-center">
+          <div className="text-sm mb-2" style={{ fontFamily: 'Cinzel, serif', color: VERBUM_COLORS.ui_gold }}>
+            Verbum
+          </div>
+          <div className="text-xs mb-4" style={{ color: VERBUM_COLORS.text_muted, fontFamily: 'Poppins, sans-serif' }}>
+            {canvasError}
+          </div>
+          <button
+            onClick={() => {
+              initDoneRef.current = false
+              setCanvasError(null)
+              setCanvasLoading(true)
+            }}
+            className="px-4 py-2 rounded-xl text-xs font-medium transition-colors"
+            style={{
+              background: 'rgba(201,168,76,0.15)',
+              border: '1px solid #C9A84C',
+              color: '#C9A84C',
+              fontFamily: 'Poppins, sans-serif',
+            }}
+          >
+            Tentar Novamente
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div
       className="relative w-full h-full"
@@ -939,6 +1050,14 @@ function VerbumCanvasInner() {
         </div>
 
         <div className="flex items-center gap-2" style={{ pointerEvents: 'auto' }}>
+          {/* Proposing indicator */}
+          {isProposing && (
+            <div className="flex items-center gap-1 text-[10px]" style={{ color: VERBUM_COLORS.edge_proposta, fontFamily: 'Poppins, sans-serif' }}>
+              <Sparkles className="w-3 h-3 animate-pulse" />
+              Analisando...
+            </div>
+          )}
+
           {/* Save status */}
           {currentFlow && saveStatus !== 'offline' && (
             <div className="flex items-center gap-1 text-[10px]" style={{ color: VERBUM_COLORS.text_muted, fontFamily: 'Poppins, sans-serif' }}>
@@ -1071,25 +1190,29 @@ function VerbumCanvasInner() {
       />
 
       <ProposalsBadge count={proposals.length} onClick={() => setProposalsVisible(true)} />
-      <ProposalsPanel
-        proposals={proposals}
-        visible={proposalsVisible}
-        onClose={() => setProposalsVisible(false)}
-        onApprove={onApproveProposal}
-        onReject={onRejectProposal}
-      />
+      <Suspense fallback={null}>
+        <ProposalsPanel
+          proposals={proposals}
+          visible={proposalsVisible}
+          onClose={() => setProposalsVisible(false)}
+          onApprove={onApproveProposal}
+          onReject={onRejectProposal}
+        />
+      </Suspense>
 
       {/* Share modal */}
       {currentFlow && (
-        <ShareModal
-          visible={shareModalVisible}
-          flow={currentFlow}
-          onClose={() => setShareModalVisible(false)}
-          onTogglePublic={async (isPublic) => {
-            await updateFlow(currentFlow.id, { is_public: isPublic })
-            setCurrentFlow({ ...currentFlow, is_public: isPublic })
-          }}
-        />
+        <Suspense fallback={null}>
+          <ShareModal
+            visible={shareModalVisible}
+            flow={currentFlow}
+            onClose={() => setShareModalVisible(false)}
+            onTogglePublic={async (isPublic) => {
+              await updateFlow(currentFlow.id, { is_public: isPublic })
+              setCurrentFlow({ ...currentFlow, is_public: isPublic })
+            }}
+          />
+        </Suspense>
       )}
 
       {isGenerating && (
@@ -1103,6 +1226,21 @@ function VerbumCanvasInner() {
           }}
         >
           Gerando explicação teológica...
+        </div>
+      )}
+
+      {/* Performance warning for large graphs */}
+      {nodes.length > 200 && (
+        <div
+          className="fixed bottom-16 left-1/2 -translate-x-1/2 z-[500] px-4 py-2 rounded-lg text-xs"
+          style={{
+            background: 'rgba(212,136,74,0.15)',
+            border: `1px solid ${VERBUM_COLORS.edge_proposta}`,
+            color: VERBUM_COLORS.edge_proposta,
+            fontFamily: 'Poppins, sans-serif',
+          }}
+        >
+          {nodes.length} nós — performance pode ser afetada
         </div>
       )}
     </div>
