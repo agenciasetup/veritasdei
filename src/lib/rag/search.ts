@@ -551,7 +551,16 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
   console.log(`[search] Total results: ${totalResults} (biblia: ${bibliaResults.length}, magistério: ${allMagisterioResults.length}, patrística: ${patristicaResults.length})`)
 
   let insight: AIInsight | null = null
-  if (totalResults > 0) {
+  if (totalResults === 0) {
+    // No results from any source — return honest "I don't know" instead of hallucinating
+    insight = {
+      summary: 'Não encontrei informações suficientes na base de dados sobre este tema específico. Para garantir a fidelidade à doutrina católica, recomendo consultar o **Catecismo da Igreja Católica** (CIC), o **Compêndio do CIC**, ou um **sacerdote** para orientação.\n\nNossa base de conhecimento está em constante crescimento, e em breve poderemos ter mais conteúdo sobre este assunto.',
+      keyPoints: ['Base de dados sem resultados suficientes para este tema'],
+      relatedTopics: [],
+      sourceContext: {},
+      protestantView: null,
+    }
+  } else if (totalResults > 0) {
     try {
       const completion = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
