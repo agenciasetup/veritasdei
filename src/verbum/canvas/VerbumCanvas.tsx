@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState, useRef } from 'react'
 import {
   ReactFlow,
   MiniMap,
@@ -9,6 +9,8 @@ import {
   BackgroundVariant,
   useNodesState,
   useEdgesState,
+  useReactFlow,
+  ReactFlowProvider,
   type Node,
   type Edge,
   type OnConnect,
@@ -19,7 +21,9 @@ import { nodeTypes } from '../nodes/nodeTypes'
 import { edgeTypes } from '../edges/edgeTypes'
 import { VERBUM_COLORS } from '../design-tokens'
 import CanvasBackground from './CanvasBackground'
-import type { TrinitasNodeData } from '../types/verbum.types'
+import ContextMenu from './ContextMenu'
+import AddNodePanel, { type AddNodePayload } from '../panels/AddNodePanel'
+import type { TrinitasNodeData, ContextMenuAction } from '../types/verbum.types'
 
 // Initial Triquetra node at center
 const INITIAL_NODES: Node[] = [
@@ -40,15 +44,146 @@ const INITIAL_NODES: Node[] = [
 
 const INITIAL_EDGES: Edge[] = []
 
-export default function VerbumCanvas() {
+function VerbumCanvasInner() {
   const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES)
   const [edges, setEdges, onEdgesChange] = useEdgesState(INITIAL_EDGES)
+  const { screenToFlowPosition } = useReactFlow()
+
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; flowX: number; flowY: number } | null>(null)
+
+  // AddNodePanel state
+  const [addPanel, setAddPanel] = useState<{ visible: boolean; mode: ContextMenuAction }>({
+    visible: false,
+    mode: 'figura',
+  })
+
+  // Store the position where the user right-clicked (in flow coords)
+  const insertPositionRef = useRef<{ x: number; y: number }>({ x: 200, y: 200 })
 
   const onConnect: OnConnect = useCallback(
     (_connection) => {
       // Sprint 3: manual connection logic
     },
     []
+  )
+
+  // Handle right-click on canvas pane
+  const onPaneContextMenu = useCallback(
+    (event: React.MouseEvent | MouseEvent) => {
+      event.preventDefault()
+      const flowPos = screenToFlowPosition({ x: event.clientX, y: event.clientY })
+      insertPositionRef.current = flowPos
+      setContextMenu({
+        x: event.clientX,
+        y: event.clientY,
+        flowX: flowPos.x,
+        flowY: flowPos.y,
+      })
+    },
+    [screenToFlowPosition]
+  )
+
+  // When user picks an option from context menu
+  const onContextMenuSelect = useCallback((action: ContextMenuAction) => {
+    setAddPanel({ visible: true, mode: action })
+  }, [])
+
+  // When user confirms a node from AddNodePanel
+  const onAddNode = useCallback(
+    (payload: AddNodePayload) => {
+      const newId = `node-${Date.now()}`
+      const pos = insertPositionRef.current
+
+      let nodeType: string
+      let data: Record<string, unknown>
+
+      switch (payload.type) {
+        case 'canonical':
+          // Canonical entities use their specific node type based on entity_type
+          if (payload.canonicalEntity?.entity_type === 'maria' || payload.canonicalEntity?.entity_type === 'pessoa_biblica') {
+            nodeType = 'figura'
+            data = {
+              title: payload.title,
+              title_latin: payload.titleLatin,
+              description: payload.description,
+              layer_id: payload.layerId,
+              historical_period: payload.canonicalEntity?.historical_period,
+              bible_key_verse: payload.canonicalEntity?.bible_key_verse,
+              is_canonical: true,
+              canonical_entity_id: payload.canonicalEntity?.id,
+              visual_tier: payload.canonicalEntity?.visual_tier || 2,
+            }
+          } else {
+            nodeType = 'figura'
+            data = {
+              title: payload.title,
+              title_latin: payload.titleLatin,
+              description: payload.description,
+              layer_id: payload.layerId,
+              is_canonical: true,
+              canonical_entity_id: payload.canonicalEntity?.id,
+              visual_tier: payload.canonicalEntity?.visual_tier || 2,
+            }
+          }
+          break
+
+        case 'encarnado':
+          nodeType = 'encarnado'
+          // Position near the Triquetra
+          pos.x = 200
+          pos.y = 150
+          data = {
+            title: payload.title,
+            description: payload.description,
+            layer_id: payload.layerId,
+            bible_reference: 'Jo 1:14',
+          }
+          break
+
+        case 'versiculo':
+          nodeType = 'versiculo'
+          data = {
+            title: payload.title,
+            bible_reference: payload.bibleReference,
+            bible_text: payload.bibleText,
+            bible_book: payload.bibleBook,
+            testament: payload.testament || 'NT',
+            layer_id: payload.layerId,
+          }
+          break
+
+        case 'dogma':
+          nodeType = 'dogma'
+          data = {
+            title: payload.title,
+            title_latin: payload.titleLatin,
+            description: payload.description,
+            layer_id: payload.layerId,
+            is_canonical: false,
+          }
+          break
+
+        default:
+          nodeType = 'figura'
+          data = {
+            title: payload.title,
+            description: payload.description,
+            layer_id: payload.layerId,
+            is_canonical: false,
+          }
+      }
+
+      const newNode: Node = {
+        id: newId,
+        type: nodeType,
+        position: pos,
+        data,
+      }
+
+      setNodes((nds) => [...nds, newNode])
+    },
+    [setNodes]
   )
 
   const defaultViewport = useMemo(() => ({ x: 0, y: 0, zoom: 0.8 }), [])
@@ -63,6 +198,7 @@ export default function VerbumCanvas() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onPaneContextMenu={onPaneContextMenu}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         defaultViewport={defaultViewport}
@@ -105,6 +241,32 @@ export default function VerbumCanvas() {
           }}
         />
       </ReactFlow>
+
+      {/* Context menu */}
+      <ContextMenu
+        x={contextMenu?.x ?? 0}
+        y={contextMenu?.y ?? 0}
+        visible={contextMenu !== null}
+        onSelect={onContextMenuSelect}
+        onClose={() => setContextMenu(null)}
+      />
+
+      {/* Add node panel */}
+      <AddNodePanel
+        visible={addPanel.visible}
+        mode={addPanel.mode}
+        onClose={() => setAddPanel((s) => ({ ...s, visible: false }))}
+        onAddNode={onAddNode}
+      />
     </div>
+  )
+}
+
+// Wrap with ReactFlowProvider for useReactFlow hook
+export default function VerbumCanvas() {
+  return (
+    <ReactFlowProvider>
+      <VerbumCanvasInner />
+    </ReactFlowProvider>
   )
 }

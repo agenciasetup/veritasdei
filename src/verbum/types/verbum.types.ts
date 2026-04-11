@@ -1,6 +1,10 @@
 // ─── Verbum Type System ───
 // All TypeScript types for the Verbum theology graph
 
+// ─── Context Menu ───
+
+export type ContextMenuAction = 'figura' | 'versiculo' | 'dogma' | 'conceito'
+
 // ─── Entity Types ───
 
 export type EntityType =
