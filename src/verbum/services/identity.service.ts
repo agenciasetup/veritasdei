@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import { sanitizePostgrestFilter } from '@/lib/utils/sanitize'
+import { withTimeout } from '@/lib/utils/with-timeout'
 import type {
   CanonicalEntity,
   IdentityResult,
@@ -37,8 +38,8 @@ export async function resolveIdentity(input: string): Promise<IdentityResult> {
   const normalized = normalize(input)
   const original = input.trim()
 
-  // 1. Check canonical entities by aliases
-  const canonical = await findCanonicalByAlias(normalized)
+  // 1. Check canonical entities by aliases (5s timeout)
+  const canonical = await withTimeout(findCanonicalByAlias(normalized), 5000, null)
   if (canonical) {
     return {
       type: 'canonical',
@@ -47,8 +48,8 @@ export async function resolveIdentity(input: string): Promise<IdentityResult> {
     }
   }
 
-  // 2. Check typology registry
-  const typologyMatch = await findTypologyMatch(normalized)
+  // 2. Check typology registry (5s timeout)
+  const typologyMatch = await withTimeout(findTypologyMatch(normalized), 5000, false)
   if (typologyMatch) {
     return {
       type: 'typology_match',
@@ -57,9 +58,9 @@ export async function resolveIdentity(input: string): Promise<IdentityResult> {
     }
   }
 
-  // 3. If it looks like a bible reference, search directly
+  // 3. If it looks like a bible reference, search directly (5s timeout)
   if (isReferencePattern(original)) {
-    const verse = await searchByReference(original)
+    const verse = await withTimeout(searchByReference(original), 5000, null)
     return {
       type: 'new',
       suggestions: {
