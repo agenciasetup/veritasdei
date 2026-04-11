@@ -49,21 +49,29 @@ export default function VerbumDashboard() {
   const [menuFlowId, setMenuFlowId] = useState<string | null>(null)
   const [tab, setTab] = useState<'my' | 'shared' | 'explore'>('my')
 
-  // Load user data
+  // Load user data with abort guard to prevent race conditions
   useEffect(() => {
     if (!user?.id) return
+    let cancelled = false
 
     async function load() {
       setIsLoading(true)
-      const [userFlows, shared] = await Promise.all([
-        getUserFlows(user!.id),
-        getSharedWithMe(user!.id, profile?.email || ''),
-      ])
-      setFlows(userFlows)
-      setSharedFlows(shared)
-      setIsLoading(false)
+      try {
+        const [userFlows, shared] = await Promise.all([
+          getUserFlows(user!.id),
+          getSharedWithMe(user!.id, profile?.email || ''),
+        ])
+        if (cancelled) return
+        setFlows(userFlows)
+        setSharedFlows(shared)
+      } catch (err) {
+        console.error('Dashboard load error:', err)
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
     }
     load()
+    return () => { cancelled = true }
   }, [user?.id, profile?.email])
 
   const handleCreateFlow = useCallback(async () => {

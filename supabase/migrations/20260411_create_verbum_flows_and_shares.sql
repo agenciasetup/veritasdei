@@ -65,14 +65,27 @@ ALTER TABLE verbum_flows ENABLE ROW LEVEL SECURITY;
 ALTER TABLE verbum_flow_shares ENABLE ROW LEVEL SECURITY;
 ALTER TABLE verbum_flow_favorites ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies to allow re-run
+DROP POLICY IF EXISTS verbum_flows_select ON verbum_flows;
+DROP POLICY IF EXISTS verbum_flows_insert ON verbum_flows;
+DROP POLICY IF EXISTS verbum_flows_update ON verbum_flows;
+DROP POLICY IF EXISTS verbum_flows_delete ON verbum_flows;
+DROP POLICY IF EXISTS verbum_flow_shares_select ON verbum_flow_shares;
+DROP POLICY IF EXISTS verbum_flow_shares_insert ON verbum_flow_shares;
+DROP POLICY IF EXISTS verbum_flow_shares_update ON verbum_flow_shares;
+DROP POLICY IF EXISTS verbum_flow_shares_delete ON verbum_flow_shares;
+DROP POLICY IF EXISTS verbum_flow_favorites_select ON verbum_flow_favorites;
+DROP POLICY IF EXISTS verbum_flow_favorites_insert ON verbum_flow_favorites;
+DROP POLICY IF EXISTS verbum_flow_favorites_delete ON verbum_flow_favorites;
+
 CREATE POLICY verbum_flows_select ON verbum_flows FOR SELECT
   USING (
     user_id = auth.uid()
     OR is_public = true
     OR id IN (
       SELECT flow_id FROM verbum_flow_shares
-      WHERE (shared_with_user = auth.uid() OR shared_with_email = (SELECT email FROM auth.users WHERE id = auth.uid()))
-      AND accepted = true
+      WHERE shared_with_user = auth.uid()
+         OR shared_with_email = (auth.jwt()->>'email')
     )
   );
 
@@ -89,7 +102,7 @@ CREATE POLICY verbum_flow_shares_select ON verbum_flow_shares FOR SELECT
   USING (
     shared_by = auth.uid()
     OR shared_with_user = auth.uid()
-    OR shared_with_email = (SELECT email FROM auth.users WHERE id = auth.uid())
+    OR shared_with_email = (auth.jwt()->>'email')
   );
 
 CREATE POLICY verbum_flow_shares_insert ON verbum_flow_shares FOR INSERT
@@ -99,7 +112,7 @@ CREATE POLICY verbum_flow_shares_update ON verbum_flow_shares FOR UPDATE
   USING (
     shared_by = auth.uid()
     OR shared_with_user = auth.uid()
-    OR shared_with_email = (SELECT email FROM auth.users WHERE id = auth.uid())
+    OR shared_with_email = (auth.jwt()->>'email')
   );
 
 CREATE POLICY verbum_flow_shares_delete ON verbum_flow_shares FOR DELETE
@@ -113,3 +126,35 @@ CREATE POLICY verbum_flow_favorites_insert ON verbum_flow_favorites FOR INSERT
 
 CREATE POLICY verbum_flow_favorites_delete ON verbum_flow_favorites FOR DELETE
   USING (auth.uid() = user_id);
+
+-- ═══════════════════════════════════════════════════════
+-- UPDATE EXISTING RLS POLICIES ON verbum_nodes / verbum_edges
+-- Replace auth.users subquery with auth.jwt()->>'email'
+-- ═══════════════════════════════════════════════════════
+
+DROP POLICY IF EXISTS verbum_nodes_select ON verbum_nodes;
+CREATE POLICY verbum_nodes_select ON verbum_nodes FOR SELECT
+  USING (
+    is_canonical = true
+    OR user_id = auth.uid()
+    OR (is_shared = true AND auth.uid() IS NOT NULL)
+    OR flow_id IN (SELECT id FROM verbum_flows WHERE is_public = true)
+    OR flow_id IN (
+      SELECT flow_id FROM verbum_flow_shares
+      WHERE shared_with_user = auth.uid()
+         OR shared_with_email = (auth.jwt()->>'email')
+    )
+  );
+
+DROP POLICY IF EXISTS verbum_edges_select ON verbum_edges;
+CREATE POLICY verbum_edges_select ON verbum_edges FOR SELECT
+  USING (
+    user_id = auth.uid()
+    OR (is_shared = true AND auth.uid() IS NOT NULL)
+    OR flow_id IN (SELECT id FROM verbum_flows WHERE is_public = true)
+    OR flow_id IN (
+      SELECT flow_id FROM verbum_flow_shares
+      WHERE shared_with_user = auth.uid()
+         OR shared_with_email = (auth.jwt()->>'email')
+    )
+  );

@@ -176,7 +176,7 @@ export async function searchByReference(reference: string): Promise<BibleVerse |
       .select('book, book_abbr, chapter, verse, reference, text_pt, text_latin, testament')
       .eq('reference', normalized)
       .limit(1)
-      .single()
+      .maybeSingle()
 
     if (!data) return null
     return mapToVerse(data)
@@ -190,7 +190,7 @@ export async function searchByReference(reference: string): Promise<BibleVerse |
     .eq('chapter', parsed.chapter)
     .eq('verse', parsed.verse)
     .limit(1)
-    .single()
+    .maybeSingle()
 
   if (data) return mapToVerse(data)
 
@@ -204,7 +204,7 @@ export async function searchByReference(reference: string): Promise<BibleVerse |
       .eq('chapter', parsed.chapter)
       .eq('verse', parsed.verse)
       .limit(1)
-      .single()
+      .maybeSingle()
 
     if (data2) return mapToVerse(data2)
   }
@@ -217,7 +217,7 @@ export async function searchByReference(reference: string): Promise<BibleVerse |
     .eq('chapter', parsed.chapter)
     .eq('verse', parsed.verse)
     .limit(1)
-    .single()
+    .maybeSingle()
 
   if (data3) return mapToVerse(data3)
   return null
