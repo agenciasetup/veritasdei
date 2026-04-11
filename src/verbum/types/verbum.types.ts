@@ -60,9 +60,43 @@ export interface CanonicalEntity {
   created_at: string
 }
 
+export interface VerbumFlow {
+  id: string
+  user_id: string
+  name: string
+  description: string | null
+  is_public: boolean
+  node_count: number
+  edge_count: number
+  clone_count: number
+  cloned_from: string | null
+  thumbnail_data: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}
+
+export interface VerbumFlowShare {
+  id: string
+  flow_id: string
+  shared_by: string
+  shared_with_email: string
+  shared_with_user: string | null
+  permission: 'view' | 'edit'
+  accepted: boolean
+  created_at: string
+}
+
+export interface VerbumFlowFavorite {
+  id: string
+  user_id: string
+  flow_id: string
+  created_at: string
+}
+
 export interface VerbumNode {
   id: string
   user_id: string | null
+  flow_id: string | null
   node_type: NodeType
   title: string
   title_latin: string | null
@@ -90,6 +124,7 @@ export interface VerbumNode {
 export interface VerbumEdge {
   id: string
   user_id: string | null
+  flow_id: string | null
   source_node_id: string
   target_node_id: string
   relation_type: RelationType
@@ -108,6 +143,7 @@ export interface VerbumEdge {
 export interface VerbumUserCanvas {
   id: string
   user_id: string
+  flow_id: string | null
   viewport_x: number
   viewport_y: number
   viewport_zoom: number
