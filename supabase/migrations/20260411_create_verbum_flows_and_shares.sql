@@ -65,6 +65,19 @@ ALTER TABLE verbum_flows ENABLE ROW LEVEL SECURITY;
 ALTER TABLE verbum_flow_shares ENABLE ROW LEVEL SECURITY;
 ALTER TABLE verbum_flow_favorites ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies to allow re-run
+DROP POLICY IF EXISTS verbum_flows_select ON verbum_flows;
+DROP POLICY IF EXISTS verbum_flows_insert ON verbum_flows;
+DROP POLICY IF EXISTS verbum_flows_update ON verbum_flows;
+DROP POLICY IF EXISTS verbum_flows_delete ON verbum_flows;
+DROP POLICY IF EXISTS verbum_flow_shares_select ON verbum_flow_shares;
+DROP POLICY IF EXISTS verbum_flow_shares_insert ON verbum_flow_shares;
+DROP POLICY IF EXISTS verbum_flow_shares_update ON verbum_flow_shares;
+DROP POLICY IF EXISTS verbum_flow_shares_delete ON verbum_flow_shares;
+DROP POLICY IF EXISTS verbum_flow_favorites_select ON verbum_flow_favorites;
+DROP POLICY IF EXISTS verbum_flow_favorites_insert ON verbum_flow_favorites;
+DROP POLICY IF EXISTS verbum_flow_favorites_delete ON verbum_flow_favorites;
+
 CREATE POLICY verbum_flows_select ON verbum_flows FOR SELECT
   USING (
     user_id = auth.uid()
