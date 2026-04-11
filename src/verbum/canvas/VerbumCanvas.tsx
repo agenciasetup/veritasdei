@@ -137,6 +137,7 @@ function VerbumCanvasInner() {
   const positionDebounceRef = useRef<Record<string, NodeJS.Timeout>>({})
   const isLoadingRef = useRef(false)
   const initDoneRef = useRef(false)
+  const addingNodeRef = useRef(false)
 
   // Refs to avoid stale closures in triggerSave
   const nodesRef = useRef(nodes)
@@ -151,7 +152,6 @@ function VerbumCanvasInner() {
 
     async function initFlow() {
       isLoadingRef.current = true
-      initDoneRef.current = true
 
       try {
         if (flowIdParam) {
@@ -229,6 +229,7 @@ function VerbumCanvasInner() {
         console.error('initFlow error:', err)
       } finally {
         isLoadingRef.current = false
+        initDoneRef.current = true
       }
     }
 
@@ -530,6 +531,11 @@ function VerbumCanvasInner() {
 
   const onAddNode = useCallback(
     (payload: AddNodePayload) => {
+      // Prevent double-click creating duplicate nodes
+      if (addingNodeRef.current) return
+      addingNodeRef.current = true
+      setTimeout(() => { addingNodeRef.current = false }, 500)
+
       const newId = crypto.randomUUID()
       const pos = insertPositionRef.current
 

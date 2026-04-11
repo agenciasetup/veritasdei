@@ -236,16 +236,6 @@ export async function shareFlow(
   supabase ??= createClient()
   if (!supabase)return null
 
-  // Check if already shared
-  const { data: existing } = await supabase
-    .from('verbum_flow_shares')
-    .select('id')
-    .eq('flow_id', flowId)
-    .eq('shared_with_email', email.toLowerCase())
-    .maybeSingle()
-
-  if (existing) return null // Already shared
-
   // Try to find user by email
   const { data: profile } = await supabase
     .from('profiles')
@@ -253,6 +243,7 @@ export async function shareFlow(
     .eq('email', email.toLowerCase())
     .maybeSingle()
 
+  // Direct insert — relies on UNIQUE(flow_id, shared_with_email) constraint
   const { data, error } = await supabase
     .from('verbum_flow_shares')
     .insert({
@@ -267,6 +258,8 @@ export async function shareFlow(
     .single()
 
   if (error) {
+    // Unique violation = already shared
+    if (error.code === '23505') return null
     console.error('shareFlow error:', error)
     return null
   }
@@ -322,19 +315,25 @@ export async function toggleFavorite(userId: string, flowId: string): Promise<bo
   supabase ??= createClient()
   if (!supabase)return false
 
-  const { data: existing } = await supabase
+  // Try to insert first — UNIQUE(user_id, flow_id) prevents duplicates
+  const { error } = await supabase
     .from('verbum_flow_favorites')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('flow_id', flowId)
-    .maybeSingle()
+    .insert({ user_id: userId, flow_id: flowId })
 
-  if (existing) {
-    await supabase.from('verbum_flow_favorites').delete().eq('id', existing.id)
-    return false // unfavorited
+  if (error) {
+    // Unique violation means it exists — delete it (unfavorite)
+    if (error.code === '23505') {
+      await supabase
+        .from('verbum_flow_favorites')
+        .delete()
+        .eq('user_id', userId)
+        .eq('flow_id', flowId)
+      return false // unfavorited
+    }
+    console.error('toggleFavorite error:', error)
+    return false
   }
 
-  await supabase.from('verbum_flow_favorites').insert({ user_id: userId, flow_id: flowId })
   return true // favorited
 }
 
