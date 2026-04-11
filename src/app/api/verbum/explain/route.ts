@@ -13,8 +13,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
     }
 
-    // Rate limit: 10 requests per minute per user
-    if (!rateLimit(user.id, 10, 60_000)) {
+    // Rate limit: 20 requests per minute per user
+    if (!rateLimit(user.id, 20, 60_000)) {
       return NextResponse.json({ error: 'Muitas requisições. Aguarde um momento.' }, { status: 429 })
     }
 

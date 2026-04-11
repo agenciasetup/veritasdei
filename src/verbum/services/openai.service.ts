@@ -17,7 +17,7 @@ export async function getConnectionExplanation(params: {
   targetRef?: string
   targetDesc?: string
   relationType: RelationType
-}): Promise<AIConnectionExplanation | null> {
+}, signal?: AbortSignal): Promise<AIConnectionExplanation | null> {
   try {
     const prompt = buildConnectionExplanationPrompt(params)
 
@@ -25,6 +25,7 @@ export async function getConnectionExplanation(params: {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt, mode: 'explain' }),
+      signal,
     })
 
     if (!response.ok) return null
@@ -32,6 +33,7 @@ export async function getConnectionExplanation(params: {
     const data = await response.json()
     return data as AIConnectionExplanation
   } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return null
     console.error('getConnectionExplanation error:', error)
     return null
   }
@@ -45,7 +47,7 @@ export async function getAutoConnectionProposals(params: {
   newNodeType: string
   newNodeRef?: string
   existingNodes: Array<{ id: string; title: string; type: string; ref?: string }>
-}): Promise<AIAutoConnectionResponse | null> {
+}, signal?: AbortSignal): Promise<AIAutoConnectionResponse | null> {
   try {
     const prompt = buildAutoConnectionPrompt(params)
 
@@ -53,6 +55,7 @@ export async function getAutoConnectionProposals(params: {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt, mode: 'auto' }),
+      signal,
     })
 
     if (!response.ok) return null
@@ -60,6 +63,7 @@ export async function getAutoConnectionProposals(params: {
     const data = await response.json()
     return data as AIAutoConnectionResponse
   } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return null
     console.error('getAutoConnectionProposals error:', error)
     return null
   }

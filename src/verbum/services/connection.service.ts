@@ -36,7 +36,7 @@ export async function proposeConnections(
       newNodeTitle: newNode.title,
       newNodeType: newNode.type,
       newNodeRef: newNode.ref,
-      existingNodes: existingNodes.slice(0, 50).map((n) => ({
+      existingNodes: existingNodes.slice(0, 20).map((n) => ({
         id: n.id,
         title: n.title,
         type: n.type,

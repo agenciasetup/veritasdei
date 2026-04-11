@@ -143,6 +143,8 @@ function VerbumCanvasInner() {
   const initDoneRef = useRef(false)
   const addingNodeRef = useRef(false)
   const longPressRef = useRef<NodeJS.Timeout | null>(null)
+  const proposalTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const proposalAbortRef = useRef<AbortController | null>(null)
 
   // Refs to avoid stale closures in triggerSave
   const nodesRef = useRef(nodes)
@@ -549,6 +551,44 @@ function VerbumCanvasInner() {
     [screenToFlowPosition, isReadOnly]
   )
 
+  // ─── Debounced AI proposal scheduling (outside render cycle) ───
+  const scheduleProposalCheck = useCallback((newNode: { id: string; title: string; type: string; ref?: string }) => {
+    // Cancel any pending proposal check
+    if (proposalTimerRef.current) clearTimeout(proposalTimerRef.current)
+    proposalAbortRef.current?.abort()
+
+    // Debounce: wait 1.5s after last node add before calling AI
+    proposalTimerRef.current = setTimeout(async () => {
+      const controller = new AbortController()
+      proposalAbortRef.current = controller
+
+      try {
+        const currentNodes = nodesRef.current
+        const existingSimpleNodes = currentNodes
+          .filter((n) => n.id !== newNode.id)
+          .map((n) => ({
+            id: n.id,
+            title: ((n.data as Record<string, unknown>)?.title as string) ||
+                   ((n.data as Record<string, unknown>)?.display_name as string) || n.id,
+            type: n.type || 'unknown',
+            ref: (n.data as Record<string, unknown>)?.bible_reference as string | undefined,
+          }))
+
+        if (controller.signal.aborted) return
+
+        const newProposals = await proposeConnections(newNode, existingSimpleNodes)
+
+        if (!controller.signal.aborted && newProposals.length > 0) {
+          setProposals((prev) => [...prev, ...newProposals])
+        }
+      } catch (err) {
+        if (!(err instanceof DOMException && (err as DOMException).name === 'AbortError')) {
+          console.error('[Verbum] proposeConnections failed:', err)
+        }
+      }
+    }, 1500)
+  }, [])
+
   const onContextMenuSelect = useCallback((action: ContextMenuAction) => {
     setAddPanel({ visible: true, mode: action })
   }, [])
@@ -653,36 +693,15 @@ function VerbumCanvasInner() {
         }).catch(() => setSaveStatus('unsaved'))
       }
 
-      setNodes((nds) => {
-        const updated = [...nds, newNode]
+      // Clean state update — no side effects inside setNodes
+      setNodes((nds) => [...nds, newNode])
 
-        const existingSimpleNodes = updated
-          .filter((n) => n.id !== newId)
-          .map((n) => ({
-            id: n.id,
-            title: ((n.data as Record<string, unknown>)?.title as string) ||
-                   ((n.data as Record<string, unknown>)?.display_name as string) || n.id,
-            type: n.type || 'unknown',
-            ref: (n.data as Record<string, unknown>)?.bible_reference as string | undefined,
-          }))
-
-        proposeConnections(
-          {
-            id: newId,
-            title: (data.title as string) || payload.title,
-            type: nodeType,
-            ref: (data.bible_reference as string) || undefined,
-          },
-          existingSimpleNodes
-        ).then((newProposals) => {
-          if (newProposals.length > 0) {
-            setProposals((prev) => [...prev, ...newProposals])
-          }
-        }).catch((err) => {
-          console.error('[Verbum] proposeConnections failed:', err)
-        })
-
-        return updated
+      // Schedule AI proposal check OUTSIDE the render cycle (debounced)
+      scheduleProposalCheck({
+        id: newId,
+        title: (data.title as string) || payload.title,
+        type: nodeType,
+        ref: (data.bible_reference as string) || undefined,
       })
 
       triggerSave()
