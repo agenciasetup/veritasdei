@@ -25,7 +25,10 @@ export interface AIInsight {
   keyPoints: string[]      // 3-5 pontos-chave
   relatedTopics: string[]  // temas para aprofundar
   sourceContext: Record<string, string>
-  protestantView: ProtestantView | null  // visão protestante + refutação
+  isControversial: boolean // se o tema é controverso entre católicos e protestantes
+  protestantView: ProtestantView | null  // visão protestante + refutação (só quando controverso)
+  curiosity: string | null // curiosidade histórica/etimológica (quando não controverso)
+  confidenceLevel?: 'high' | 'medium' | 'low' // nível de confiança baseado nas fontes
 }
 
 export interface QueryResponse {

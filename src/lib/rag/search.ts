@@ -57,7 +57,9 @@ function parseAIResponse(raw: string): AIInsight | null {
       sourceContext: typeof parsed.sourceContext === 'object' && parsed.sourceContext !== null
         ? parsed.sourceContext
         : {},
+      isControversial: parsed.isControversial === true,
       protestantView: parseProtestantView(parsed.protestantView),
+      curiosity: typeof parsed.curiosity === 'string' ? parsed.curiosity : null,
     }
   } catch {
     if (raw.length > 50) {
@@ -66,7 +68,9 @@ function parseAIResponse(raw: string): AIInsight | null {
         keyPoints: [],
         relatedTopics: [],
         sourceContext: {},
+        isControversial: false,
         protestantView: null,
+        curiosity: null,
       }
     }
     return null
@@ -558,7 +562,10 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
       keyPoints: ['Base de dados sem resultados suficientes para este tema'],
       relatedTopics: [],
       sourceContext: {},
+      isControversial: false,
       protestantView: null,
+      curiosity: null,
+      confidenceLevel: 'low',
     }
   } else if (totalResults > 0) {
     try {
@@ -571,6 +578,23 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
 
       const rawResponse = completion.choices[0].message.content ?? ''
       insight = parseAIResponse(rawResponse)
+
+      // Calculate confidence level based on source coverage
+      if (insight) {
+        const pillarsWithResults = [
+          bibliaResults.length > 0,
+          allMagisterioResults.length > 0,
+          patristicaResults.length > 0,
+        ].filter(Boolean).length
+
+        if (pillarsWithResults >= 3 && totalResults >= 8) {
+          insight.confidenceLevel = 'high'
+        } else if (pillarsWithResults >= 2 && totalResults >= 4) {
+          insight.confidenceLevel = 'medium'
+        } else {
+          insight.confidenceLevel = 'low'
+        }
+      }
     } catch (err) {
       console.error('[search] OpenAI error:', err instanceof Error ? err.message : err)
       insight = null
