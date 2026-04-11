@@ -10,7 +10,7 @@ import {
   ChevronLeft, ChevronRight, Home, Church, Droplets, ScrollText,
   Tablets, BookOpen, Scale, Heart, GraduationCap, MapPin, Map,
   LogIn, User, LogOut, Shield, Users, Cross, ClipboardCheck, BookMarked,
-  Calendar, Library,
+  Calendar, Library, Network,
 } from 'lucide-react'
 
 /* ─── Navigation structure with groups ─── */
@@ -39,6 +39,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/trilhas', icon: GraduationCap, label: 'Trilhas de Estudo' },
       { href: '/mapa', icon: Map, label: 'Mapa da Fé' },
+      { href: '/verbum', icon: Network, label: 'Verbum' },
       { href: '/dogmas', icon: Church, label: 'Dogmas' },
       { href: '/sacramentos', icon: Droplets, label: 'Sacramentos' },
       { href: '/catecismo-pio-x', icon: BookMarked, label: 'Catecismo Pio X' },

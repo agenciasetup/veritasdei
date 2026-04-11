@@ -7,13 +7,15 @@ import BottomNav from './BottomNav'
 import LiturgicalBar from './LiturgicalBar'
 
 const PUBLIC_PATHS = ['/login', '/auth', '/privacidade', '/termos', '/onboarding']
+const FULLSCREEN_PATHS = ['/verbum']
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
   const pathname = usePathname()
 
   const isPublicPage = PUBLIC_PATHS.some(p => pathname.startsWith(p))
-  const showChrome = isAuthenticated && !isPublicPage
+  const isFullscreen = FULLSCREEN_PATHS.some(p => pathname.startsWith(p))
+  const showChrome = isAuthenticated && !isPublicPage && !isFullscreen
 
   return (
     <>
