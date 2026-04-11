@@ -138,6 +138,7 @@ function VerbumCanvasInner() {
   const isLoadingRef = useRef(false)
   const initDoneRef = useRef(false)
   const addingNodeRef = useRef(false)
+  const longPressRef = useRef<NodeJS.Timeout | null>(null)
 
   // Refs to avoid stale closures in triggerSave
   const nodesRef = useRef(nodes)
@@ -817,7 +818,27 @@ function VerbumCanvasInner() {
   const saveLabel = saveStatus === 'saved' ? 'Salvo' : saveStatus === 'saving' ? 'Salvando...' : saveStatus === 'unsaved' ? 'Não salvo' : ''
 
   return (
-    <div className="relative w-full h-full" style={{ background: VERBUM_COLORS.canvas_bg }}>
+    <div
+      className="relative w-full h-full"
+      style={{ background: VERBUM_COLORS.canvas_bg }}
+      onTouchStart={(e) => {
+        if (isReadOnly || e.touches.length !== 1) return
+        const touch = e.touches[0]
+        const tx = touch.clientX
+        const ty = touch.clientY
+        longPressRef.current = setTimeout(() => {
+          const flowPos = screenToFlowPosition({ x: tx, y: ty })
+          insertPositionRef.current = flowPos
+          setContextMenu({ x: tx, y: ty, flowX: flowPos.x, flowY: flowPos.y })
+        }, 500)
+      }}
+      onTouchEnd={() => {
+        if (longPressRef.current) { clearTimeout(longPressRef.current); longPressRef.current = null }
+      }}
+      onTouchMove={() => {
+        if (longPressRef.current) { clearTimeout(longPressRef.current); longPressRef.current = null }
+      }}
+    >
       <CanvasBackground />
 
       <ReactFlow

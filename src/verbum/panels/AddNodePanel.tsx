@@ -347,7 +347,7 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
-              width: 500,
+              width: 'min(500px, calc(100vw - 2rem))',
               maxHeight: '80vh',
               background: VERBUM_COLORS.ui_bg,
               border: `1px solid ${VERBUM_COLORS.ui_border}`,
