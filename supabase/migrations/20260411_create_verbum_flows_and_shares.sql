@@ -84,8 +84,8 @@ CREATE POLICY verbum_flows_select ON verbum_flows FOR SELECT
     OR is_public = true
     OR id IN (
       SELECT flow_id FROM verbum_flow_shares
-      WHERE (shared_with_user = auth.uid() OR shared_with_email = (SELECT email FROM auth.users WHERE id = auth.uid()))
-      AND accepted = true
+      WHERE shared_with_user = auth.uid()
+         OR shared_with_email = (auth.jwt()->>'email')
     )
   );
 
@@ -102,7 +102,7 @@ CREATE POLICY verbum_flow_shares_select ON verbum_flow_shares FOR SELECT
   USING (
     shared_by = auth.uid()
     OR shared_with_user = auth.uid()
-    OR shared_with_email = (SELECT email FROM auth.users WHERE id = auth.uid())
+    OR shared_with_email = (auth.jwt()->>'email')
   );
 
 CREATE POLICY verbum_flow_shares_insert ON verbum_flow_shares FOR INSERT
@@ -112,7 +112,7 @@ CREATE POLICY verbum_flow_shares_update ON verbum_flow_shares FOR UPDATE
   USING (
     shared_by = auth.uid()
     OR shared_with_user = auth.uid()
-    OR shared_with_email = (SELECT email FROM auth.users WHERE id = auth.uid())
+    OR shared_with_email = (auth.jwt()->>'email')
   );
 
 CREATE POLICY verbum_flow_shares_delete ON verbum_flow_shares FOR DELETE
