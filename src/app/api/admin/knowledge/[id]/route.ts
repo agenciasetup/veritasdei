@@ -3,14 +3,18 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 
 async function checkAdmin() {
-  const supabase = await createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Não autenticado', status: 401 }
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Não autenticado', status: 401 }
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin') return { error: 'Sem permissão', status: 403 }
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    if (profile?.role !== 'admin') return { error: 'Sem permissão', status: 403 }
 
-  return { error: null, status: 200 }
+    return { error: null, status: 200 }
+  } catch {
+    return { error: 'Não autenticado', status: 401 }
+  }
 }
 
 type RouteContext = { params: Promise<{ id: string }> }
