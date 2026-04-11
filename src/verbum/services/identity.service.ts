@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { sanitizeIlike, sanitizePostgrestFilter } from '@/lib/utils/sanitize'
 import type {
   CanonicalEntity,
   IdentityResult,
@@ -145,7 +146,7 @@ async function searchKnowledgeBase(normalized: string): Promise<KnowledgeBaseEnt
   const { data: topicMatch } = await supabase
     .from('ai_knowledge_base')
     .select('category, topic, core_teaching, bible_references, keywords')
-    .ilike('topic', `%${normalized}%`)
+    .ilike('topic', `%${sanitizeIlike(normalized)}%`)
     .limit(3)
 
   return (topicMatch || []) as KnowledgeBaseEntry[]
@@ -165,7 +166,7 @@ export async function searchCanonicalEntities(query: string): Promise<CanonicalE
   const { data } = await supabase
     .from('verbum_canonical_entities')
     .select('*')
-    .or(`display_name.ilike.%${query}%,canonical_name.ilike.%${normalized}%`)
+    .or(`display_name.ilike.%${sanitizePostgrestFilter(query)}%,canonical_name.ilike.%${sanitizePostgrestFilter(normalized)}%`)
     .limit(5)
 
   return (data || []) as CanonicalEntity[]

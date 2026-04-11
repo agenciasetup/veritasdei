@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { sanitizePostgrestFilter } from '@/lib/utils/sanitize'
 import { VOCACOES } from '@/types/auth'
 import { VocacaoIcon } from '@/components/icons/VocacaoIcons'
 import {
@@ -62,8 +63,7 @@ export default function AdminUsuariosPage() {
       .select('id, name, email, role, status, vocacao, verified, cidade, estado, paroquia, plan, created_at', { count: 'exact' })
 
     if (search.trim()) {
-      // Escape special PostgREST filter characters to prevent filter injection
-      const sanitized = search.trim().replace(/[%_\\]/g, c => `\\${c}`)
+      const sanitized = sanitizePostgrestFilter(search.trim())
       query = query.or(`name.ilike.%${sanitized}%,email.ilike.%${sanitized}%`)
     }
     if (filterVocacao) query = query.eq('vocacao', filterVocacao)

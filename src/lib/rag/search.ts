@@ -4,6 +4,7 @@ import { buildRAGPrompt } from './prompt'
 import { disambiguateQuery } from './disambiguation'
 import { understandQuery, searchKnowledgeBase, extractBibleRefsFromKnowledge } from './query-understanding'
 import { isSensitiveTopic } from '../utils/sensitive-topics'
+import { sanitizePostgrestFilter } from '../utils/sanitize'
 import type { QueryResponse, SearchResult, AIInsight, ProtestantView } from '@/types'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
@@ -129,7 +130,7 @@ async function searchBibliaKeyword(
   }
 
   // Fallback: ilike search
-  const orConditions = keywords.map(k => `text_pt.ilike.%${k}%`).join(',')
+  const orConditions = keywords.map(k => `text_pt.ilike.%${sanitizePostgrestFilter(k)}%`).join(',')
 
   let queryBuilder = supabase
     .from('biblia')

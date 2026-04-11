@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
+import { sanitizeIlike } from '@/lib/utils/sanitize'
 import Link from 'next/link'
 import {
   Users, Church, HeartHandshake, UserPlus, LogIn, MapPin, Clock, Search,
@@ -56,7 +57,7 @@ export default function LandingPage() {
       .from('paroquias')
       .select('id, nome, diocese, cidade, estado, padre_responsavel, telefone, horarios_missa, foto_url, status')
       .eq('status', 'aprovada')
-      .ilike('cidade', `%${searchCity.trim()}%`)
+      .ilike('cidade', `%${sanitizeIlike(searchCity.trim())}%`)
       .limit(6)
 
     setSearchResults((data as Paroquia[]) ?? [])

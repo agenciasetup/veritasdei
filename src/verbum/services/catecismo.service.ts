@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { sanitizeIlike } from '@/lib/utils/sanitize'
 
 // Lazy-init: deferred from module import to prevent premature Supabase auth init.
 let supabase: ReturnType<typeof createClient> | undefined
@@ -30,7 +31,7 @@ export async function searchByText(query: string, limit = 5) {
   const { data } = await supabase
     .from('catecismo')
     .select('id, paragraph, section, part, text, source')
-    .ilike('text', `%${query}%`)
+    .ilike('text', `%${sanitizeIlike(query)}%`)
     .limit(limit)
 
   return data || []

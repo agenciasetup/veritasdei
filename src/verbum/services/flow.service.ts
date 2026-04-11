@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { sanitizePostgrestFilter } from '@/lib/utils/sanitize'
 import type { VerbumFlow, VerbumFlowShare, VerbumFlowFavorite } from '../types/verbum.types'
 
 // Lazy-init: deferred from module import to prevent premature Supabase auth init.
@@ -217,7 +218,7 @@ export async function searchPublicFlows(query: string, limit = 20): Promise<Verb
     .from('verbum_flows')
     .select('*')
     .eq('is_public', true)
-    .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
+    .or(`name.ilike.%${sanitizePostgrestFilter(query)}%,description.ilike.%${sanitizePostgrestFilter(query)}%`)
     .order('clone_count', { ascending: false })
     .limit(limit)
 
