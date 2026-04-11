@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { handleQueryError } from '@/lib/supabase/query'
 import { sanitizeIlike, sanitizePostgrestFilter } from '@/lib/utils/sanitize'
 import { withTimeout } from '@/lib/utils/with-timeout'
 import type { BibleVerse } from '../types/verbum.types'
@@ -170,24 +171,25 @@ function resolveBookAbbreviation(bookName: string): string {
  */
 export async function searchByReference(reference: string): Promise<BibleVerse | null> {
   supabase ??= createClient()
-  if (!supabase)return null
+  if (!supabase) return null
 
   const parsed = parseReference(reference)
   if (!parsed) {
     const normalized = normalizeReference(reference)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('biblia')
       .select('book, book_abbr, chapter, verse, reference, text_pt, text_latin, testament')
       .eq('reference', normalized)
       .limit(1)
       .maybeSingle()
 
+    if (error) await handleQueryError(error, 'Bible.searchByReference')
     if (!data) return null
     return mapToVerse(data)
   }
 
   // Try with original abbreviation first
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('biblia')
     .select('book, book_abbr, chapter, verse, reference, text_pt, text_latin, testament')
     .ilike('book_abbr', parsed.book_abbr)
@@ -196,12 +198,13 @@ export async function searchByReference(reference: string): Promise<BibleVerse |
     .limit(1)
     .maybeSingle()
 
+  if (error) await handleQueryError(error, 'Bible.searchByReference')
   if (data) return mapToVerse(data)
 
   // Try with resolved abbreviation (handles "Isaias" -> "Is")
   const resolvedAbbr = resolveBookAbbreviation(parsed.book_abbr)
   if (resolvedAbbr !== parsed.book_abbr) {
-    const { data: data2 } = await supabase
+    const { data: data2, error: err2 } = await supabase
       .from('biblia')
       .select('book, book_abbr, chapter, verse, reference, text_pt, text_latin, testament')
       .ilike('book_abbr', resolvedAbbr)
@@ -210,11 +213,12 @@ export async function searchByReference(reference: string): Promise<BibleVerse |
       .limit(1)
       .maybeSingle()
 
+    if (err2) await handleQueryError(err2, 'Bible.searchByReference')
     if (data2) return mapToVerse(data2)
   }
 
   // Try matching by full book name
-  const { data: data3 } = await supabase
+  const { data: data3, error: err3 } = await supabase
     .from('biblia')
     .select('book, book_abbr, chapter, verse, reference, text_pt, text_latin, testament')
     .ilike('book', `%${sanitizeIlike(parsed.book_abbr)}%`)
@@ -223,6 +227,7 @@ export async function searchByReference(reference: string): Promise<BibleVerse |
     .limit(1)
     .maybeSingle()
 
+  if (err3) await handleQueryError(err3, 'Bible.searchByReference')
   if (data3) return mapToVerse(data3)
   return null
 }
@@ -233,13 +238,13 @@ export async function searchByReference(reference: string): Promise<BibleVerse |
  */
 export async function searchByRange(reference: string): Promise<BibleVerse[]> {
   supabase ??= createClient()
-  if (!supabase)return []
+  if (!supabase) return []
 
   const parsed = parseRangeReference(reference)
   if (!parsed) return []
 
   // Try with original abbreviation
-  let { data } = await supabase
+  const { data, error } = await supabase
     .from('biblia')
     .select('book, book_abbr, chapter, verse, reference, text_pt, text_latin, testament')
     .ilike('book_abbr', parsed.book_abbr)
@@ -248,12 +253,13 @@ export async function searchByRange(reference: string): Promise<BibleVerse[]> {
     .lte('verse', parsed.verseEnd)
     .order('verse')
 
+  if (error) await handleQueryError(error, 'Bible.searchByRange')
   if (data && data.length > 0) return data.map(mapToVerse)
 
   // Try with resolved abbreviation
   const resolvedAbbr = resolveBookAbbreviation(parsed.book_abbr)
   if (resolvedAbbr !== parsed.book_abbr) {
-    const { data: data2 } = await supabase
+    const { data: data2, error: err2 } = await supabase
       .from('biblia')
       .select('book, book_abbr, chapter, verse, reference, text_pt, text_latin, testament')
       .ilike('book_abbr', resolvedAbbr)
@@ -262,11 +268,12 @@ export async function searchByRange(reference: string): Promise<BibleVerse[]> {
       .lte('verse', parsed.verseEnd)
       .order('verse')
 
+    if (err2) await handleQueryError(err2, 'Bible.searchByRange')
     if (data2 && data2.length > 0) return data2.map(mapToVerse)
   }
 
   // Try by full book name
-  const { data: data3 } = await supabase
+  const { data: data3, error: err3 } = await supabase
     .from('biblia')
     .select('book, book_abbr, chapter, verse, reference, text_pt, text_latin, testament')
     .ilike('book', `%${sanitizeIlike(parsed.book_abbr)}%`)
@@ -275,6 +282,7 @@ export async function searchByRange(reference: string): Promise<BibleVerse[]> {
     .lte('verse', parsed.verseEnd)
     .order('verse')
 
+  if (err3) await handleQueryError(err3, 'Bible.searchByRange')
   return (data3 || []).map(mapToVerse)
 }
 
@@ -284,13 +292,13 @@ export async function searchByRange(reference: string): Promise<BibleVerse[]> {
  */
 export async function searchByText(query: string, limit = 8): Promise<BibleVerse[]> {
   supabase ??= createClient()
-  if (!supabase)return []
+  if (!supabase) return []
 
   const words = query.trim().split(/\s+/).filter(w => w.length > 2)
   if (words.length === 0) return []
 
   // Full query match first (5s timeout per query)
-  const { data } = await withTimeout(
+  const fullResult = await withTimeout(
     supabase
       .from('biblia')
       .select('book, book_abbr, chapter, verse, reference, text_pt, text_latin, testament')
@@ -300,8 +308,9 @@ export async function searchByText(query: string, limit = 8): Promise<BibleVerse
     { data: null, error: null } as Awaited<ReturnType<typeof supabase.from>>
   )
 
-  if (data && data.length > 0) {
-    return data.map(mapToVerse)
+  if (fullResult.error) await handleQueryError(fullResult.error, 'Bible.searchByText')
+  if (fullResult.data && fullResult.data.length > 0) {
+    return fullResult.data.map(mapToVerse)
   }
 
   // Multi-word search: run in parallel with per-query error handling
@@ -312,11 +321,12 @@ export async function searchByText(query: string, limit = 8): Promise<BibleVerse
     const wordResults = await Promise.allSettled(
       words.sort((a, b) => b.length - a.length).slice(0, 3).map(async (word) => {
         try {
-          const { data: wordData } = await supabase
+          const { data: wordData, error: wordErr } = await supabase
             .from('biblia')
             .select('book, book_abbr, chapter, verse, reference, text_pt, text_latin, testament')
             .ilike('text_pt', `%${sanitizeIlike(word)}%`)
             .limit(limit)
+          if (wordErr) await handleQueryError(wordErr, 'Bible.searchByText(word)')
           return wordData || []
         } catch {
           return []
@@ -352,7 +362,7 @@ export async function searchByText(query: string, limit = 8): Promise<BibleVerse
 
   // Single word fallback (5s timeout)
   const mainWord = words.sort((a, b) => b.length - a.length)[0]
-  const { data: fallback } = await withTimeout(
+  const fallbackResult = await withTimeout(
     supabase
       .from('biblia')
       .select('book, book_abbr, chapter, verse, reference, text_pt, text_latin, testament')
@@ -362,7 +372,8 @@ export async function searchByText(query: string, limit = 8): Promise<BibleVerse
     { data: null, error: null } as Awaited<ReturnType<typeof supabase.from>>
   )
 
-  return (fallback || []).map(mapToVerse)
+  if (fallbackResult.error) await handleQueryError(fallbackResult.error, 'Bible.searchByText(fallback)')
+  return (fallbackResult.data || []).map(mapToVerse)
 }
 
 /**
@@ -383,7 +394,8 @@ export async function searchByBook(bookQuery: string, chapter?: number, limit = 
     query = query.eq('chapter', chapter)
   }
 
-  const { data } = await query.order('chapter').order('verse').limit(limit)
+  const { data, error } = await query.order('chapter').order('verse').limit(limit)
+  if (error) await handleQueryError(error, 'Bible.searchByBook')
   return (data || []).map(mapToVerse)
 }
 

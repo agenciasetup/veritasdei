@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { handleQueryError } from '@/lib/supabase/query'
 import { getAutoConnectionProposals } from './openai.service'
 import type { ConnectionProposal, RelationType, VerbumSource } from '../types/verbum.types'
 
@@ -81,11 +82,13 @@ async function checkTypologyRegistry(
 
   try {
     // Check if new node matches a type alias
-    const { data: typeMatches } = await supabase
+    const { data: typeMatches, error: typeErr } = await supabase
       .from('verbum_typology_registry')
       .select('*')
       .contains('aliases_type', [normalized])
       .limit(10)
+
+    if (typeErr) await handleQueryError(typeErr, 'Connection.checkTypology(type)')
 
     if (typeMatches && typeMatches.length > 0) {
       for (const match of typeMatches) {
@@ -121,11 +124,13 @@ async function checkTypologyRegistry(
 
   try {
     // Also check if new node matches an antitype alias
-    const { data: antitypeMatches } = await supabase
+    const { data: antitypeMatches, error: antiErr } = await supabase
       .from('verbum_typology_registry')
       .select('*')
       .contains('aliases_antitype', [normalized])
       .limit(10)
+
+    if (antiErr) await handleQueryError(antiErr, 'Connection.checkTypology(antitype)')
 
     if (antitypeMatches && antitypeMatches.length > 0) {
       for (const match of antitypeMatches) {

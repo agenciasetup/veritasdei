@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { handleQueryError } from '@/lib/supabase/query'
 import { sanitizePostgrestFilter } from '@/lib/utils/sanitize'
 import { withTimeout } from '@/lib/utils/with-timeout'
 import type {
@@ -92,14 +93,19 @@ export async function resolveIdentity(input: string): Promise<IdentityResult> {
  */
 async function findCanonicalByAlias(normalized: string): Promise<CanonicalEntity | null> {
   supabase ??= createClient()
-  if (!supabase)return null
+  if (!supabase) return null
 
-  const { data } = await supabase
+  const doQuery = () => supabase!
     .from('verbum_canonical_entities')
     .select('*')
     .contains('aliases', [normalized])
     .limit(1)
     .maybeSingle()
+
+  let { data, error } = await doQuery()
+  if (error && await handleQueryError(error, 'Identity.findCanonicalByAlias')) {
+    ;({ data, error } = await doQuery())
+  }
 
   return data as CanonicalEntity | null
 }
@@ -109,22 +115,24 @@ async function findCanonicalByAlias(normalized: string): Promise<CanonicalEntity
  */
 async function findTypologyMatch(normalized: string): Promise<boolean> {
   supabase ??= createClient()
-  if (!supabase)return false
+  if (!supabase) return false
 
-  const { data: typeMatch } = await supabase
+  const { data: typeMatch, error: typeErr } = await supabase
     .from('verbum_typology_registry')
     .select('id')
     .contains('aliases_type', [normalized])
     .limit(1)
 
+  if (typeErr) await handleQueryError(typeErr, 'Identity.findTypologyMatch(type)')
   if (typeMatch && typeMatch.length > 0) return true
 
-  const { data: antitypeMatch } = await supabase
+  const { data: antitypeMatch, error: antiErr } = await supabase
     .from('verbum_typology_registry')
     .select('id')
     .contains('aliases_antitype', [normalized])
     .limit(1)
 
+  if (antiErr) await handleQueryError(antiErr, 'Identity.findTypologyMatch(antitype)')
   return !!(antitypeMatch && antitypeMatch.length > 0)
 }
 
@@ -133,14 +141,18 @@ async function findTypologyMatch(normalized: string): Promise<boolean> {
  */
 async function searchKnowledgeBase(normalized: string): Promise<KnowledgeBaseEntry[]> {
   supabase ??= createClient()
-  if (!supabase)return []
+  if (!supabase) return []
 
-  // Single query: keyword array match OR topic ilike — avoids two sequential queries
-  const { data } = await supabase
+  const doQuery = () => supabase!
     .from('ai_knowledge_base')
     .select('category, topic, core_teaching, bible_references, keywords')
     .or(`keywords.cs.{${sanitizePostgrestFilter(normalized)}},topic.ilike.%${sanitizePostgrestFilter(normalized)}%`)
     .limit(3)
+
+  let { data, error } = await doQuery()
+  if (error && await handleQueryError(error, 'Identity.searchKnowledgeBase')) {
+    ;({ data, error } = await doQuery())
+  }
 
   return (data || []) as KnowledgeBaseEntry[]
 }
@@ -151,16 +163,20 @@ async function searchKnowledgeBase(normalized: string): Promise<KnowledgeBaseEnt
  */
 export async function searchCanonicalEntities(query: string): Promise<CanonicalEntity[]> {
   supabase ??= createClient()
-  if (!supabase)return []
+  if (!supabase) return []
 
   const normalized = normalize(query)
 
-  // Search by display_name or aliases
-  const { data } = await supabase
+  const doQuery = () => supabase!
     .from('verbum_canonical_entities')
     .select('*')
     .or(`display_name.ilike.%${sanitizePostgrestFilter(query)}%,canonical_name.ilike.%${sanitizePostgrestFilter(normalized)}%`)
     .limit(5)
+
+  let { data, error } = await doQuery()
+  if (error && await handleQueryError(error, 'Identity.searchCanonicalEntities')) {
+    ;({ data, error } = await doQuery())
+  }
 
   return (data || []) as CanonicalEntity[]
 }
