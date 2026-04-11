@@ -1,0 +1,166 @@
+import { createClient } from '@/lib/supabase/client'
+import type {
+  CanonicalEntity,
+  IdentityResult,
+  BibleVerse,
+  KnowledgeBaseEntry,
+} from '../types/verbum.types'
+import { searchByReference, searchByText, isReferencePattern } from './bible.service'
+
+const supabase = createClient()
+
+/**
+ * Normalize input for comparison: lowercase, remove accents.
+ */
+function normalize(input: string): string {
+  return input
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+}
+
+/**
+ * Resolve a user's text input into a canonical identity, typology match,
+ * or suggestions for creating a new node.
+ *
+ * This is THE critical function — always called before creating any node.
+ */
+export async function resolveIdentity(input: string): Promise<IdentityResult> {
+  if (!supabase) {
+    return { type: 'new', action: 'create_new', suggestions: {} }
+  }
+
+  const normalized = normalize(input)
+  const original = input.trim()
+
+  // 1. Check canonical entities by aliases
+  const canonical = await findCanonicalByAlias(normalized)
+  if (canonical) {
+    return {
+      type: 'canonical',
+      entity: canonical,
+      action: canonical.is_trinitarian ? 'activate_trinitarian' : 'activate_canonical',
+    }
+  }
+
+  // 2. Check typology registry
+  const typologyMatch = await findTypologyMatch(normalized)
+  if (typologyMatch) {
+    return {
+      type: 'typology_match',
+      suggestions: { knowledge: [] },
+      action: 'create_new',
+    }
+  }
+
+  // 3. If it looks like a bible reference, search directly
+  if (isReferencePattern(original)) {
+    const verse = await searchByReference(original)
+    return {
+      type: 'new',
+      suggestions: {
+        verses: verse ? [verse] : [],
+        knowledge: [],
+      },
+      action: 'create_new',
+    }
+  }
+
+  // 4. Search biblia by text content
+  const verses = await searchByText(original, 5)
+
+  // 5. Search ai_knowledge_base by keywords
+  const knowledge = await searchKnowledgeBase(normalized)
+
+  return {
+    type: 'new',
+    suggestions: { verses, knowledge },
+    action: 'create_new',
+  }
+}
+
+/**
+ * Find a canonical entity whose aliases array contains the normalized input.
+ */
+async function findCanonicalByAlias(normalized: string): Promise<CanonicalEntity | null> {
+  if (!supabase) return null
+
+  const { data } = await supabase
+    .from('verbum_canonical_entities')
+    .select('*')
+    .contains('aliases', [normalized])
+    .limit(1)
+    .maybeSingle()
+
+  return data as CanonicalEntity | null
+}
+
+/**
+ * Check if the input matches a known typology entry.
+ */
+async function findTypologyMatch(normalized: string): Promise<boolean> {
+  if (!supabase) return false
+
+  const { data: typeMatch } = await supabase
+    .from('verbum_typology_registry')
+    .select('id')
+    .contains('aliases_type', [normalized])
+    .limit(1)
+
+  if (typeMatch && typeMatch.length > 0) return true
+
+  const { data: antitypeMatch } = await supabase
+    .from('verbum_typology_registry')
+    .select('id')
+    .contains('aliases_antitype', [normalized])
+    .limit(1)
+
+  return !!(antitypeMatch && antitypeMatch.length > 0)
+}
+
+/**
+ * Search ai_knowledge_base by keywords array.
+ */
+async function searchKnowledgeBase(normalized: string): Promise<KnowledgeBaseEntry[]> {
+  if (!supabase) return []
+
+  // Try keyword match
+  const { data } = await supabase
+    .from('ai_knowledge_base')
+    .select('category, topic, core_teaching, bible_references, keywords')
+    .contains('keywords', [normalized])
+    .limit(3)
+
+  if (data && data.length > 0) {
+    return data as KnowledgeBaseEntry[]
+  }
+
+  // Fallback: ILIKE on topic
+  const { data: topicMatch } = await supabase
+    .from('ai_knowledge_base')
+    .select('category, topic, core_teaching, bible_references, keywords')
+    .ilike('topic', `%${normalized}%`)
+    .limit(3)
+
+  return (topicMatch || []) as KnowledgeBaseEntry[]
+}
+
+/**
+ * Search canonical entities by partial name match.
+ * Used for the AddNodePanel suggestions.
+ */
+export async function searchCanonicalEntities(query: string): Promise<CanonicalEntity[]> {
+  if (!supabase) return []
+
+  const normalized = normalize(query)
+
+  // Search by display_name or aliases
+  const { data } = await supabase
+    .from('verbum_canonical_entities')
+    .select('*')
+    .or(`display_name.ilike.%${query}%,canonical_name.ilike.%${normalized}%`)
+    .limit(5)
+
+  return (data || []) as CanonicalEntity[]
+}
