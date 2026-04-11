@@ -12,9 +12,8 @@ const TRINITY_PERSONS = [
     label: 'Deus Pai',
     latin: 'Deus Pater',
     verse: 'Mt 6:9',
-    // Top center of triquetra
     cx: 90,
-    cy: 38,
+    cy: 32,
     handlePos: Position.Top,
   },
   {
@@ -22,9 +21,8 @@ const TRINITY_PERSONS = [
     label: 'Deus Filho',
     latin: 'Deus Filius',
     verse: 'Jo 1:14',
-    // Bottom right
-    cx: 140,
-    cy: 142,
+    cx: 145,
+    cy: 145,
     handlePos: Position.Right,
   },
   {
@@ -32,9 +30,8 @@ const TRINITY_PERSONS = [
     label: 'Espírito Santo',
     latin: 'Spiritus Sanctus',
     verse: 'Jo 14:26',
-    // Bottom left
-    cx: 40,
-    cy: 142,
+    cx: 35,
+    cy: 145,
     handlePos: Position.Left,
   },
 ] as const
@@ -74,7 +71,7 @@ function TrinitasNode({ selected }: NodeProps) {
         />
       )}
 
-      {/* Slowly rotating Triquetra SVG */}
+      {/* Slowly rotating Triquetra SVG — proper symmetrical Celtic triquetra */}
       <motion.svg
         viewBox="0 0 180 180"
         width={180}
@@ -89,20 +86,31 @@ function TrinitasNode({ selected }: NodeProps) {
       >
         <defs>
           <linearGradient id="triquetaGold" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#D4AA4A" />
+            <stop offset="0%" stopColor="#E0C060" />
             <stop offset="50%" stopColor="#C9A84C" />
             <stop offset="100%" stopColor="#A88A3C" />
           </linearGradient>
           <filter id="triquetaGlow">
-            <feGaussianBlur stdDeviation="2" result="blur" />
+            <feGaussianBlur stdDeviation="3" result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
+          {/* Clip for the interlocking weave effect */}
+          <clipPath id="clipTop">
+            <rect x="0" y="0" width="180" height="95" />
+          </clipPath>
+          <clipPath id="clipBottom">
+            <rect x="0" y="85" width="180" height="95" />
+          </clipPath>
         </defs>
 
-        {/* Triquetra: three interlocked vesica piscis arcs */}
+        {/*
+          Proper Triquetra (Trinity Knot)
+          Three vesica piscis leaves arranged 120° apart around center (90,100).
+          Each leaf is an almond/eye shape formed by two circular arcs.
+        */}
         <g
           filter="url(#triquetaGlow)"
           fill="none"
@@ -111,48 +119,53 @@ function TrinitasNode({ selected }: NodeProps) {
           strokeLinecap="round"
           strokeLinejoin="round"
         >
-          {/* Top loop */}
+          {/* Top leaf — points upward */}
           <path d="
-            M 90 30
-            C 55 30, 35 65, 55 95
-            C 65 112, 78 118, 90 118
-            C 102 118, 115 112, 125 95
-            C 145 65, 125 30, 90 30
+            M 90 28
+            C 62 48, 58 82, 72 102
+            C 78 112, 84 114, 90 110
+            C 96 114, 102 112, 108 102
+            C 122 82, 118 48, 90 28
             Z
           " />
-          {/* Bottom-left loop */}
+
+          {/* Bottom-left leaf — points to lower-left */}
           <path d="
-            M 55 95
-            C 35 125, 45 160, 75 160
-            C 90 160, 100 150, 105 138
-            C 108 130, 105 120, 98 112
-            C 88 100, 72 100, 55 95
+            M 72 102
+            C 52 108, 32 132, 40 156
+            C 44 164, 50 168, 56 166
+            C 58 172, 64 174, 72 168
+            C 92 158, 98 128, 90 110
             Z
           " />
-          {/* Bottom-right loop */}
+
+          {/* Bottom-right leaf — points to lower-right */}
           <path d="
-            M 125 95
-            C 145 125, 135 160, 105 160
-            C 90 160, 80 150, 75 138
-            C 72 130, 75 120, 82 112
-            C 92 100, 108 100, 125 95
+            M 108 102
+            C 128 108, 148 132, 140 156
+            C 136 164, 130 168, 124 166
+            C 122 172, 116 174, 108 168
+            C 88 158, 82 128, 90 110
             Z
           " />
-          {/* Central triangle accent */}
-          <path
-            d="M 90 70 L 72 108 L 108 108 Z"
-            strokeWidth="1.5"
-            opacity={0.4}
+
+          {/* Inner circle at the center — symbolizing unity of the Trinity */}
+          <circle
+            cx="90"
+            cy="108"
+            r="12"
+            strokeWidth="1.8"
+            opacity={0.5}
           />
         </g>
 
-        {/* Center circle */}
+        {/* Center dot */}
         <circle
           cx="90"
-          cy="100"
-          r="6"
+          cy="108"
+          r="3.5"
           fill={VERBUM_COLORS.ui_gold}
-          opacity={0.5}
+          opacity={0.6}
         />
       </motion.svg>
 
@@ -229,9 +242,9 @@ function TrinitasNode({ selected }: NodeProps) {
 
       {/* React Flow Handles */}
       <Handle type="target" position={Position.Top} className="!opacity-0" />
-      <Handle type="source" position={Position.Top} id="pai" className="!opacity-0" style={{ top: 38 }} />
-      <Handle type="source" position={Position.Right} id="filho" className="!opacity-0" style={{ top: 142 }} />
-      <Handle type="source" position={Position.Left} id="espirito_santo" className="!opacity-0" style={{ top: 142 }} />
+      <Handle type="source" position={Position.Top} id="pai" className="!opacity-0" style={{ top: 32 }} />
+      <Handle type="source" position={Position.Right} id="filho" className="!opacity-0" style={{ top: 145 }} />
+      <Handle type="source" position={Position.Left} id="espirito_santo" className="!opacity-0" style={{ top: 145 }} />
       <Handle type="source" position={Position.Bottom} className="!opacity-0" />
     </div>
   )

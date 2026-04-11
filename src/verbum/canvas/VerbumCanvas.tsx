@@ -17,6 +17,8 @@ import {
   type Connection,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
+import Link from 'next/link'
+import { ArrowLeft, Plus, HelpCircle } from 'lucide-react'
 
 import { nodeTypes } from '../nodes/nodeTypes'
 import { edgeTypes } from '../edges/edgeTypes'
@@ -620,6 +622,84 @@ function VerbumCanvasInner() {
         />
       </ReactFlow>
 
+      {/* Top toolbar */}
+      <div
+        className="fixed top-0 left-0 right-0 z-[200] flex items-center justify-between px-4 py-2"
+        style={{
+          background: 'linear-gradient(to bottom, rgba(10,8,6,0.95) 0%, rgba(10,8,6,0.7) 80%, transparent 100%)',
+          pointerEvents: 'none',
+        }}
+      >
+        <div className="flex items-center gap-3" style={{ pointerEvents: 'auto' }}>
+          <Link
+            href="/verbum"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors"
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: `1px solid ${VERBUM_COLORS.ui_border}`,
+              color: VERBUM_COLORS.text_secondary,
+              fontFamily: 'Poppins, sans-serif',
+            }}
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Verbum
+          </Link>
+          <span
+            className="text-xs font-semibold"
+            style={{ fontFamily: 'Cinzel, serif', color: VERBUM_COLORS.ui_gold, letterSpacing: '0.08em' }}
+          >
+            MAPPA FIDEI
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2" style={{ pointerEvents: 'auto' }}>
+          {/* Quick add button */}
+          <button
+            onClick={() => {
+              insertPositionRef.current = { x: 300, y: 200 }
+              setAddPanel({ visible: true, mode: 'figura' })
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors"
+            style={{
+              background: 'rgba(201,168,76,0.08)',
+              border: `1px solid rgba(201,168,76,0.3)`,
+              color: VERBUM_COLORS.ui_gold,
+              fontFamily: 'Poppins, sans-serif',
+            }}
+            title="Adicionar nó (ou clique direito no canvas)"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Inserir
+          </button>
+
+          {/* Help hint */}
+          <div className="relative group">
+            <button
+              className="p-1.5 rounded-lg"
+              style={{ color: VERBUM_COLORS.text_muted }}
+            >
+              <HelpCircle className="w-4 h-4" />
+            </button>
+            <div
+              className="absolute right-0 top-full mt-2 w-56 rounded-xl p-4 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200"
+              style={{
+                background: VERBUM_COLORS.ui_bg,
+                border: `1px solid ${VERBUM_COLORS.ui_border}`,
+                boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+              }}
+            >
+              <div className="text-[11px] space-y-2" style={{ color: VERBUM_COLORS.text_secondary, fontFamily: 'Poppins, sans-serif' }}>
+                <div><strong style={{ color: VERBUM_COLORS.ui_gold }}>Clique direito</strong> — inserir nó</div>
+                <div><strong style={{ color: VERBUM_COLORS.ui_gold }}>Arrastar handle</strong> — criar conexão</div>
+                <div><strong style={{ color: VERBUM_COLORS.ui_gold }}>Alt + clique</strong> — modo foco</div>
+                <div><strong style={{ color: VERBUM_COLORS.ui_gold }}>Clique na aresta</strong> — ver detalhes</div>
+                <div><strong style={{ color: VERBUM_COLORS.ui_gold }}>ESC</strong> — sair do foco</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Layer controls */}
       <LayerControls
         visibleLayers={visibleLayers}
@@ -629,7 +709,7 @@ function VerbumCanvasInner() {
       {/* Focus mode indicator */}
       {focusNodeId && (
         <div
-          className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-lg text-xs"
+          className="fixed top-14 left-1/2 -translate-x-1/2 z-[200] px-4 py-2 rounded-lg text-xs"
           style={{
             background: VERBUM_COLORS.ui_bg,
             border: `1px solid ${VERBUM_COLORS.ui_gold}`,

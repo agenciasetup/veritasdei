@@ -26,16 +26,16 @@ export async function proposeConnections(
     return registryMatches
   }
 
-  // STEP 2: If fewer than 3 nodes, skip auto-connection
-  if (existingNodes.length < 3) return []
+  // STEP 2: If fewer than 2 nodes, skip auto-connection
+  if (existingNodes.length < 2) return []
 
-  // STEP 3: Call AI for proposals
+  // STEP 3: Call AI for proposals (send up to 50 nodes for better matching)
   try {
     const aiResult = await getAutoConnectionProposals({
       newNodeTitle: newNode.title,
       newNodeType: newNode.type,
       newNodeRef: newNode.ref,
-      existingNodes: existingNodes.slice(0, 20).map((n) => ({
+      existingNodes: existingNodes.slice(0, 50).map((n) => ({
         id: n.id,
         title: n.title,
         type: n.type,
@@ -46,7 +46,7 @@ export async function proposeConnections(
     if (!aiResult?.proposals) return []
 
     return aiResult.proposals
-      .filter((p) => p.confidence >= 0.7)
+      .filter((p) => p.confidence >= 0.5)
       .map((p) => ({
         ...p,
         source: 'ai' as const,
