@@ -20,5 +20,15 @@ export function rateLimit(key: string, limit: number, windowMs: number): boolean
 
   valid.push(now)
   requests.set(key, valid)
+
+  // Evict oldest entries when map grows too large to prevent memory leak
+  if (requests.size > 10000) {
+    const iter = requests.keys()
+    for (let i = 0; i < 2000; i++) {
+      const k = iter.next().value
+      if (k !== undefined) requests.delete(k)
+    }
+  }
+
   return true // allowed
 }

@@ -56,6 +56,7 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
   const [trinityEntity, setTrinityEntity] = useState<CanonicalEntity | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   const config = MODE_CONFIG[mode]
 
@@ -67,6 +68,10 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
       setShowTrinityModal(false)
       setTimeout(() => inputRef.current?.focus(), 100)
     }
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      abortRef.current?.abort()
+    }
   }, [visible, mode])
 
   const doSearch = useCallback(
@@ -76,8 +81,15 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
         return
       }
 
+      // Cancel previous in-flight search
+      abortRef.current?.abort()
+      const controller = new AbortController()
+      abortRef.current = controller
+
       setIsSearching(true)
       try {
+        // Early exit if aborted before first await
+        if (controller.signal.aborted) return
         const allResults: SearchResult[] = []
 
         // 1. Identity resolution first (with 8s timeout)
@@ -185,9 +197,14 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
           })
         }
 
-        setResults(allResults)
+        // Only update state if this search wasn't superseded
+        if (!controller.signal.aborted) {
+          setResults(allResults)
+        }
       } finally {
-        setIsSearching(false)
+        if (!controller.signal.aborted) {
+          setIsSearching(false)
+        }
       }
     },
     [mode]
@@ -197,7 +214,7 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
     (value: string) => {
       setQuery(value)
       if (debounceRef.current) clearTimeout(debounceRef.current)
-      debounceRef.current = setTimeout(() => doSearch(value), 300)
+      debounceRef.current = setTimeout(() => doSearch(value), 500)
     },
     [doSearch]
   )
