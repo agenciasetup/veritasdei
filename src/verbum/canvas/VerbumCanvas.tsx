@@ -146,11 +146,13 @@ function VerbumCanvasInner() {
   const proposalTimerRef = useRef<NodeJS.Timeout | null>(null)
   const proposalAbortRef = useRef<AbortController | null>(null)
 
-  // Refs to avoid stale closures in triggerSave
+  // Refs to avoid stale closures — updated via useEffect (not during render)
   const nodesRef = useRef(nodes)
   const edgesRef = useRef(edges)
-  nodesRef.current = nodes
-  edgesRef.current = edges
+  const currentFlowRef = useRef(currentFlow)
+  useEffect(() => { nodesRef.current = nodes }, [nodes])
+  useEffect(() => { edgesRef.current = edges }, [edges])
+  useEffect(() => { currentFlowRef.current = currentFlow }, [currentFlow])
 
   // ─── Reset init when flow ID changes (prevents loading loop) ───
   const prevFlowIdRef = useRef<string | null>(null)
@@ -264,9 +266,10 @@ function VerbumCanvasInner() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, flowIdParam])
 
-  // ─── Auto-save debounced ───
+  // ─── Auto-save debounced (stable — uses refs to avoid dependency cascades) ───
   const triggerSave = useCallback(() => {
-    if (!currentFlow || !user?.id || isReadOnly || isLoadingRef.current) return
+    const flow = currentFlowRef.current
+    if (!flow || !user?.id || isReadOnly || isLoadingRef.current) return
     setSaveStatus('unsaved')
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
@@ -274,7 +277,7 @@ function VerbumCanvasInner() {
       setSaveStatus('saving')
       try {
         const userNodes = nodesRef.current.filter(n => n.id !== TRINITAS_NODE_ID)
-        await updateFlow(currentFlow.id, {
+        await updateFlow(flow.id, {
           node_count: userNodes.length,
           edge_count: edgesRef.current.length,
         })
@@ -283,18 +286,17 @@ function VerbumCanvasInner() {
         setSaveStatus('unsaved')
       }
     }, 2000)
-  }, [currentFlow, user?.id, isReadOnly])
+  }, [user?.id, isReadOnly])
 
   // ─── Persist node position on drag ───
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
       onNodesChange(changes)
 
-      if (!currentFlow || !user?.id || isReadOnly) return
+      if (!currentFlowRef.current || !user?.id || isReadOnly) return
 
       for (const change of changes) {
         if (change.type === 'position' && change.position && change.dragging === false && change.id !== TRINITAS_NODE_ID) {
-          // Debounce position updates per node to avoid flooding
           const nodeId = change.id
           const pos = change.position
           if (positionDebounceRef.current[nodeId]) {
@@ -308,7 +310,7 @@ function VerbumCanvasInner() {
         }
       }
     },
-    [onNodesChange, currentFlow, user?.id, isReadOnly, triggerSave]
+    [onNodesChange, user?.id, isReadOnly, triggerSave]
   )
 
   // ─── beforeunload warning ───

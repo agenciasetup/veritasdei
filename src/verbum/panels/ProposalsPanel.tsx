@@ -115,7 +115,7 @@ export default function ProposalsPanel({
             <div className="overflow-y-auto" style={{ maxHeight: 'calc(60vh - 52px)' }}>
               {proposals.map((proposal, idx) => (
                 <div
-                  key={idx}
+                  key={`${proposal.source_node_id}-${proposal.target_node_id}-${proposal.relation_type}`}
                   className="px-5 py-4"
                   style={{ borderBottom: `1px solid rgba(58,42,16,0.3)` }}
                 >
