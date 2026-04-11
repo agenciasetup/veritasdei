@@ -9,6 +9,7 @@ import {
   type Vocacao, type Sacramento, type ProfileUpdate,
 } from '@/types/auth'
 import { VocacaoIcon } from '@/components/icons/VocacaoIcons'
+import CrossIcon from '@/components/icons/CrossIcon'
 import {
   User, Camera, Save, Church, MapPin, Heart, BookOpen,
   CheckCircle, Phone, Calendar, Shield, AtSign, GraduationCap,
@@ -869,7 +870,7 @@ function CarteirinhaCard({ profile }: { profile: ReturnType<typeof useAuth>['pro
               borderBottom: '2px solid #C9A84C',
             }}
           >
-            <span style={{ fontSize: '1.4rem', color: '#C9A84C' }}>&#10013;</span>
+            <CrossIcon size="md" />
             <div className="text-center">
               <h3
                 className="text-lg font-bold tracking-[0.2em] uppercase"
@@ -884,7 +885,7 @@ function CarteirinhaCard({ profile }: { profile: ReturnType<typeof useAuth>['pro
                 Carteirinha Catolica
               </p>
             </div>
-            <span style={{ fontSize: '1.4rem', color: '#C9A84C' }}>&#10013;</span>
+            <CrossIcon size="md" />
           </div>
 
           {/* Body */}
@@ -1026,7 +1027,7 @@ function CarteirinhaCard({ profile }: { profile: ReturnType<typeof useAuth>['pro
                 className="w-6 h-6 rounded-full flex items-center justify-center"
                 style={{ background: 'rgba(107,29,42,0.06)', border: '1px solid rgba(201,168,76,0.25)' }}
               >
-                <span style={{ fontSize: '0.7rem', color: '#C9A84C' }}>&#10013;</span>
+                <CrossIcon size="xs" />
               </div>
             </div>
           </div>

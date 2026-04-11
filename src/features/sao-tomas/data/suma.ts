@@ -11,10 +11,12 @@ export const SUMA_PARTS: SumaPart[] = [
     abbreviation: 'I',
     name: 'Prima Pars',
     description: 'Deus em Si mesmo: existência, atributos, Trindade, criação, anjos, homem e governo divino.',
+    synthesis: 'A Prima Pars trata de Deus considerado em Si mesmo. São Tomás começa demonstrando a existência de Deus pelas Cinco Vias (q.2), depois investiga Seus atributos: simplicidade (q.3), perfeição (q.4), bondade (q.5-6), infinidade (q.7), imutabilidade (q.9), eternidade (q.10), unidade (q.11) e o modo como O conhecemos (q.12-13). Em seguida, trata da Trindade das Pessoas divinas (q.27-43), da criação em geral (q.44-49), dos anjos (q.50-64), da criação do mundo corporal (q.65-74), do homem em sua natureza de corpo e alma (q.75-102) e, finalmente, do governo divino sobre todas as criaturas (q.103-119). O princípio unificador é: tudo procede de Deus e tudo é governado por Ele.',
     themes: [
       {
         title: 'A Existência de Deus',
         description: 'As célebres Cinco Vias para demonstrar a existência de Deus.',
+        synthesis: 'São Tomás ensina que a existência de Deus não é evidente para nós (a.1), embora seja evidente em si mesma, porque não conhecemos a essência divina diretamente. Portanto, precisa ser demonstrada (a.2), e pode sê-lo a posteriori, ou seja, pelos efeitos. Na célebre Questão 2, Artigo 3, apresenta as Cinco Vias: (1) pelo movimento — tudo que se move é movido por outro, e é necessário um Primeiro Motor Imóvel; (2) pela causalidade eficiente — nada é causa de si, logo há uma Primeira Causa; (3) pelo contingente e necessário — os seres contingentes exigem um Ser Necessário por si; (4) pelos graus de perfeição — os mais e menos perfeitos supõem um Máximo de perfeição; (5) pelo governo do mundo — seres sem inteligência agem para um fim, logo são dirigidos por uma Inteligência suprema. Deus é, portanto, demonstrável pela razão natural.',
         questions: [
           {
             number: 2,
@@ -79,6 +81,7 @@ export const SUMA_PARTS: SumaPart[] = [
       {
         title: 'A Santíssima Trindade',
         description: 'O mistério das três Pessoas divinas na unidade da essência.',
+        synthesis: 'A Trindade é o mistério central da fé cristã: um só Deus em três Pessoas distintas — Pai, Filho e Espírito Santo. São Tomás explica que "pessoa" (q.29) significa o que há de mais perfeito em toda a natureza, isto é, o subsistente em natureza racional. Em Deus, as Pessoas se distinguem pelas relações de origem: o Pai gera o Filho (processão do Verbo), e do Pai e do Filho procede o Espírito Santo (processão do Amor). As relações são reais e subsistentes, constituindo as próprias Pessoas, sem dividir a essência divina. Há quatro relações reais (paternidade, filiação, espiração ativa, processão), mas três Pessoas, porque a espiração ativa é comum ao Pai e ao Filho.',
         questions: [
           {
             number: 29,
@@ -109,10 +112,12 @@ export const SUMA_PARTS: SumaPart[] = [
     abbreviation: 'I-II',
     name: 'Prima Secundae',
     description: 'A ação humana: felicidade, atos humanos, paixões, hábitos, virtudes, pecado, lei e graça.',
+    synthesis: 'A Prima Secundae trata do caminho do homem para Deus, ou seja, da ação humana em geral. Começa pelo fim último — a felicidade (q.1-5) —, mostra que só a visão de Deus satisfaz plenamente o desejo natural do homem, e então analisa os meios: os atos humanos voluntários (q.6-21), as paixões da alma (q.22-48), os hábitos e virtudes (q.49-70), o pecado (q.71-89), a lei (natural, humana, divina — q.90-108) e a graça (q.109-114). O princípio organizador é: o homem, criado à imagem de Deus, retorna a Ele pelo exercício livre de seus atos, guiado pela lei e fortalecido pela graça.',
     themes: [
       {
         title: 'A Felicidade do Homem',
         description: 'Em que consiste a verdadeira felicidade e como alcançá-la.',
+        synthesis: 'São Tomás demonstra que o homem age necessariamente por um fim último (q.1), pois a vontade tende naturalmente ao bem. Investiga então em que consiste a verdadeira felicidade: não nas riquezas, honras, fama, poder, prazeres do corpo, nem mesmo nos bens da alma criada (q.2, a.1-7). A felicidade perfeita consiste unicamente na visão da essência divina (q.2, a.8), pois só o Bem infinito pode saciar o desejo infinito do intelecto humano. Nesta vida, temos apenas uma felicidade imperfeita; a felicidade perfeita é escatológica — é a visão beatífica, na qual o intelecto alcança a própria essência de Deus e descansa plenamente.',
         questions: [
           {
             number: 1,
@@ -163,10 +168,12 @@ export const SUMA_PARTS: SumaPart[] = [
     abbreviation: 'II-II',
     name: 'Secunda Secundae',
     description: 'As virtudes e vícios em particular: fé, esperança, caridade, prudência, justiça, fortaleza e temperança.',
+    synthesis: 'A Secunda Secundae é a mais extensa parte da Suma e trata das virtudes e vícios em particular. Começa pelas três virtudes teologais — fé (q.1-16), esperança (q.17-22) e caridade (q.23-46) — que têm Deus como objeto direto. Depois trata das quatro virtudes cardeais — prudência (q.47-56), justiça (q.57-122, incluindo a religião), fortaleza (q.123-140) e temperança (q.141-170). Cada virtude é analisada em sua natureza, partes, vícios opostos e dons do Espírito Santo correspondentes. Conclui com os estados de vida (q.171-189): carismas, vida ativa e contemplativa, perfeição religiosa.',
     themes: [
       {
         title: 'A Fé',
         description: 'Natureza, objeto e necessidade da fé teologal.',
+        synthesis: 'A fé é a primeira das virtudes teologais. São Tomás ensina que seu objeto formal é a Verdade Primeira (Deus revelante) — a fé não assente a nada senão porque Deus o revelou (q.1, a.1). Materialmente, a fé abrange tudo o que Deus revelou, incluindo verdades sobre as criaturas enquanto se referem a Deus. A fé é um hábito do intelecto, mas movido pela vontade: cremos porque queremos crer, impelidos pela graça. A fé é necessária para a salvação, é mais certa que qualquer ciência humana (pois se funda na Verdade divina), e é mérito quando livre. Os vícios opostos são a infidelidade, a heresia e a apostasia.',
         questions: [
           {
             number: 1,
@@ -197,10 +204,12 @@ export const SUMA_PARTS: SumaPart[] = [
     abbreviation: 'III',
     name: 'Tertia Pars',
     description: 'Cristo caminho para Deus: a Encarnação, os Sacramentos e a vida eterna.',
+    synthesis: 'A Tertia Pars trata de Cristo como caminho do homem para Deus. Divide-se em: (1) o próprio Cristo — conveniência da Encarnação (q.1-6), união hipostática (q.2), perfeições de Cristo em ciência, graça e poder (q.7-26), vida e Paixão de Cristo (q.27-59); (2) os Sacramentos como meios de salvação — em geral (q.60-65) e em particular: Batismo (q.66-71), Confirmação (q.72), Eucaristia (q.73-83), Penitência (q.84-90). A Suma ficou incompleta — São Tomás parou de escrever em dezembro de 1273. O Suplemento (compilado por seus discípulos a partir do Comentário às Sentenças) completa os sacramentos restantes e a escatologia.',
     themes: [
       {
         title: 'A Encarnação',
         description: 'A conveniência e o modo da Encarnação do Verbo.',
+        synthesis: 'São Tomás demonstra que era sumamente conveniente que Deus se encarnasse (q.1), pois pertence à razão do Sumo Bem comunicar-se à criatura de modo sumo. A Encarnação é a união da natureza divina e da natureza humana na única Pessoa do Verbo (união hipostática). Cristo é verdadeiro Deus e verdadeiro homem — uma só Pessoa em duas naturezas, sem confusão nem separação. A natureza humana não foi diminuída, mas elevada à máxima dignidade. O motivo principal da Encarnação foi a redenção do pecado, embora Deus pudesse ter redimido o homem de outro modo. A Encarnação manifesta simultaneamente a bondade, sabedoria, justiça e poder de Deus.',
         questions: [
           {
             number: 1,

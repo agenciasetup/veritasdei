@@ -1,39 +1,11 @@
+import CrossIcon from '@/components/icons/CrossIcon'
+
 export default function Header() {
   return (
     <header className="w-full pt-10 pb-6 px-4 text-center relative z-10">
       {/* Gothic Cross */}
       <div className="flex justify-center mb-5">
-        <svg
-          width="36"
-          height="52"
-          viewBox="0 0 36 52"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="gothic-cross"
-          aria-hidden="true"
-        >
-          {/* Vertical beam */}
-          <rect x="14" y="0" width="8" height="52" rx="1.5" fill="url(#crossGold)" />
-          {/* Horizontal beam */}
-          <rect x="0" y="14" width="36" height="8" rx="1.5" fill="url(#crossGold)" />
-          {/* Center jewel */}
-          <circle cx="18" cy="18" r="3" fill="#6B1D2A" stroke="#C9A84C" strokeWidth="1" />
-          {/* Top finial */}
-          <circle cx="18" cy="2" r="1.5" fill="#C9A84C" opacity="0.6" />
-          {/* Bottom finial */}
-          <circle cx="18" cy="50" r="1.5" fill="#C9A84C" opacity="0.6" />
-          {/* Left finial */}
-          <circle cx="2" cy="18" r="1.5" fill="#C9A84C" opacity="0.6" />
-          {/* Right finial */}
-          <circle cx="34" cy="18" r="1.5" fill="#C9A84C" opacity="0.6" />
-          <defs>
-            <linearGradient id="crossGold" x1="18" y1="0" x2="18" y2="52" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor="#D9C077" />
-              <stop offset="50%" stopColor="#C9A84C" />
-              <stop offset="100%" stopColor="#A88B3A" />
-            </linearGradient>
-          </defs>
-        </svg>
+        <CrossIcon size="lg" className="gothic-cross" />
       </div>
 
       {/* Title */}

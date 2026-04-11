@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 
 // Layout
+import CrossIcon from '@/components/icons/CrossIcon'
 import SearchBox from '@/components/ui/SearchBox'
 import CatechismPopup from '@/components/ui/CatechismPopup'
 import LandingPage from '@/components/landing/LandingPage'
@@ -155,7 +156,7 @@ export default function Home() {
             >
               Veritas Dei
             </span>
-            <span className="flex-shrink-0 md:hidden" style={{ color: '#C9A84C', fontSize: '1.2rem' }}>&#10013;</span>
+            <span className="flex-shrink-0 md:hidden"><CrossIcon size="sm" /></span>
             <div className="flex-1">
               <SearchBox onSearch={handleSearch} isLoading={isLoading} hideChips />
             </div>

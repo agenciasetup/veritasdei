@@ -4,6 +4,7 @@ import AuthGuard from '@/components/auth/AuthGuard'
 import { useAuth } from '@/contexts/AuthContext'
 import { VOCACOES, SACRAMENTOS } from '@/types/auth'
 import { VocacaoIcon } from '@/components/icons/VocacaoIcons'
+import CrossIcon from '@/components/icons/CrossIcon'
 import {
   Shield, MapPin, Church, CheckCircle, Calendar, Droplets, User,
 } from 'lucide-react'
@@ -58,7 +59,7 @@ function CarteirinhaContent() {
             }}
           >
             <div className="flex items-center gap-2">
-              <span style={{ color: '#C9A84C', fontSize: '1.2rem' }}>&#10013;</span>
+              <CrossIcon size="md" />
               <span
                 className="text-sm font-bold tracking-widest uppercase"
                 style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}

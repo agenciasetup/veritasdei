@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { getDisplayName } from '@/lib/greetings'
+import CrossIcon from '@/components/icons/CrossIcon'
 import {
   ChevronLeft, ChevronRight, Home, Church, Droplets, ScrollText,
   Tablets, BookOpen, Scale, Heart, GraduationCap, MapPin, Map,
@@ -92,7 +93,7 @@ export default function Sidebar() {
             Veritas Dei
           </span>
         ) : (
-          <span style={{ color: '#C9A84C', fontSize: '1.1rem' }}>&#10013;</span>
+          <CrossIcon size="sm" />
         )}
       </div>
 
