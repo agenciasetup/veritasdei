@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import {
   Sparkles, Lightbulb, ArrowRight, AlertTriangle, ShieldAlert, BookMarked,
-  BookOpen, Church, ScrollText,
+  BookOpen, Feather, ShieldCheck, ShieldAlert as ShieldWarn, ShieldQuestion,
 } from 'lucide-react'
 import RichText from '@/components/ui/RichText'
 import PillarCard from '@/components/ui/PillarCard'
@@ -13,12 +13,6 @@ import type { QueryResponse, Pillar } from '@/types'
 const PILLAR_ORDER: Pillar[] = ['biblia', 'magisterio', 'patristica']
 
 type TabId = 'sintese' | 'fontes' | 'objecoes'
-
-const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
-  { id: 'sintese', label: 'Síntese', icon: Sparkles },
-  { id: 'fontes', label: 'Fontes', icon: BookOpen },
-  { id: 'objecoes', label: 'Objeções', icon: AlertTriangle },
-]
 
 interface SearchResultsProps {
   response: QueryResponse | null
@@ -36,6 +30,18 @@ export default function SearchResults({
   const [activeTab, setActiveTab] = useState<TabId>('sintese')
   const insight = response?.insight
   const hasProtestantView = !!insight?.protestantView
+  const hasCuriosity = !!insight?.curiosity
+  const hasSecondaryCard = hasProtestantView || hasCuriosity
+
+  const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
+    { id: 'sintese', label: 'Síntese', icon: Sparkles },
+    { id: 'fontes', label: 'Fontes', icon: BookOpen },
+    ...(hasProtestantView
+      ? [{ id: 'objecoes' as TabId, label: 'Objeções', icon: AlertTriangle }]
+      : hasCuriosity
+        ? [{ id: 'objecoes' as TabId, label: 'Curiosidade', icon: Feather }]
+        : []),
+  ]
 
   return (
     <section className="relative z-10 w-full px-4 md:px-6 lg:px-8 pb-16 pt-6 flex-1">
@@ -47,7 +53,7 @@ export default function SearchResults({
       {insight && insight.summary && (
         <>
           <div className="flex gap-1 mb-6 xl:hidden overflow-x-auto">
-            {TABS.filter(t => t.id !== 'objecoes' || hasProtestantView).map((tab) => {
+            {tabs.map((tab) => {
               const Icon = tab.icon
               const isActive = activeTab === tab.id
               return (
@@ -74,6 +80,7 @@ export default function SearchResults({
             {activeTab === 'sintese' && (
               <CatholicSummaryCard
                 insight={insight}
+                fullWidth={!hasSecondaryCard}
                 onRelatedClick={onRelatedClick}
                 onCitationClick={onCitationClick}
               />
@@ -81,11 +88,14 @@ export default function SearchResults({
             {activeTab === 'fontes' && (
               <SourcesSection response={response} isLoading={isLoading} />
             )}
-            {activeTab === 'objecoes' && insight.protestantView && (
+            {activeTab === 'objecoes' && hasProtestantView && (
               <ProtestantViewCard
-                protestantView={insight.protestantView}
+                protestantView={insight.protestantView!}
                 onCitationClick={onCitationClick}
               />
+            )}
+            {activeTab === 'objecoes' && !hasProtestantView && hasCuriosity && (
+              <CuriosityCard curiosity={insight.curiosity!} />
             )}
           </div>
 
@@ -93,16 +103,25 @@ export default function SearchResults({
           <div className="hidden xl:grid xl:grid-cols-5 gap-6 mb-10 fade-in">
             <CatholicSummaryCard
               insight={insight}
+              fullWidth={!hasSecondaryCard}
               onRelatedClick={onRelatedClick}
               onCitationClick={onCitationClick}
             />
-            {insight.protestantView && (
+            {hasProtestantView && (
               <ProtestantViewCard
-                protestantView={insight.protestantView}
+                protestantView={insight.protestantView!}
                 onCitationClick={onCitationClick}
               />
             )}
+            {!hasProtestantView && hasCuriosity && (
+              <CuriosityCard curiosity={insight.curiosity!} />
+            )}
           </div>
+
+          {/* ── Confidence indicator ── */}
+          {insight.confidenceLevel && (
+            <ConfidenceIndicator level={insight.confidenceLevel} />
+          )}
 
           {/* ── Desktop: sources below ── */}
           <div className="hidden xl:block">
@@ -160,16 +179,18 @@ function SourcesSection({
 
 function CatholicSummaryCard({
   insight,
+  fullWidth,
   onRelatedClick,
   onCitationClick,
 }: {
   insight: NonNullable<QueryResponse['insight']>
+  fullWidth: boolean
   onRelatedClick: (topic: string) => void
   onCitationClick: (reference: string, rect: DOMRect) => void
 }) {
   return (
     <div
-      className="xl:col-span-3 rounded-2xl p-6 md:p-10 mb-6 xl:mb-0"
+      className={`${fullWidth ? 'xl:col-span-5' : 'xl:col-span-3'} rounded-2xl p-6 md:p-10 mb-6 xl:mb-0`}
       style={{
         background: 'rgba(16,16,16,0.8)',
         backdropFilter: 'blur(20px)',
@@ -194,13 +215,13 @@ function CatholicSummaryCard({
         </div>
       </div>
 
-      <div className="mb-6 md:mb-8" style={{ color: '#E8E2D8', fontSize: '1.05rem' }}>
+      <div className={`mb-6 md:mb-8 ${fullWidth ? 'max-w-4xl' : ''}`} style={{ color: '#E8E2D8', fontSize: '1.05rem' }}>
         <RichText text={insight.summary} accentColor="#C9A84C" onCitationClick={onCitationClick} />
       </div>
 
       {insight.keyPoints.length > 0 && (
         <div
-          className="rounded-xl p-5 md:p-6 mb-6 md:mb-8"
+          className={`rounded-xl p-5 md:p-6 mb-6 md:mb-8 ${fullWidth ? 'max-w-4xl' : ''}`}
           style={{ background: 'rgba(201,168,76,0.04)', border: '1px solid rgba(201,168,76,0.08)' }}
         >
           <div className="flex items-center gap-2 mb-3 md:mb-4">
@@ -328,6 +349,95 @@ function ProtestantViewCard({
           Essas informações não são exatas pois há +40 mil denominações protestantes que podem mudar suas doutrinas de acordo com suas próprias interpretações da Bíblia.
         </p>
       </div>
+    </div>
+  )
+}
+
+/* ─── Curiosity Card (for non-controversial topics) ─── */
+
+function CuriosityCard({ curiosity }: { curiosity: string }) {
+  return (
+    <div
+      className="xl:col-span-2 rounded-2xl p-6 md:p-8 flex flex-col mb-6 xl:mb-0"
+      style={{
+        background: 'rgba(74,124,89,0.06)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(74,124,89,0.15)',
+        boxShadow: '0 12px 48px rgba(0,0,0,0.3)',
+      }}
+    >
+      <div className="flex items-center gap-3 mb-5 md:mb-6">
+        <div
+          className="w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center"
+          style={{ background: 'rgba(74,124,89,0.12)', border: '1px solid rgba(74,124,89,0.2)' }}
+        >
+          <Feather className="w-5 h-5" style={{ color: '#4A7C59' }} />
+        </div>
+        <div>
+          <h2 className="text-base font-bold" style={{ fontFamily: 'Cinzel, serif', color: '#4A7C59' }}>
+            Você sabia?
+          </h2>
+          <p className="text-xs mt-0.5" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+            Curiosidade sobre este tema
+          </p>
+        </div>
+      </div>
+
+      <div style={{ color: '#E8E2D8', fontSize: '0.92rem' }}>
+        <RichText text={curiosity} accentColor="#4A7C59" />
+      </div>
+    </div>
+  )
+}
+
+/* ─── Confidence Indicator ─── */
+
+function ConfidenceIndicator({ level }: { level: 'high' | 'medium' | 'low' }) {
+  const config = {
+    high: {
+      icon: ShieldCheck,
+      label: 'Alta confiança',
+      description: 'Múltiplas fontes em todos os pilares',
+      color: '#4A7C59',
+      bg: 'rgba(74,124,89,0.08)',
+      border: 'rgba(74,124,89,0.2)',
+    },
+    medium: {
+      icon: ShieldWarn,
+      label: 'Confiança moderada',
+      description: 'Fontes encontradas, mas cobertura parcial',
+      color: '#C9A84C',
+      bg: 'rgba(201,168,76,0.06)',
+      border: 'rgba(201,168,76,0.15)',
+    },
+    low: {
+      icon: ShieldQuestion,
+      label: 'Base limitada',
+      description: 'Poucas fontes — enriqueça este tema na Base IA',
+      color: '#D94F5C',
+      bg: 'rgba(217,79,92,0.06)',
+      border: 'rgba(217,79,92,0.15)',
+    },
+  }
+
+  const c = config[level]
+  const Icon = c.icon
+
+  return (
+    <div
+      className="flex items-center gap-2.5 mb-6 px-4 py-2.5 rounded-xl w-fit mx-auto"
+      style={{
+        background: c.bg,
+        border: `1px solid ${c.border}`,
+      }}
+    >
+      <Icon className="w-4 h-4" style={{ color: c.color }} />
+      <span className="text-xs font-medium" style={{ color: c.color, fontFamily: 'Poppins, sans-serif' }}>
+        {c.label}
+      </span>
+      <span className="text-xs" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+        — {c.description}
+      </span>
     </div>
   )
 }
