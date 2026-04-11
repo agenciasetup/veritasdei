@@ -1,22 +1,32 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { MYSTERY_GROUPS, getMysteryForToday } from './data/mysteries'
 import {
   SINAL_DA_CRUZ, CREDO, PAI_NOSSO, AVE_MARIA,
   GLORIA, SALVE_RAINHA, ORACAO_FINAL,
 } from './data/prayers'
-import type { MysteryGroup, MysterySet } from './data/types'
+import type { MysterySet } from './data/types'
+import CrossIcon from '@/components/icons/CrossIcon'
 import PrayerCard from './components/PrayerCard'
 import DecadeSection from './components/DecadeSection'
 
 export default function RosarioView() {
-  const todayMystery = useMemo(() => getMysteryForToday(), [])
-  const [activeSet, setActiveSet] = useState<MysterySet>(todayMystery.id)
+  // Start with a stable default to avoid SSR/client mismatch
+  const [activeSet, setActiveSet] = useState<MysterySet>('gozosos')
+  const [ready, setReady] = useState(false)
   const [expandInitial, setExpandInitial] = useState(false)
   const [expandFinal, setExpandFinal] = useState(false)
 
-  const currentGroup: MysteryGroup = MYSTERY_GROUPS.find(g => g.id === activeSet)!
+  // Set the correct mystery for today only on the client
+  useEffect(() => {
+    const today = getMysteryForToday()
+    setActiveSet(today.id)
+    setReady(true)
+  }, [])
+
+  const currentGroup = MYSTERY_GROUPS.find(g => g.id === activeSet) ?? MYSTERY_GROUPS[0]
+  const todayId = ready ? getMysteryForToday().id : null
 
   return (
     <div className="flex flex-col min-h-screen relative">
@@ -45,7 +55,7 @@ export default function RosarioView() {
           >
             {MYSTERY_GROUPS.map((group) => {
               const isActive = activeSet === group.id
-              const isToday = todayMystery.id === group.id
+              const isToday = todayId === group.id
               return (
                 <button
                   key={group.id}
@@ -105,7 +115,7 @@ export default function RosarioView() {
                     border: '1px solid rgba(201,168,76,0.15)',
                   }}
                 >
-                  <span style={{ color: '#C9A84C', fontSize: '0.85rem' }}>&#10013;</span>
+                  <CrossIcon size="xs" />
                 </div>
                 <span
                   className="text-sm font-semibold tracking-wide"
@@ -176,7 +186,7 @@ export default function RosarioView() {
                     border: '1px solid rgba(201,168,76,0.15)',
                   }}
                 >
-                  <span style={{ color: '#C9A84C', fontSize: '0.85rem' }}>&#10013;</span>
+                  <CrossIcon size="xs" />
                 </div>
                 <span
                   className="text-sm font-semibold tracking-wide"

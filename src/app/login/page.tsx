@@ -7,6 +7,7 @@ import { VOCACOES, type Vocacao } from '@/types/auth'
 import { VocacaoIcon } from '@/components/icons/VocacaoIcons'
 import { LogIn, UserPlus, Mail, Eye, EyeOff, ArrowLeft, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
+import CrossIcon from '@/components/icons/CrossIcon'
 
 type Tab = 'login' | 'registro' | 'primeiro-acesso'
 
@@ -127,18 +128,7 @@ function LoginPageInner() {
 
       {/* Gothic Cross */}
       <div className="mb-6">
-        <svg width="28" height="40" viewBox="0 0 36 52" fill="none" className="gothic-cross">
-          <rect x="14" y="0" width="8" height="52" rx="1.5" fill="url(#crossGoldLogin)" />
-          <rect x="0" y="14" width="36" height="8" rx="1.5" fill="url(#crossGoldLogin)" />
-          <circle cx="18" cy="18" r="3" fill="#6B1D2A" stroke="#C9A84C" strokeWidth="1" />
-          <defs>
-            <linearGradient id="crossGoldLogin" x1="18" y1="0" x2="18" y2="52" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor="#D9C077" />
-              <stop offset="50%" stopColor="#C9A84C" />
-              <stop offset="100%" stopColor="#A88B3A" />
-            </linearGradient>
-          </defs>
-        </svg>
+        <CrossIcon size="md" className="gothic-cross" />
       </div>
 
       <h1

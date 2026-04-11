@@ -3,6 +3,7 @@
 import AuthGuard from '@/components/auth/AuthGuard'
 import { useAuth } from '@/contexts/AuthContext'
 import { MessageSquare, Heart, Share2, Users, Bell, Flame, BookOpen, Church } from 'lucide-react'
+import CrossIcon from '@/components/icons/CrossIcon'
 
 const SAMPLE_POSTS = [
   {
@@ -145,7 +146,7 @@ function ComunidadeContent() {
                   className="w-10 h-10 rounded-xl flex items-center justify-center"
                   style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.15)' }}
                 >
-                  <span style={{ color: '#C9A84C', fontSize: '1rem' }}>&#10013;</span>
+                  <CrossIcon size="sm" />
                 </div>
                 <div className="flex-1">
                   <span className="text-sm font-medium block" style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}>

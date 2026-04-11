@@ -9,6 +9,7 @@ import {
   BookOpen, GraduationCap, CreditCard, MessageSquare, Crown,
 } from 'lucide-react'
 import type { Paroquia } from '@/types/paroquia'
+import CrossIcon from '@/components/icons/CrossIcon'
 
 interface Stats {
   catolicos: number
@@ -70,22 +71,7 @@ export default function LandingPage() {
 
       {/* ── Cross ── */}
       <div className="relative z-10 mb-8">
-        <svg width="44" height="64" viewBox="0 0 36 52" fill="none" className="gothic-cross">
-          <rect x="14" y="0" width="8" height="52" rx="1.5" fill="url(#crossGoldLanding)" />
-          <rect x="0" y="14" width="36" height="8" rx="1.5" fill="url(#crossGoldLanding)" />
-          <circle cx="18" cy="18" r="3" fill="#6B1D2A" stroke="#C9A84C" strokeWidth="1" />
-          <circle cx="18" cy="2" r="1.5" fill="#C9A84C" opacity="0.6" />
-          <circle cx="18" cy="50" r="1.5" fill="#C9A84C" opacity="0.6" />
-          <circle cx="2" cy="18" r="1.5" fill="#C9A84C" opacity="0.6" />
-          <circle cx="34" cy="18" r="1.5" fill="#C9A84C" opacity="0.6" />
-          <defs>
-            <linearGradient id="crossGoldLanding" x1="18" y1="0" x2="18" y2="52" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor="#D9C077" />
-              <stop offset="50%" stopColor="#C9A84C" />
-              <stop offset="100%" stopColor="#A88B3A" />
-            </linearGradient>
-          </defs>
-        </svg>
+        <CrossIcon size="lg" className="gothic-cross" />
       </div>
 
       {/* ── Headline ── */}
