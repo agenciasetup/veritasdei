@@ -154,34 +154,43 @@ function AuthProviderInner({
     mountedRef.current = true
     initDoneRef.current = false
 
-    // Safety timeout — if auth takes too long, stop blocking the UI
+    // Safety timeout — if auth takes too long, stop blocking the UI.
+    // 15s is generous but avoids false timeouts on slow networks.
     const timeout = setTimeout(() => {
       if (mountedRef.current && !initDoneRef.current) {
-        console.warn('[Auth] Init timed out after 5s')
+        console.warn('[Auth] Init timed out after 15s — unblocking UI')
+        initDoneRef.current = true
         setState(prev => prev.isLoading ? { ...prev, isLoading: false } : prev)
       }
-    }, 5000)
+    }, 15000)
 
-    // Initial session check
-    supabase.auth.getSession().then(async ({ data: { session } }: { data: { session: Session | null } }) => {
-      initDoneRef.current = true
-      await setAuthState(session)
-    }).catch((err: unknown) => {
+    // Listen for auth changes FIRST so we don't miss events from getSession
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event: string, session: Session | null) => {
+        if (event === 'INITIAL_SESSION') {
+          // This fires from getSession — use it as our primary init signal
+          initDoneRef.current = true
+          await setAuthState(session)
+          return
+        }
+        if (event === 'SIGNED_OUT') {
+          setState({ ...DEFAULT_STATE, isLoading: false })
+          return
+        }
+        if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
+          await setAuthState(session)
+        }
+      }
+    )
+
+    // getSession triggers INITIAL_SESSION event above
+    supabase.auth.getSession().catch((err: unknown) => {
       console.error('[Auth] getSession failed:', err)
       initDoneRef.current = true
       if (mountedRef.current) {
         setState(prev => ({ ...prev, isLoading: false }))
       }
     })
-
-    // Listen for auth changes (login, logout, token refresh)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: string, session: Session | null) => {
-        // Skip INITIAL_SESSION since we handle it above via getSession
-        if (event === 'INITIAL_SESSION') return
-        await setAuthState(session)
-      }
-    )
 
     return () => {
       mountedRef.current = false

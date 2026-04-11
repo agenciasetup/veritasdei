@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/client'
 import type { BibleVerse } from '../types/verbum.types'
 
-const supabase = createClient()
+// Lazy-init: deferred from module import to prevent premature Supabase auth init.
+let supabase: ReturnType<typeof createClient> | undefined
 
 /**
  * Normalize a reference input to match the DB format (comma, not colon).
@@ -166,7 +167,8 @@ function resolveBookAbbreviation(bookName: string): string {
  * Search for a verse by exact reference (e.g., "Mt 16:18" or "Mt 16,18").
  */
 export async function searchByReference(reference: string): Promise<BibleVerse | null> {
-  if (!supabase) return null
+  supabase ??= createClient()
+  if (!supabase)return null
 
   const parsed = parseReference(reference)
   if (!parsed) {
@@ -228,7 +230,8 @@ export async function searchByReference(reference: string): Promise<BibleVerse |
  * Returns all verses in the range.
  */
 export async function searchByRange(reference: string): Promise<BibleVerse[]> {
-  if (!supabase) return []
+  supabase ??= createClient()
+  if (!supabase)return []
 
   const parsed = parseRangeReference(reference)
   if (!parsed) return []
@@ -278,7 +281,8 @@ export async function searchByRange(reference: string): Promise<BibleVerse[]> {
  * Splits query into keywords for broader matching.
  */
 export async function searchByText(query: string, limit = 8): Promise<BibleVerse[]> {
-  if (!supabase) return []
+  supabase ??= createClient()
+  if (!supabase)return []
 
   const words = query.trim().split(/\s+/).filter(w => w.length > 2)
   if (words.length === 0) return []
@@ -347,7 +351,8 @@ export async function searchByText(query: string, limit = 8): Promise<BibleVerse
  * Search bible by book name and optional chapter.
  */
 export async function searchByBook(bookQuery: string, chapter?: number, limit = 10): Promise<BibleVerse[]> {
-  if (!supabase) return []
+  supabase ??= createClient()
+  if (!supabase)return []
 
   const resolvedAbbr = resolveBookAbbreviation(bookQuery)
 

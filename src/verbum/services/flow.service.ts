@@ -1,7 +1,9 @@
 import { createClient } from '@/lib/supabase/client'
 import type { VerbumFlow, VerbumFlowShare, VerbumFlowFavorite } from '../types/verbum.types'
 
-const supabase = createClient()
+// Lazy-init: deferred from module import to prevent premature Supabase auth init.
+// createClient() is a singleton — calling ??= just defers the FIRST creation.
+let supabase: ReturnType<typeof createClient> | undefined
 
 // ─── Flow CRUD ───
 
@@ -10,7 +12,8 @@ export async function createFlow(
   name: string,
   description?: string
 ): Promise<VerbumFlow | null> {
-  if (!supabase) return null
+  supabase ??= createClient()
+  if (!supabase)return null
 
   const { data, error } = await supabase
     .from('verbum_flows')
@@ -26,7 +29,8 @@ export async function createFlow(
 }
 
 export async function getUserFlows(userId: string): Promise<VerbumFlow[]> {
-  if (!supabase) return []
+  supabase ??= createClient()
+  if (!supabase)return []
 
   const { data, error } = await supabase
     .from('verbum_flows')
@@ -42,7 +46,8 @@ export async function getUserFlows(userId: string): Promise<VerbumFlow[]> {
 }
 
 export async function getFlow(flowId: string): Promise<VerbumFlow | null> {
-  if (!supabase) return null
+  supabase ??= createClient()
+  if (!supabase)return null
 
   const { data, error } = await supabase
     .from('verbum_flows')
@@ -58,7 +63,8 @@ export async function updateFlow(
   flowId: string,
   updates: Partial<Pick<VerbumFlow, 'name' | 'description' | 'is_public' | 'node_count' | 'edge_count' | 'thumbnail_data'>>
 ): Promise<void> {
-  if (!supabase) return
+  supabase ??= createClient()
+  if (!supabase)return
 
   await supabase
     .from('verbum_flows')
@@ -67,13 +73,15 @@ export async function updateFlow(
 }
 
 export async function deleteFlow(flowId: string): Promise<void> {
-  if (!supabase) return
+  supabase ??= createClient()
+  if (!supabase)return
 
   await supabase.from('verbum_flows').delete().eq('id', flowId)
 }
 
 export async function duplicateFlow(flowId: string, userId: string, newName: string): Promise<VerbumFlow | null> {
-  if (!supabase) return null
+  supabase ??= createClient()
+  if (!supabase)return null
 
   // Get source flow
   const source = await getFlow(flowId)
@@ -180,7 +188,8 @@ export async function getPublicFlows(
   offset = 0,
   sortBy: 'recent' | 'popular' | 'nodes' = 'recent'
 ): Promise<{ flows: VerbumFlow[]; total: number }> {
-  if (!supabase) return { flows: [], total: 0 }
+  supabase ??= createClient()
+  if (!supabase)return { flows: [], total: 0 }
 
   const orderCol = sortBy === 'recent' ? 'created_at' : sortBy === 'popular' ? 'clone_count' : 'node_count'
 
@@ -205,7 +214,8 @@ export async function getPublicFlows(
 }
 
 export async function searchPublicFlows(query: string, limit = 20): Promise<VerbumFlow[]> {
-  if (!supabase) return []
+  supabase ??= createClient()
+  if (!supabase)return []
 
   const { data } = await supabase
     .from('verbum_flows')
@@ -226,7 +236,8 @@ export async function shareFlow(
   email: string,
   permission: 'view' | 'edit' = 'view'
 ): Promise<VerbumFlowShare | null> {
-  if (!supabase) return null
+  supabase ??= createClient()
+  if (!supabase)return null
 
   // Check if already shared
   const { data: existing } = await supabase
@@ -266,7 +277,8 @@ export async function shareFlow(
 }
 
 export async function getFlowShares(flowId: string): Promise<VerbumFlowShare[]> {
-  if (!supabase) return []
+  supabase ??= createClient()
+  if (!supabase)return []
 
   const { data } = await supabase
     .from('verbum_flow_shares')
@@ -278,7 +290,8 @@ export async function getFlowShares(flowId: string): Promise<VerbumFlowShare[]> 
 }
 
 export async function getSharedWithMe(userId: string, email: string): Promise<(VerbumFlowShare & { flow?: VerbumFlow })[]> {
-  if (!supabase) return []
+  supabase ??= createClient()
+  if (!supabase)return []
 
   const { data } = await supabase
     .from('verbum_flow_shares')
@@ -290,7 +303,8 @@ export async function getSharedWithMe(userId: string, email: string): Promise<(V
 }
 
 export async function acceptShare(shareId: string): Promise<void> {
-  if (!supabase) return
+  supabase ??= createClient()
+  if (!supabase)return
 
   await supabase
     .from('verbum_flow_shares')
@@ -299,7 +313,8 @@ export async function acceptShare(shareId: string): Promise<void> {
 }
 
 export async function revokeShare(shareId: string): Promise<void> {
-  if (!supabase) return
+  supabase ??= createClient()
+  if (!supabase)return
 
   await supabase.from('verbum_flow_shares').delete().eq('id', shareId)
 }
@@ -307,7 +322,8 @@ export async function revokeShare(shareId: string): Promise<void> {
 // ─── Favorites ───
 
 export async function toggleFavorite(userId: string, flowId: string): Promise<boolean> {
-  if (!supabase) return false
+  supabase ??= createClient()
+  if (!supabase)return false
 
   const { data: existing } = await supabase
     .from('verbum_flow_favorites')
@@ -326,7 +342,8 @@ export async function toggleFavorite(userId: string, flowId: string): Promise<bo
 }
 
 export async function getUserFavorites(userId: string): Promise<string[]> {
-  if (!supabase) return []
+  supabase ??= createClient()
+  if (!supabase)return []
 
   const { data } = await supabase
     .from('verbum_flow_favorites')
@@ -339,7 +356,8 @@ export async function getUserFavorites(userId: string): Promise<string[]> {
 // ─── Flow Nodes/Edges Persistence ───
 
 export async function loadFlowNodes(flowId: string) {
-  if (!supabase) return []
+  supabase ??= createClient()
+  if (!supabase)return []
 
   const { data } = await supabase
     .from('verbum_nodes')
@@ -351,7 +369,8 @@ export async function loadFlowNodes(flowId: string) {
 }
 
 export async function loadFlowEdges(flowId: string) {
-  if (!supabase) return []
+  supabase ??= createClient()
+  if (!supabase)return []
 
   const { data } = await supabase
     .from('verbum_edges')
@@ -382,7 +401,8 @@ export async function saveFlowNode(
     canonical_entity_id?: string | null
   }
 ): Promise<void> {
-  if (!supabase) return
+  supabase ??= createClient()
+  if (!supabase)return
 
   await supabase.from('verbum_nodes').upsert({
     id: node.id,
@@ -422,7 +442,8 @@ export async function saveFlowEdge(
     is_auto_generated?: boolean
   }
 ): Promise<void> {
-  if (!supabase) return
+  supabase ??= createClient()
+  if (!supabase)return
 
   await supabase.from('verbum_edges').upsert({
     id: edge.id,
@@ -444,17 +465,20 @@ export async function saveFlowEdge(
 }
 
 export async function deleteFlowNode(nodeId: string): Promise<void> {
-  if (!supabase) return
+  supabase ??= createClient()
+  if (!supabase)return
   await supabase.from('verbum_nodes').delete().eq('id', nodeId)
 }
 
 export async function deleteFlowEdge(edgeId: string): Promise<void> {
-  if (!supabase) return
+  supabase ??= createClient()
+  if (!supabase)return
   await supabase.from('verbum_edges').delete().eq('id', edgeId)
 }
 
 export async function updateNodePosition(nodeId: string, posX: number, posY: number): Promise<void> {
-  if (!supabase) return
+  supabase ??= createClient()
+  if (!supabase)return
   await supabase
     .from('verbum_nodes')
     .update({ pos_x: posX, pos_y: posY, updated_at: new Date().toISOString() })
