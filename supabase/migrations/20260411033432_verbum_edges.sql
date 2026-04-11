@@ -1,0 +1,1 @@
+-- Applied directly to Supabase. Stub for migration sync.
