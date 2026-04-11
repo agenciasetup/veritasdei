@@ -13,7 +13,7 @@ const TRINITY_PERSONS = [
     latin: 'Deus Pater',
     verse: 'Mt 6:9',
     cx: 90,
-    cy: 32,
+    cy: 26,
     handlePos: Position.Top,
   },
   {
@@ -22,7 +22,7 @@ const TRINITY_PERSONS = [
     latin: 'Deus Filius',
     verse: 'Jo 1:14',
     cx: 145,
-    cy: 145,
+    cy: 122,
     handlePos: Position.Right,
   },
   {
@@ -31,7 +31,7 @@ const TRINITY_PERSONS = [
     latin: 'Spiritus Sanctus',
     verse: 'Jo 14:26',
     cx: 35,
-    cy: 145,
+    cy: 122,
     handlePos: Position.Left,
   },
 ] as const
@@ -97,73 +97,39 @@ function TrinitasNode({ selected }: NodeProps) {
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
-          {/* Clip for the interlocking weave effect */}
-          <clipPath id="clipTop">
-            <rect x="0" y="0" width="180" height="95" />
-          </clipPath>
-          <clipPath id="clipBottom">
-            <rect x="0" y="85" width="180" height="95" />
-          </clipPath>
         </defs>
 
         {/*
-          Proper Triquetra (Trinity Knot)
-          Three vesica piscis leaves arranged 120° apart around center (90,100).
-          Each leaf is an almond/eye shape formed by two circular arcs.
+          Proper Triquetra — one vesica piscis leaf rotated 3× at 120° intervals.
+          Center at (90,90). Each leaf extends 62px from center to tip.
+          Uses SVG transform for mathematically perfect 3-fold symmetry.
         */}
         <g
           filter="url(#triquetaGlow)"
           fill="none"
           stroke="url(#triquetaGold)"
-          strokeWidth="2.5"
+          strokeWidth="2.2"
           strokeLinecap="round"
           strokeLinejoin="round"
         >
-          {/* Top leaf — points upward */}
-          <path d="
-            M 90 28
-            C 62 48, 58 82, 72 102
-            C 78 112, 84 114, 90 110
-            C 96 114, 102 112, 108 102
-            C 122 82, 118 48, 90 28
-            Z
-          " />
+          {/* Top leaf — vesica piscis pointing upward */}
+          <path d="M 90 90 C 66 70, 64 42, 90 24 C 116 42, 114 70, 90 90 Z" />
+          {/* Bottom-left leaf — same shape rotated 120° */}
+          <path d="M 90 90 C 66 70, 64 42, 90 24 C 116 42, 114 70, 90 90 Z" transform="rotate(120, 90, 90)" />
+          {/* Bottom-right leaf — same shape rotated 240° */}
+          <path d="M 90 90 C 66 70, 64 42, 90 24 C 116 42, 114 70, 90 90 Z" transform="rotate(240, 90, 90)" />
 
-          {/* Bottom-left leaf — points to lower-left */}
-          <path d="
-            M 72 102
-            C 52 108, 32 132, 40 156
-            C 44 164, 50 168, 56 166
-            C 58 172, 64 174, 72 168
-            C 92 158, 98 128, 90 110
-            Z
-          " />
-
-          {/* Bottom-right leaf — points to lower-right */}
-          <path d="
-            M 108 102
-            C 128 108, 148 132, 140 156
-            C 136 164, 130 168, 124 166
-            C 122 172, 116 174, 108 168
-            C 88 158, 82 128, 90 110
-            Z
-          " />
-
-          {/* Inner circle at the center — symbolizing unity of the Trinity */}
-          <circle
-            cx="90"
-            cy="108"
-            r="12"
-            strokeWidth="1.8"
-            opacity={0.5}
-          />
+          {/* Outer circle — symbolizing divine unity */}
+          <circle cx="90" cy="90" r="56" strokeWidth="1.5" opacity={0.4} />
+          {/* Inner circle at center — symbolizing consubstantiality */}
+          <circle cx="90" cy="90" r="14" strokeWidth="1.5" opacity={0.45} />
         </g>
 
         {/* Center dot */}
         <circle
           cx="90"
-          cy="108"
-          r="3.5"
+          cy="90"
+          r="3"
           fill={VERBUM_COLORS.ui_gold}
           opacity={0.6}
         />
@@ -242,9 +208,9 @@ function TrinitasNode({ selected }: NodeProps) {
 
       {/* React Flow Handles */}
       <Handle type="target" position={Position.Top} className="!opacity-0" />
-      <Handle type="source" position={Position.Top} id="pai" className="!opacity-0" style={{ top: 32 }} />
-      <Handle type="source" position={Position.Right} id="filho" className="!opacity-0" style={{ top: 145 }} />
-      <Handle type="source" position={Position.Left} id="espirito_santo" className="!opacity-0" style={{ top: 145 }} />
+      <Handle type="source" position={Position.Top} id="pai" className="!opacity-0" style={{ top: 24 }} />
+      <Handle type="source" position={Position.Right} id="filho" className="!opacity-0" style={{ top: 122 }} />
+      <Handle type="source" position={Position.Left} id="espirito_santo" className="!opacity-0" style={{ top: 122 }} />
       <Handle type="source" position={Position.Bottom} className="!opacity-0" />
     </div>
   )

@@ -57,10 +57,13 @@ import type {
   VerbumFlow,
 } from '../types/verbum.types'
 
+// Fixed UUID for the Trinitas node — must be valid UUID for DB compatibility
+const TRINITAS_NODE_ID = '00000000-0000-4000-a000-000000000001'
+
 // Initial Triquetra node at center
 const INITIAL_NODES: Node[] = [
   {
-    id: 'canonical-trindade',
+    id: TRINITAS_NODE_ID,
     type: 'trinitas',
     position: { x: 0, y: 0 },
     data: {
@@ -131,19 +134,31 @@ function VerbumCanvasInner() {
 
   // Debounce ref for auto-save
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const positionDebounceRef = useRef<Record<string, NodeJS.Timeout>>({})
   const isLoadingRef = useRef(false)
+  const initDoneRef = useRef(false)
+
+  // Refs to avoid stale closures in triggerSave
+  const nodesRef = useRef(nodes)
+  const edgesRef = useRef(edges)
+  nodesRef.current = nodes
+  edgesRef.current = edges
 
   // ─── Load or create flow on mount ───
   useEffect(() => {
-    if (!user?.id) return
+    if (!user?.id || initDoneRef.current) return
+    let cancelled = false
 
     async function initFlow() {
       isLoadingRef.current = true
+      initDoneRef.current = true
 
-      if (flowIdParam) {
-        // Load existing flow
-        const flow = await getFlow(flowIdParam)
-        if (flow) {
+      try {
+        if (flowIdParam) {
+          // Load existing flow
+          const flow = await getFlow(flowIdParam)
+          if (cancelled || !flow) return
+
           setCurrentFlow(flow)
           setFlowName(flow.name)
           setIsReadOnly(flow.user_id !== user!.id)
@@ -153,6 +168,7 @@ function VerbumCanvasInner() {
             loadFlowNodes(flowIdParam),
             loadFlowEdges(flowIdParam),
           ])
+          if (cancelled) return
 
           // Convert DB nodes to React Flow nodes
           const loadedNodes: Node[] = [
@@ -198,24 +214,28 @@ function VerbumCanvasInner() {
           setNodes(loadedNodes)
           setEdges(loadedEdges)
           setSaveStatus('saved')
-        }
-      } else {
-        // Create a new flow
-        const newFlow = await createFlow(user!.id, 'Meu Fluxo')
-        if (newFlow) {
+        } else {
+          // Create a new flow
+          const newFlow = await createFlow(user!.id, 'Meu Fluxo')
+          if (cancelled || !newFlow) return
+
           setCurrentFlow(newFlow)
           setFlowName(newFlow.name)
           setSaveStatus('saved')
           // Update URL without navigation
           window.history.replaceState({}, '', `/verbum/canvas?flow=${newFlow.id}`)
         }
+      } catch (err) {
+        console.error('initFlow error:', err)
+      } finally {
+        isLoadingRef.current = false
       }
-
-      isLoadingRef.current = false
     }
 
     initFlow()
-  }, [user?.id, flowIdParam, setNodes, setEdges])
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, flowIdParam])
 
   // ─── Auto-save debounced ───
   const triggerSave = useCallback(() => {
@@ -226,18 +246,17 @@ function VerbumCanvasInner() {
     saveTimeoutRef.current = setTimeout(async () => {
       setSaveStatus('saving')
       try {
-        // Count nodes (excluding the system Triquetra)
-        const userNodes = nodes.filter(n => n.id !== 'canonical-trindade')
+        const userNodes = nodesRef.current.filter(n => n.id !== TRINITAS_NODE_ID)
         await updateFlow(currentFlow.id, {
           node_count: userNodes.length,
-          edge_count: edges.length,
+          edge_count: edgesRef.current.length,
         })
         setSaveStatus('saved')
       } catch {
         setSaveStatus('unsaved')
       }
     }, 2000)
-  }, [currentFlow, user?.id, isReadOnly, nodes, edges])
+  }, [currentFlow, user?.id, isReadOnly])
 
   // ─── Persist node position on drag ───
   const handleNodesChange = useCallback(
@@ -247,8 +266,17 @@ function VerbumCanvasInner() {
       if (!currentFlow || !user?.id || isReadOnly) return
 
       for (const change of changes) {
-        if (change.type === 'position' && change.position && change.dragging === false && change.id !== 'canonical-trindade') {
-          persistNodePosition(change.id, change.position.x, change.position.y)
+        if (change.type === 'position' && change.position && change.dragging === false && change.id !== TRINITAS_NODE_ID) {
+          // Debounce position updates per node to avoid flooding
+          const nodeId = change.id
+          const pos = change.position
+          if (positionDebounceRef.current[nodeId]) {
+            clearTimeout(positionDebounceRef.current[nodeId])
+          }
+          positionDebounceRef.current[nodeId] = setTimeout(() => {
+            persistNodePosition(nodeId, pos.x, pos.y).catch(() => {})
+            delete positionDebounceRef.current[nodeId]
+          }, 500)
           triggerSave()
         }
       }
@@ -292,7 +320,7 @@ function VerbumCanvasInner() {
       const targetName = (targetNode.data as Record<string, unknown>).title as string ||
         (targetNode.data as Record<string, unknown>).display_name as string || targetNode.id
 
-      const edgeId = `edge-${Date.now()}`
+      const edgeId = crypto.randomUUID()
       const newEdge: Edge = {
         id: edgeId,
         source: pendingConnection.source,
@@ -475,7 +503,7 @@ function VerbumCanvasInner() {
 
   const onAddNode = useCallback(
     (payload: AddNodePayload) => {
-      const newId = `node-${Date.now()}`
+      const newId = crypto.randomUUID()
       const pos = insertPositionRef.current
 
       let nodeType: string
@@ -605,7 +633,7 @@ function VerbumCanvasInner() {
 
   const onApproveProposal = useCallback(
     (proposal: ConnectionProposal) => {
-      const edgeId = `edge-${Date.now()}`
+      const edgeId = crypto.randomUUID()
       const sourceNode = nodes.find((n) => {
         const title = ((n.data as Record<string, unknown>)?.title as string) || ''
         return title && n.id !== proposal.target_node_id

@@ -80,8 +80,11 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
       try {
         const allResults: SearchResult[] = []
 
-        // 1. Identity resolution first
-        const identity = await resolveIdentity(q)
+        // 1. Identity resolution first (with 8s timeout)
+        const identity: IdentityResult = await Promise.race([
+          resolveIdentity(q),
+          new Promise<IdentityResult>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
+        ]).catch((): IdentityResult => ({ type: 'new', action: 'create_new', suggestions: {} }))
         setIdentityResult(identity)
 
         // If canonical, show special result
