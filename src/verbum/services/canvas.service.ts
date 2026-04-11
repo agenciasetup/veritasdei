@@ -1,13 +1,15 @@
 import { createClient } from '@/lib/supabase/client'
 import type { VerbumNode, VerbumEdge, VerbumUserCanvas } from '../types/verbum.types'
 
-const supabase = createClient()
+// Lazy-init: deferred from module import to prevent premature Supabase auth init.
+let supabase: ReturnType<typeof createClient> | undefined
 
 /**
  * Load all nodes for the current user (canonical + shared + personal).
  */
 export async function loadNodes(userId: string): Promise<VerbumNode[]> {
-  if (!supabase) return []
+  supabase ??= createClient()
+  if (!supabase)return []
 
   const { data, error } = await supabase
     .from('verbum_nodes')
@@ -26,7 +28,8 @@ export async function loadNodes(userId: string): Promise<VerbumNode[]> {
  * Load all edges for the current user.
  */
 export async function loadEdges(userId: string): Promise<VerbumEdge[]> {
-  if (!supabase) return []
+  supabase ??= createClient()
+  if (!supabase)return []
 
   const { data, error } = await supabase
     .from('verbum_edges')
@@ -48,7 +51,8 @@ export async function loadEdges(userId: string): Promise<VerbumEdge[]> {
 export async function insertNode(
   node: Omit<VerbumNode, 'id' | 'created_at' | 'updated_at' | 'embedding'>
 ): Promise<VerbumNode | null> {
-  if (!supabase) return null
+  supabase ??= createClient()
+  if (!supabase)return null
 
   const { data, error } = await supabase
     .from('verbum_nodes')
@@ -71,7 +75,8 @@ export async function updateNodePosition(
   pos_x: number,
   pos_y: number
 ): Promise<void> {
-  if (!supabase) return
+  supabase ??= createClient()
+  if (!supabase)return
 
   await supabase
     .from('verbum_nodes')
@@ -83,7 +88,8 @@ export async function updateNodePosition(
  * Load or create user canvas state.
  */
 export async function loadCanvasState(userId: string): Promise<VerbumUserCanvas | null> {
-  if (!supabase) return null
+  supabase ??= createClient()
+  if (!supabase)return null
 
   const { data } = await supabase
     .from('verbum_user_canvas')
@@ -101,7 +107,8 @@ export async function saveCanvasState(
   userId: string,
   state: Partial<Pick<VerbumUserCanvas, 'viewport_x' | 'viewport_y' | 'viewport_zoom' | 'visible_layers' | 'active_filter' | 'active_mode'>>
 ): Promise<void> {
-  if (!supabase) return
+  supabase ??= createClient()
+  if (!supabase)return
 
   await supabase
     .from('verbum_user_canvas')

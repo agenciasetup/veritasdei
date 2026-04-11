@@ -7,7 +7,8 @@ import type {
 } from '../types/verbum.types'
 import { searchByReference, searchByText, isReferencePattern } from './bible.service'
 
-const supabase = createClient()
+// Lazy-init: deferred from module import to prevent premature Supabase auth init.
+let supabase: ReturnType<typeof createClient> | undefined
 
 /**
  * Normalize input for comparison: lowercase, remove accents.
@@ -27,7 +28,8 @@ function normalize(input: string): string {
  * This is THE critical function — always called before creating any node.
  */
 export async function resolveIdentity(input: string): Promise<IdentityResult> {
-  if (!supabase) {
+  supabase ??= createClient()
+  if (!supabase){
     return { type: 'new', action: 'create_new', suggestions: {} }
   }
 
@@ -84,7 +86,8 @@ export async function resolveIdentity(input: string): Promise<IdentityResult> {
  * Find a canonical entity whose aliases array contains the normalized input.
  */
 async function findCanonicalByAlias(normalized: string): Promise<CanonicalEntity | null> {
-  if (!supabase) return null
+  supabase ??= createClient()
+  if (!supabase)return null
 
   const { data } = await supabase
     .from('verbum_canonical_entities')
@@ -100,7 +103,8 @@ async function findCanonicalByAlias(normalized: string): Promise<CanonicalEntity
  * Check if the input matches a known typology entry.
  */
 async function findTypologyMatch(normalized: string): Promise<boolean> {
-  if (!supabase) return false
+  supabase ??= createClient()
+  if (!supabase)return false
 
   const { data: typeMatch } = await supabase
     .from('verbum_typology_registry')
@@ -123,7 +127,8 @@ async function findTypologyMatch(normalized: string): Promise<boolean> {
  * Search ai_knowledge_base by keywords array.
  */
 async function searchKnowledgeBase(normalized: string): Promise<KnowledgeBaseEntry[]> {
-  if (!supabase) return []
+  supabase ??= createClient()
+  if (!supabase)return []
 
   // Try keyword match
   const { data } = await supabase
@@ -151,7 +156,8 @@ async function searchKnowledgeBase(normalized: string): Promise<KnowledgeBaseEnt
  * Used for the AddNodePanel suggestions.
  */
 export async function searchCanonicalEntities(query: string): Promise<CanonicalEntity[]> {
-  if (!supabase) return []
+  supabase ??= createClient()
+  if (!supabase)return []
 
   const normalized = normalize(query)
 

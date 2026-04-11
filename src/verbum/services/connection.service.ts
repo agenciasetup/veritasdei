@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase/client'
 import { getAutoConnectionProposals } from './openai.service'
 import type { ConnectionProposal, RelationType, VerbumSource } from '../types/verbum.types'
 
-const supabase = createClient()
+// Lazy-init: deferred from module import to prevent premature Supabase auth init.
+let supabase: ReturnType<typeof createClient> | undefined
 
 interface SimpleNode {
   id: string
@@ -65,7 +66,8 @@ async function checkTypologyRegistry(
   newNode: SimpleNode,
   existingNodes: SimpleNode[]
 ): Promise<ConnectionProposal[]> {
-  if (!supabase) return []
+  supabase ??= createClient()
+  if (!supabase)return []
 
   const normalized = newNode.title
     .toLowerCase()

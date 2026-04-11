@@ -1,12 +1,14 @@
 import { createClient } from '@/lib/supabase/client'
 
-const supabase = createClient()
+// Lazy-init: deferred from module import to prevent premature Supabase auth init.
+let supabase: ReturnType<typeof createClient> | undefined
 
 /**
  * Search catecismo by paragraph number.
  */
 export async function searchByParagraph(paragraph: number) {
-  if (!supabase) return null
+  supabase ??= createClient()
+  if (!supabase)return null
 
   const { data } = await supabase
     .from('catecismo')
@@ -22,7 +24,8 @@ export async function searchByParagraph(paragraph: number) {
  * Search catecismo by text content.
  */
 export async function searchByText(query: string, limit = 5) {
-  if (!supabase) return []
+  supabase ??= createClient()
+  if (!supabase)return []
 
   const { data } = await supabase
     .from('catecismo')
