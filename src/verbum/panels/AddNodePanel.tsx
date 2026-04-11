@@ -2,10 +2,16 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Search, BookOpen, User, Church, Sparkles } from 'lucide-react'
+import { X, Search, BookOpen, User, Church, Sparkles, ChevronRight } from 'lucide-react'
 import { VERBUM_COLORS } from '../design-tokens'
 import { resolveIdentity, searchCanonicalEntities } from '../services/identity.service'
-import { searchByText, searchByReference, isReferencePattern } from '../services/bible.service'
+import {
+  searchByText,
+  searchByReference,
+  searchByRange,
+  isReferencePattern,
+  isRangePattern,
+} from '../services/bible.service'
 import type {
   IdentityResult,
   BibleVerse,
@@ -36,7 +42,7 @@ export interface AddNodePayload {
 
 const MODE_CONFIG = {
   figura: { title: 'Personagem Bíblico', icon: User, placeholder: 'Ex: Abraão, Moisés, Pedro...' },
-  versiculo: { title: 'Versículo', icon: BookOpen, placeholder: 'Ex: Mt 16:18, Jo 1:14, "sobre esta pedra"...' },
+  versiculo: { title: 'Versículo', icon: BookOpen, placeholder: 'Ex: Mt 16:18, Isaías 22:22-25, "sobre esta pedra"...' },
   dogma: { title: 'Dogma / Conceito', icon: Church, placeholder: 'Ex: Imaculada Conceição, Transubstanciação...' },
   conceito: { title: 'Tradição', icon: Sparkles, placeholder: 'Ex: sacrifício, aliança, redenção...' },
 }
@@ -101,9 +107,36 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
           }
         }
 
-        // 3. Bible search
+        // 3. Bible search — verse ranges, single verses, and text
         if (mode === 'versiculo' || mode === 'figura') {
-          if (isReferencePattern(q)) {
+          if (isRangePattern(q)) {
+            // Verse range: e.g. "Is 22:22-25"
+            const verses = await searchByRange(q)
+            if (verses.length > 0) {
+              // Add as a combined range result
+              const firstVerse = verses[0]
+              const lastVerse = verses[verses.length - 1]
+              const combinedText = verses.map(v => `[${v.verse}] ${v.text_pt}`).join(' ')
+              const rangeRef = `${firstVerse.book} ${firstVerse.chapter},${firstVerse.verse}-${lastVerse.verse}`
+
+              allResults.push({
+                kind: 'verse_range',
+                title: rangeRef,
+                subtitle: combinedText.substring(0, 160) + (combinedText.length > 160 ? '...' : ''),
+                data: verses,
+              })
+
+              // Also add individual verses
+              for (const v of verses) {
+                allResults.push({
+                  kind: 'verse',
+                  title: v.reference,
+                  subtitle: v.text_pt.substring(0, 100) + (v.text_pt.length > 100 ? '...' : ''),
+                  data: v,
+                })
+              }
+            }
+          } else if (isReferencePattern(q)) {
             const verse = await searchByReference(q)
             if (verse) {
               allResults.push({
@@ -114,7 +147,8 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
               })
             }
           } else {
-            const verses = await searchByText(q, 5)
+            // Text-based semantic search
+            const verses = await searchByText(q, 6)
             for (const v of verses) {
               allResults.push({
                 kind: 'verse',
@@ -169,13 +203,11 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
     (result: SearchResult) => {
       if (result.kind === 'canonical') {
         const entity = result.data as CanonicalEntity
-        // Special: Trinitarian entity → show modal
         if (entity.is_trinitarian) {
           setTrinityEntity(entity)
           setShowTrinityModal(true)
           return
         }
-        // Regular canonical
         onAddNode({
           type: 'canonical',
           title: entity.display_name,
@@ -183,6 +215,27 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
           description: entity.short_description || undefined,
           canonicalEntity: entity,
           layerId: entity.layer_default,
+        })
+        onClose()
+        return
+      }
+
+      if (result.kind === 'verse_range') {
+        // Add all verses in range as a single combined node
+        const verses = result.data as BibleVerse[]
+        const firstVerse = verses[0]
+        const lastVerse = verses[verses.length - 1]
+        const combinedText = verses.map(v => `[${v.verse}] ${v.text_pt}`).join(' ')
+        const rangeRef = `${firstVerse.book} ${firstVerse.chapter},${firstVerse.verse}-${lastVerse.verse}`
+
+        onAddNode({
+          type: 'versiculo',
+          title: rangeRef,
+          bibleReference: rangeRef,
+          bibleText: combinedText,
+          bibleBook: firstVerse.book,
+          testament: firstVerse.testament,
+          layerId: firstVerse.testament === 'AT' ? 2 : 3,
         })
         onClose()
         return
@@ -274,7 +327,7 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
-              width: 480,
+              width: 500,
               maxHeight: '80vh',
               background: VERBUM_COLORS.ui_bg,
               border: `1px solid ${VERBUM_COLORS.ui_border}`,
@@ -336,10 +389,19 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
                   onBlur={(e) => (e.currentTarget.style.borderColor = VERBUM_COLORS.ui_border)}
                 />
               </div>
+              {/* Search tips */}
+              {mode === 'versiculo' && query.length === 0 && (
+                <div
+                  className="mt-2 text-[10px] leading-relaxed"
+                  style={{ color: VERBUM_COLORS.text_muted, fontFamily: 'Poppins, sans-serif' }}
+                >
+                  Busca por referência (Mt 16:18), intervalo (Is 22:22-25), ou texto livre
+                </div>
+              )}
             </div>
 
             {/* Results */}
-            <div className="overflow-y-auto" style={{ maxHeight: 'calc(80vh - 140px)' }}>
+            <div className="overflow-y-auto" style={{ maxHeight: 'calc(80vh - 160px)' }}>
               {isSearching && (
                 <div
                   className="px-5 py-4 text-sm text-center"
@@ -378,25 +440,32 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
                 >
                   <ResultIcon kind={result.kind} />
                   <div className="flex-1 min-w-0">
-                    <div
-                      className="text-sm font-medium truncate"
-                      style={{
-                        color: result.kind === 'canonical'
-                          ? VERBUM_COLORS.ui_gold
-                          : VERBUM_COLORS.text_primary,
-                        fontFamily: result.kind === 'canonical' ? 'Cinzel, serif' : 'Poppins, sans-serif',
-                      }}
-                    >
-                      {result.title}
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="text-sm font-medium truncate"
+                        style={{
+                          color: result.kind === 'canonical'
+                            ? VERBUM_COLORS.ui_gold
+                            : result.kind === 'verse_range'
+                              ? VERBUM_COLORS.edge_profetica
+                              : VERBUM_COLORS.text_primary,
+                          fontFamily: result.kind === 'canonical' ? 'Cinzel, serif' : 'Poppins, sans-serif',
+                        }}
+                      >
+                        {result.title}
+                      </div>
+                      {result.kind === 'verse_range' && (
+                        <ChevronRight className="w-3 h-3 flex-shrink-0" style={{ color: VERBUM_COLORS.text_muted }} />
+                      )}
                     </div>
                     <div
                       className="text-xs mt-0.5 line-clamp-2"
                       style={{
                         color: VERBUM_COLORS.text_secondary,
-                        fontFamily: result.kind === 'verse'
+                        fontFamily: result.kind === 'verse' || result.kind === 'verse_range'
                           ? 'Cormorant Garamond, serif'
                           : 'Poppins, sans-serif',
-                        fontStyle: result.kind === 'verse' ? 'italic' : 'normal',
+                        fontStyle: result.kind === 'verse' || result.kind === 'verse_range' ? 'italic' : 'normal',
                       }}
                     >
                       {result.subtitle}
@@ -423,7 +492,7 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
 // ─── Sub-components ───
 
 interface SearchResult {
-  kind: 'canonical' | 'verse' | 'knowledge' | 'manual'
+  kind: 'canonical' | 'verse' | 'verse_range' | 'knowledge' | 'manual'
   title: string
   subtitle: string
   data: unknown
@@ -436,6 +505,8 @@ function ResultIcon({ kind }: { kind: string }) {
       return <Sparkles style={{ ...style, color: VERBUM_COLORS.ui_gold }} />
     case 'verse':
       return <BookOpen style={{ ...style, color: VERBUM_COLORS.edge_doutrina }} />
+    case 'verse_range':
+      return <BookOpen style={{ ...style, color: VERBUM_COLORS.edge_profetica }} />
     case 'knowledge':
       return <Church style={{ ...style, color: VERBUM_COLORS.node_dogma_border }} />
     default:
@@ -474,6 +545,22 @@ function ResultBadge({ kind, data }: { kind: string; data: unknown }) {
         {verse.testament === 'AT' ? 'Antigo Testamento' : 'Novo Testamento'}
       </span>
     )
+  }
+  if (kind === 'verse_range') {
+    const verses = data as BibleVerse[]
+    if (verses.length > 0) {
+      return (
+        <span
+          className="inline-block mt-1 text-[9px] px-1.5 py-0.5 rounded"
+          style={{
+            background: 'rgba(212,136,74,0.12)',
+            color: VERBUM_COLORS.edge_profetica,
+          }}
+        >
+          {verses.length} versículos · {verses[0].testament === 'AT' ? 'Antigo Testamento' : 'Novo Testamento'}
+        </span>
+      )
+    }
   }
   return null
 }
