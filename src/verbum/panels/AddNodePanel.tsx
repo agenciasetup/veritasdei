@@ -87,16 +87,39 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
       abortRef.current = controller
 
       setIsSearching(true)
+
+      // Global safety timeout — always clear isSearching after 12s
+      const globalTimeout = setTimeout(() => {
+        if (!controller.signal.aborted) {
+          controller.abort()
+          setIsSearching(false)
+          setResults([{
+            kind: 'manual' as const,
+            title: q,
+            subtitle: `Busca expirou. Criar "${q}" como novo nó`,
+            data: null,
+          }])
+        }
+      }, 12000)
+
       try {
-        // Early exit if aborted before first await
         if (controller.signal.aborted) return
         const allResults: SearchResult[] = []
 
-        // 1. Identity resolution first (with 8s timeout)
-        const identity: IdentityResult = await Promise.race([
-          resolveIdentity(q),
-          new Promise<IdentityResult>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
-        ]).catch((): IdentityResult => ({ type: 'new', action: 'create_new', suggestions: {} }))
+        // 1. Identity resolution (with 8s timeout + abort-aware)
+        let identity: IdentityResult = { type: 'new', action: 'create_new', suggestions: {} }
+        try {
+          identity = await Promise.race([
+            resolveIdentity(q),
+            new Promise<IdentityResult>((_, reject) => {
+              const t = setTimeout(() => reject(new Error('identity_timeout')), 8000)
+              controller.signal.addEventListener('abort', () => { clearTimeout(t); reject(new Error('aborted')) })
+            }),
+          ])
+        } catch {
+          // Identity resolution failed — continue with other searches
+        }
+        if (controller.signal.aborted) return
         setIdentityResult(identity)
 
         // If canonical, show special result
@@ -109,39 +132,64 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
           })
         }
 
-        // 2. Canonical entity search
-        const canonicals = await searchCanonicalEntities(q)
-        for (const c of canonicals) {
-          if (!allResults.some((r) => r.kind === 'canonical' && (r.data as CanonicalEntity).id === c.id)) {
-            allResults.push({
-              kind: 'canonical',
-              title: c.display_name,
-              subtitle: c.short_description || '',
-              data: c,
-            })
+        // 2. Canonical entity search — SAFE
+        if (!controller.signal.aborted) {
+          try {
+            const canonicals = await searchCanonicalEntities(q)
+            for (const c of canonicals) {
+              if (!allResults.some((r) => r.kind === 'canonical' && (r.data as CanonicalEntity).id === c.id)) {
+                allResults.push({
+                  kind: 'canonical',
+                  title: c.display_name,
+                  subtitle: c.short_description || '',
+                  data: c,
+                })
+              }
+            }
+          } catch {
+            // Continue without canonical results
           }
         }
 
-        // 3. Bible search — verse ranges, single verses, and text
-        if (mode === 'versiculo' || mode === 'figura') {
-          if (isRangePattern(q)) {
-            // Verse range: e.g. "Is 22:22-25"
-            const verses = await searchByRange(q)
-            if (verses.length > 0) {
-              // Add as a combined range result
-              const firstVerse = verses[0]
-              const lastVerse = verses[verses.length - 1]
-              const combinedText = verses.map(v => `[${v.verse}] ${v.text_pt}`).join(' ')
-              const rangeRef = `${firstVerse.book} ${firstVerse.chapter},${firstVerse.verse}-${lastVerse.verse}`
+        // 3. Bible search — SAFE
+        if (!controller.signal.aborted && (mode === 'versiculo' || mode === 'figura')) {
+          try {
+            if (isRangePattern(q)) {
+              const verses = await searchByRange(q)
+              if (verses.length > 0) {
+                const firstVerse = verses[0]
+                const lastVerse = verses[verses.length - 1]
+                const combinedText = verses.map(v => `[${v.verse}] ${v.text_pt}`).join(' ')
+                const rangeRef = `${firstVerse.book} ${firstVerse.chapter},${firstVerse.verse}-${lastVerse.verse}`
 
-              allResults.push({
-                kind: 'verse_range',
-                title: rangeRef,
-                subtitle: combinedText.substring(0, 160) + (combinedText.length > 160 ? '...' : ''),
-                data: verses,
-              })
+                allResults.push({
+                  kind: 'verse_range',
+                  title: rangeRef,
+                  subtitle: combinedText.substring(0, 160) + (combinedText.length > 160 ? '...' : ''),
+                  data: verses,
+                })
 
-              // Also add individual verses
+                for (const v of verses) {
+                  allResults.push({
+                    kind: 'verse',
+                    title: v.reference,
+                    subtitle: v.text_pt.substring(0, 100) + (v.text_pt.length > 100 ? '...' : ''),
+                    data: v,
+                  })
+                }
+              }
+            } else if (isReferencePattern(q)) {
+              const verse = await searchByReference(q)
+              if (verse) {
+                allResults.push({
+                  kind: 'verse',
+                  title: verse.reference,
+                  subtitle: verse.text_pt.substring(0, 100) + (verse.text_pt.length > 100 ? '...' : ''),
+                  data: verse,
+                })
+              }
+            } else {
+              const verses = await searchByText(q, 6)
               for (const v of verses) {
                 allResults.push({
                   kind: 'verse',
@@ -151,31 +199,12 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
                 })
               }
             }
-          } else if (isReferencePattern(q)) {
-            const verse = await searchByReference(q)
-            if (verse) {
-              allResults.push({
-                kind: 'verse',
-                title: verse.reference,
-                subtitle: verse.text_pt.substring(0, 100) + (verse.text_pt.length > 100 ? '...' : ''),
-                data: verse,
-              })
-            }
-          } else {
-            // Text-based semantic search
-            const verses = await searchByText(q, 6)
-            for (const v of verses) {
-              allResults.push({
-                kind: 'verse',
-                title: v.reference,
-                subtitle: v.text_pt.substring(0, 100) + (v.text_pt.length > 100 ? '...' : ''),
-                data: v,
-              })
-            }
+          } catch {
+            // Continue without bible results
           }
         }
 
-        // 4. Knowledge base results
+        // 4. Knowledge base results (from identity resolution)
         if (identity.suggestions?.knowledge) {
           for (const k of identity.suggestions.knowledge) {
             allResults.push({
@@ -197,14 +226,24 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
           })
         }
 
-        // Only update state if this search wasn't superseded
         if (!controller.signal.aborted) {
           setResults(allResults)
         }
-      } finally {
+      } catch (err) {
+        // Catch-all for unexpected errors
+        console.error('[AddNodePanel] doSearch error:', err)
         if (!controller.signal.aborted) {
-          setIsSearching(false)
+          setResults([{
+            kind: 'manual',
+            title: q,
+            subtitle: `Erro na busca. Criar "${q}" manualmente`,
+            data: null,
+          }])
         }
+      } finally {
+        clearTimeout(globalTimeout)
+        // ALWAYS clear isSearching — prevents "Buscando..." stuck forever
+        setIsSearching(false)
       }
     },
     [mode]

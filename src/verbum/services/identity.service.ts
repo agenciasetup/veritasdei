@@ -70,11 +70,14 @@ export async function resolveIdentity(input: string): Promise<IdentityResult> {
     }
   }
 
-  // 4 & 5. Search biblia + knowledge base in parallel
-  const [verses, knowledge] = await Promise.all([
+  // 4 & 5. Search biblia + knowledge base in parallel (allSettled prevents one failure from killing both)
+  const [versesResult, knowledgeResult] = await Promise.allSettled([
     searchByText(original, 5),
     searchKnowledgeBase(normalized),
   ])
+
+  const verses = versesResult.status === 'fulfilled' ? versesResult.value : []
+  const knowledge = knowledgeResult.status === 'fulfilled' ? knowledgeResult.value : []
 
   return {
     type: 'new',
