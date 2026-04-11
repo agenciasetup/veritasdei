@@ -19,7 +19,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Plus, HelpCircle, Save, Cloud, CloudOff, Share2 } from 'lucide-react'
 
 import { useAuth } from '@/contexts/AuthContext'
@@ -80,6 +80,7 @@ const INITIAL_NODES: Node[] = [
 function VerbumCanvasInner() {
   const { user } = useAuth()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const flowIdParam = searchParams.get('flow')
 
   const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES)
@@ -107,6 +108,7 @@ function VerbumCanvasInner() {
   // Connection type selector state
   const [pendingConnection, setPendingConnection] = useState<Connection | null>(null)
   const [connectionSelector, setConnectionSelector] = useState(false)
+  const [showHelpTip, setShowHelpTip] = useState(false)
 
   // Edge detail panel state
   const [edgeDetail, setEdgeDetail] = useState<{
@@ -223,8 +225,8 @@ function VerbumCanvasInner() {
           setCurrentFlow(newFlow)
           setFlowName(newFlow.name)
           setSaveStatus('saved')
-          // Update URL without navigation
-          window.history.replaceState({}, '', `/verbum/canvas?flow=${newFlow.id}`)
+          // Update URL without full navigation — preserves back button
+          router.replace(`/verbum/canvas?flow=${newFlow.id}`)
         }
       } catch (err) {
         console.error('initFlow error:', err)
@@ -880,6 +882,7 @@ function VerbumCanvasInner() {
             background: VERBUM_COLORS.ui_bg,
             border: `1px solid ${VERBUM_COLORS.ui_border}`,
             borderRadius: '8px',
+            marginBottom: 'env(safe-area-inset-bottom, 0px)',
           }}
           pannable
           zoomable
@@ -891,6 +894,7 @@ function VerbumCanvasInner() {
             background: VERBUM_COLORS.ui_bg,
             border: `1px solid ${VERBUM_COLORS.ui_border}`,
             borderRadius: '8px',
+            marginBottom: 'env(safe-area-inset-bottom, 0px)',
           }}
         />
       </ReactFlow>
@@ -900,6 +904,7 @@ function VerbumCanvasInner() {
         className="fixed top-0 left-0 right-0 z-[200] flex items-center justify-between px-4 py-2"
         style={{
           background: 'linear-gradient(to bottom, rgba(10,8,6,0.95) 0%, rgba(10,8,6,0.7) 80%, transparent 100%)',
+          paddingTop: 'max(0.5rem, env(safe-area-inset-top))',
           pointerEvents: 'none',
         }}
       >
@@ -918,7 +923,7 @@ function VerbumCanvasInner() {
             Verbum
           </Link>
           <span
-            className="text-xs font-semibold truncate max-w-[200px]"
+            className="text-xs font-semibold truncate max-w-[120px] sm:max-w-[200px] md:max-w-[300px]"
             style={{ fontFamily: 'Cinzel, serif', color: VERBUM_COLORS.ui_gold, letterSpacing: '0.06em' }}
           >
             {flowName}
@@ -978,13 +983,17 @@ function VerbumCanvasInner() {
             </button>
           )}
 
-          {/* Help hint */}
+          {/* Help hint — click toggle for touch, hover for desktop */}
           <div className="relative group">
-            <button className="p-1.5 rounded-lg" style={{ color: VERBUM_COLORS.text_muted }}>
+            <button
+              className="p-1.5 rounded-lg"
+              style={{ color: VERBUM_COLORS.text_muted }}
+              onClick={() => setShowHelpTip((v) => !v)}
+            >
               <HelpCircle className="w-4 h-4" />
             </button>
             <div
-              className="absolute right-0 top-full mt-2 w-56 rounded-xl p-4 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200"
+              className={`absolute right-0 top-full mt-2 w-56 rounded-xl p-4 transition-opacity duration-200 ${showHelpTip ? 'opacity-100 pointer-events-auto' : 'opacity-0 group-hover:opacity-100 pointer-events-none'}`}
               style={{
                 background: VERBUM_COLORS.ui_bg,
                 border: `1px solid ${VERBUM_COLORS.ui_border}`,
