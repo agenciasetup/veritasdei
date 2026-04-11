@@ -223,6 +223,8 @@ export interface KnowledgeBaseEntry {
 // ─── Connection Engine ───
 
 export interface ConnectionProposal {
+  source_node_id: string
+  source_node_title: string
   target_node_id: string
   target_node_title: string
   relation_type: RelationType

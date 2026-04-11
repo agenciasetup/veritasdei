@@ -50,6 +50,8 @@ export async function proposeConnections(
       .filter((p) => p.confidence >= 0.5)
       .map((p) => ({
         ...p,
+        source_node_id: newNode.id,
+        source_node_title: newNode.title,
         source: 'ai' as const,
       }))
   } catch {
@@ -96,6 +98,8 @@ async function checkTypologyRegistry(
 
       if (antitypeNode) {
         proposals.push({
+          source_node_id: newNode.id,
+          source_node_title: newNode.title,
           target_node_id: antitypeNode.id,
           target_node_title: antitypeNode.title,
           relation_type: match.relation_type as RelationType,
@@ -129,6 +133,8 @@ async function checkTypologyRegistry(
 
       if (typeNode) {
         proposals.push({
+          source_node_id: newNode.id,
+          source_node_title: newNode.title,
           target_node_id: typeNode.id,
           target_node_title: typeNode.title,
           relation_type: match.relation_type as RelationType,

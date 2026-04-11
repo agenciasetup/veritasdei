@@ -169,13 +169,9 @@ export async function duplicateFlow(flowId: string, userId: string, newName: str
 
   await updateFlow(newFlow.id, { node_count: nodeCount, edge_count: edgeCount || 0 })
 
-  // Increment clone count on source
+  // Increment clone count on source — use RPC for atomicity, log error if unavailable
   await supabase.rpc('increment_clone_count', { flow_id_param: flowId }).catch(() => {
-    // RPC may not exist, update manually
-    supabase
-      .from('verbum_flows')
-      .update({ clone_count: (source.clone_count || 0) + 1 })
-      .eq('id', flowId)
+    console.warn('increment_clone_count RPC unavailable, skipping')
   })
 
   return { ...newFlow, node_count: nodeCount, edge_count: edgeCount || 0 }
