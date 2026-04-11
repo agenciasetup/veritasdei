@@ -47,8 +47,13 @@ export async function updateSession(request: NextRequest) {
   // This is critical — without it, server components see stale/expired sessions.
   try {
     await supabase.auth.getUser()
-  } catch (err) {
-    console.error('[Middleware] Auth refresh failed:', err)
+  } catch {
+    // Retry once on failure before giving up
+    try {
+      await supabase.auth.getUser()
+    } catch (retryErr) {
+      console.error('[Middleware] Auth refresh failed after retry:', retryErr)
+    }
   }
 
   return supabaseResponse

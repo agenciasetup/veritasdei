@@ -158,11 +158,11 @@ function AuthProviderInner({
     // 15s is generous but avoids false timeouts on slow networks.
     const timeout = setTimeout(() => {
       if (mountedRef.current && !initDoneRef.current) {
-        console.warn('[Auth] Init timed out after 15s — unblocking UI')
+        console.warn('[Auth] Init timed out after 5s — unblocking UI')
         initDoneRef.current = true
         setState(prev => prev.isLoading ? { ...prev, isLoading: false } : prev)
       }
-    }, 15000)
+    }, 5000)
 
     // Listen for auth changes FIRST so we don't miss events from getSession
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -198,6 +198,17 @@ function AuthProviderInner({
       subscription.unsubscribe()
     }
   }, [supabase, setAuthState])
+
+  // Refresh session when tab becomes visible again (prevents inactive-tab token expiry)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        supabase.auth.getSession().catch(() => {})
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [supabase])
 
   const signUp = async (email: string, password: string, name: string) => {
     const { error } = await supabase.auth.signUp({
@@ -255,12 +266,13 @@ function AuthProviderInner({
   }
 
   const signOut = async () => {
-    // Clear local state immediately to avoid stale UI
-    setState({ ...DEFAULT_STATE, isLoading: false })
     try {
       await supabase.auth.signOut()
     } catch (err) {
       console.error('[Auth] signOut error:', err)
+    } finally {
+      // Clear local state after API call to prevent stale server session
+      setState({ ...DEFAULT_STATE, isLoading: false })
     }
   }
 
