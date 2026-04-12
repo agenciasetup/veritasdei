@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
 import AuthGuard from '@/components/auth/AuthGuard'
@@ -13,12 +14,14 @@ import CrossIcon from '@/components/icons/CrossIcon'
 import {
   User, Camera, Save, Church, MapPin, Heart, BookOpen,
   CheckCircle, Phone, Calendar, Shield, AtSign, GraduationCap,
-  Share2, CreditCard, FileText,
+  Share2, CreditCard, FileText, Target, Bell, Flame, Check,
 } from 'lucide-react'
 import { isValidCpf, maskCpf, stripCpf } from '@/lib/utils/cpf'
 import Link from 'next/link'
+import { usePropositos } from '@/contexts/PropositosContext'
+import { cadenciaLabel, periodoAtualLabel } from '@/lib/propositos'
 
-type MainTab = 'editar' | 'carteirinha'
+type MainTab = 'editar' | 'carteirinha' | 'propositos' | 'notificacoes'
 type Section = 'pessoal' | 'endereco' | 'fe' | 'social'
 
 const SECTIONS: { key: Section; label: string; icon: React.ElementType }[] = [
@@ -31,7 +34,9 @@ const SECTIONS: { key: Section; label: string; icon: React.ElementType }[] = [
 export default function PerfilPage() {
   return (
     <AuthGuard>
-      <PerfilContent />
+      <Suspense fallback={<div className="min-h-screen" />}>
+        <PerfilContent />
+      </Suspense>
     </AuthGuard>
   )
 }
@@ -40,8 +45,17 @@ function PerfilContent() {
   const { profile, refreshProfile, user } = useAuth()
   const supabase = createClient()!
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const searchParams = useSearchParams()
 
-  const [mainTab, setMainTab] = useState<MainTab>('editar')
+  const initialTab = (() => {
+    const t = searchParams.get('tab')
+    if (t === 'propositos' || t === 'notificacoes' || t === 'carteirinha' || t === 'editar') {
+      return t as MainTab
+    }
+    return 'editar' as MainTab
+  })()
+
+  const [mainTab, setMainTab] = useState<MainTab>(initialTab)
   const [section, setSection] = useState<Section>('pessoal')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -298,15 +312,17 @@ function PerfilContent() {
         )}
 
         {/* Main Tab Bar */}
-        <div className="flex gap-3 mb-6">
+        <div className="flex gap-3 mb-6 overflow-x-auto pb-2 no-scrollbar">
           {([
             { key: 'editar' as MainTab, label: 'Editar Perfil', icon: User },
+            { key: 'propositos' as MainTab, label: 'Propósitos', icon: Target },
+            { key: 'notificacoes' as MainTab, label: 'Notificações', icon: Bell },
             { key: 'carteirinha' as MainTab, label: 'Carteirinha', icon: CreditCard },
           ]).map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               onClick={() => setMainTab(key)}
-              className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold tracking-wider uppercase transition-all"
+              className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold tracking-wider uppercase transition-all flex-shrink-0"
               style={{
                 fontFamily: 'Cinzel, serif',
                 background: mainTab === key
@@ -323,6 +339,9 @@ function PerfilContent() {
             </button>
           ))}
         </div>
+
+        {mainTab === 'propositos' && <PropositosSection />}
+        {mainTab === 'notificacoes' && <NotificacoesSection />}
 
         {/* ═══════════════════════════════════════ */}
         {/* EDITAR PERFIL TAB                      */}
@@ -1049,5 +1068,300 @@ function CarteirinhaCard({ profile }: { profile: ReturnType<typeof useAuth>['pro
         Compartilhar Carteirinha
       </button>
     </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════ */
+/* PROPÓSITOS — leitura + ativar/desativar + check-in      */
+/* ═══════════════════════════════════════════════════════ */
+
+function PropositosSection() {
+  const { propositos, loading, checkIn, reload } = usePropositos()
+  const supabase = createClient()
+  const { user } = useAuth()
+  const [saving, setSaving] = useState<string | null>(null)
+
+  async function toggleAtivo(id: string, ativo: boolean) {
+    if (!user || !supabase) return
+    setSaving(id)
+    await supabase
+      .from('user_propositos')
+      .update({ ativo: !ativo })
+      .eq('id', id)
+      .eq('user_id', user.id)
+    await reload()
+    setSaving(null)
+  }
+
+  if (loading && propositos.length === 0) {
+    return (
+      <div className="py-10 text-center text-sm" style={{ color: '#7A7368' }}>
+        Carregando propósitos…
+      </div>
+    )
+  }
+
+  return (
+    <section className="mb-8">
+      <div className="mb-4">
+        <h2
+          className="text-lg mb-1"
+          style={{ fontFamily: 'Cormorant Garamond, serif', color: '#F2EDE4' }}
+        >
+          Meus propósitos
+        </h2>
+        <p
+          className="text-xs"
+          style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+        >
+          Compromissos espirituais que aparecem na sua tela inicial.
+          A criação de propósitos personalizados chega em breve — por
+          enquanto ative os sugeridos abaixo.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        {propositos.length === 0 && (
+          <p
+            className="text-sm py-6 text-center"
+            style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+          >
+            Nenhum propósito ainda.
+          </p>
+        )}
+        {propositos.map(p => {
+          const feitoHoje = p.feito_hoje
+          return (
+            <div
+              key={p.id}
+              className="p-4 rounded-2xl"
+              style={{
+                background: p.ativo
+                  ? 'rgba(201,168,76,0.06)'
+                  : 'rgba(255,255,255,0.02)',
+                border: `1px solid ${
+                  p.ativo ? 'rgba(201,168,76,0.18)' : 'rgba(201,168,76,0.08)'
+                }`,
+              }}
+            >
+              <div className="flex items-start justify-between gap-4 mb-2">
+                <div className="min-w-0">
+                  <p
+                    className="text-base font-medium truncate"
+                    style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}
+                  >
+                    {p.titulo}
+                  </p>
+                  <p
+                    className="text-xs mt-0.5"
+                    style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+                  >
+                    {cadenciaLabel(p.cadencia, p.meta_por_periodo)}
+                    {p.descricao ? ` · ${p.descricao}` : ''}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleAtivo(p.id, p.ativo)}
+                  disabled={saving === p.id}
+                  className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs transition-all"
+                  style={{
+                    background: p.ativo
+                      ? 'rgba(102,187,106,0.12)'
+                      : 'rgba(201,168,76,0.08)',
+                    border: `1px solid ${
+                      p.ativo ? 'rgba(102,187,106,0.35)' : 'rgba(201,168,76,0.2)'
+                    }`,
+                    color: p.ativo ? '#66BB6A' : '#C9A84C',
+                    fontFamily: 'Poppins, sans-serif',
+                  }}
+                >
+                  {p.ativo ? 'Ativo' : 'Ativar'}
+                </button>
+              </div>
+
+              <div className="flex items-center gap-3 text-xs mt-3">
+                <span style={{ color: '#A8A096', fontFamily: 'Poppins, sans-serif' }}>
+                  {p.periodo_atual}/{p.meta_por_periodo} {periodoAtualLabel(p.cadencia)}
+                </span>
+                {p.streak > 0 && (
+                  <span
+                    className="inline-flex items-center gap-1"
+                    style={{ color: '#E67E22', fontFamily: 'Poppins, sans-serif' }}
+                  >
+                    <Flame className="w-3 h-3" />
+                    {p.streak} {p.streak === 1 ? 'dia' : 'períodos'}
+                  </span>
+                )}
+                {p.ativo && !feitoHoje && (
+                  <button
+                    type="button"
+                    onClick={() => checkIn(p.id)}
+                    className="ml-auto inline-flex items-center gap-1 text-xs px-3 py-1 rounded-lg"
+                    style={{
+                      background: 'rgba(201,168,76,0.12)',
+                      border: '1px solid rgba(201,168,76,0.25)',
+                      color: '#C9A84C',
+                      fontFamily: 'Poppins, sans-serif',
+                    }}
+                  >
+                    <Check className="w-3 h-3" />
+                    Marcar feito hoje
+                  </button>
+                )}
+                {p.ativo && feitoHoje && (
+                  <span
+                    className="ml-auto inline-flex items-center gap-1 text-xs"
+                    style={{ color: '#66BB6A', fontFamily: 'Poppins, sans-serif' }}
+                  >
+                    <Check className="w-3 h-3" />
+                    Feito hoje
+                  </span>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════ */
+/* NOTIFICAÇÕES — toggle consciente (inerte na Fase 1)    */
+/* ═══════════════════════════════════════════════════════ */
+
+function NotificacoesSection() {
+  const [enabled, setEnabled] = useState(false)
+  const [permissao, setPermissao] = useState<NotificationPermission | 'unsupported'>(
+    typeof window !== 'undefined' && 'Notification' in window
+      ? Notification.permission
+      : 'unsupported',
+  )
+  const [pedindo, setPedindo] = useState(false)
+
+  async function pedirPermissao() {
+    if (!('Notification' in window)) return
+    setPedindo(true)
+    try {
+      const resultado = await Notification.requestPermission()
+      setPermissao(resultado)
+      if (resultado === 'granted') setEnabled(true)
+    } finally {
+      setPedindo(false)
+    }
+  }
+
+  const isStandalone =
+    typeof window !== 'undefined' &&
+    (window.matchMedia?.('(display-mode: standalone)').matches ||
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true)
+
+  const isIos =
+    typeof window !== 'undefined' &&
+    /iPad|iPhone|iPod/.test(window.navigator.userAgent)
+
+  return (
+    <section className="mb-8">
+      <div className="mb-4">
+        <h2
+          className="text-lg mb-1"
+          style={{ fontFamily: 'Cormorant Garamond, serif', color: '#F2EDE4' }}
+        >
+          Notificações
+        </h2>
+        <p
+          className="text-xs"
+          style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+        >
+          Receba lembretes de oração, confissão e missa no seu celular.
+          O envio real começa na próxima atualização — por ora você já
+          pode conceder a permissão.
+        </p>
+      </div>
+
+      <div
+        className="p-4 rounded-2xl mb-4"
+        style={{
+          background: 'rgba(201,168,76,0.06)',
+          border: '1px solid rgba(201,168,76,0.18)',
+        }}
+      >
+        <div className="flex items-start justify-between gap-4 mb-3">
+          <div>
+            <p
+              className="text-base font-medium"
+              style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}
+            >
+              Lembretes no celular
+            </p>
+            <p
+              className="text-xs mt-1"
+              style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+            >
+              Estado da permissão:{' '}
+              <strong style={{ color: '#C9A84C' }}>
+                {permissao === 'granted'
+                  ? 'concedida'
+                  : permissao === 'denied'
+                  ? 'negada'
+                  : permissao === 'default'
+                  ? 'não pedida'
+                  : 'não suportada'}
+              </strong>
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setEnabled(v => !v)}
+            aria-pressed={enabled}
+            className="flex-shrink-0 relative w-12 h-7 rounded-full transition-colors"
+            style={{
+              background: enabled
+                ? 'rgba(102,187,106,0.35)'
+                : 'rgba(255,255,255,0.08)',
+              border: `1px solid ${
+                enabled ? 'rgba(102,187,106,0.6)' : 'rgba(255,255,255,0.15)'
+              }`,
+            }}
+          >
+            <span
+              className="absolute top-0.5 w-5 h-5 rounded-full transition-all"
+              style={{
+                left: enabled ? 'calc(100% - 22px)' : '2px',
+                background: enabled ? '#66BB6A' : '#7A7368',
+              }}
+            />
+          </button>
+        </div>
+
+        {permissao !== 'granted' && permissao !== 'unsupported' && (
+          <button
+            type="button"
+            onClick={pedirPermissao}
+            disabled={pedindo}
+            className="w-full py-2.5 rounded-xl text-sm"
+            style={{
+              background: 'linear-gradient(135deg, #C9A84C, #A88B3A)',
+              color: '#0F0E0C',
+              fontFamily: 'Poppins, sans-serif',
+              fontWeight: 600,
+            }}
+          >
+            {pedindo ? 'Aguardando…' : 'Permitir notificações'}
+          </button>
+        )}
+
+        {isIos && !isStandalone && (
+          <p
+            className="text-[11px] mt-3 leading-relaxed"
+            style={{ color: '#E67E22', fontFamily: 'Poppins, sans-serif' }}
+          >
+            No iPhone, notificações só funcionam após instalar o app: toque
+            em <strong>Compartilhar</strong> → <strong>Adicionar à Tela de Início</strong>.
+          </p>
+        )}
+      </div>
+    </section>
   )
 }

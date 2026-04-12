@@ -3,15 +3,27 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
-import { Home, GraduationCap, Search, MapPin, User } from 'lucide-react'
+import { Home, Cross, CalendarHeart, BookOpen, User } from 'lucide-react'
+
+/**
+ * Navegação mobile — 5 hubs primários.
+ *
+ * - Hoje: perfil pessoal diário, liturgia, propósitos, atalhos
+ * - Orar: rosário, orações, exame de consciência
+ * - Liturgia: calendário, leituras do dia, paróquias, confissão
+ * - Aprender: trilhas, dogmas, catecismo, virtudes, S. Tomás
+ * - Perfil: dados pessoais, propósitos, notificações
+ *
+ * Busca deixa de ser um slot — vira ícone no header da página Hoje.
+ */
 
 const NAV_ITEMS = [
-  { href: '/',          icon: Home,          label: 'Início' },
-  { href: '/trilhas',   icon: GraduationCap, label: 'Trilhas' },
-  { href: '/?focus=search', icon: Search,    label: 'Buscar',  isSearch: true },
-  { href: '/paroquias', icon: MapPin,        label: 'Paróquias' },
-  { href: '/perfil',    icon: User,          label: 'Eu' },
-]
+  { href: '/',         icon: Home,          label: 'Hoje' },
+  { href: '/orar',     icon: Cross,         label: 'Orar' },
+  { href: '/liturgia', icon: CalendarHeart, label: 'Liturgia' },
+  { href: '/aprender', icon: BookOpen,      label: 'Aprender' },
+  { href: '/perfil',   icon: User,          label: 'Perfil' },
+] as const
 
 export default function BottomNav() {
   const pathname = usePathname()
@@ -32,38 +44,10 @@ export default function BottomNav() {
       }}
     >
       {NAV_ITEMS.map((item) => {
-        const isActive = item.isSearch
-          ? false
-          : pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
+        const isActive =
+          pathname === item.href ||
+          (item.href !== '/' && pathname.startsWith(item.href))
         const Icon = item.icon
-
-        // Search button gets special central styling
-        if (item.isSearch) {
-          return (
-            <Link
-              key="search"
-              href="/?focus=search"
-              className="flex flex-col items-center gap-0.5 py-1.5 px-3 -mt-3 relative"
-              aria-label="Buscar"
-            >
-              <div
-                className="w-11 h-11 rounded-full flex items-center justify-center"
-                style={{
-                  background: 'linear-gradient(135deg, #C9A84C, #A88B3A)',
-                  boxShadow: '0 4px 16px rgba(201,168,76,0.3)',
-                }}
-              >
-                <Search className="w-5 h-5" style={{ color: '#0F0E0C' }} />
-              </div>
-              <span
-                className="text-[10px] tracking-wide"
-                style={{ fontFamily: 'Poppins, sans-serif', color: '#C9A84C' }}
-              >
-                {item.label}
-              </span>
-            </Link>
-          )
-        }
 
         return (
           <Link
@@ -71,7 +55,7 @@ export default function BottomNav() {
             href={item.href}
             aria-label={item.label}
             aria-current={isActive ? 'page' : undefined}
-            className="flex flex-col items-center gap-0.5 py-2 px-3 transition-colors relative"
+            className="flex flex-col items-center gap-0.5 py-2 px-3 transition-colors relative flex-1"
             style={{ color: isActive ? '#C9A84C' : '#7A7368' }}
           >
             {isActive && (
