@@ -268,10 +268,10 @@ export function useVerbumFlow(): UseVerbumFlowReturn {
       const allEdges = edgesRef.current
       const userNodes = allNodes.filter(n => n.id !== TRINITAS_NODE_ID)
 
-      // Save all nodes in parallel
-      const nodePromises = userNodes.map(n => {
+      // Build save functions for each node
+      const nodeSavers = userNodes.map(n => {
         const d = n.data as Record<string, unknown>
-        return saveFlowNode(flow.id, user!.id, {
+        return () => saveFlowNode(flow.id, user!.id, {
           id: n.id,
           node_type: n.type || 'figura',
           title: (d.title as string) || '',
@@ -283,15 +283,15 @@ export function useVerbumFlow(): UseVerbumFlowReturn {
           layer_id: (d.layer_id as number) ?? 5,
           pos_x: n.position.x,
           pos_y: n.position.y,
-          is_canonical: (d.is_canonical as boolean) || false,
+          is_canonical: false, // User nodes are NEVER canonical (RLS requires false)
           canonical_entity_id: (d.canonical_entity_id as string) || null,
         })
       })
 
-      // Save all edges in parallel
-      const edgePromises = allEdges.map(e => {
+      // Build save functions for each edge
+      const edgeSavers = allEdges.map(e => {
         const d = e.data as Record<string, unknown> | undefined
-        return saveFlowEdge(flow.id, user!.id, {
+        return () => saveFlowEdge(flow.id, user!.id, {
           id: e.id,
           source_node_id: e.source,
           target_node_id: e.target,
@@ -306,7 +306,19 @@ export function useVerbumFlow(): UseVerbumFlowReturn {
         })
       })
 
-      await Promise.all([...nodePromises, ...edgePromises])
+      // Process in batches of 5 to avoid overwhelming Supabase
+      const allSavers = [...nodeSavers, ...edgeSavers]
+      let failCount = 0
+      for (let i = 0; i < allSavers.length; i += 5) {
+        const batch = allSavers.slice(i, i + 5)
+        const results = await Promise.allSettled(batch.map(fn => fn()))
+        for (const r of results) {
+          if (r.status === 'rejected') {
+            console.error('saveAll batch item failed:', r.reason)
+            failCount++
+          }
+        }
+      }
 
       // Update flow metadata
       await updateFlow(flow.id, {
@@ -314,7 +326,14 @@ export function useVerbumFlow(): UseVerbumFlowReturn {
         edge_count: allEdges.length,
       })
 
-      setSaveStatus('saved')
+      if (failCount === 0) {
+        setSaveStatus('saved')
+      } else if (failCount < allSavers.length) {
+        console.warn(`saveAll: ${failCount}/${allSavers.length} items failed`)
+        setSaveStatus('unsaved')
+      } else {
+        setSaveStatus('error')
+      }
     } catch (err) {
       console.error('saveAll error:', err)
       setSaveStatus('error')

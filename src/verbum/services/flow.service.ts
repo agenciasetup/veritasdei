@@ -427,7 +427,7 @@ export async function saveFlowNode(
   supabase ??= createClient()
   if (!supabase)return
 
-  await supabase.from('verbum_nodes').upsert({
+  const { error } = await supabase.from('verbum_nodes').upsert({
     id: node.id,
     user_id: userId,
     flow_id: flowId,
@@ -446,6 +446,11 @@ export async function saveFlowNode(
     is_shared: false,
     updated_at: new Date().toISOString(),
   }, { onConflict: 'id' })
+
+  if (error) {
+    console.error(`saveFlowNode error (${node.id}):`, error)
+    throw error
+  }
 }
 
 export async function saveFlowEdge(
@@ -468,7 +473,7 @@ export async function saveFlowEdge(
   supabase ??= createClient()
   if (!supabase)return
 
-  await supabase.from('verbum_edges').upsert({
+  const { error } = await supabase.from('verbum_edges').upsert({
     id: edge.id,
     user_id: userId,
     flow_id: flowId,
@@ -485,6 +490,11 @@ export async function saveFlowEdge(
     is_shared: false,
     updated_at: new Date().toISOString(),
   }, { onConflict: 'id' })
+
+  if (error) {
+    console.error(`saveFlowEdge error (${edge.id}):`, error)
+    throw error
+  }
 }
 
 export async function deleteFlowNode(nodeId: string): Promise<void> {
