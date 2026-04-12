@@ -6,6 +6,24 @@ import type { VerbumFlow, VerbumFlowShare, VerbumFlowFavorite } from '../types/v
 // createClient() is a singleton — calling ??= just defers the FIRST creation.
 let supabase: ReturnType<typeof createClient> | undefined
 
+// ─── DB CHECK constraint validation ───
+// These must match the CHECK constraints in the database exactly.
+export const VALID_RELATION_TYPES = new Set([
+  'tipologia', 'doutrina', 'citacao_direta', 'magistério', 'patristica', 'etimologia', 'profetica',
+])
+
+const VALID_NODE_TYPES = new Set([
+  'canonical', 'figura', 'versiculo', 'dogma', 'conceito', 'encarnado', 'postit',
+])
+
+function sanitizeRelationType(value: string): string {
+  return VALID_RELATION_TYPES.has(value) ? value : 'doutrina'
+}
+
+function sanitizeNodeType(value: string): string {
+  return VALID_NODE_TYPES.has(value) ? value : 'figura'
+}
+
 // ─── Flow CRUD ───
 
 export async function createFlow(
@@ -431,7 +449,7 @@ export async function saveFlowNode(
     id: node.id,
     user_id: userId,
     flow_id: flowId,
-    node_type: node.node_type,
+    node_type: sanitizeNodeType(node.node_type),
     title: node.title,
     title_latin: node.title_latin || null,
     description: node.description || null,
@@ -479,7 +497,7 @@ export async function saveFlowEdge(
     flow_id: flowId,
     source_node_id: edge.source_node_id,
     target_node_id: edge.target_node_id,
-    relation_type: edge.relation_type,
+    relation_type: sanitizeRelationType(edge.relation_type),
     magisterial_weight: edge.magisterial_weight || 3,
     theological_name: edge.theological_name || null,
     ai_explanation_short: edge.ai_explanation_short || null,

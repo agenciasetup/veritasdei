@@ -295,7 +295,7 @@ export function useVerbumFlow(): UseVerbumFlowReturn {
           id: e.id,
           source_node_id: e.source,
           target_node_id: e.target,
-          relation_type: (d?.relation_type as string) || e.type || 'doutrina',
+          relation_type: (d?.relation_type as string) || 'doutrina',
           magisterial_weight: (d?.magisterial_weight as number) || 3,
           theological_name: (d?.theological_name as string) || null,
           ai_explanation_short: (d?.explanation_short as string) || null,
