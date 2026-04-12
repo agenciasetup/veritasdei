@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { handleQueryError } from '@/lib/supabase/query'
 import { getAutoConnectionProposals } from './openai.service'
+import { VALID_RELATION_TYPES } from './flow.service'
 import type { ConnectionProposal, RelationType, VerbumSource } from '../types/verbum.types'
 
 // Lazy-init: deferred from module import to prevent premature Supabase auth init.
@@ -51,6 +52,7 @@ export async function proposeConnections(
       .filter((p) => p.confidence >= 0.5)
       .map((p) => ({
         ...p,
+        relation_type: (VALID_RELATION_TYPES.has(p.relation_type) ? p.relation_type : 'doutrina') as RelationType,
         source_node_id: newNode.id,
         source_node_title: newNode.title,
         source: 'ai' as const,

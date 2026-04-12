@@ -87,6 +87,16 @@ Identifique APENAS conexões com fundamento real e sólido no Magistério Catól
 Máximo 3 conexões propostas. Prefira qualidade sobre quantidade.
 NÃO proponha conexões fracas ou forçadas.
 
+IMPORTANTE: O campo "relation_type" DEVE ser exatamente um destes valores:
+- "tipologia" — Figura do AT cumprida no NT
+- "doutrina" — Fundamentação doutrinária/dogmática
+- "citacao_direta" — Citação explícita de texto bíblico
+- "magistério" — Conexão via documento do Magistério
+- "patristica" — Fundamento nos Padres da Igreja
+- "etimologia" — Conexão etimológica/linguística
+- "profetica" — Profecia e cumprimento
+NÃO use nenhum outro valor. Se nenhum se encaixa perfeitamente, use "doutrina".
+
 Responda APENAS com JSON válido:
 {
   "proposals": [
