@@ -45,7 +45,7 @@ const INITIAL_NODES: Node[] = [
   },
 ]
 
-type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'offline'
+type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'offline' | 'error'
 
 export interface UseVerbumFlowReturn {
   // Auth
@@ -80,6 +80,8 @@ export interface UseVerbumFlowReturn {
 
   // Actions
   triggerSave: () => void
+  saveAll: () => Promise<void>
+  markDirty: () => void
   retryInit: () => void
 
   // Service re-exports for convenience
@@ -249,27 +251,78 @@ export function useVerbumFlow(): UseVerbumFlowReturn {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, flowIdParam])
 
-  // ─── Auto-save debounced (stable — uses refs to avoid dependency cascades) ───
-  const triggerSave = useCallback(() => {
-    const flow = currentFlowRef.current
-    if (!flow || !user?.id || isReadOnly || isLoadingRef.current) return
+  // ─── Mark canvas as dirty (unsaved) — called on any mutation ───
+  const markDirty = useCallback(() => {
+    if (!currentFlowRef.current || !user?.id || isReadOnly || isLoadingRef.current) return
     setSaveStatus('unsaved')
-
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-    saveTimeoutRef.current = setTimeout(async () => {
-      setSaveStatus('saving')
-      try {
-        const userNodes = nodesRef.current.filter(n => n.id !== TRINITAS_NODE_ID)
-        await updateFlow(flow.id, {
-          node_count: userNodes.length,
-          edge_count: edgesRef.current.length,
-        })
-        setSaveStatus('saved')
-      } catch {
-        setSaveStatus('unsaved')
-      }
-    }, 2000)
   }, [user?.id, isReadOnly])
+
+  // ─── Save ALL nodes + edges to DB (manual save) ───
+  const saveAll = useCallback(async () => {
+    const flow = currentFlowRef.current
+    if (!flow || !user?.id || isReadOnly) return
+
+    setSaveStatus('saving')
+    try {
+      const allNodes = nodesRef.current
+      const allEdges = edgesRef.current
+      const userNodes = allNodes.filter(n => n.id !== TRINITAS_NODE_ID)
+
+      // Save all nodes in parallel
+      const nodePromises = userNodes.map(n => {
+        const d = n.data as Record<string, unknown>
+        return saveFlowNode(flow.id, user!.id, {
+          id: n.id,
+          node_type: n.type || 'figura',
+          title: (d.title as string) || '',
+          title_latin: n.type === 'postit' ? (d.color as string) || null : (d.title_latin as string) || null,
+          description: n.type === 'postit' ? (d.body as string) || null : (d.description as string) || null,
+          bible_reference: (d.bible_reference as string) || null,
+          bible_text: (d.bible_text as string) || null,
+          bible_book: (d.bible_book as string) || null,
+          layer_id: (d.layer_id as number) ?? 5,
+          pos_x: n.position.x,
+          pos_y: n.position.y,
+          is_canonical: (d.is_canonical as boolean) || false,
+          canonical_entity_id: (d.canonical_entity_id as string) || null,
+        })
+      })
+
+      // Save all edges in parallel
+      const edgePromises = allEdges.map(e => {
+        const d = e.data as Record<string, unknown> | undefined
+        return saveFlowEdge(flow.id, user!.id, {
+          id: e.id,
+          source_node_id: e.source,
+          target_node_id: e.target,
+          relation_type: (d?.relation_type as string) || e.type || 'doutrina',
+          magisterial_weight: (d?.magisterial_weight as number) || 3,
+          theological_name: (d?.theological_name as string) || null,
+          ai_explanation_short: (d?.explanation_short as string) || null,
+          ai_explanation: (d?.explanation_full as string) || null,
+          sources: (d?.sources as unknown[]) || [],
+          status: (d?.status as string) || 'proposta',
+          is_auto_generated: false,
+        })
+      })
+
+      await Promise.all([...nodePromises, ...edgePromises])
+
+      // Update flow metadata
+      await updateFlow(flow.id, {
+        node_count: userNodes.length,
+        edge_count: allEdges.length,
+      })
+
+      setSaveStatus('saved')
+    } catch (err) {
+      console.error('saveAll error:', err)
+      setSaveStatus('error')
+    }
+  }, [user?.id, isReadOnly])
+
+  // Legacy alias — now just marks dirty instead of auto-saving
+  const triggerSave = markDirty
 
   // ─── Persist node position + deletion on change ───
   const handleNodesChange = useCallback(
@@ -286,20 +339,26 @@ export function useVerbumFlow(): UseVerbumFlowReturn {
             clearTimeout(positionDebounceRef.current[nodeId])
           }
           positionDebounceRef.current[nodeId] = setTimeout(() => {
-            persistNodePosition(nodeId, pos.x, pos.y).catch(() => {})
+            persistNodePosition(nodeId, pos.x, pos.y).catch((err) => {
+              console.error(`Failed to save position for node ${nodeId}:`, err)
+              setSaveStatus('unsaved')
+            })
             delete positionDebounceRef.current[nodeId]
           }, 500)
-          triggerSave()
+          markDirty()
         }
 
         // Persist node deletions — edges cascade-deleted via FK ON DELETE CASCADE
         if (change.type === 'remove' && change.id !== TRINITAS_NODE_ID) {
-          deleteFlowNode(change.id).catch(() => setSaveStatus('unsaved'))
-          triggerSave()
+          deleteFlowNode(change.id).catch((err) => {
+            console.error(`Failed to delete node ${change.id}:`, err)
+            setSaveStatus('error')
+          })
+          markDirty()
         }
       }
     },
-    [onNodesChange, user?.id, isReadOnly, triggerSave]
+    [onNodesChange, user?.id, isReadOnly, markDirty]
   )
 
   // ─── Persist edge deletions ───
@@ -311,15 +370,18 @@ export function useVerbumFlow(): UseVerbumFlowReturn {
 
       for (const change of changes) {
         if (change.type === 'remove') {
-          deleteFlowEdge(change.id).catch(() => setSaveStatus('unsaved'))
+          deleteFlowEdge(change.id).catch((err) => {
+            console.error(`Failed to delete edge ${change.id}:`, err)
+            setSaveStatus('error')
+          })
         }
       }
 
       if (changes.some(c => c.type === 'remove')) {
-        triggerSave()
+        markDirty()
       }
     },
-    [onEdgesChange, user?.id, isReadOnly, triggerSave]
+    [onEdgesChange, user?.id, isReadOnly, markDirty]
   )
 
   // ─── beforeunload warning ───
@@ -372,6 +434,8 @@ export function useVerbumFlow(): UseVerbumFlowReturn {
     currentFlowRef,
     isLoadingRef,
     triggerSave,
+    saveAll,
+    markDirty,
     retryInit,
     saveFlowNode,
     saveFlowEdge,

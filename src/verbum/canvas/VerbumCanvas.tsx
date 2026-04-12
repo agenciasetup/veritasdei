@@ -57,7 +57,7 @@ function VerbumCanvasInner() {
     nodes, edges, setNodes, setEdges,
     handleNodesChange, handleEdgesChange,
     nodesRef, edgesRef, currentFlowRef, isLoadingRef,
-    triggerSave, retryInit,
+    triggerSave, saveAll, markDirty, retryInit,
     saveFlowNode, saveFlowEdge, deleteFlowEdge, deleteFlowNode,
     updateFlow,
   } = useVerbumFlow()
@@ -785,10 +785,15 @@ function VerbumCanvasInner() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setFocusNodeId(null)
+      // Ctrl+S / Cmd+S to save
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault()
+        saveAll()
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [])
+  }, [saveAll])
 
   const filteredNodes = useMemo(() => {
     return nodes.map((node) => {
@@ -880,8 +885,8 @@ function VerbumCanvasInner() {
   const defaultViewport = useMemo(() => ({ x: 0, y: 0, zoom: 0.8 }), [])
 
   // Save status indicator
-  const SaveIcon = saveStatus === 'saved' ? Cloud : saveStatus === 'saving' ? Save : saveStatus === 'unsaved' ? CloudOff : CloudOff
-  const saveLabel = saveStatus === 'saved' ? 'Salvo' : saveStatus === 'saving' ? 'Salvando...' : saveStatus === 'unsaved' ? 'Não salvo' : ''
+  const SaveIcon = saveStatus === 'saved' ? Cloud : saveStatus === 'saving' ? Save : saveStatus === 'error' ? CloudOff : saveStatus === 'unsaved' ? CloudOff : CloudOff
+  const saveLabel = saveStatus === 'saved' ? 'Salvo' : saveStatus === 'saving' ? 'Salvando...' : saveStatus === 'error' ? 'Erro ao salvar' : saveStatus === 'unsaved' ? 'Não salvo' : ''
 
   // ─── Redirect unauthenticated users ───
   useEffect(() => {
@@ -1073,8 +1078,39 @@ function VerbumCanvasInner() {
             </div>
           )}
 
-          {/* Save status */}
-          {currentFlow && saveStatus !== 'offline' && (
+          {/* Save button */}
+          {currentFlow && !isReadOnly && saveStatus !== 'offline' && (
+            <button
+              onClick={() => saveAll()}
+              disabled={saveStatus === 'saving' || saveStatus === 'saved'}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-all"
+              style={{
+                background: saveStatus === 'unsaved' || saveStatus === 'error'
+                  ? 'rgba(201,168,76,0.15)'
+                  : saveStatus === 'saving'
+                    ? 'rgba(255,255,255,0.06)'
+                    : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${
+                  saveStatus === 'unsaved' || saveStatus === 'error'
+                    ? 'rgba(201,168,76,0.5)'
+                    : VERBUM_COLORS.ui_border
+                }`,
+                color: saveStatus === 'unsaved' || saveStatus === 'error'
+                  ? VERBUM_COLORS.ui_gold
+                  : saveStatus === 'saving'
+                    ? VERBUM_COLORS.text_muted
+                    : VERBUM_COLORS.text_secondary,
+                fontFamily: 'Poppins, sans-serif',
+                opacity: saveStatus === 'saved' ? 0.5 : 1,
+                cursor: saveStatus === 'saving' || saveStatus === 'saved' ? 'default' : 'pointer',
+              }}
+            >
+              <SaveIcon className={`w-3.5 h-3.5 ${saveStatus === 'saving' ? 'animate-pulse' : ''}`} />
+              {saveLabel || 'Salvar'}
+            </button>
+          )}
+          {/* Read-only save status (no button) */}
+          {currentFlow && isReadOnly && saveStatus !== 'offline' && (
             <div className="flex items-center gap-1 text-[10px]" style={{ color: VERBUM_COLORS.text_muted, fontFamily: 'Poppins, sans-serif' }}>
               <SaveIcon className="w-3 h-3" />
               {saveLabel}
