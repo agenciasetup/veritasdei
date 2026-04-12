@@ -7,11 +7,15 @@ import { sanitizeIlike } from '@/lib/utils/sanitize'
 import Link from 'next/link'
 import {
   Users, Church, HeartHandshake, UserPlus, LogIn, MapPin, Clock, Search,
-  BookOpen, GraduationCap, CreditCard, MessageSquare, Crown,
+  BookOpen, GraduationCap, CreditCard, MessageSquare,
+  Navigation, Loader2,
 } from 'lucide-react'
-import type { Paroquia } from '@/types/paroquia'
+import type { Paroquia, ParoquiaNearby } from '@/types/paroquia'
 import CrossIcon from '@/components/icons/CrossIcon'
 import SeloVerificado from '@/components/paroquias/SeloVerificado'
+import CityAutocomplete from '@/components/CityAutocomplete'
+import { useGeolocation } from '@/hooks/useGeolocation'
+import { formatDistance } from '@/lib/utils/geo'
 
 interface Stats {
   catolicos: number
@@ -21,11 +25,13 @@ interface Stats {
 
 export default function LandingPage() {
   const { isAuthenticated } = useAuth()
+  const geo = useGeolocation()
   const [stats, setStats] = useState<Stats>({ catolicos: 0, convertidos: 0, igrejas: 0 })
   const [animated, setAnimated] = useState(false)
   const [searchCity, setSearchCity] = useState('')
   const [searchResults, setSearchResults] = useState<Paroquia[]>([])
   const [nearbyResults, setNearbyResults] = useState<Paroquia[]>([])
+  const [geoResults, setGeoResults] = useState<ParoquiaNearby[]>([])
   const [searched, setSearched] = useState(false)
   const [searching, setSearching] = useState(false)
 
@@ -54,6 +60,7 @@ export default function LandingPage() {
     if (!supabase || !searchCity.trim()) return
     setSearching(true)
     setSearched(true)
+    setGeoResults([])
 
     const termo = searchCity.trim()
     const SELECT =
@@ -93,6 +100,44 @@ export default function LandingPage() {
 
     setSearching(false)
   }
+
+  // Busca automática por raio quando a geolocalização estiver disponível.
+  useEffect(() => {
+    if (geo.status !== 'granted' || !geo.coords) return
+    const supabase = createClient()
+    if (!supabase) return
+
+    let cancelled = false
+    setSearching(true)
+    setSearched(true)
+    setSearchResults([])
+    setNearbyResults([])
+
+    supabase
+      .rpc('paroquias_nearby', {
+        p_lat: geo.coords.latitude,
+        p_lng: geo.coords.longitude,
+        p_radius_km: 60,
+        p_limit: 12,
+      })
+      .then((res: { data: ParoquiaNearby[] | null; error: unknown }) => {
+        if (cancelled) return
+        setGeoResults(res.data ?? [])
+        // Prefill cidade no input caso conheça a cidade
+        if (geo.coords?.cidade && !searchCity) {
+          setSearchCity(geo.coords.cidade)
+        }
+        setSearching(false)
+      })
+      .catch(() => {
+        if (!cancelled) setSearching(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geo.status, geo.coords?.latitude, geo.coords?.longitude])
 
   if (isAuthenticated) return null
 
@@ -187,25 +232,57 @@ export default function LandingPage() {
         >
           Encontre sua Paróquia
         </h2>
+
+        {/* Barra de localização */}
+        <div className="mb-3 flex items-center justify-center gap-2">
+          <button
+            onClick={() => geo.request()}
+            disabled={geo.status === 'prompting' || geo.status === 'loading'}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs transition-all"
+            style={{
+              background: geo.status === 'granted' ? 'rgba(76,175,80,0.1)' : 'rgba(201,168,76,0.08)',
+              border: `1px solid ${geo.status === 'granted' ? 'rgba(76,175,80,0.25)' : 'rgba(201,168,76,0.15)'}`,
+              color: geo.status === 'granted' ? '#4CAF50' : '#C9A84C',
+              fontFamily: 'Poppins, sans-serif',
+            }}
+          >
+            {geo.status === 'prompting' || geo.status === 'loading' ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Navigation className="w-3.5 h-3.5" />
+            )}
+            {geo.status === 'granted' && geo.coords?.label
+              ? `Você está em ${geo.coords.label}`
+              : 'Usar minha localização'}
+          </button>
+          {geo.status === 'granted' && (
+            <button
+              onClick={() => { geo.clear(); setGeoResults([]); setSearched(false) }}
+              className="text-xs underline"
+              style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif', background: 'none', border: 'none' }}
+            >
+              limpar
+            </button>
+          )}
+        </div>
+        {geo.error && (
+          <p className="text-xs text-center mb-3" style={{ color: '#D94F5C', fontFamily: 'Poppins, sans-serif' }}>
+            {geo.error}
+          </p>
+        )}
+
         <div className="flex gap-2">
-          <div className="flex-1 relative">
-            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#7A7368' }} />
-            <input
-              type="text"
+          <div className="flex-1">
+            <CityAutocomplete
               value={searchCity}
-              onChange={e => setSearchCity(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSearch()}
-              placeholder="Digite sua cidade..."
-              className="w-full pl-11 pr-4 py-3.5 rounded-xl text-sm"
-              style={{
-                background: 'rgba(16,16,16,0.8)',
-                border: '1px solid rgba(201,168,76,0.15)',
-                color: '#F2EDE4',
-                fontFamily: 'Poppins, sans-serif',
-                outline: 'none',
+              onChange={setSearchCity}
+              onSelect={city => {
+                setSearchCity(city.cidade)
+                setTimeout(() => handleSearch(), 0)
               }}
-              onFocus={e => { e.target.style.borderColor = 'rgba(201,168,76,0.4)' }}
-              onBlur={e => { e.target.style.borderColor = 'rgba(201,168,76,0.15)' }}
+              placeholder="Digite sua cidade..."
+              biasLatitude={geo.coords?.latitude ?? null}
+              biasLongitude={geo.coords?.longitude ?? null}
             />
           </div>
           <button
@@ -227,8 +304,34 @@ export default function LandingPage() {
           </button>
         </div>
 
-        {/* Search Results */}
-        {searched && !searching && (
+        {/* Geo Results (quando geolocation ativa) */}
+        {searched && !searching && geoResults.length > 0 && (
+          <div className="mt-4">
+            <h3
+              className="text-xs tracking-wider uppercase mb-3 text-center"
+              style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
+            >
+              Próximas a você
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {geoResults.slice(0, 6).map(p => (
+                <LandingNearbyCard key={p.id} p={p} />
+              ))}
+            </div>
+            <div className="mt-4 text-center">
+              <Link
+                href={`/paroquias/buscar?lat=${geo.coords?.latitude ?? ''}&lng=${geo.coords?.longitude ?? ''}`}
+                className="inline-flex items-center gap-2 text-xs tracking-wider uppercase"
+                style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
+              >
+                Ver todas as igrejas próximas →
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Text Search Results */}
+        {searched && !searching && geoResults.length === 0 && (
           <div className="mt-4">
             {searchResults.length === 0 && nearbyResults.length === 0 ? (
               <p className="text-sm text-center py-4" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
@@ -394,6 +497,70 @@ function LandingChurchCard({ p }: { p: Paroquia }) {
           {p.nome}
         </h4>
         {p.verificado && <SeloVerificado size="sm" showLabel={false} />}
+      </div>
+      {p.diocese && (
+        <p className="text-xs mb-1.5" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+          {p.diocese}
+        </p>
+      )}
+      <div className="flex items-center gap-1.5 text-xs mb-1" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
+        <MapPin className="w-3 h-3" style={{ color: '#C9A84C' }} />
+        {p.cidade}, {p.estado}
+      </div>
+      {p.horarios_missa && p.horarios_missa.length > 0 && (
+        <div className="flex items-start gap-1.5 text-xs mb-0.5" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
+          <Clock className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: '#C9A84C' }} />
+          <span>
+            Missa: {p.horarios_missa.slice(0, 2).map(h => `${h.dia.slice(0, 3)} ${h.horario}`).join(', ')}
+          </span>
+        </div>
+      )}
+      {p.horarios_confissao && p.horarios_confissao.length > 0 && (
+        <div className="flex items-start gap-1.5 text-xs" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
+          <Clock className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: '#D94F5C' }} />
+          <span>
+            Confissão: {p.horarios_confissao.slice(0, 2).map(h => `${h.dia.slice(0, 3)} ${h.horario}`).join(', ')}
+          </span>
+        </div>
+      )}
+      {p.padre_responsavel && (
+        <div className="flex items-center gap-1.5 text-xs mt-1" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
+          <Church className="w-3 h-3" style={{ color: '#C9A84C' }} />
+          Pe. {p.padre_responsavel}
+        </div>
+      )}
+    </Link>
+  )
+}
+
+function LandingNearbyCard({ p }: { p: ParoquiaNearby }) {
+  return (
+    <Link
+      href={`/paroquias/${p.id}`}
+      className="block rounded-xl p-4 transition-all hover:border-[rgba(201,168,76,0.25)]"
+      style={{
+        background: 'rgba(16,16,16,0.7)',
+        border: '1px solid rgba(201,168,76,0.1)',
+      }}
+    >
+      <div className="flex items-start justify-between gap-2 mb-1">
+        <h4 className="text-sm font-bold" style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}>
+          {p.nome}
+        </h4>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {p.verificado && <SeloVerificado size="sm" showLabel={false} />}
+          <span
+            className="text-[10px] px-2 py-0.5 rounded-full"
+            style={{
+              background: 'rgba(201,168,76,0.1)',
+              border: '1px solid rgba(201,168,76,0.2)',
+              color: '#C9A84C',
+              fontFamily: 'Poppins, sans-serif',
+            }}
+          >
+            {formatDistance(p.distancia_km)}
+          </span>
+        </div>
       </div>
       {p.diocese && (
         <p className="text-xs mb-1.5" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>

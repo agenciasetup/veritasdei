@@ -1,17 +1,26 @@
 'use client'
 
-import { use, useEffect, useState } from 'react'
+import { use, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
 import AuthGuard from '@/components/auth/AuthGuard'
-import type { FotoParoquia, HorarioMissa, Paroquia, TipoIgreja } from '@/types/paroquia'
+import type {
+  CuriosidadeItem,
+  FotoParoquia,
+  HistoriaBlock,
+  HorarioMissa,
+  InfoUtilItem,
+  Paroquia,
+  TipoIgreja,
+} from '@/types/paroquia'
 import { TIPOS_IGREJA } from '@/types/paroquia'
 import { maskCnpj, stripCnpj, isValidCnpj } from '@/lib/utils/cnpj'
 import HorariosSection from '@/components/paroquias/HorariosSection'
 import FotosGallery from '@/components/paroquias/FotosGallery'
 import SeloVerificado from '@/components/paroquias/SeloVerificado'
+import HistoriaBlocksEditor from '@/components/paroquias/HistoriaBlocksEditor'
 import {
   Church,
   MapPin,
@@ -26,6 +35,14 @@ import {
   FileText,
   Info,
   Save,
+  Camera,
+  Crown,
+  Sparkles,
+  Lightbulb,
+  Search,
+  Plus,
+  Trash2,
+  Image as ImageIcon,
 } from 'lucide-react'
 
 const ESTADOS_BR = [
@@ -80,6 +97,22 @@ function EditarContent({ id }: { id: string }) {
 
   // Fotos
   const [fotos, setFotos] = useState<FotoParoquia[]>([])
+  const [fotoCapaUrl, setFotoCapaUrl] = useState<string | null>(null)
+  const [fotoPerfilUrl, setFotoPerfilUrl] = useState<string | null>(null)
+
+  // Minisite
+  const [historiaBlocks, setHistoriaBlocks] = useState<HistoriaBlock[]>([])
+  const [santoNome, setSantoNome] = useState('')
+  const [santoDescricao, setSantoDescricao] = useState('')
+  const [santoImagemUrl, setSantoImagemUrl] = useState<string | null>(null)
+  const [santoDataFesta, setSantoDataFesta] = useState('')
+  const [curiosidades, setCuriosidades] = useState<CuriosidadeItem[]>([])
+  const [informacoesUteis, setInformacoesUteis] = useState<InfoUtilItem[]>([])
+
+  // SEO
+  const [seoTitle, setSeoTitle] = useState('')
+  const [seoDescription, setSeoDescription] = useState('')
+  const [seoKeywords, setSeoKeywords] = useState('')
 
   // Contatos
   const [telefone, setTelefone] = useState('')
@@ -122,6 +155,18 @@ function EditarContent({ id }: { id: string }) {
         setHorariosMissa(p.horarios_missa ?? [])
         setHorariosConfissao(p.horarios_confissao ?? [])
         setFotos(p.fotos ?? [])
+        setFotoCapaUrl(p.foto_capa_url ?? null)
+        setFotoPerfilUrl(p.foto_perfil_url ?? null)
+        setHistoriaBlocks(p.historia_blocks ?? [])
+        setSantoNome(p.santo_nome ?? '')
+        setSantoDescricao(p.santo_descricao ?? '')
+        setSantoImagemUrl(p.santo_imagem_url ?? null)
+        setSantoDataFesta(p.santo_data_festa ?? '')
+        setCuriosidades(p.curiosidades ?? [])
+        setInformacoesUteis(p.informacoes_uteis ?? [])
+        setSeoTitle(p.seo_title ?? '')
+        setSeoDescription(p.seo_description ?? '')
+        setSeoKeywords(p.seo_keywords ?? '')
         setTelefone(p.telefone ?? '')
         setEmail(p.email ?? '')
         setInstagramHandle(p.instagram ?? '')
@@ -183,6 +228,18 @@ function EditarContent({ id }: { id: string }) {
         email: email.trim() || null,
         foto_url: fotos[0]?.url ?? null,
         fotos,
+        foto_capa_url: fotoCapaUrl,
+        foto_perfil_url: fotoPerfilUrl,
+        historia_blocks: historiaBlocks,
+        santo_nome: santoNome.trim() || null,
+        santo_descricao: santoDescricao.trim() || null,
+        santo_imagem_url: santoImagemUrl,
+        santo_data_festa: santoDataFesta.trim() || null,
+        curiosidades,
+        informacoes_uteis: informacoesUteis,
+        seo_title: seoTitle.trim() || null,
+        seo_description: seoDescription.trim() || null,
+        seo_keywords: seoKeywords.trim() || null,
         instagram: instagramHandle.trim() || null,
         facebook: facebookHandle.trim() || null,
         site: site.trim() || null,
@@ -261,7 +318,9 @@ function EditarContent({ id }: { id: string }) {
     )
   }
 
-  const isOwner = user?.id === paroquia.owner_user_id
+  const isOwner =
+    !!user?.id &&
+    (user.id === paroquia.owner_user_id || user.id === paroquia.criado_por)
   if (!isOwner) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-4">
@@ -334,6 +393,30 @@ function EditarContent({ id }: { id: string }) {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Capa + Perfil */}
+          <Card>
+            <SectionTitle icon={Camera} label="Capa e Perfil" />
+            <p className="text-xs mb-3" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+              A capa aparece como banner da página pública e a foto de perfil como avatar da igreja.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4">
+              <SingleImageUploader
+                label="Foto de capa"
+                value={fotoCapaUrl}
+                aspect="16 / 9"
+                onChange={setFotoCapaUrl}
+                onError={setError}
+              />
+              <SingleImageUploader
+                label="Foto de perfil"
+                value={fotoPerfilUrl}
+                aspect="1 / 1"
+                onChange={setFotoPerfilUrl}
+                onError={setError}
+              />
+            </div>
+          </Card>
+
           <FotosGallery value={fotos} onChange={setFotos} onError={setError} />
 
           {/* Identidade */}
@@ -475,6 +558,89 @@ function EditarContent({ id }: { id: string }) {
             />
           </Card>
 
+          <HistoriaBlocksEditor value={historiaBlocks} onChange={setHistoriaBlocks} onError={setError} />
+
+          {/* Santo */}
+          <Card>
+            <SectionTitle icon={Crown} label="Santo Padroeiro" />
+            <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-4">
+              <Field label="Nome do santo" value={santoNome} onChange={setSantoNome} />
+              <Field label="Data da festa" value={santoDataFesta} onChange={setSantoDataFesta} />
+            </div>
+            <div>
+              <label
+                className="block text-xs mb-2 tracking-wider uppercase"
+                style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}
+              >
+                História / Descrição
+              </label>
+              <textarea
+                value={santoDescricao}
+                onChange={e => setSantoDescricao(e.target.value)}
+                rows={5}
+                className="w-full px-4 py-3 rounded-xl text-sm resize-none"
+                style={{
+                  background: 'rgba(10,10,10,0.6)',
+                  border: '1px solid rgba(201,168,76,0.12)',
+                  color: '#F2EDE4',
+                  fontFamily: 'Poppins, sans-serif',
+                  outline: 'none',
+                }}
+              />
+            </div>
+            <SingleImageUploader
+              label="Imagem do santo"
+              value={santoImagemUrl}
+              aspect="3 / 4"
+              onChange={setSantoImagemUrl}
+              onError={setError}
+            />
+          </Card>
+
+          {/* Curiosidades */}
+          <Card>
+            <SectionTitle icon={Sparkles} label="Curiosidades" />
+            <CuriosidadesEditor value={curiosidades} onChange={setCuriosidades} />
+          </Card>
+
+          {/* Informações úteis */}
+          <Card>
+            <SectionTitle icon={Lightbulb} label="Informações Úteis" />
+            <InfoUteisEditor value={informacoesUteis} onChange={setInformacoesUteis} />
+          </Card>
+
+          {/* SEO */}
+          <Card>
+            <SectionTitle icon={Search} label="SEO e GEO" />
+            <p className="text-xs mb-3" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+              Ajuda os mecanismos de busca a encontrar sua igreja. Deixe em branco para usar os padrões automáticos.
+            </p>
+            <Field label="Título (até 60 caracteres)" value={seoTitle} onChange={setSeoTitle} />
+            <div>
+              <label
+                className="block text-xs mb-2 tracking-wider uppercase"
+                style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}
+              >
+                Descrição (até 160 caracteres)
+              </label>
+              <textarea
+                value={seoDescription}
+                onChange={e => setSeoDescription(e.target.value)}
+                rows={3}
+                maxLength={200}
+                className="w-full px-4 py-3 rounded-xl text-sm resize-none"
+                style={{
+                  background: 'rgba(10,10,10,0.6)',
+                  border: '1px solid rgba(201,168,76,0.12)',
+                  color: '#F2EDE4',
+                  fontFamily: 'Poppins, sans-serif',
+                  outline: 'none',
+                }}
+              />
+            </div>
+            <Field label="Palavras-chave (separadas por vírgula)" value={seoKeywords} onChange={setSeoKeywords} />
+          </Card>
+
           {/* Verificação */}
           {!paroquia.verificado && (
             <Card highlight>
@@ -605,6 +771,319 @@ function SectionTitle({ icon: Icon, label }: { icon: React.ElementType; label: s
       >
         {label}
       </h3>
+    </div>
+  )
+}
+
+function SingleImageUploader({
+  label,
+  value,
+  aspect,
+  onChange,
+  onError,
+}: {
+  label: string
+  value: string | null
+  aspect: string
+  onChange: (url: string | null) => void
+  onError?: (msg: string) => void
+}) {
+  const supabase = createClient()
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !supabase) return
+    if (!file.type.startsWith('image/')) {
+      onError?.('Apenas imagens são permitidas.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      onError?.('A imagem deve ter no máximo 5MB.')
+      return
+    }
+    setUploading(true)
+    const ext = file.name.split('.').pop() ?? 'jpg'
+    const path = `single/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+    const { error } = await supabase.storage.from('paroquias').upload(path, file)
+    if (error) {
+      onError?.(error.message)
+      setUploading(false)
+      return
+    }
+    const { data } = supabase.storage.from('paroquias').getPublicUrl(path)
+    onChange(data.publicUrl)
+    setUploading(false)
+  }
+
+  return (
+    <div>
+      <label
+        className="block text-xs mb-2 tracking-wider uppercase"
+        style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}
+      >
+        {label}
+      </label>
+      {value ? (
+        <div
+          className="relative w-full rounded-xl overflow-hidden"
+          style={{ aspectRatio: aspect, background: 'rgba(10,10,10,0.6)', border: '1px solid rgba(201,168,76,0.12)' }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={value} alt={label} className="w-full h-full object-cover" />
+          <div className="absolute bottom-2 right-2 flex gap-1.5">
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              className="text-xs px-3 py-1.5 rounded-lg"
+              style={{
+                background: 'rgba(0,0,0,0.75)',
+                color: '#C9A84C',
+                border: '1px solid rgba(201,168,76,0.2)',
+                fontFamily: 'Poppins, sans-serif',
+              }}
+            >
+              Trocar
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange(null)}
+              className="text-xs px-3 py-1.5 rounded-lg"
+              style={{
+                background: 'rgba(0,0,0,0.75)',
+                color: '#D94F5C',
+                border: '1px solid rgba(217,79,92,0.3)',
+                fontFamily: 'Poppins, sans-serif',
+              }}
+            >
+              Remover
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="w-full rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2"
+          style={{
+            aspectRatio: aspect,
+            borderColor: 'rgba(201,168,76,0.15)',
+            color: '#7A7368',
+            background: 'transparent',
+          }}
+        >
+          {uploading ? (
+            <div
+              className="w-6 h-6 border-2 rounded-full animate-spin"
+              style={{ borderColor: 'rgba(201,168,76,0.3)', borderTopColor: '#C9A84C' }}
+            />
+          ) : (
+            <>
+              <ImageIcon className="w-5 h-5" style={{ color: '#C9A84C' }} />
+              <span className="text-xs" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                Selecionar imagem
+              </span>
+            </>
+          )}
+        </button>
+      )}
+      <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+    </div>
+  )
+}
+
+function CuriosidadesEditor({
+  value,
+  onChange,
+}: {
+  value: CuriosidadeItem[]
+  onChange: (v: CuriosidadeItem[]) => void
+}) {
+  const add = () =>
+    onChange([...value, { id: `cur_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, titulo: '', descricao: '' }])
+  const update = (id: string, patch: Partial<CuriosidadeItem>) =>
+    onChange(value.map(c => (c.id === id ? { ...c, ...patch } : c)))
+  const remove = (id: string) => onChange(value.filter(c => c.id !== id))
+
+  return (
+    <div className="space-y-3">
+      {value.length === 0 && (
+        <p className="text-xs italic" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+          Nenhuma curiosidade cadastrada ainda.
+        </p>
+      )}
+      {value.map(item => (
+        <div
+          key={item.id}
+          className="rounded-xl p-4 space-y-2"
+          style={{ background: 'rgba(10,10,10,0.55)', border: '1px solid rgba(201,168,76,0.12)' }}
+        >
+          <div className="flex items-start gap-2">
+            <input
+              type="text"
+              value={item.titulo}
+              onChange={e => update(item.id, { titulo: e.target.value })}
+              placeholder="Título da curiosidade"
+              className="flex-1 px-3 py-2 rounded-lg text-sm"
+              style={{
+                background: 'rgba(10,10,10,0.6)',
+                border: '1px solid rgba(201,168,76,0.12)',
+                color: '#F2EDE4',
+                fontFamily: 'Poppins, sans-serif',
+                outline: 'none',
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => remove(item.id)}
+              aria-label="Remover"
+              className="w-9 h-9 rounded-lg flex items-center justify-center"
+              style={{
+                background: 'rgba(10,10,10,0.6)',
+                border: '1px solid rgba(217,79,92,0.3)',
+                color: '#D94F5C',
+              }}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <textarea
+            value={item.descricao}
+            onChange={e => update(item.id, { descricao: e.target.value })}
+            placeholder="Descrição"
+            rows={3}
+            className="w-full px-3 py-2 rounded-lg text-sm resize-none"
+            style={{
+              background: 'rgba(10,10,10,0.6)',
+              border: '1px solid rgba(201,168,76,0.12)',
+              color: '#F2EDE4',
+              fontFamily: 'Poppins, sans-serif',
+              outline: 'none',
+            }}
+          />
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={add}
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs tracking-wider uppercase"
+        style={{
+          fontFamily: 'Cinzel, serif',
+          background: 'rgba(201,168,76,0.08)',
+          border: '1px solid rgba(201,168,76,0.15)',
+          color: '#C9A84C',
+        }}
+      >
+        <Plus className="w-3.5 h-3.5" /> Adicionar curiosidade
+      </button>
+    </div>
+  )
+}
+
+function InfoUteisEditor({
+  value,
+  onChange,
+}: {
+  value: InfoUtilItem[]
+  onChange: (v: InfoUtilItem[]) => void
+}) {
+  const add = () =>
+    onChange([
+      ...value,
+      { id: `uti_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, titulo: '', conteudo: '' },
+    ])
+  const update = (id: string, patch: Partial<InfoUtilItem>) =>
+    onChange(value.map(c => (c.id === id ? { ...c, ...patch } : c)))
+  const remove = (id: string) => onChange(value.filter(c => c.id !== id))
+
+  return (
+    <div className="space-y-3">
+      {value.length === 0 && (
+        <p className="text-xs italic" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+          Nenhuma informação útil cadastrada ainda.
+        </p>
+      )}
+      {value.map(item => (
+        <div
+          key={item.id}
+          className="rounded-xl p-4 space-y-2"
+          style={{ background: 'rgba(10,10,10,0.55)', border: '1px solid rgba(201,168,76,0.12)' }}
+        >
+          <div className="flex items-start gap-2">
+            <input
+              type="text"
+              value={item.titulo}
+              onChange={e => update(item.id, { titulo: e.target.value })}
+              placeholder="Ex: Pastoral do Batismo"
+              className="flex-1 px-3 py-2 rounded-lg text-sm"
+              style={{
+                background: 'rgba(10,10,10,0.6)',
+                border: '1px solid rgba(201,168,76,0.12)',
+                color: '#F2EDE4',
+                fontFamily: 'Poppins, sans-serif',
+                outline: 'none',
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => remove(item.id)}
+              aria-label="Remover"
+              className="w-9 h-9 rounded-lg flex items-center justify-center"
+              style={{
+                background: 'rgba(10,10,10,0.6)',
+                border: '1px solid rgba(217,79,92,0.3)',
+                color: '#D94F5C',
+              }}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <textarea
+            value={item.conteudo}
+            onChange={e => update(item.id, { conteudo: e.target.value })}
+            placeholder="Detalhes, horário, instruções..."
+            rows={3}
+            className="w-full px-3 py-2 rounded-lg text-sm resize-none"
+            style={{
+              background: 'rgba(10,10,10,0.6)',
+              border: '1px solid rgba(201,168,76,0.12)',
+              color: '#F2EDE4',
+              fontFamily: 'Poppins, sans-serif',
+              outline: 'none',
+            }}
+          />
+          <input
+            type="url"
+            value={item.link ?? ''}
+            onChange={e => update(item.id, { link: e.target.value })}
+            placeholder="Link (opcional)"
+            className="w-full px-3 py-2 rounded-lg text-sm"
+            style={{
+              background: 'rgba(10,10,10,0.6)',
+              border: '1px solid rgba(201,168,76,0.12)',
+              color: '#F2EDE4',
+              fontFamily: 'Poppins, sans-serif',
+              outline: 'none',
+            }}
+          />
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={add}
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs tracking-wider uppercase"
+        style={{
+          fontFamily: 'Cinzel, serif',
+          background: 'rgba(201,168,76,0.08)',
+          border: '1px solid rgba(201,168,76,0.15)',
+          color: '#C9A84C',
+        }}
+      >
+        <Plus className="w-3.5 h-3.5" /> Adicionar item
+      </button>
     </div>
   )
 }
