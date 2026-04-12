@@ -3,7 +3,7 @@
 
 // ─── Context Menu ───
 
-export type ContextMenuAction = 'figura' | 'versiculo' | 'dogma' | 'conceito'
+export type ContextMenuAction = 'figura' | 'versiculo' | 'dogma' | 'conceito' | 'postit'
 
 // ─── Entity Types ───
 
@@ -23,6 +23,7 @@ export type NodeType =
   | 'dogma'
   | 'conceito'
   | 'encarnado'
+  | 'postit'
 
 export type RelationType =
   | 'tipologia'
@@ -308,6 +309,15 @@ export interface EncarnacaoNodeData {
   description: string
   layer_id: number
   bible_reference: string
+}
+
+export type PostItColor = 'amber' | 'pink' | 'blue' | 'green' | 'purple'
+
+export interface PostItNodeData {
+  title: string
+  body: string
+  color: PostItColor
+  layer_id: number
 }
 
 // ─── Canvas Layer ───

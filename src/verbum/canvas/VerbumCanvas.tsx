@@ -7,22 +7,18 @@ import {
   Controls,
   Background,
   BackgroundVariant,
-  useNodesState,
-  useEdgesState,
   useReactFlow,
   ReactFlowProvider,
   type Node,
   type Edge,
-  type OnConnect,
   type Connection,
-  type NodeChange,
+  type OnConnect,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import Link from 'next/link'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, HelpCircle, Save, Cloud, CloudOff, Share2, Sparkles } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { ArrowLeft, Plus, HelpCircle, Save, Cloud, CloudOff, Share2, Sparkles, BookOpen, Download } from 'lucide-react'
 
-import { useAuth } from '@/contexts/AuthContext'
 import { nodeTypes } from '../nodes/nodeTypes'
 import { edgeTypes } from '../edges/edgeTypes'
 import { VERBUM_COLORS } from '../design-tokens'
@@ -32,76 +28,48 @@ import ContextMenu from './ContextMenu'
 import AddNodePanel, { type AddNodePayload } from '../panels/AddNodePanel'
 import ConnectionTypeSelector from '../panels/ConnectionTypeSelector'
 import EdgeDetailPanel from '../panels/EdgeDetailPanel'
-// ShareModal lazy-loaded above
 import { getConnectionExplanation } from '../services/openai.service'
 import { proposeConnections } from '../services/connection.service'
-import {
-  getFlow,
-  createFlow,
-  updateFlow,
-  loadFlowNodes,
-  loadFlowEdges,
-  saveFlowNode,
-  saveFlowEdge,
-  deleteFlowEdge,
-  updateNodePosition as persistNodePosition,
-} from '../services/flow.service'
 import { ProposalsBadge } from '../panels/ProposalsPanel'
+import { useVerbumFlow, TRINITAS_NODE_ID } from '../hooks/useVerbumFlow'
+import { VerbumCanvasProvider } from '../contexts/VerbumCanvasContext'
+import SelectionToolbar from './SelectionToolbar'
+import CanvasSearch from './CanvasSearch'
+import ConnectionFilter from './ConnectionFilter'
 const ProposalsPanel = lazy(() => import('../panels/ProposalsPanel'))
 const ShareModal = lazy(() => import('../panels/ShareModal'))
+const AISearchPanel = lazy(() => import('../panels/AISearchPanel'))
+const ExportPanel = lazy(() => import('../panels/ExportPanel'))
 import type {
   ConnectionProposal,
-  TrinitasNodeData,
   ContextMenuAction,
   RelationType,
   VerbumSource,
   EdgeStatus,
-  VerbumFlow,
 } from '../types/verbum.types'
 
-// Fixed UUID for the Trinitas node — must be valid UUID for DB compatibility
-const TRINITAS_NODE_ID = '00000000-0000-4000-a000-000000000001'
-
-// Initial Triquetra node at center
-const INITIAL_NODES: Node[] = [
-  {
-    id: TRINITAS_NODE_ID,
-    type: 'trinitas',
-    position: { x: 0, y: 0 },
-    data: {
-      canonical_name: 'trindade',
-      display_name: 'Santíssima Trindade',
-      layer_id: 0,
-      is_canonical: true,
-    } satisfies TrinitasNodeData,
-    draggable: false,
-    selectable: true,
-  },
-]
-
 function VerbumCanvasInner() {
-  const { user, isLoading: authLoading } = useAuth()
-  const searchParams = useSearchParams()
+  const {
+    user, authLoading,
+    currentFlow, setCurrentFlow, flowName, flowIdParam,
+    isReadOnly, saveStatus, setSaveStatus,
+    canvasLoading, canvasError, setCanvasError,
+    nodes, edges, setNodes, setEdges,
+    handleNodesChange, handleEdgesChange,
+    nodesRef, edgesRef, currentFlowRef, isLoadingRef,
+    triggerSave, retryInit,
+    saveFlowNode, saveFlowEdge, deleteFlowEdge, deleteFlowNode,
+    updateFlow,
+  } = useVerbumFlow()
+
   const router = useRouter()
-  const flowIdParam = searchParams.get('flow')
-  const [canvasLoading, setCanvasLoading] = useState(true)
-  const [canvasError, setCanvasError] = useState<string | null>(null)
-
-  const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES)
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const { screenToFlowPosition } = useReactFlow()
-
-  // Flow state
-  const [currentFlow, setCurrentFlow] = useState<VerbumFlow | null>(null)
-  const [flowName, setFlowName] = useState('Meu Fluxo')
-  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved' | 'offline'>('offline')
-  const [isReadOnly, setIsReadOnly] = useState(false)
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; flowX: number; flowY: number } | null>(null)
 
   // AddNodePanel state
-  const [addPanel, setAddPanel] = useState<{ visible: boolean; mode: ContextMenuAction }>({
+  const [addPanel, setAddPanel] = useState<{ visible: boolean; mode: Exclude<ContextMenuAction, 'postit'> }>({
     visible: false,
     mode: 'figura',
   })
@@ -138,204 +106,23 @@ function VerbumCanvasInner() {
   const [visibleLayers, setVisibleLayers] = useState<number[]>([0, 1, 2, 3, 4, 5])
   const [focusNodeId, setFocusNodeId] = useState<string | null>(null)
   const [shareModalVisible, setShareModalVisible] = useState(false)
+  const [searchPanelVisible, setSearchPanelVisible] = useState(false)
+  const [exportPanelVisible, setExportPanelVisible] = useState(false)
+  const [highlightNodeId, setHighlightNodeId] = useState<string | null>(null)
+  const [connectionFilterEntities, setConnectionFilterEntities] = useState<string[]>([])
+  const [connectionFilterRelation, setConnectionFilterRelation] = useState<string | null>(null)
 
-  // Debounce ref for auto-save
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const positionDebounceRef = useRef<Record<string, NodeJS.Timeout>>({})
-  const isLoadingRef = useRef(false)
-  const initDoneRef = useRef(false)
   const addingNodeRef = useRef(false)
   const longPressRef = useRef<NodeJS.Timeout | null>(null)
   const proposalTimerRef = useRef<NodeJS.Timeout | null>(null)
   const proposalAbortRef = useRef<AbortController | null>(null)
 
-  // Refs to avoid stale closures — updated via useEffect (not during render)
-  const nodesRef = useRef(nodes)
-  const edgesRef = useRef(edges)
-  const currentFlowRef = useRef(currentFlow)
-  useEffect(() => { nodesRef.current = nodes }, [nodes])
-  useEffect(() => { edgesRef.current = edges }, [edges])
-  useEffect(() => { currentFlowRef.current = currentFlow }, [currentFlow])
-
-  // ─── Reset init when flow ID changes (prevents loading loop) ───
-  const prevFlowIdRef = useRef<string | null>(null)
-  useEffect(() => {
-    if (flowIdParam !== prevFlowIdRef.current) {
-      prevFlowIdRef.current = flowIdParam
-      initDoneRef.current = false
-    }
-  }, [flowIdParam])
-
-  // ─── Load or create flow on mount ───
-  useEffect(() => {
-    if (!user?.id || initDoneRef.current) return
-    let cancelled = false
-
-    async function initFlow() {
-      isLoadingRef.current = true
-      setCanvasLoading(true)
-      setCanvasError(null)
-
-      try {
-        if (flowIdParam) {
-          // Load existing flow
-          const flow = await getFlow(flowIdParam)
-          if (cancelled) return
-          if (!flow) {
-            setCanvasError('Fluxo não encontrado.')
-            return
-          }
-
-          setCurrentFlow(flow)
-          setFlowName(flow.name)
-          setIsReadOnly(flow.user_id !== user!.id)
-
-          // Load nodes and edges
-          const [dbNodes, dbEdges] = await Promise.all([
-            loadFlowNodes(flowIdParam),
-            loadFlowEdges(flowIdParam),
-          ])
-          if (cancelled) return
-
-          // Convert DB nodes to React Flow nodes (filter out Trinitas to avoid duplicate)
-          const loadedNodes: Node[] = [
-            ...INITIAL_NODES,
-            ...dbNodes.filter((n: Record<string, unknown>) => n.id !== TRINITAS_NODE_ID).map((n: Record<string, unknown>) => ({
-              id: n.id as string,
-              type: n.node_type as string,
-              position: { x: n.pos_x as number, y: n.pos_y as number },
-              data: {
-                title: n.title,
-                title_latin: n.title_latin,
-                description: n.description,
-                layer_id: n.layer_id,
-                bible_reference: n.bible_reference,
-                bible_text: n.bible_text,
-                bible_book: n.bible_book,
-                testament: (n.bible_book as string)?.match(/^(Gn|Ex|Lv|Nm|Dt|Js|Jz|Rt|1Sm|2Sm|1Rs|2Rs|1Cr|2Cr|Esd|Ne|Tb|Jt|Est|1Mc|2Mc|Jó|Sl|Pr|Ecl|Ct|Sb|Eclo|Is|Jr|Lm|Br|Ez|Dn|Os|Jl|Am|Ab|Jn|Mq|Na|Hc|Sf|Ag|Zc|Ml)/) ? 'AT' : 'NT',
-                is_canonical: n.is_canonical,
-                canonical_entity_id: n.canonical_entity_id,
-                ccc_paragraph: n.ccc_paragraph,
-                ccc_text: n.ccc_text,
-              },
-            })),
-          ]
-
-          // Convert DB edges to React Flow edges
-          const loadedEdges: Edge[] = dbEdges.map((e: Record<string, unknown>) => ({
-            id: e.id as string,
-            source: e.source_node_id as string,
-            target: e.target_node_id as string,
-            type: e.relation_type as string,
-            data: {
-              relation_type: e.relation_type,
-              status: e.status,
-              magisterial_weight: e.magisterial_weight,
-              theological_name: e.theological_name,
-              explanation_short: e.ai_explanation_short,
-              explanation_full: e.ai_explanation,
-              sources: e.sources || [],
-            },
-          }))
-
-          setNodes(loadedNodes)
-          setEdges(loadedEdges)
-          setSaveStatus('saved')
-        } else {
-          // Create a new flow
-          const newFlow = await createFlow(user!.id, 'Meu Fluxo')
-          if (cancelled || !newFlow) return
-
-          setCurrentFlow(newFlow)
-          setFlowName(newFlow.name)
-          setSaveStatus('saved')
-          // Update URL without triggering re-render — prevents re-initialization loop
-          window.history.replaceState({}, '', `/verbum/canvas?flow=${newFlow.id}`)
-        }
-      } catch (err) {
-        console.error('initFlow error:', err)
-        if (!cancelled) {
-          setCanvasError('Erro ao carregar o fluxo. Tente novamente.')
-        }
-      } finally {
-        isLoadingRef.current = false
-        initDoneRef.current = true
-        if (!cancelled) setCanvasLoading(false)
-      }
-    }
-
-    initFlow()
-    return () => { cancelled = true }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, flowIdParam])
-
-  // ─── Auto-save debounced (stable — uses refs to avoid dependency cascades) ───
-  const triggerSave = useCallback(() => {
-    const flow = currentFlowRef.current
-    if (!flow || !user?.id || isReadOnly || isLoadingRef.current) return
-    setSaveStatus('unsaved')
-
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-    saveTimeoutRef.current = setTimeout(async () => {
-      setSaveStatus('saving')
-      try {
-        const userNodes = nodesRef.current.filter(n => n.id !== TRINITAS_NODE_ID)
-        await updateFlow(flow.id, {
-          node_count: userNodes.length,
-          edge_count: edgesRef.current.length,
-        })
-        setSaveStatus('saved')
-      } catch {
-        setSaveStatus('unsaved')
-      }
-    }, 2000)
-  }, [user?.id, isReadOnly])
-
-  // ─── Persist node position on drag ───
-  const handleNodesChange = useCallback(
-    (changes: NodeChange[]) => {
-      onNodesChange(changes)
-
-      if (!currentFlowRef.current || !user?.id || isReadOnly) return
-
-      for (const change of changes) {
-        if (change.type === 'position' && change.position && change.dragging === false && change.id !== TRINITAS_NODE_ID) {
-          const nodeId = change.id
-          const pos = change.position
-          if (positionDebounceRef.current[nodeId]) {
-            clearTimeout(positionDebounceRef.current[nodeId])
-          }
-          positionDebounceRef.current[nodeId] = setTimeout(() => {
-            persistNodePosition(nodeId, pos.x, pos.y).catch(() => {})
-            delete positionDebounceRef.current[nodeId]
-          }, 500)
-          triggerSave()
-        }
-      }
-    },
-    [onNodesChange, user?.id, isReadOnly, triggerSave]
-  )
-
-  // ─── beforeunload warning ───
-  useEffect(() => {
-    const handler = (e: BeforeUnloadEvent) => {
-      if (saveStatus === 'unsaved' || saveStatus === 'saving') {
-        e.preventDefault()
-      }
-    }
-    window.addEventListener('beforeunload', handler)
-    return () => window.removeEventListener('beforeunload', handler)
-  }, [saveStatus])
-
-  // ─── Cleanup all timers on unmount ───
+  // ─── Cleanup proposal/longpress timers on unmount ───
   useEffect(() => {
     return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
       if (proposalTimerRef.current) clearTimeout(proposalTimerRef.current)
       if (longPressRef.current) clearTimeout(longPressRef.current)
       proposalAbortRef.current?.abort()
-      Object.values(positionDebounceRef.current).forEach(clearTimeout)
-      positionDebounceRef.current = {}
     }
   }, [])
 
@@ -600,9 +387,210 @@ function VerbumCanvasInner() {
     }, 1500)
   }, [])
 
+  // ─── Analyze existing node via AI (triggered by Sparkles button on nodes) ───
+  const onAnalyzeNode = useCallback((nodeId: string) => {
+    const node = nodesRef.current.find((n) => n.id === nodeId)
+    if (!node) return
+
+    const nodeData = node.data as Record<string, unknown>
+    scheduleProposalCheck({
+      id: node.id,
+      title: (nodeData.title as string) || (nodeData.display_name as string) || node.id,
+      type: node.type || 'unknown',
+      ref: (nodeData.bible_reference as string) || undefined,
+    })
+  }, [scheduleProposalCheck])
+
+  // ─── Update node data (used by PostItNode for inline editing) ───
+  const onUpdateNodeData = useCallback((nodeId: string, updates: Record<string, unknown>) => {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === nodeId ? { ...n, data: { ...n.data, ...updates } } : n
+      )
+    )
+
+    // Persist to DB
+    if (currentFlow && user?.id) {
+      const node = nodesRef.current.find((n) => n.id === nodeId)
+      if (node) {
+        const merged = { ...node.data, ...updates } as Record<string, unknown>
+        saveFlowNode(currentFlow.id, user.id, {
+          id: nodeId,
+          node_type: node.type || 'postit',
+          title: (merged.title as string) || '',
+          title_latin: (merged.color as string) || null, // post-it color stored in title_latin
+          description: (merged.body as string) || (merged.description as string) || null,
+          layer_id: (merged.layer_id as number) || 5,
+          pos_x: node.position.x,
+          pos_y: node.position.y,
+        }).catch(() => setSaveStatus('unsaved'))
+      }
+    }
+    triggerSave()
+  }, [setNodes, currentFlow, user?.id, triggerSave])
+
+  const canvasContextValue = useMemo(() => ({
+    onAnalyzeNode,
+    onUpdateNodeData,
+    isReadOnly,
+  }), [onAnalyzeNode, onUpdateNodeData, isReadOnly])
+
+  // ─── Create a post-it directly (no AddNodePanel needed) ───
+  const createPostIt = useCallback(() => {
+    if (addingNodeRef.current) return
+    addingNodeRef.current = true
+    setTimeout(() => { addingNodeRef.current = false }, 500)
+
+    const newId = crypto.randomUUID()
+    const pos = insertPositionRef.current
+    const data = {
+      title: 'Nova Nota',
+      body: '',
+      color: 'amber',
+      layer_id: 5,
+    }
+
+    const newNode = {
+      id: newId,
+      type: 'postit' as const,
+      position: pos,
+      data,
+    }
+
+    setNodes((nds) => [...nds, newNode])
+
+    if (currentFlow && user?.id) {
+      saveFlowNode(currentFlow.id, user.id, {
+        id: newId,
+        node_type: 'postit',
+        title: data.title,
+        title_latin: data.color,
+        description: null,
+        layer_id: 5,
+        pos_x: pos.x,
+        pos_y: pos.y,
+      }).catch(() => setSaveStatus('unsaved'))
+    }
+    triggerSave()
+  }, [setNodes, currentFlow, user?.id, triggerSave])
+
+  // ─── Add a verse from the AI search panel ───
+  const onAddVerseFromSearch = useCallback((reference: string, text: string) => {
+    const newId = crypto.randomUUID()
+    // Detect testament from book abbreviation
+    const atBooks = /^(Gn|Ex|Lv|Nm|Dt|Js|Jz|Rt|1Sm|2Sm|1Rs|2Rs|1Cr|2Cr|Esd|Ne|Tb|Jt|Est|1Mc|2Mc|Jó|Sl|Pr|Ecl|Ct|Sb|Eclo|Is|Jr|Lm|Br|Ez|Dn|Os|Jl|Am|Ab|Jn|Mq|Na|Hc|Sf|Ag|Zc|Ml)/
+    const testament = atBooks.test(reference) ? 'AT' : 'NT'
+    const book = reference.split(/\s/)[0] || ''
+
+    // Place new verse near center with offset to avoid overlap
+    const nodeCount = nodesRef.current.length
+    const pos = { x: 300 + (nodeCount % 5) * 50, y: 200 + Math.floor(nodeCount / 5) * 80 }
+
+    const data = {
+      title: reference,
+      bible_reference: reference,
+      bible_text: text,
+      bible_book: book,
+      testament,
+      layer_id: testament === 'AT' ? 2 : 3,
+    }
+
+    setNodes((nds) => [...nds, { id: newId, type: 'versiculo', position: pos, data }])
+
+    if (currentFlow && user?.id) {
+      saveFlowNode(currentFlow.id, user.id, {
+        id: newId,
+        node_type: 'versiculo',
+        title: reference,
+        bible_reference: reference,
+        bible_text: text,
+        bible_book: book,
+        layer_id: data.layer_id,
+        pos_x: pos.x,
+        pos_y: pos.y,
+      }).catch(() => setSaveStatus('unsaved'))
+    }
+
+    // Schedule AI connection proposals for the new verse
+    scheduleProposalCheck({
+      id: newId,
+      title: reference,
+      type: 'versiculo',
+      ref: reference,
+    })
+
+    triggerSave()
+  }, [setNodes, currentFlow, user?.id, triggerSave, scheduleProposalCheck])
+
+  // ─── Multi-select helpers ───
+  const selectedNodes = useMemo(
+    () => nodes.filter((n) => n.selected && n.id !== TRINITAS_NODE_ID),
+    [nodes]
+  )
+
+  const onAlignHorizontal = useCallback(() => {
+    if (selectedNodes.length < 2) return
+    const avgY = selectedNodes.reduce((sum, n) => sum + n.position.y, 0) / selectedNodes.length
+    const ids = new Set(selectedNodes.map((n) => n.id))
+    setNodes((nds) =>
+      nds.map((n) => (ids.has(n.id) ? { ...n, position: { ...n.position, y: avgY } } : n))
+    )
+    triggerSave()
+  }, [selectedNodes, setNodes, triggerSave])
+
+  const onAlignVertical = useCallback(() => {
+    if (selectedNodes.length < 2) return
+    const avgX = selectedNodes.reduce((sum, n) => sum + n.position.x, 0) / selectedNodes.length
+    const ids = new Set(selectedNodes.map((n) => n.id))
+    setNodes((nds) =>
+      nds.map((n) => (ids.has(n.id) ? { ...n, position: { ...n.position, x: avgX } } : n))
+    )
+    triggerSave()
+  }, [selectedNodes, setNodes, triggerSave])
+
+  const onDistribute = useCallback(() => {
+    if (selectedNodes.length < 3) return
+    const sorted = [...selectedNodes].sort((a, b) => a.position.x - b.position.x)
+    const minX = sorted[0].position.x
+    const maxX = sorted[sorted.length - 1].position.x
+    const step = (maxX - minX) / (sorted.length - 1)
+    const posMap = new Map(sorted.map((n, i) => [n.id, minX + i * step]))
+    setNodes((nds) =>
+      nds.map((n) => (posMap.has(n.id) ? { ...n, position: { ...n.position, x: posMap.get(n.id)! } } : n))
+    )
+    triggerSave()
+  }, [selectedNodes, setNodes, triggerSave])
+
+  const onDeleteSelected = useCallback(() => {
+    const ids = selectedNodes.map((n) => n.id)
+    setNodes((nds) => nds.filter((n) => !ids.includes(n.id)))
+    setEdges((eds) => eds.filter((e) => !ids.includes(e.source) && !ids.includes(e.target)))
+    for (const id of ids) {
+      deleteFlowNode(id).catch(() => setSaveStatus('unsaved'))
+    }
+    triggerSave()
+  }, [selectedNodes, setNodes, setEdges, triggerSave])
+
+  const onAnalyzeSelected = useCallback(() => {
+    // Analyze the first selected node, proposals will include connections to all others
+    const first = selectedNodes[0]
+    if (!first) return
+    const nodeData = first.data as Record<string, unknown>
+    scheduleProposalCheck({
+      id: first.id,
+      title: (nodeData.title as string) || (nodeData.display_name as string) || first.id,
+      type: first.type || 'unknown',
+      ref: (nodeData.bible_reference as string) || undefined,
+    })
+  }, [selectedNodes, scheduleProposalCheck])
+
   const onContextMenuSelect = useCallback((action: ContextMenuAction) => {
+    if (action === 'postit') {
+      createPostIt()
+      return
+    }
     setAddPanel({ visible: true, mode: action })
-  }, [])
+  }, [createPostIt])
 
   const onAddNode = useCallback(
     (payload: AddNodePayload) => {
@@ -780,6 +768,11 @@ function VerbumCanvasInner() {
     )
   }, [])
 
+  const onConnectionFilterChange = useCallback((entities: string[], relation: string | null) => {
+    setConnectionFilterEntities(entities)
+    setConnectionFilterRelation(relation)
+  }, [])
+
   const onNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
       if (event.altKey) {
@@ -813,6 +806,8 @@ function VerbumCanvasInner() {
         isFocused = connectedNodeIds.has(node.id)
       }
 
+      const isHighlighted = highlightNodeId === node.id
+
       return {
         ...node,
         hidden: !isLayerVisible,
@@ -820,10 +815,11 @@ function VerbumCanvasInner() {
           ...node.style,
           opacity: isFocused ? 1 : 0.15,
           transition: 'opacity 0.3s ease',
+          ...(isHighlighted ? { boxShadow: `0 0 20px ${VERBUM_COLORS.ui_gold}`, borderRadius: '12px' } : {}),
         },
       }
     })
-  }, [nodes, visibleLayers, focusNodeId, edges])
+  }, [nodes, visibleLayers, focusNodeId, edges, highlightNodeId])
 
   const filteredEdges = useMemo(() => {
     const hiddenNodeIds = new Set(
@@ -835,6 +831,9 @@ function VerbumCanvasInner() {
         .map((n) => n.id)
     )
 
+    const hasEntityFilter = connectionFilterEntities.length > 0
+    const entitySet = new Set(connectionFilterEntities)
+
     return edges.map((edge) => {
       const sourceHidden = hiddenNodeIds.has(edge.source)
       const targetHidden = hiddenNodeIds.has(edge.target)
@@ -844,8 +843,22 @@ function VerbumCanvasInner() {
         isFocused = edge.source === focusNodeId || edge.target === focusNodeId
       }
 
+      // Connection filter: hide edges not involving selected entities
+      let isFiltered = false
+      if (hasEntityFilter) {
+        isFiltered = !entitySet.has(edge.source) && !entitySet.has(edge.target)
+      }
+      if (connectionFilterRelation) {
+        const edgeData = edge.data as Record<string, unknown> | undefined
+        const rel = (edgeData?.relation_type as string) || edge.type || ''
+        if (rel !== connectionFilterRelation) isFiltered = true
+      }
+
       if (sourceHidden && targetHidden) {
         return { ...edge, hidden: true }
+      }
+      if (isFiltered) {
+        return { ...edge, style: { ...edge.style, opacity: 0.05, transition: 'opacity 0.3s ease' } }
       }
       if (sourceHidden || targetHidden) {
         return {
@@ -862,7 +875,7 @@ function VerbumCanvasInner() {
         },
       }
     })
-  }, [edges, nodes, visibleLayers, focusNodeId])
+  }, [edges, nodes, visibleLayers, focusNodeId, connectionFilterEntities, connectionFilterRelation])
 
   const defaultViewport = useMemo(() => ({ x: 0, y: 0, zoom: 0.8 }), [])
 
@@ -910,11 +923,7 @@ function VerbumCanvasInner() {
             {canvasError}
           </div>
           <button
-            onClick={() => {
-              initDoneRef.current = false
-              setCanvasError(null)
-              setCanvasLoading(true)
-            }}
+            onClick={retryInit}
             className="px-4 py-2 rounded-xl text-xs font-medium transition-colors"
             style={{
               background: 'rgba(201,168,76,0.15)',
@@ -954,61 +963,67 @@ function VerbumCanvasInner() {
     >
       <CanvasBackground />
 
-      <ReactFlow
-        nodes={filteredNodes}
-        edges={filteredEdges}
-        onNodesChange={handleNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onNodeClick={onNodeClick}
-        onEdgeClick={onEdgeClick}
-        onPaneContextMenu={onPaneContextMenu}
-        onPaneClick={() => focusNodeId && setFocusNodeId(null)}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        defaultViewport={defaultViewport}
-        fitView
-        fitViewOptions={{ padding: 0.5, maxZoom: 1.2 }}
-        minZoom={0.1}
-        maxZoom={2}
-        proOptions={{ hideAttribution: true }}
-        className="verbum-flow"
-        style={{ background: 'transparent' }}
-        nodesDraggable={!isReadOnly}
-        nodesConnectable={!isReadOnly}
-        elementsSelectable={!isReadOnly}
-      >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={50}
-          size={1}
-          color="rgba(201, 168, 76, 0.04)"
-        />
-        <MiniMap
-          position="bottom-left"
-          nodeStrokeColor={VERBUM_COLORS.node_canonical_border}
-          nodeColor={VERBUM_COLORS.node_canonical_bg}
-          maskColor="rgba(10, 8, 6, 0.85)"
-          style={{
-            background: VERBUM_COLORS.ui_bg,
-            border: `1px solid ${VERBUM_COLORS.ui_border}`,
-            borderRadius: '8px',
-            marginBottom: 'env(safe-area-inset-bottom, 0px)',
-          }}
-          pannable
-          zoomable
-        />
-        <Controls
-          position="bottom-right"
-          showInteractive={false}
-          style={{
-            background: VERBUM_COLORS.ui_bg,
-            border: `1px solid ${VERBUM_COLORS.ui_border}`,
-            borderRadius: '8px',
-            marginBottom: 'env(safe-area-inset-bottom, 0px)',
-          }}
-        />
-      </ReactFlow>
+      <VerbumCanvasProvider value={canvasContextValue}>
+        <ReactFlow
+          nodes={filteredNodes}
+          edges={filteredEdges}
+          onNodesChange={handleNodesChange}
+          onEdgesChange={handleEdgesChange}
+          onConnect={onConnect}
+          onNodeClick={onNodeClick}
+          onEdgeClick={onEdgeClick}
+          onPaneContextMenu={onPaneContextMenu}
+          onPaneClick={() => focusNodeId && setFocusNodeId(null)}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          defaultViewport={defaultViewport}
+          fitView
+          fitViewOptions={{ padding: 0.5, maxZoom: 1.2 }}
+          minZoom={0.1}
+          maxZoom={2}
+          proOptions={{ hideAttribution: true }}
+          className="verbum-flow"
+          style={{ background: 'transparent' }}
+          nodesDraggable={!isReadOnly}
+          nodesConnectable={!isReadOnly}
+          elementsSelectable={!isReadOnly}
+          deleteKeyCode={isReadOnly ? null : ['Backspace', 'Delete']}
+          multiSelectionKeyCode="Shift"
+          selectionOnDrag={!isReadOnly}
+          panOnDrag={isReadOnly ? true : [1, 2]}
+        >
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={50}
+            size={1}
+            color="rgba(201, 168, 76, 0.04)"
+          />
+          <MiniMap
+            position="bottom-left"
+            nodeStrokeColor={VERBUM_COLORS.node_canonical_border}
+            nodeColor={VERBUM_COLORS.node_canonical_bg}
+            maskColor="rgba(10, 8, 6, 0.85)"
+            style={{
+              background: VERBUM_COLORS.ui_bg,
+              border: `1px solid ${VERBUM_COLORS.ui_border}`,
+              borderRadius: '8px',
+              marginBottom: 'env(safe-area-inset-bottom, 0px)',
+            }}
+            pannable
+            zoomable
+          />
+          <Controls
+            position="bottom-right"
+            showInteractive={false}
+            style={{
+              background: VERBUM_COLORS.ui_bg,
+              border: `1px solid ${VERBUM_COLORS.ui_border}`,
+              borderRadius: '8px',
+              marginBottom: 'env(safe-area-inset-bottom, 0px)',
+            }}
+          />
+        </ReactFlow>
+      </VerbumCanvasProvider>
 
       {/* Top toolbar */}
       <div
@@ -1082,6 +1097,43 @@ function VerbumCanvasInner() {
             </button>
           )}
 
+          {/* AI Search button */}
+          <button
+            onClick={() => setSearchPanelVisible(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors"
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: `1px solid ${VERBUM_COLORS.ui_border}`,
+              color: VERBUM_COLORS.text_secondary,
+              fontFamily: 'Poppins, sans-serif',
+            }}
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Connection filter */}
+          <ConnectionFilter
+            nodes={nodes}
+            edges={edges}
+            filterEntities={connectionFilterEntities}
+            filterRelation={connectionFilterRelation}
+            onFilterChange={onConnectionFilterChange}
+          />
+
+          {/* Export button */}
+          <button
+            onClick={() => setExportPanelVisible(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors"
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: `1px solid ${VERBUM_COLORS.ui_border}`,
+              color: VERBUM_COLORS.text_secondary,
+              fontFamily: 'Poppins, sans-serif',
+            }}
+          >
+            <Download className="w-3.5 h-3.5" />
+          </button>
+
           {/* Quick add button */}
           {!isReadOnly && (
             <button
@@ -1132,6 +1184,15 @@ function VerbumCanvasInner() {
       </div>
 
       <LayerControls visibleLayers={visibleLayers} onToggleLayer={onToggleLayer} />
+
+      <SelectionToolbar
+        selectedNodes={selectedNodes}
+        onAlignHorizontal={onAlignHorizontal}
+        onAlignVertical={onAlignVertical}
+        onDistribute={onDistribute}
+        onDeleteSelected={onDeleteSelected}
+        onAnalyzeSelected={onAnalyzeSelected}
+      />
 
       {focusNodeId && (
         <div
@@ -1184,6 +1245,10 @@ function VerbumCanvasInner() {
       <EdgeDetailPanel
         visible={edgeDetail.visible}
         data={edgeDetail.data}
+        edgeId={edgeDetail.edgeId}
+        flowId={currentFlow?.id ?? null}
+        userId={user?.id ?? null}
+        isReadOnly={isReadOnly}
         onClose={() => setEdgeDetail({ visible: false, edgeId: null, data: null })}
         onApprove={onApproveEdge}
         onReject={onRejectEdge}
@@ -1214,6 +1279,29 @@ function VerbumCanvasInner() {
           />
         </Suspense>
       )}
+
+      {/* Export panel */}
+      <Suspense fallback={null}>
+        <ExportPanel
+          visible={exportPanelVisible}
+          flowName={flowName}
+          nodes={nodes}
+          edges={edges}
+          onClose={() => setExportPanelVisible(false)}
+        />
+      </Suspense>
+
+      {/* Canvas search (Cmd+F) */}
+      <CanvasSearch nodes={nodes} onHighlightNode={setHighlightNodeId} />
+
+      {/* AI Search Panel */}
+      <Suspense fallback={null}>
+        <AISearchPanel
+          visible={searchPanelVisible}
+          onClose={() => setSearchPanelVisible(false)}
+          onAddVerse={onAddVerseFromSearch}
+        />
+      </Suspense>
 
       {isGenerating && (
         <div

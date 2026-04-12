@@ -3,15 +3,18 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { motion } from 'framer-motion'
+import { Sparkles } from 'lucide-react'
 import { VERBUM_COLORS } from '../design-tokens'
+import { useVerbumCanvas } from '../contexts/VerbumCanvasContext'
 import type { EncarnacaoNodeData } from '../types/verbum.types'
 
-function EncarnacaoNode({ data, selected }: NodeProps) {
+function EncarnacaoNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as EncarnacaoNodeData
+  const { onAnalyzeNode, isReadOnly } = useVerbumCanvas()
 
   return (
     <motion.div
-      className="relative px-4 py-3 rounded-xl min-w-[150px] max-w-[200px]"
+      className="relative px-4 py-3 rounded-xl min-w-[150px] max-w-[200px] group"
       style={{
         background: 'linear-gradient(135deg, #1A1208 0%, #201810 100%)',
         border: `2px solid ${selected ? VERBUM_COLORS.ui_gold : VERBUM_COLORS.node_canonical_border}`,
@@ -26,6 +29,22 @@ function EncarnacaoNode({ data, selected }: NodeProps) {
       }}
       transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
     >
+      {/* AI Analysis Button */}
+      {!isReadOnly && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onAnalyzeNode(id) }}
+          className="absolute -top-2 -left-2 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+          style={{
+            background: VERBUM_COLORS.ui_bg,
+            border: `1px solid ${VERBUM_COLORS.ui_gold}`,
+            color: VERBUM_COLORS.ui_gold,
+          }}
+          title="Analisar conexões com IA"
+        >
+          <Sparkles className="w-3 h-3" />
+        </button>
+      )}
+
       <div
         className="text-sm font-bold text-center"
         style={{

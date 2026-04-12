@@ -18,10 +18,11 @@ const MENU_ITEMS: { action: ContextMenuAction; icon: string; label: string }[] =
   { action: 'versiculo', icon: '📖', label: 'Inserir Versículo' },
   { action: 'dogma', icon: '⛪', label: 'Inserir Dogma / Conceito' },
   { action: 'conceito', icon: '✨', label: 'Inserir da Tradição' },
+  { action: 'postit', icon: '📝', label: 'Nota Adesiva' },
 ]
 
 const MENU_WIDTH = 240
-const MENU_HEIGHT = 200 // approximate: header + 4 items
+const MENU_HEIGHT = 250 // approximate: header + 5 items
 
 export default function ContextMenu({ x, y, visible, onSelect, onClose }: ContextMenuProps) {
   // Clamp position so menu stays within viewport

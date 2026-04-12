@@ -22,7 +22,7 @@ import type {
 
 interface AddNodePanelProps {
   visible: boolean
-  mode: ContextMenuAction
+  mode: Exclude<ContextMenuAction, 'postit'>
   onClose: () => void
   onAddNode: (payload: AddNodePayload) => void
 }
