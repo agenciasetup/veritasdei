@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import type { Paroquia } from '@/types/paroquia'
 import CrossIcon from '@/components/icons/CrossIcon'
+import SeloVerificado from '@/components/paroquias/SeloVerificado'
 
 interface Stats {
   catolicos: number
@@ -24,6 +25,7 @@ export default function LandingPage() {
   const [animated, setAnimated] = useState(false)
   const [searchCity, setSearchCity] = useState('')
   const [searchResults, setSearchResults] = useState<Paroquia[]>([])
+  const [nearbyResults, setNearbyResults] = useState<Paroquia[]>([])
   const [searched, setSearched] = useState(false)
   const [searching, setSearching] = useState(false)
 
@@ -53,14 +55,42 @@ export default function LandingPage() {
     setSearching(true)
     setSearched(true)
 
+    const termo = searchCity.trim()
+    const SELECT =
+      'id, nome, diocese, cidade, estado, padre_responsavel, telefone, horarios_missa, horarios_confissao, tipo_igreja, foto_url, fotos, verificado, status'
+
     const { data } = await supabase
       .from('paroquias')
-      .select('id, nome, diocese, cidade, estado, padre_responsavel, telefone, horarios_missa, foto_url, status')
+      .select(SELECT)
       .eq('status', 'aprovada')
-      .ilike('cidade', `%${sanitizeIlike(searchCity.trim())}%`)
+      .ilike('cidade', `%${sanitizeIlike(termo)}%`)
+      .order('verificado', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(6)
 
-    setSearchResults((data as Paroquia[]) ?? [])
+    const exact = (data as Paroquia[]) ?? []
+    setSearchResults(exact)
+
+    // Busca igrejas de cidades próximas: mesmo estado, cidade diferente.
+    if (exact.length > 0) {
+      const uf = exact[0].estado
+      const cidadesDigitadas = new Set(exact.map(p => p.cidade.toLowerCase()))
+      const { data: nearby } = await supabase
+        .from('paroquias')
+        .select(SELECT)
+        .eq('status', 'aprovada')
+        .eq('estado', uf)
+        .order('verificado', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(12)
+      const filtered = ((nearby as Paroquia[]) ?? [])
+        .filter(p => !cidadesDigitadas.has(p.cidade.toLowerCase()))
+        .slice(0, 6)
+      setNearbyResults(filtered)
+    } else {
+      setNearbyResults([])
+    }
+
     setSearching(false)
   }
 
@@ -200,48 +230,46 @@ export default function LandingPage() {
         {/* Search Results */}
         {searched && !searching && (
           <div className="mt-4">
-            {searchResults.length === 0 ? (
+            {searchResults.length === 0 && nearbyResults.length === 0 ? (
               <p className="text-sm text-center py-4" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
                 Nenhuma paróquia encontrada em &quot;{searchCity}&quot;. Cadastre-se e ajude a registrar!
               </p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {searchResults.map(p => (
-                  <div
-                    key={p.id}
-                    className="rounded-xl p-4 transition-all"
-                    style={{
-                      background: 'rgba(16,16,16,0.7)',
-                      border: '1px solid rgba(201,168,76,0.1)',
-                    }}
-                  >
-                    <h4 className="text-sm font-bold mb-1" style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}>
-                      {p.nome}
-                    </h4>
-                    {p.diocese && (
-                      <p className="text-xs mb-1.5" style={{ color: '#7A7368' }}>{p.diocese}</p>
-                    )}
-                    <div className="flex items-center gap-1.5 text-xs mb-1" style={{ color: '#B8AFA2' }}>
-                      <MapPin className="w-3 h-3" style={{ color: '#C9A84C' }} />
-                      {p.cidade}, {p.estado}
-                    </div>
-                    {p.horarios_missa && p.horarios_missa.length > 0 && (
-                      <div className="flex items-center gap-1.5 text-xs" style={{ color: '#B8AFA2' }}>
-                        <Clock className="w-3 h-3" style={{ color: '#C9A84C' }} />
-                        {p.horarios_missa.slice(0, 2).map((h, i) => (
-                          <span key={i}>{h.dia} {h.horario}{i < Math.min(p.horarios_missa.length, 2) - 1 ? ', ' : ''}</span>
-                        ))}
-                      </div>
-                    )}
-                    {p.padre_responsavel && (
-                      <div className="flex items-center gap-1.5 text-xs mt-1" style={{ color: '#B8AFA2' }}>
-                        <Church className="w-3 h-3" style={{ color: '#C9A84C' }} />
-                        Pe. {p.padre_responsavel}
-                      </div>
-                    )}
+              <>
+                {searchResults.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {searchResults.map(p => (
+                      <LandingChurchCard key={p.id} p={p} />
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
+
+                {nearbyResults.length > 0 && (
+                  <>
+                    <h3
+                      className="text-xs tracking-wider uppercase mt-6 mb-3"
+                      style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
+                    >
+                      Em cidades próximas
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {nearbyResults.map(p => (
+                        <LandingChurchCard key={p.id} p={p} />
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                <div className="mt-4 text-center">
+                  <Link
+                    href={`/paroquias/buscar?cidade=${encodeURIComponent(searchCity.trim())}`}
+                    className="inline-flex items-center gap-2 text-xs tracking-wider uppercase"
+                    style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
+                  >
+                    Ver todas as igrejas →
+                  </Link>
+                </div>
+              </>
             )}
           </div>
         )}
@@ -348,5 +376,56 @@ function CounterCard({ icon: Icon, value, label }: { icon: React.ElementType; va
         </span>
       </div>
     </div>
+  )
+}
+
+function LandingChurchCard({ p }: { p: Paroquia }) {
+  return (
+    <Link
+      href={`/paroquias/${p.id}`}
+      className="block rounded-xl p-4 transition-all hover:border-[rgba(201,168,76,0.25)]"
+      style={{
+        background: 'rgba(16,16,16,0.7)',
+        border: '1px solid rgba(201,168,76,0.1)',
+      }}
+    >
+      <div className="flex items-start justify-between gap-2 mb-1">
+        <h4 className="text-sm font-bold" style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}>
+          {p.nome}
+        </h4>
+        {p.verificado && <SeloVerificado size="sm" showLabel={false} />}
+      </div>
+      {p.diocese && (
+        <p className="text-xs mb-1.5" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+          {p.diocese}
+        </p>
+      )}
+      <div className="flex items-center gap-1.5 text-xs mb-1" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
+        <MapPin className="w-3 h-3" style={{ color: '#C9A84C' }} />
+        {p.cidade}, {p.estado}
+      </div>
+      {p.horarios_missa && p.horarios_missa.length > 0 && (
+        <div className="flex items-start gap-1.5 text-xs mb-0.5" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
+          <Clock className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: '#C9A84C' }} />
+          <span>
+            Missa: {p.horarios_missa.slice(0, 2).map(h => `${h.dia.slice(0, 3)} ${h.horario}`).join(', ')}
+          </span>
+        </div>
+      )}
+      {p.horarios_confissao && p.horarios_confissao.length > 0 && (
+        <div className="flex items-start gap-1.5 text-xs" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
+          <Clock className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: '#D94F5C' }} />
+          <span>
+            Confissão: {p.horarios_confissao.slice(0, 2).map(h => `${h.dia.slice(0, 3)} ${h.horario}`).join(', ')}
+          </span>
+        </div>
+      )}
+      {p.padre_responsavel && (
+        <div className="flex items-center gap-1.5 text-xs mt-1" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
+          <Church className="w-3 h-3" style={{ color: '#C9A84C' }} />
+          Pe. {p.padre_responsavel}
+        </div>
+      )}
+    </Link>
   )
 }

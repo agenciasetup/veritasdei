@@ -5,8 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { VocacaoIcon } from '@/components/icons/VocacaoIcons'
 import {
-  CheckSquare, Church, Shield, CheckCircle, XCircle, Clock,
-  FileText, MapPin, User, ExternalLink,
+  CheckSquare, Church, Shield, CheckCircle, XCircle,
+  FileText, MapPin, User, ExternalLink, BadgeCheck,
 } from 'lucide-react'
 
 interface Verificacao {
@@ -34,7 +34,24 @@ interface ParoquiaPendente {
   profiles?: { name: string | null; email: string | null; vocacao: string }
 }
 
-type Tab = 'verificacoes' | 'paroquias'
+type Tab = 'verificacoes' | 'paroquias' | 'igrejas-verif'
+
+interface ParoquiaVerif {
+  id: string
+  nome: string
+  cnpj: string | null
+  tipo_igreja: string | null
+  diocese: string | null
+  cidade: string
+  estado: string
+  padre_responsavel: string | null
+  foto_url: string | null
+  verificacao_solicitada_em: string
+  verificacao_documento_path: string | null
+  verificacao_notas: string | null
+  owner_user_id: string | null
+  owner?: { name: string | null; email: string | null } | null
+}
 
 export default function AdminAprovacoesPage() {
   const supabase = createClient()
@@ -43,6 +60,7 @@ export default function AdminAprovacoesPage() {
   const [tab, setTab] = useState<Tab>('verificacoes')
   const [verificacoes, setVerificacoes] = useState<Verificacao[]>([])
   const [paroquias, setParoquias] = useState<ParoquiaPendente[]>([])
+  const [igrejasVerif, setIgrejasVerif] = useState<ParoquiaVerif[]>([])
   const [loading, setLoading] = useState(true)
 
   const fetchVerificacoes = useCallback(async () => {
@@ -71,10 +89,25 @@ export default function AdminAprovacoesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const fetchIgrejasVerif = useCallback(async () => {
+    if (!supabase) return
+    setLoading(true)
+    const { data } = await supabase
+      .from('paroquias')
+      .select('*, owner:owner_user_id(name, email)')
+      .not('verificacao_solicitada_em', 'is', null)
+      .eq('verificado', false)
+      .order('verificacao_solicitada_em', { ascending: true })
+    setIgrejasVerif((data as ParoquiaVerif[]) ?? [])
+    setLoading(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     if (tab === 'verificacoes') fetchVerificacoes()
-    else fetchParoquias()
-  }, [tab, fetchVerificacoes, fetchParoquias])
+    else if (tab === 'paroquias') fetchParoquias()
+    else fetchIgrejasVerif()
+  }, [tab, fetchVerificacoes, fetchParoquias, fetchIgrejasVerif])
 
   const handleVerificacao = async (id: string, action: 'aprovado' | 'rejeitado') => {
     if (!supabase || !profile) return
@@ -103,7 +136,31 @@ export default function AdminAprovacoesPage() {
     fetchParoquias()
   }
 
-  const totalPending = verificacoes.length + paroquias.length
+  const handleIgrejaVerif = async (id: string, action: 'aprovar' | 'rejeitar') => {
+    if (!supabase || !profile) return
+    if (action === 'aprovar') {
+      await supabase.from('paroquias').update({
+        verificado: true,
+        verificado_por: profile.id,
+        verificado_em: new Date().toISOString(),
+      }).eq('id', id)
+    } else {
+      await supabase.from('paroquias').update({
+        verificacao_solicitada_em: null,
+      }).eq('id', id)
+    }
+    fetchIgrejasVerif()
+  }
+
+  const openVerifDoc = async (path: string) => {
+    if (!supabase) return
+    const { data } = await supabase.storage
+      .from('paroquia-documentos')
+      .createSignedUrl(path, 600)
+    if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+  }
+
+  const totalPending = verificacoes.length + paroquias.length + igrejasVerif.length
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -117,10 +174,11 @@ export default function AdminAprovacoesPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-6 flex-wrap">
         {[
           { key: 'verificacoes' as Tab, icon: Shield, label: 'Verificações de Título' },
           { key: 'paroquias' as Tab, icon: Church, label: 'Paróquias Pendentes' },
+          { key: 'igrejas-verif' as Tab, icon: BadgeCheck, label: 'Verificações de Igrejas' },
         ].map(({ key, icon: Icon, label }) => (
           <button key={key} onClick={() => setTab(key)}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs transition-all"
@@ -206,6 +264,96 @@ export default function AdminAprovacoesPage() {
                         <CheckCircle className="w-3.5 h-3.5" /> Aprovar
                       </button>
                       <button onClick={() => handleVerificacao(v.id, 'rejeitado')}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all"
+                        style={{ background: 'rgba(217,79,92,0.1)', border: '1px solid rgba(217,79,92,0.2)', color: '#D94F5C', fontFamily: 'Poppins, sans-serif' }}>
+                        <XCircle className="w-3.5 h-3.5" /> Rejeitar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ═══ VERIFICAÇÕES DE IGREJAS ═══ */}
+      {!loading && tab === 'igrejas-verif' && (
+        <>
+          {igrejasVerif.length === 0 ? (
+            <EmptyState icon={BadgeCheck} message="Nenhuma igreja aguardando verificação" />
+          ) : (
+            <div className="space-y-3">
+              {igrejasVerif.map(p => (
+                <div key={p.id} className="rounded-2xl p-5"
+                  style={{ background: 'rgba(16,16,16,0.7)', border: '1px solid rgba(201,168,76,0.1)' }}>
+                  <div className="flex items-start gap-4">
+                    {p.foto_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.foto_url} alt={p.nome} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0"
+                        style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.15)' }}>
+                        <Church className="w-6 h-6" style={{ color: '#C9A84C' }} />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <p className="text-sm font-bold" style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}>
+                          {p.nome}
+                        </p>
+                        {p.tipo_igreja && (
+                          <span className="text-xs px-2 py-0.5 rounded-full"
+                            style={{ background: 'rgba(201,168,76,0.08)', color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}>
+                            {p.tipo_igreja}
+                          </span>
+                        )}
+                      </div>
+                      {p.diocese && <p className="text-xs" style={{ color: '#7A7368' }}>{p.diocese}</p>}
+                      <div className="flex items-center gap-3 mt-2 flex-wrap">
+                        <span className="flex items-center gap-1 text-xs" style={{ color: '#B8AFA2' }}>
+                          <MapPin className="w-3 h-3" style={{ color: '#C9A84C' }} />
+                          {p.cidade}, {p.estado}
+                        </span>
+                        {p.cnpj && (
+                          <span className="text-xs" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
+                            CNPJ: {p.cnpj}
+                          </span>
+                        )}
+                        {p.padre_responsavel && (
+                          <span className="flex items-center gap-1 text-xs" style={{ color: '#B8AFA2' }}>
+                            <User className="w-3 h-3" style={{ color: '#C9A84C' }} />
+                            Pe. {p.padre_responsavel}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs mt-1.5" style={{ color: '#7A736860' }}>
+                        Solicitado por {p.owner?.name ?? p.owner?.email ?? 'desconhecido'} em {new Date(p.verificacao_solicitada_em).toLocaleDateString('pt-BR')}
+                      </p>
+                      {p.verificacao_documento_path && (
+                        <button
+                          onClick={() => openVerifDoc(p.verificacao_documento_path!)}
+                          className="inline-flex items-center gap-1 text-xs mt-2 underline cursor-pointer"
+                          style={{ color: '#C9A84C', background: 'none', border: 'none' }}>
+                          <FileText className="w-3 h-3" /> Ver documento
+                          <ExternalLink className="w-3 h-3" />
+                        </button>
+                      )}
+                      {p.verificacao_notas && (
+                        <p className="text-xs mt-2 p-2 rounded-lg"
+                          style={{ background: 'rgba(10,10,10,0.5)', color: '#B8AFA2' }}>
+                          {p.verificacao_notas}
+                        </p>
+                      )}
+                    </div>
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button onClick={() => handleIgrejaVerif(p.id, 'aprovar')}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all"
+                        style={{ background: 'rgba(76,175,80,0.1)', border: '1px solid rgba(76,175,80,0.2)', color: '#4CAF50', fontFamily: 'Poppins, sans-serif' }}>
+                        <CheckCircle className="w-3.5 h-3.5" /> Aprovar
+                      </button>
+                      <button onClick={() => handleIgrejaVerif(p.id, 'rejeitar')}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all"
                         style={{ background: 'rgba(217,79,92,0.1)', border: '1px solid rgba(217,79,92,0.2)', color: '#D94F5C', fontFamily: 'Poppins, sans-serif' }}>
                         <XCircle className="w-3.5 h-3.5" /> Rejeitar
