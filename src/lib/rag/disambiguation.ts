@@ -238,6 +238,25 @@ export function disambiguateQuery(query: string): DisambiguationResult {
     result.wasDisambiguated = true
   }
 
+  // ─── Override testament filter if user explicitly mentions AT or NT ───
+  // This MUST run after name disambiguation so it overrides the default.
+  // e.g. "Paralelos de Maria no AT" → override NT default to AT
+  const atPatterns = [
+    'antigo testamento', 'velho testamento',
+    ' no at', ' do at', ' at ',
+    'antigo testamento', 'velho testamento',
+  ]
+  const ntPatterns = [
+    'novo testamento',
+    ' no nt', ' do nt', ' nt ',
+  ]
+  const lowerPadded = ` ${lower} ` // pad for word-boundary matching
+  if (atPatterns.some(p => lowerPadded.includes(p))) {
+    result.testamentFilter = 'AT'
+  } else if (ntPatterns.some(p => lowerPadded.includes(p))) {
+    result.testamentFilter = 'NT'
+  }
+
   // Also apply theological topic enrichment
   const topicResult = enrichTheologicalTopic(query)
   if (topicResult) {

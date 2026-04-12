@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import { handleQueryError } from '@/lib/supabase/query'
-import { sanitizePostgrestFilter } from '@/lib/utils/sanitize'
+import { sanitizeIlike } from '@/lib/utils/sanitize'
 import { withTimeout } from '@/lib/utils/with-timeout'
 import type {
   CanonicalEntity,
@@ -143,18 +143,35 @@ async function searchKnowledgeBase(normalized: string): Promise<KnowledgeBaseEnt
   supabase ??= createClient()
   if (!supabase) return []
 
-  const doQuery = () => supabase!
-    .from('ai_knowledge_base')
-    .select('category, topic, core_teaching, bible_references, keywords')
-    .or(`keywords.cs.{${sanitizePostgrestFilter(normalized)}},topic.ilike.%${sanitizePostgrestFilter(normalized)}%`)
-    .limit(3)
+  // Run two separate queries instead of .or() to avoid comma-delimiter conflicts
+  // (PostgREST .or() treats commas as delimiters, breaking inputs like "Gn 3,15")
+  const [keywordsResult, topicResult] = await Promise.allSettled([
+    supabase
+      .from('ai_knowledge_base')
+      .select('category, topic, core_teaching, bible_references, keywords')
+      .contains('keywords', [normalized])
+      .limit(3),
+    supabase
+      .from('ai_knowledge_base')
+      .select('category, topic, core_teaching, bible_references, keywords')
+      .ilike('topic', `%${sanitizeIlike(normalized)}%`)
+      .limit(3),
+  ])
 
-  let { data, error } = await doQuery()
-  if (error && await handleQueryError(error, 'Identity.searchKnowledgeBase')) {
-    ;({ data, error } = await doQuery())
+  const keywordsData = keywordsResult.status === 'fulfilled' ? (keywordsResult.value.data || []) : []
+  const topicData = topicResult.status === 'fulfilled' ? (topicResult.value.data || []) : []
+
+  // Deduplicate by topic
+  const seen = new Set<string>()
+  const merged: KnowledgeBaseEntry[] = []
+  for (const entry of [...keywordsData, ...topicData]) {
+    const e = entry as KnowledgeBaseEntry
+    if (!seen.has(e.topic)) {
+      seen.add(e.topic)
+      merged.push(e)
+    }
   }
-
-  return (data || []) as KnowledgeBaseEntry[]
+  return merged.slice(0, 3)
 }
 
 /**
@@ -167,16 +184,33 @@ export async function searchCanonicalEntities(query: string): Promise<CanonicalE
 
   const normalized = normalize(query)
 
-  const doQuery = () => supabase!
-    .from('verbum_canonical_entities')
-    .select('*')
-    .or(`display_name.ilike.%${sanitizePostgrestFilter(query)}%,canonical_name.ilike.%${sanitizePostgrestFilter(normalized)}%`)
-    .limit(5)
+  // Run two separate queries instead of .or() to avoid comma-delimiter conflicts
+  // (PostgREST .or() treats commas as delimiters, breaking inputs like "Gn 3,15")
+  const [displayResult, canonicalResult] = await Promise.allSettled([
+    supabase
+      .from('verbum_canonical_entities')
+      .select('*')
+      .ilike('display_name', `%${sanitizeIlike(query)}%`)
+      .limit(5),
+    supabase
+      .from('verbum_canonical_entities')
+      .select('*')
+      .ilike('canonical_name', `%${sanitizeIlike(normalized)}%`)
+      .limit(5),
+  ])
 
-  let { data, error } = await doQuery()
-  if (error && await handleQueryError(error, 'Identity.searchCanonicalEntities')) {
-    ;({ data, error } = await doQuery())
+  const displayData = displayResult.status === 'fulfilled' ? (displayResult.value.data || []) : []
+  const canonicalData = canonicalResult.status === 'fulfilled' ? (canonicalResult.value.data || []) : []
+
+  // Deduplicate by id
+  const seen = new Set<string>()
+  const merged: CanonicalEntity[] = []
+  for (const entry of [...displayData, ...canonicalData]) {
+    const e = entry as CanonicalEntity
+    if (!seen.has(e.id)) {
+      seen.add(e.id)
+      merged.push(e)
+    }
   }
-
-  return (data || []) as CanonicalEntity[]
+  return merged.slice(0, 5)
 }

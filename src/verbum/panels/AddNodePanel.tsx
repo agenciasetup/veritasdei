@@ -68,6 +68,11 @@ export default function AddNodePanel({ visible, mode, onClose, onAddNode }: AddN
       setIdentityResult(null)
       setShowTrinityModal(false)
       setTimeout(() => inputRef.current?.focus(), 100)
+    } else {
+      // Abort any in-flight searches when panel closes
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      abortRef.current?.abort()
+      setIsSearching(false)
     }
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)

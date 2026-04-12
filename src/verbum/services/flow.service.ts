@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
-import { sanitizePostgrestFilter } from '@/lib/utils/sanitize'
+import { sanitizeIlike } from '@/lib/utils/sanitize'
 import type { VerbumFlow, VerbumFlowShare, VerbumFlowFavorite } from '../types/verbum.types'
 
 // Lazy-init: deferred from module import to prevent premature Supabase auth init.
@@ -214,15 +214,38 @@ export async function searchPublicFlows(query: string, limit = 20, offset = 0): 
   supabase ??= createClient()
   if (!supabase)return []
 
-  const { data } = await supabase
-    .from('verbum_flows')
-    .select('*')
-    .eq('is_public', true)
-    .or(`name.ilike.%${sanitizePostgrestFilter(query)}%,description.ilike.%${sanitizePostgrestFilter(query)}%`)
-    .order('clone_count', { ascending: false })
-    .range(offset, offset + limit - 1)
+  // Run two separate queries instead of .or() to avoid comma-delimiter conflicts
+  const sanitized = sanitizeIlike(query)
+  const [nameResult, descResult] = await Promise.allSettled([
+    supabase
+      .from('verbum_flows')
+      .select('*')
+      .eq('is_public', true)
+      .ilike('name', `%${sanitized}%`)
+      .order('clone_count', { ascending: false })
+      .range(offset, offset + limit - 1),
+    supabase
+      .from('verbum_flows')
+      .select('*')
+      .eq('is_public', true)
+      .ilike('description', `%${sanitized}%`)
+      .order('clone_count', { ascending: false })
+      .range(offset, offset + limit - 1),
+  ])
 
-  return (data || []) as VerbumFlow[]
+  const nameData = nameResult.status === 'fulfilled' ? (nameResult.value.data || []) : []
+  const descData = descResult.status === 'fulfilled' ? (descResult.value.data || []) : []
+
+  const seen = new Set<string>()
+  const merged: VerbumFlow[] = []
+  for (const entry of [...nameData, ...descData]) {
+    const e = entry as VerbumFlow
+    if (!seen.has(e.id)) {
+      seen.add(e.id)
+      merged.push(e)
+    }
+  }
+  return merged.slice(0, limit)
 }
 
 // ─── Sharing ───
