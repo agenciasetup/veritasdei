@@ -17,7 +17,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, HelpCircle, Save, Cloud, CloudOff, Share2, Sparkles, BookOpen } from 'lucide-react'
+import { ArrowLeft, Plus, HelpCircle, Save, Cloud, CloudOff, Share2, Sparkles, BookOpen, Download } from 'lucide-react'
 
 import { nodeTypes } from '../nodes/nodeTypes'
 import { edgeTypes } from '../edges/edgeTypes'
@@ -39,6 +39,7 @@ import ConnectionFilter from './ConnectionFilter'
 const ProposalsPanel = lazy(() => import('../panels/ProposalsPanel'))
 const ShareModal = lazy(() => import('../panels/ShareModal'))
 const AISearchPanel = lazy(() => import('../panels/AISearchPanel'))
+const ExportPanel = lazy(() => import('../panels/ExportPanel'))
 import type {
   ConnectionProposal,
   ContextMenuAction,
@@ -106,6 +107,7 @@ function VerbumCanvasInner() {
   const [focusNodeId, setFocusNodeId] = useState<string | null>(null)
   const [shareModalVisible, setShareModalVisible] = useState(false)
   const [searchPanelVisible, setSearchPanelVisible] = useState(false)
+  const [exportPanelVisible, setExportPanelVisible] = useState(false)
   const [highlightNodeId, setHighlightNodeId] = useState<string | null>(null)
   const [connectionFilterEntities, setConnectionFilterEntities] = useState<string[]>([])
   const [connectionFilterRelation, setConnectionFilterRelation] = useState<string | null>(null)
@@ -1118,6 +1120,20 @@ function VerbumCanvasInner() {
             onFilterChange={onConnectionFilterChange}
           />
 
+          {/* Export button */}
+          <button
+            onClick={() => setExportPanelVisible(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors"
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: `1px solid ${VERBUM_COLORS.ui_border}`,
+              color: VERBUM_COLORS.text_secondary,
+              fontFamily: 'Poppins, sans-serif',
+            }}
+          >
+            <Download className="w-3.5 h-3.5" />
+          </button>
+
           {/* Quick add button */}
           {!isReadOnly && (
             <button
@@ -1259,6 +1275,17 @@ function VerbumCanvasInner() {
           />
         </Suspense>
       )}
+
+      {/* Export panel */}
+      <Suspense fallback={null}>
+        <ExportPanel
+          visible={exportPanelVisible}
+          flowName={flowName}
+          nodes={nodes}
+          edges={edges}
+          onClose={() => setExportPanelVisible(false)}
+        />
+      </Suspense>
 
       {/* Canvas search (Cmd+F) */}
       <CanvasSearch nodes={nodes} onHighlightNode={setHighlightNodeId} />
