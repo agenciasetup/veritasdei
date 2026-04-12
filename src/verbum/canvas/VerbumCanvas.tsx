@@ -33,6 +33,7 @@ import { proposeConnections } from '../services/connection.service'
 import { ProposalsBadge } from '../panels/ProposalsPanel'
 import { useVerbumFlow, TRINITAS_NODE_ID } from '../hooks/useVerbumFlow'
 import { VerbumCanvasProvider } from '../contexts/VerbumCanvasContext'
+import SelectionToolbar from './SelectionToolbar'
 const ProposalsPanel = lazy(() => import('../panels/ProposalsPanel'))
 const ShareModal = lazy(() => import('../panels/ShareModal'))
 const AISearchPanel = lazy(() => import('../panels/AISearchPanel'))
@@ -54,7 +55,7 @@ function VerbumCanvasInner() {
     handleNodesChange, handleEdgesChange,
     nodesRef, edgesRef, currentFlowRef, isLoadingRef,
     triggerSave, retryInit,
-    saveFlowNode, saveFlowEdge, deleteFlowEdge,
+    saveFlowNode, saveFlowEdge, deleteFlowEdge, deleteFlowNode,
     updateFlow,
   } = useVerbumFlow()
 
@@ -513,6 +514,68 @@ function VerbumCanvasInner() {
 
     triggerSave()
   }, [setNodes, currentFlow, user?.id, triggerSave, scheduleProposalCheck])
+
+  // ─── Multi-select helpers ───
+  const selectedNodes = useMemo(
+    () => nodes.filter((n) => n.selected && n.id !== TRINITAS_NODE_ID),
+    [nodes]
+  )
+
+  const onAlignHorizontal = useCallback(() => {
+    if (selectedNodes.length < 2) return
+    const avgY = selectedNodes.reduce((sum, n) => sum + n.position.y, 0) / selectedNodes.length
+    const ids = new Set(selectedNodes.map((n) => n.id))
+    setNodes((nds) =>
+      nds.map((n) => (ids.has(n.id) ? { ...n, position: { ...n.position, y: avgY } } : n))
+    )
+    triggerSave()
+  }, [selectedNodes, setNodes, triggerSave])
+
+  const onAlignVertical = useCallback(() => {
+    if (selectedNodes.length < 2) return
+    const avgX = selectedNodes.reduce((sum, n) => sum + n.position.x, 0) / selectedNodes.length
+    const ids = new Set(selectedNodes.map((n) => n.id))
+    setNodes((nds) =>
+      nds.map((n) => (ids.has(n.id) ? { ...n, position: { ...n.position, x: avgX } } : n))
+    )
+    triggerSave()
+  }, [selectedNodes, setNodes, triggerSave])
+
+  const onDistribute = useCallback(() => {
+    if (selectedNodes.length < 3) return
+    const sorted = [...selectedNodes].sort((a, b) => a.position.x - b.position.x)
+    const minX = sorted[0].position.x
+    const maxX = sorted[sorted.length - 1].position.x
+    const step = (maxX - minX) / (sorted.length - 1)
+    const posMap = new Map(sorted.map((n, i) => [n.id, minX + i * step]))
+    setNodes((nds) =>
+      nds.map((n) => (posMap.has(n.id) ? { ...n, position: { ...n.position, x: posMap.get(n.id)! } } : n))
+    )
+    triggerSave()
+  }, [selectedNodes, setNodes, triggerSave])
+
+  const onDeleteSelected = useCallback(() => {
+    const ids = selectedNodes.map((n) => n.id)
+    setNodes((nds) => nds.filter((n) => !ids.includes(n.id)))
+    setEdges((eds) => eds.filter((e) => !ids.includes(e.source) && !ids.includes(e.target)))
+    for (const id of ids) {
+      deleteFlowNode(id).catch(() => setSaveStatus('unsaved'))
+    }
+    triggerSave()
+  }, [selectedNodes, setNodes, setEdges, triggerSave])
+
+  const onAnalyzeSelected = useCallback(() => {
+    // Analyze the first selected node, proposals will include connections to all others
+    const first = selectedNodes[0]
+    if (!first) return
+    const nodeData = first.data as Record<string, unknown>
+    scheduleProposalCheck({
+      id: first.id,
+      title: (nodeData.title as string) || (nodeData.display_name as string) || first.id,
+      type: first.type || 'unknown',
+      ref: (nodeData.bible_reference as string) || undefined,
+    })
+  }, [selectedNodes, scheduleProposalCheck])
 
   const onContextMenuSelect = useCallback((action: ContextMenuAction) => {
     if (action === 'postit') {
@@ -1066,6 +1129,15 @@ function VerbumCanvasInner() {
       </div>
 
       <LayerControls visibleLayers={visibleLayers} onToggleLayer={onToggleLayer} />
+
+      <SelectionToolbar
+        selectedNodes={selectedNodes}
+        onAlignHorizontal={onAlignHorizontal}
+        onAlignVertical={onAlignVertical}
+        onDistribute={onDistribute}
+        onDeleteSelected={onDeleteSelected}
+        onAnalyzeSelected={onAnalyzeSelected}
+      />
 
       {focusNodeId && (
         <div
