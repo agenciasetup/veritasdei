@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
 
 function extractFromNew(data: Record<string, unknown>) {
   const get = (type: string, useShort = false): string => {
@@ -50,12 +49,6 @@ function extractFromLegacy(result: Record<string, unknown>) {
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
-  }
-
   const apiKey = process.env.API_PLACES_NEW
   if (!apiKey) {
     return NextResponse.json({ error: 'API key não configurada.' }, { status: 500 })
