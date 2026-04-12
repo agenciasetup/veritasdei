@@ -17,7 +17,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, HelpCircle, Save, Cloud, CloudOff, Share2, Sparkles } from 'lucide-react'
+import { ArrowLeft, Plus, HelpCircle, Save, Cloud, CloudOff, Share2, Sparkles, BookOpen } from 'lucide-react'
 
 import { nodeTypes } from '../nodes/nodeTypes'
 import { edgeTypes } from '../edges/edgeTypes'
@@ -35,6 +35,7 @@ import { useVerbumFlow, TRINITAS_NODE_ID } from '../hooks/useVerbumFlow'
 import { VerbumCanvasProvider } from '../contexts/VerbumCanvasContext'
 const ProposalsPanel = lazy(() => import('../panels/ProposalsPanel'))
 const ShareModal = lazy(() => import('../panels/ShareModal'))
+const AISearchPanel = lazy(() => import('../panels/AISearchPanel'))
 import type {
   ConnectionProposal,
   ContextMenuAction,
@@ -101,6 +102,7 @@ function VerbumCanvasInner() {
   const [visibleLayers, setVisibleLayers] = useState<number[]>([0, 1, 2, 3, 4, 5])
   const [focusNodeId, setFocusNodeId] = useState<string | null>(null)
   const [shareModalVisible, setShareModalVisible] = useState(false)
+  const [searchPanelVisible, setSearchPanelVisible] = useState(false)
 
   const addingNodeRef = useRef(false)
   const longPressRef = useRef<NodeJS.Timeout | null>(null)
@@ -463,6 +465,54 @@ function VerbumCanvasInner() {
     }
     triggerSave()
   }, [setNodes, currentFlow, user?.id, triggerSave])
+
+  // ─── Add a verse from the AI search panel ───
+  const onAddVerseFromSearch = useCallback((reference: string, text: string) => {
+    const newId = crypto.randomUUID()
+    // Detect testament from book abbreviation
+    const atBooks = /^(Gn|Ex|Lv|Nm|Dt|Js|Jz|Rt|1Sm|2Sm|1Rs|2Rs|1Cr|2Cr|Esd|Ne|Tb|Jt|Est|1Mc|2Mc|Jó|Sl|Pr|Ecl|Ct|Sb|Eclo|Is|Jr|Lm|Br|Ez|Dn|Os|Jl|Am|Ab|Jn|Mq|Na|Hc|Sf|Ag|Zc|Ml)/
+    const testament = atBooks.test(reference) ? 'AT' : 'NT'
+    const book = reference.split(/\s/)[0] || ''
+
+    // Place new verse near center with offset to avoid overlap
+    const nodeCount = nodesRef.current.length
+    const pos = { x: 300 + (nodeCount % 5) * 50, y: 200 + Math.floor(nodeCount / 5) * 80 }
+
+    const data = {
+      title: reference,
+      bible_reference: reference,
+      bible_text: text,
+      bible_book: book,
+      testament,
+      layer_id: testament === 'AT' ? 2 : 3,
+    }
+
+    setNodes((nds) => [...nds, { id: newId, type: 'versiculo', position: pos, data }])
+
+    if (currentFlow && user?.id) {
+      saveFlowNode(currentFlow.id, user.id, {
+        id: newId,
+        node_type: 'versiculo',
+        title: reference,
+        bible_reference: reference,
+        bible_text: text,
+        bible_book: book,
+        layer_id: data.layer_id,
+        pos_x: pos.x,
+        pos_y: pos.y,
+      }).catch(() => setSaveStatus('unsaved'))
+    }
+
+    // Schedule AI connection proposals for the new verse
+    scheduleProposalCheck({
+      id: newId,
+      title: reference,
+      type: 'versiculo',
+      ref: reference,
+    })
+
+    triggerSave()
+  }, [setNodes, currentFlow, user?.id, triggerSave, scheduleProposalCheck])
 
   const onContextMenuSelect = useCallback((action: ContextMenuAction) => {
     if (action === 'postit') {
@@ -952,6 +1002,20 @@ function VerbumCanvasInner() {
             </button>
           )}
 
+          {/* AI Search button */}
+          <button
+            onClick={() => setSearchPanelVisible(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors"
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: `1px solid ${VERBUM_COLORS.ui_border}`,
+              color: VERBUM_COLORS.text_secondary,
+              fontFamily: 'Poppins, sans-serif',
+            }}
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+          </button>
+
           {/* Quick add button */}
           {!isReadOnly && (
             <button
@@ -1084,6 +1148,15 @@ function VerbumCanvasInner() {
           />
         </Suspense>
       )}
+
+      {/* AI Search Panel */}
+      <Suspense fallback={null}>
+        <AISearchPanel
+          visible={searchPanelVisible}
+          onClose={() => setSearchPanelVisible(false)}
+          onAddVerse={onAddVerseFromSearch}
+        />
+      </Suspense>
 
       {isGenerating && (
         <div
