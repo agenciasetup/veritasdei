@@ -2,16 +2,19 @@
 
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
+import { Sparkles } from 'lucide-react'
 import { VERBUM_COLORS } from '../design-tokens'
+import { useVerbumCanvas } from '../contexts/VerbumCanvasContext'
 import type { VersiculoNodeData } from '../types/verbum.types'
 
-function VersiculoNode({ data, selected }: NodeProps) {
+function VersiculoNode({ id, data, selected }: NodeProps) {
   const d = data as unknown as VersiculoNodeData
+  const { onAnalyzeNode, isReadOnly } = useVerbumCanvas()
   const isAT = d.testament === 'AT'
 
   return (
     <div
-      className="relative px-4 py-3 rounded-lg min-w-[160px] max-w-[240px] transition-shadow"
+      className="relative px-4 py-3 rounded-lg min-w-[160px] max-w-[240px] transition-shadow group"
       style={{
         background: VERBUM_COLORS.node_versiculo_bg,
         border: `1.5px solid ${selected ? VERBUM_COLORS.ui_gold : VERBUM_COLORS.node_versiculo_border}`,
@@ -20,6 +23,22 @@ function VersiculoNode({ data, selected }: NodeProps) {
           : '0 2px 8px rgba(0,0,0,0.4)',
       }}
     >
+      {/* AI Analysis Button */}
+      {!isReadOnly && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onAnalyzeNode(id) }}
+          className="absolute -top-2 -left-2 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+          style={{
+            background: VERBUM_COLORS.ui_bg,
+            border: `1px solid ${VERBUM_COLORS.ui_gold}`,
+            color: VERBUM_COLORS.ui_gold,
+          }}
+          title="Analisar conexões com IA"
+        >
+          <Sparkles className="w-3 h-3" />
+        </button>
+      )}
+
       {/* Testament badge */}
       <div
         className="absolute -top-2 -right-2 text-[8px] font-bold px-1.5 py-0.5 rounded"

@@ -32,6 +32,7 @@ import { getConnectionExplanation } from '../services/openai.service'
 import { proposeConnections } from '../services/connection.service'
 import { ProposalsBadge } from '../panels/ProposalsPanel'
 import { useVerbumFlow, TRINITAS_NODE_ID } from '../hooks/useVerbumFlow'
+import { VerbumCanvasProvider } from '../contexts/VerbumCanvasContext'
 const ProposalsPanel = lazy(() => import('../panels/ProposalsPanel'))
 const ShareModal = lazy(() => import('../panels/ShareModal'))
 import type {
@@ -375,6 +376,25 @@ function VerbumCanvasInner() {
       }
     }, 1500)
   }, [])
+
+  // ─── Analyze existing node via AI (triggered by Sparkles button on nodes) ───
+  const onAnalyzeNode = useCallback((nodeId: string) => {
+    const node = nodesRef.current.find((n) => n.id === nodeId)
+    if (!node) return
+
+    const nodeData = node.data as Record<string, unknown>
+    scheduleProposalCheck({
+      id: node.id,
+      title: (nodeData.title as string) || (nodeData.display_name as string) || node.id,
+      type: node.type || 'unknown',
+      ref: (nodeData.bible_reference as string) || undefined,
+    })
+  }, [scheduleProposalCheck])
+
+  const canvasContextValue = useMemo(() => ({
+    onAnalyzeNode,
+    isReadOnly,
+  }), [onAnalyzeNode, isReadOnly])
 
   const onContextMenuSelect = useCallback((action: ContextMenuAction) => {
     setAddPanel({ visible: true, mode: action })
@@ -726,65 +746,67 @@ function VerbumCanvasInner() {
     >
       <CanvasBackground />
 
-      <ReactFlow
-        nodes={filteredNodes}
-        edges={filteredEdges}
-        onNodesChange={handleNodesChange}
-        onEdgesChange={handleEdgesChange}
-        onConnect={onConnect}
-        onNodeClick={onNodeClick}
-        onEdgeClick={onEdgeClick}
-        onPaneContextMenu={onPaneContextMenu}
-        onPaneClick={() => focusNodeId && setFocusNodeId(null)}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        defaultViewport={defaultViewport}
-        fitView
-        fitViewOptions={{ padding: 0.5, maxZoom: 1.2 }}
-        minZoom={0.1}
-        maxZoom={2}
-        proOptions={{ hideAttribution: true }}
-        className="verbum-flow"
-        style={{ background: 'transparent' }}
-        nodesDraggable={!isReadOnly}
-        nodesConnectable={!isReadOnly}
-        elementsSelectable={!isReadOnly}
-        deleteKeyCode={isReadOnly ? null : ['Backspace', 'Delete']}
-        multiSelectionKeyCode="Shift"
-        selectionOnDrag={!isReadOnly}
-        panOnDrag={isReadOnly ? true : [1, 2]}
-      >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={50}
-          size={1}
-          color="rgba(201, 168, 76, 0.04)"
-        />
-        <MiniMap
-          position="bottom-left"
-          nodeStrokeColor={VERBUM_COLORS.node_canonical_border}
-          nodeColor={VERBUM_COLORS.node_canonical_bg}
-          maskColor="rgba(10, 8, 6, 0.85)"
-          style={{
-            background: VERBUM_COLORS.ui_bg,
-            border: `1px solid ${VERBUM_COLORS.ui_border}`,
-            borderRadius: '8px',
-            marginBottom: 'env(safe-area-inset-bottom, 0px)',
-          }}
-          pannable
-          zoomable
-        />
-        <Controls
-          position="bottom-right"
-          showInteractive={false}
-          style={{
-            background: VERBUM_COLORS.ui_bg,
-            border: `1px solid ${VERBUM_COLORS.ui_border}`,
-            borderRadius: '8px',
-            marginBottom: 'env(safe-area-inset-bottom, 0px)',
-          }}
-        />
-      </ReactFlow>
+      <VerbumCanvasProvider value={canvasContextValue}>
+        <ReactFlow
+          nodes={filteredNodes}
+          edges={filteredEdges}
+          onNodesChange={handleNodesChange}
+          onEdgesChange={handleEdgesChange}
+          onConnect={onConnect}
+          onNodeClick={onNodeClick}
+          onEdgeClick={onEdgeClick}
+          onPaneContextMenu={onPaneContextMenu}
+          onPaneClick={() => focusNodeId && setFocusNodeId(null)}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          defaultViewport={defaultViewport}
+          fitView
+          fitViewOptions={{ padding: 0.5, maxZoom: 1.2 }}
+          minZoom={0.1}
+          maxZoom={2}
+          proOptions={{ hideAttribution: true }}
+          className="verbum-flow"
+          style={{ background: 'transparent' }}
+          nodesDraggable={!isReadOnly}
+          nodesConnectable={!isReadOnly}
+          elementsSelectable={!isReadOnly}
+          deleteKeyCode={isReadOnly ? null : ['Backspace', 'Delete']}
+          multiSelectionKeyCode="Shift"
+          selectionOnDrag={!isReadOnly}
+          panOnDrag={isReadOnly ? true : [1, 2]}
+        >
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={50}
+            size={1}
+            color="rgba(201, 168, 76, 0.04)"
+          />
+          <MiniMap
+            position="bottom-left"
+            nodeStrokeColor={VERBUM_COLORS.node_canonical_border}
+            nodeColor={VERBUM_COLORS.node_canonical_bg}
+            maskColor="rgba(10, 8, 6, 0.85)"
+            style={{
+              background: VERBUM_COLORS.ui_bg,
+              border: `1px solid ${VERBUM_COLORS.ui_border}`,
+              borderRadius: '8px',
+              marginBottom: 'env(safe-area-inset-bottom, 0px)',
+            }}
+            pannable
+            zoomable
+          />
+          <Controls
+            position="bottom-right"
+            showInteractive={false}
+            style={{
+              background: VERBUM_COLORS.ui_bg,
+              border: `1px solid ${VERBUM_COLORS.ui_border}`,
+              borderRadius: '8px',
+              marginBottom: 'env(safe-area-inset-bottom, 0px)',
+            }}
+          />
+        </ReactFlow>
+      </VerbumCanvasProvider>
 
       {/* Top toolbar */}
       <div
