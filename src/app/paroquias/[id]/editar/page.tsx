@@ -205,21 +205,36 @@ function EditarContent({ id }: { id: string }) {
       const up = await supabase.storage
         .from('paroquia-documentos')
         .upload(path, verificacaoFile, { upsert: true })
-      if (!up.error) {
-        await supabase
-          .from('paroquias')
-          .update({
-            verificacao_documento_path: path,
-            verificacao_solicitada_em: new Date().toISOString(),
-            verificacao_notas: verificacaoNotas.trim() || null,
-          })
-          .eq('id', paroquia.id)
+      if (up.error) {
+        console.error('[editar] Upload do documento falhou:', up.error)
+        setError(`Não foi possível enviar o documento: ${up.error.message}`)
+        setSaving(false)
+        return
+      }
+      const { error: verifUpdateErr } = await supabase
+        .from('paroquias')
+        .update({
+          verificacao_documento_path: path,
+          verificacao_solicitada_em: new Date().toISOString(),
+          verificacao_notas: verificacaoNotas.trim() || null,
+        })
+        .eq('id', paroquia.id)
+      if (verifUpdateErr) {
+        console.error('[editar] Falha ao registrar solicitação:', verifUpdateErr)
+        setError(
+          `Documento enviado, mas a solicitação de verificação não foi registrada: ${verifUpdateErr.message}`,
+        )
+        setSaving(false)
+        return
       }
     } else if (verificacaoNotas && verificacaoNotas !== (paroquia.verificacao_notas ?? '')) {
-      await supabase
+      const { error: notasErr } = await supabase
         .from('paroquias')
         .update({ verificacao_notas: verificacaoNotas.trim() || null })
         .eq('id', paroquia.id)
+      if (notasErr) {
+        console.error('[editar] Falha ao atualizar observações:', notasErr)
+      }
     }
 
     setSaving(false)

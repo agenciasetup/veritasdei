@@ -92,13 +92,42 @@ export default function AdminAprovacoesPage() {
   const fetchIgrejasVerif = useCallback(async () => {
     if (!supabase) return
     setLoading(true)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('paroquias')
-      .select('*, owner:owner_user_id(name, email)')
+      .select(
+        'id, nome, cnpj, tipo_igreja, diocese, cidade, estado, padre_responsavel, foto_url, verificacao_solicitada_em, verificacao_documento_path, verificacao_notas, owner_user_id',
+      )
       .not('verificacao_solicitada_em', 'is', null)
       .eq('verificado', false)
       .order('verificacao_solicitada_em', { ascending: true })
-    setIgrejasVerif((data as ParoquiaVerif[]) ?? [])
+
+    if (error) {
+      console.error('[admin] igrejas verif fetch error:', error)
+      setIgrejasVerif([])
+      setLoading(false)
+      return
+    }
+
+    const rows = (data as ParoquiaVerif[]) ?? []
+    const ownerIds = Array.from(
+      new Set(rows.map(r => r.owner_user_id).filter((v): v is string => !!v)),
+    )
+
+    if (ownerIds.length > 0) {
+      const { data: owners } = await supabase
+        .from('profiles')
+        .select('id, name, email')
+        .in('id', ownerIds)
+      type OwnerRow = { id: string; name: string | null; email: string | null }
+      const list = (owners as OwnerRow[] | null) ?? []
+      const byId = new Map<string, OwnerRow>(list.map(o => [o.id, o]))
+      for (const r of rows) {
+        const o = r.owner_user_id ? byId.get(r.owner_user_id) : null
+        r.owner = o ? { name: o.name ?? null, email: o.email ?? null } : null
+      }
+    }
+
+    setIgrejasVerif(rows)
     setLoading(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

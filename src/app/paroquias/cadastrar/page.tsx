@@ -165,15 +165,31 @@ function CadastrarContent() {
         const up = await supabase.storage
           .from('paroquia-documentos')
           .upload(path, verificacaoFile, { upsert: true })
-        if (!up.error) {
-          await supabase
-            .from('paroquias')
-            .update({
-              verificacao_documento_path: path,
-              verificacao_solicitada_em: new Date().toISOString(),
-              verificacao_notas: verificacaoNotas.trim() || null,
-            })
-            .eq('id', inserted.id)
+        if (up.error) {
+          console.error('[cadastrar] Upload do documento falhou:', up.error)
+          setError(
+            `Igreja cadastrada, mas não foi possível enviar o documento de verificação: ${up.error.message}`,
+          )
+          setSaving(false)
+          router.push(`/paroquias/${inserted.id}`)
+          return
+        }
+        const { error: verifUpdateErr } = await supabase
+          .from('paroquias')
+          .update({
+            verificacao_documento_path: path,
+            verificacao_solicitada_em: new Date().toISOString(),
+            verificacao_notas: verificacaoNotas.trim() || null,
+          })
+          .eq('id', inserted.id)
+        if (verifUpdateErr) {
+          console.error('[cadastrar] Falha ao registrar solicitação:', verifUpdateErr)
+          setError(
+            `Igreja cadastrada e documento enviado, mas a solicitação de verificação não foi registrada: ${verifUpdateErr.message}`,
+          )
+          setSaving(false)
+          router.push(`/paroquias/${inserted.id}`)
+          return
         }
       }
 
