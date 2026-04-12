@@ -15,13 +15,14 @@ import {
   User, Camera, Save, Church, MapPin, Heart, BookOpen,
   CheckCircle, Phone, Calendar, Shield, AtSign, GraduationCap,
   Share2, CreditCard, FileText, Target, Bell, Flame, Check,
-  Plus, Settings2,
+  Plus, Settings2, Sparkles,
 } from 'lucide-react'
 import { isValidCpf, maskCpf, stripCpf } from '@/lib/utils/cpf'
 import Link from 'next/link'
 import { usePropositos } from '@/contexts/PropositosContext'
 import { cadenciaLabel, periodoAtualLabel } from '@/lib/propositos'
 import { usePropositoSheet } from '@/components/propositos/PropositoSheet'
+import { useSubscription } from '@/contexts/SubscriptionContext'
 import {
   subscribePush,
   unsubscribePush,
@@ -31,7 +32,7 @@ import {
   isStandalone,
 } from '@/lib/pwa/push'
 
-type MainTab = 'editar' | 'carteirinha' | 'propositos' | 'notificacoes'
+type MainTab = 'editar' | 'carteirinha' | 'propositos' | 'notificacoes' | 'assinatura'
 type Section = 'pessoal' | 'endereco' | 'fe' | 'social'
 
 const SECTIONS: { key: Section; label: string; icon: React.ElementType }[] = [
@@ -59,7 +60,7 @@ function PerfilContent() {
 
   const initialTab = (() => {
     const t = searchParams.get('tab')
-    if (t === 'propositos' || t === 'notificacoes' || t === 'carteirinha' || t === 'editar') {
+    if (t === 'propositos' || t === 'notificacoes' || t === 'carteirinha' || t === 'editar' || t === 'assinatura') {
       return t as MainTab
     }
     return 'editar' as MainTab
@@ -327,6 +328,7 @@ function PerfilContent() {
             { key: 'editar' as MainTab, label: 'Editar Perfil', icon: User },
             { key: 'propositos' as MainTab, label: 'Propósitos', icon: Target },
             { key: 'notificacoes' as MainTab, label: 'Notificações', icon: Bell },
+            { key: 'assinatura' as MainTab, label: 'Assinatura', icon: Sparkles },
             { key: 'carteirinha' as MainTab, label: 'Carteirinha', icon: CreditCard },
           ]).map(({ key, label, icon: Icon }) => (
             <button
@@ -352,6 +354,7 @@ function PerfilContent() {
 
         {mainTab === 'propositos' && <PropositosSection />}
         {mainTab === 'notificacoes' && <NotificacoesSection />}
+        {mainTab === 'assinatura' && <AssinaturaSection />}
 
         {/* ═══════════════════════════════════════ */}
         {/* EDITAR PERFIL TAB                      */}
@@ -1435,6 +1438,166 @@ function NotificacoesSection() {
           </p>
         )}
       </div>
+    </section>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════ */
+/* ASSINATURA — status + portal Stripe                     */
+/* ═══════════════════════════════════════════════════════ */
+
+function AssinaturaSection() {
+  const { isPremium, loading, plano, status, expiraEm, cancelAtPeriodEnd, refresh } = useSubscription()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Refresh ao montar (ex: volta do checkout com ?status=success)
+    refresh()
+  }, [refresh])
+
+  async function abrirPortal() {
+    setBusy(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/payments/portal', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Falha ao abrir portal')
+      if (data.url) window.location.href = data.url
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const expiraFmt = expiraEm
+    ? new Date(expiraEm).toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      })
+    : null
+
+  return (
+    <section className="mb-8">
+      <div className="mb-4">
+        <h2
+          className="text-lg mb-1"
+          style={{ fontFamily: 'Cormorant Garamond, serif', color: '#F2EDE4' }}
+        >
+          Minha assinatura
+        </h2>
+        <p
+          className="text-xs"
+          style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+        >
+          Gerencie seu plano, método de pagamento e histórico de cobranças.
+        </p>
+      </div>
+
+      {loading ? (
+        <div className="py-10 text-center text-sm" style={{ color: '#7A7368' }}>
+          Carregando…
+        </div>
+      ) : isPremium ? (
+        <div
+          className="p-5 rounded-2xl mb-4"
+          style={{
+            background: 'linear-gradient(135deg, rgba(201,168,76,0.1), rgba(201,168,76,0.02))',
+            border: '1px solid rgba(201,168,76,0.3)',
+          }}
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="w-5 h-5" style={{ color: '#C9A84C' }} />
+            <span
+              className="text-base font-medium"
+              style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}
+            >
+              Veritas Dei {plano === 'premium' ? 'Premium' : plano}
+            </span>
+            <span
+              className="ml-auto text-[11px] px-2 py-0.5 rounded-full"
+              style={{
+                background: 'rgba(102,187,106,0.15)',
+                color: '#66BB6A',
+                border: '1px solid rgba(102,187,106,0.3)',
+                fontFamily: 'Poppins, sans-serif',
+              }}
+            >
+              {status === 'trialing' ? 'Em avaliação' : 'Ativo'}
+            </span>
+          </div>
+          {expiraFmt && (
+            <p
+              className="text-xs mb-1"
+              style={{ color: '#A8A096', fontFamily: 'Poppins, sans-serif' }}
+            >
+              {cancelAtPeriodEnd
+                ? `Acesso até ${expiraFmt} (não renovará)`
+                : `Próxima cobrança: ${expiraFmt}`}
+            </p>
+          )}
+        </div>
+      ) : (
+        <div
+          className="p-5 rounded-2xl mb-4 text-center"
+          style={{
+            background: 'rgba(255,255,255,0.02)',
+            border: '1px dashed rgba(201,168,76,0.25)',
+          }}
+        >
+          <p
+            className="text-sm mb-4"
+            style={{ color: '#A8A096', fontFamily: 'Poppins, sans-serif' }}
+          >
+            Você ainda não tem um plano ativo.
+          </p>
+          <Link
+            href="/planos"
+            className="inline-block px-6 py-3 rounded-xl text-sm"
+            style={{
+              background: 'linear-gradient(135deg, #C9A84C, #A88B3A)',
+              color: '#0F0E0C',
+              fontFamily: 'Poppins, sans-serif',
+              fontWeight: 600,
+            }}
+          >
+            Ver planos
+          </Link>
+        </div>
+      )}
+
+      {error && (
+        <div
+          className="mb-4 p-3 rounded-xl text-xs"
+          style={{
+            background: 'rgba(230,126,34,0.12)',
+            border: '1px solid rgba(230,126,34,0.3)',
+            color: '#E67E22',
+            fontFamily: 'Poppins, sans-serif',
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      {isPremium && (
+        <button
+          type="button"
+          onClick={abrirPortal}
+          disabled={busy}
+          className="w-full py-3 rounded-xl text-sm"
+          style={{
+            background: 'rgba(201,168,76,0.12)',
+            border: '1px solid rgba(201,168,76,0.3)',
+            color: '#C9A84C',
+            fontFamily: 'Poppins, sans-serif',
+          }}
+        >
+          {busy ? 'Abrindo…' : 'Gerenciar pagamento'}
+        </button>
+      )}
     </section>
   )
 }

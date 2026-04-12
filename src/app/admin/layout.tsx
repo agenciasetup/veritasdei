@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useEffect } from 'react'
-import { Users, FileText, CheckSquare, ArrowLeft, Shield, GraduationCap, Brain } from 'lucide-react'
+import { Users, FileText, CheckSquare, ArrowLeft, Shield, GraduationCap, Brain, CreditCard } from 'lucide-react'
 
 const ADMIN_NAV = [
   { href: '/admin/usuarios', icon: Users, label: 'Usuários' },
@@ -12,6 +12,7 @@ const ADMIN_NAV = [
   { href: '/admin/trilhas', icon: GraduationCap, label: 'Trilhas' },
   { href: '/admin/aprovacoes', icon: CheckSquare, label: 'Aprovações' },
   { href: '/admin/ia-knowledge', icon: Brain, label: 'Base IA' },
+  { href: '/admin/planos', icon: CreditCard, label: 'Planos' },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
