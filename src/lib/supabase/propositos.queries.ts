@@ -89,6 +89,69 @@ export async function desfazerCheckIn(
   return { error: error?.message ?? null }
 }
 
+/* ─── CRUD ─────────────────────────────────────────────────────────── */
+
+export type PropositoDraft = {
+  tipo: string
+  titulo: string
+  descricao?: string | null
+  cadencia: 'diaria' | 'semanal' | 'mensal' | 'dias_semana'
+  meta_por_periodo: number
+  dias_semana?: number[] | null
+  horario_sugerido?: string | null
+  ativo: boolean
+}
+
+export async function createProposito(
+  userId: string,
+  draft: PropositoDraft,
+): Promise<{ id: string | null; error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { id: null, error: 'Supabase não configurado.' }
+  const { data, error } = await supabase
+    .from('user_propositos')
+    .insert({
+      user_id: userId,
+      tipo: draft.tipo,
+      titulo: draft.titulo,
+      descricao: draft.descricao ?? null,
+      cadencia: draft.cadencia,
+      meta_por_periodo: draft.meta_por_periodo,
+      dias_semana: draft.dias_semana ?? null,
+      horario_sugerido: draft.horario_sugerido ?? null,
+      ativo: draft.ativo,
+    })
+    .select('id')
+    .single()
+  if (error) return { id: null, error: error.message }
+  return { id: (data as { id: string }).id, error: null }
+}
+
+export async function updateProposito(
+  propositoId: string,
+  patch: Partial<PropositoDraft>,
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Supabase não configurado.' }
+  const { error } = await supabase
+    .from('user_propositos')
+    .update(patch)
+    .eq('id', propositoId)
+  return { error: error?.message ?? null }
+}
+
+export async function deleteProposito(
+  propositoId: string,
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+  if (!supabase) return { error: 'Supabase não configurado.' }
+  const { error } = await supabase
+    .from('user_propositos')
+    .delete()
+    .eq('id', propositoId)
+  return { error: error?.message ?? null }
+}
+
 /* ─── Seed lazy ───────────────────────────────────────────────────── */
 
 /**

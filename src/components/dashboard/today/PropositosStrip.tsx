@@ -1,9 +1,9 @@
 'use client'
 
-import Link from 'next/link'
-import { Check, Plus, Flame } from 'lucide-react'
+import { Check, Plus, Flame, Settings2 } from 'lucide-react'
 import { usePropositos } from '@/contexts/PropositosContext'
 import { cadenciaLabel, periodoAtualLabel } from '@/lib/propositos'
+import { usePropositoSheet } from '@/components/propositos/PropositoSheet'
 
 /**
  * Strip horizontal de propósitos ativos — a "steroid version"
@@ -18,6 +18,7 @@ import { cadenciaLabel, periodoAtualLabel } from '@/lib/propositos'
  */
 export default function PropositosStrip() {
   const { propositos, propositosAtivos, loading, checkIn } = usePropositos()
+  const { openCreate, openEdit } = usePropositoSheet()
 
   if (loading && propositos.length === 0) {
     return (
@@ -55,13 +56,15 @@ export default function PropositosStrip() {
         >
           Meus propósitos
         </h2>
-        <Link
-          href="/perfil?tab=propositos"
-          className="text-xs"
+        <button
+          type="button"
+          onClick={openCreate}
+          className="inline-flex items-center gap-1 text-xs"
           style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
         >
-          Ver todos
-        </Link>
+          <Plus className="w-3.5 h-3.5" />
+          Novo
+        </button>
       </div>
 
       <div
@@ -81,7 +84,7 @@ export default function PropositosStrip() {
           return (
             <div
               key={p.id}
-              className="flex-shrink-0 w-56 p-4 rounded-2xl"
+              className="flex-shrink-0 w-56 p-4 rounded-2xl relative"
               style={{
                 scrollSnapAlign: 'start',
                 background: inativo
@@ -93,8 +96,17 @@ export default function PropositosStrip() {
                 opacity: inativo ? 0.6 : 1,
               }}
             >
+              <button
+                type="button"
+                onClick={() => openEdit(p)}
+                aria-label="Editar propósito"
+                className="absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center"
+                style={{ color: '#7A7368', background: 'rgba(255,255,255,0.04)' }}
+              >
+                <Settings2 className="w-3 h-3" />
+              </button>
               <p
-                className="text-sm font-medium mb-1 truncate"
+                className="text-sm font-medium mb-1 truncate pr-7"
                 style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}
               >
                 {p.titulo}
@@ -124,8 +136,9 @@ export default function PropositosStrip() {
               )}
 
               {inativo ? (
-                <Link
-                  href="/perfil?tab=propositos"
+                <button
+                  type="button"
+                  onClick={() => openEdit(p)}
                   className="block w-full text-center py-2 rounded-xl text-xs"
                   style={{
                     background: 'rgba(201,168,76,0.08)',
@@ -135,7 +148,7 @@ export default function PropositosStrip() {
                   }}
                 >
                   Ativar
-                </Link>
+                </button>
               ) : (
                 <button
                   type="button"
@@ -163,8 +176,9 @@ export default function PropositosStrip() {
         })}
 
         {/* Card "+ novo" sempre no fim */}
-        <Link
-          href="/perfil?tab=propositos"
+        <button
+          type="button"
+          onClick={openCreate}
           className="flex-shrink-0 w-40 flex flex-col items-center justify-center gap-2 rounded-2xl"
           style={{
             scrollSnapAlign: 'start',
@@ -179,9 +193,9 @@ export default function PropositosStrip() {
             className="text-xs"
             style={{ fontFamily: 'Poppins, sans-serif' }}
           >
-            Gerenciar
+            Novo propósito
           </span>
-        </Link>
+        </button>
       </div>
     </section>
   )

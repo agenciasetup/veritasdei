@@ -23,9 +23,10 @@ const GRADE_LABELS: Record<string, string> = {
 /**
  * Card principal da home: destaca o dia litúrgico atual.
  *
- * Fonte de dados: cálculo local (`getLiturgicalDay`) — já usado pela
- * LiturgicalBar. Integração com leituras reais (Evangelho etc.) fica pra
- * Fase 2.
+ * Fonte de dados para cor/nome/grau: cálculo local (`getLiturgicalDay`).
+ * Leva o usuário para `/liturgia/hoje` onde as leituras reais do dia
+ * (primeira leitura, salmo, evangelho) são trazidas da Edge Function
+ * `liturgia-scrape` com cache de 24h.
  */
 export default function LiturgiaHojeCard() {
   const day = getLiturgicalDay(new Date())
@@ -38,7 +39,7 @@ export default function LiturgiaHojeCard() {
 
   return (
     <Link
-      href="/liturgia"
+      href="/liturgia/hoje"
       className="block mx-4 mb-4 rounded-3xl p-5 transition-all active:scale-[0.99]"
       style={{
         background: style.bg,
