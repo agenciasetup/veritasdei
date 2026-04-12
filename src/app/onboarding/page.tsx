@@ -7,10 +7,13 @@ import { createClient } from '@/lib/supabase/client'
 import { VOCACOES, SACRAMENTOS, type Vocacao, type Sacramento } from '@/types/auth'
 import { VocacaoIcon } from '@/components/icons/VocacaoIcons'
 import {
-  Camera, User, ArrowRight, ArrowLeft, Check, MapPin, Church,
+  Camera, User, ArrowRight, ArrowLeft, Check, MapPin, Church, Users, HeartHandshake,
 } from 'lucide-react'
 
+type PerfilTipo = 'fiel' | 'igreja' | null
+
 const STEPS = [
+  { label: 'Tipo', desc: 'Fiel ou Igreja' },
   { label: 'Perfil', desc: 'Foto e nome' },
   { label: 'Vocação', desc: 'Sua vocação' },
   { label: 'Fé', desc: 'Sacramentos' },
@@ -33,6 +36,7 @@ export default function OnboardingPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Form state
+  const [perfilTipo, setPerfilTipo] = useState<PerfilTipo>(null)
   const [name, setName] = useState('')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [vocacao, setVocacao] = useState<Vocacao>('leigo')
@@ -95,6 +99,27 @@ export default function OnboardingPage() {
     if (!user || !supabase) return
     setSaving(true)
 
+    if (perfilTipo === 'igreja') {
+      // Igreja: só marca onboarding como concluído (mantém vocacao 'leigo')
+      // e redireciona para o cadastro da igreja. Não grava sacramentos/paróquia
+      // pessoal — estes não fazem sentido para o representante da igreja.
+      await supabase
+        .from('profiles')
+        .update({
+          name: name || null,
+          profile_image_url: avatarUrl,
+          cidade: cidade || null,
+          estado: estado || null,
+          onboarding_completed: true,
+        })
+        .eq('id', user.id)
+
+      await refreshProfile()
+      setSaving(false)
+      router.push('/paroquias/cadastrar')
+      return
+    }
+
     await supabase
       .from('profiles')
       .update({
@@ -126,8 +151,46 @@ export default function OnboardingPage() {
     router.push('/')
   }
 
-  const canGoNext = step < STEPS.length - 1
+  // Steps visíveis: para fiel usa todos; para igreja pula vocação e fé.
+  const visibleSteps = perfilTipo === 'igreja'
+    ? [STEPS[0], STEPS[1], STEPS[4]]
+    : STEPS
+  const currentStepIdx = (() => {
+    if (perfilTipo !== 'igreja') return step
+    // step armazenado: 0=tipo, 1=perfil, 4=local
+    if (step === 0) return 0
+    if (step === 1) return 1
+    if (step === 4) return 2
+    return step
+  })()
+  const totalVisible = visibleSteps.length
+  const canGoNext = (() => {
+    if (perfilTipo === 'igreja') return step !== 4
+    return step < STEPS.length - 1
+  })()
   const canGoBack = step > 0
+
+  const goNext = () => {
+    if (perfilTipo === 'igreja') {
+      if (step === 0) setStep(1)
+      else if (step === 1) setStep(4)
+      return
+    }
+    setStep(s => Math.min(s + 1, STEPS.length - 1))
+  }
+  const goBack = () => {
+    if (perfilTipo === 'igreja') {
+      if (step === 4) setStep(1)
+      else if (step === 1) setStep(0)
+      return
+    }
+    setStep(s => Math.max(s - 1, 0))
+  }
+  const nextDisabled = (() => {
+    if (step === 0 && perfilTipo === null) return true
+    if (step === 1 && !name.trim()) return true
+    return false
+  })()
 
   if (isLoading || !isAuthenticated) {
     return (
@@ -156,24 +219,24 @@ export default function OnboardingPage() {
       {/* Progress bar */}
       <div className="w-full max-w-lg relative z-10 mb-8">
         <div className="flex items-center justify-between mb-3">
-          {STEPS.map((s, i) => (
+          {visibleSteps.map((s, i) => (
             <div key={i} className="flex flex-col items-center flex-1">
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"
                 style={{
                   fontFamily: 'Cinzel, serif',
-                  background: i <= step ? 'rgba(201,168,76,0.15)' : 'rgba(10,10,10,0.6)',
-                  border: i <= step ? '2px solid #C9A84C' : '2px solid rgba(201,168,76,0.1)',
-                  color: i <= step ? '#C9A84C' : '#7A7368',
+                  background: i <= currentStepIdx ? 'rgba(201,168,76,0.15)' : 'rgba(10,10,10,0.6)',
+                  border: i <= currentStepIdx ? '2px solid #C9A84C' : '2px solid rgba(201,168,76,0.1)',
+                  color: i <= currentStepIdx ? '#C9A84C' : '#7A7368',
                 }}
               >
-                {i < step ? <Check className="w-4 h-4" /> : i + 1}
+                {i < currentStepIdx ? <Check className="w-4 h-4" /> : i + 1}
               </div>
               <span
                 className="text-[10px] mt-1.5 hidden sm:block"
                 style={{
                   fontFamily: 'Poppins, sans-serif',
-                  color: i <= step ? '#C9A84C' : '#7A7368',
+                  color: i <= currentStepIdx ? '#C9A84C' : '#7A7368',
                 }}
               >
                 {s.label}
@@ -186,7 +249,7 @@ export default function OnboardingPage() {
           <div
             className="h-full rounded-full transition-all duration-500"
             style={{
-              width: `${((step) / (STEPS.length - 1)) * 100}%`,
+              width: `${(currentStepIdx / Math.max(totalVisible - 1, 1)) * 100}%`,
               background: 'linear-gradient(90deg, #C9A84C, #A88B3A)',
             }}
           />
@@ -204,17 +267,98 @@ export default function OnboardingPage() {
           minHeight: '380px',
         }}
       >
-        {/* ═══ STEP 1: Photo + Name ═══ */}
+        {/* ═══ STEP 0: Fiel ou Igreja ═══ */}
         {step === 0 && (
+          <div>
+            <h2
+              className="text-xl font-bold tracking-wider uppercase mb-1 text-center"
+              style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
+            >
+              Quem é você?
+            </h2>
+            <p className="text-sm mb-8 text-center" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+              Escolha o tipo de perfil para continuar
+            </p>
+
+            <div className="grid grid-cols-1 gap-3">
+              <button
+                type="button"
+                onClick={() => setPerfilTipo('fiel')}
+                className="flex items-start gap-3 p-4 rounded-xl text-left transition-all"
+                style={{
+                  fontFamily: 'Poppins, sans-serif',
+                  background: perfilTipo === 'fiel' ? 'rgba(201,168,76,0.12)' : 'rgba(10,10,10,0.5)',
+                  border: perfilTipo === 'fiel' ? '2px solid rgba(201,168,76,0.4)' : '2px solid rgba(201,168,76,0.08)',
+                  color: perfilTipo === 'fiel' ? '#C9A84C' : '#B8AFA2',
+                }}
+              >
+                <div
+                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.15)' }}
+                >
+                  <Users className="w-5 h-5" style={{ color: '#C9A84C' }} />
+                </div>
+                <div>
+                  <div className="text-sm font-bold mb-1" style={{ fontFamily: 'Cinzel, serif' }}>
+                    Sou um fiel
+                  </div>
+                  <div className="text-xs" style={{ color: '#7A7368' }}>
+                    Cadastre sua vocação, sacramentos e paróquia — acompanhe estudos, formação e comunidade.
+                  </div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPerfilTipo('igreja')}
+                className="flex items-start gap-3 p-4 rounded-xl text-left transition-all"
+                style={{
+                  fontFamily: 'Poppins, sans-serif',
+                  background: perfilTipo === 'igreja' ? 'rgba(201,168,76,0.12)' : 'rgba(10,10,10,0.5)',
+                  border: perfilTipo === 'igreja' ? '2px solid rgba(201,168,76,0.4)' : '2px solid rgba(201,168,76,0.08)',
+                  color: perfilTipo === 'igreja' ? '#C9A84C' : '#B8AFA2',
+                }}
+              >
+                <div
+                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.15)' }}
+                >
+                  <Church className="w-5 h-5" style={{ color: '#C9A84C' }} />
+                </div>
+                <div>
+                  <div className="text-sm font-bold mb-1" style={{ fontFamily: 'Cinzel, serif' }}>
+                    Represento uma Igreja
+                  </div>
+                  <div className="text-xs" style={{ color: '#7A7368' }}>
+                    Cadastre uma igreja (CNPJ, tipo, horários, fotos). Após a verificação, publique
+                    avisos no feed da sua igreja.
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            <div className="mt-6 flex items-start gap-2 p-3 rounded-xl" style={{ background: 'rgba(201,168,76,0.05)', border: '1px solid rgba(201,168,76,0.1)' }}>
+              <HeartHandshake className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#C9A84C' }} />
+              <p className="text-xs" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+                O mesmo usuário pode administrar várias igrejas no futuro.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ STEP 1: Photo + Name ═══ */}
+        {step === 1 && (
           <div className="flex flex-col items-center">
             <h2
               className="text-xl font-bold tracking-wider uppercase mb-1 text-center"
               style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
             >
-              Seu Perfil
+              {perfilTipo === 'igreja' ? 'Seu Nome' : 'Seu Perfil'}
             </h2>
             <p className="text-sm mb-8 text-center" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
-              Como a comunidade vai te conhecer
+              {perfilTipo === 'igreja'
+                ? 'Nome do responsável pela igreja no Veritas Dei'
+                : 'Como a comunidade vai te conhecer'}
             </p>
 
             {/* Avatar */}
@@ -282,7 +426,7 @@ export default function OnboardingPage() {
         )}
 
         {/* ═══ STEP 2: Vocação ═══ */}
-        {step === 1 && (
+        {step === 2 && perfilTipo !== 'igreja' && (
           <div>
             <h2
               className="text-xl font-bold tracking-wider uppercase mb-1 text-center"
@@ -317,7 +461,7 @@ export default function OnboardingPage() {
         )}
 
         {/* ═══ STEP 3: Fé ═══ */}
-        {step === 2 && (
+        {step === 3 && perfilTipo !== 'igreja' && (
           <div>
             <h2
               className="text-xl font-bold tracking-wider uppercase mb-1 text-center"
@@ -387,16 +531,18 @@ export default function OnboardingPage() {
         )}
 
         {/* ═══ STEP 4: Localização ═══ */}
-        {step === 3 && (
+        {step === 4 && (
           <div>
             <h2
               className="text-xl font-bold tracking-wider uppercase mb-1 text-center"
               style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
             >
-              Sua Localização
+              {perfilTipo === 'igreja' ? 'Cidade da Igreja' : 'Sua Localização'}
             </h2>
             <p className="text-sm mb-8 text-center" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
-              Para encontrar igrejas perto de você
+              {perfilTipo === 'igreja'
+                ? 'Usamos para pré-preencher o cadastro da igreja no próximo passo'
+                : 'Para encontrar igrejas perto de você'}
             </p>
 
             <div className="space-y-4">
@@ -438,7 +584,7 @@ export default function OnboardingPage() {
       <div className="w-full max-w-lg flex items-center justify-between mt-6 relative z-10">
         {canGoBack ? (
           <button
-            onClick={() => setStep(s => s - 1)}
+            onClick={goBack}
             className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm transition-all hover:opacity-80"
             style={{
               fontFamily: 'Poppins, sans-serif',
@@ -456,12 +602,16 @@ export default function OnboardingPage() {
 
         {canGoNext ? (
           <button
-            onClick={() => setStep(s => s + 1)}
+            onClick={goNext}
+            disabled={nextDisabled}
             className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold tracking-wider uppercase transition-all hover:scale-[1.02]"
             style={{
               fontFamily: 'Cinzel, serif',
-              background: 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
-              color: '#0A0A0A',
+              background: nextDisabled
+                ? 'rgba(201,168,76,0.15)'
+                : 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
+              color: nextDisabled ? '#7A7368' : '#0A0A0A',
+              cursor: nextDisabled ? 'not-allowed' : 'pointer',
             }}
           >
             Próximo
@@ -490,10 +640,10 @@ export default function OnboardingPage() {
         )}
       </div>
 
-      {/* Skip step */}
-      {canGoNext && (
+      {/* Skip step — available only for non-blocking steps (not tipo/perfil) */}
+      {canGoNext && step !== 0 && step !== 1 && (
         <button
-          onClick={() => setStep(s => s + 1)}
+          onClick={goNext}
           className="relative z-10 mt-3 text-xs transition-colors hover:opacity-80"
           style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
         >
