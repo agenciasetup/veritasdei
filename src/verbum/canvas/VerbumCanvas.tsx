@@ -16,6 +16,7 @@ import {
   type OnConnect,
   type Connection,
   type NodeChange,
+  type EdgeChange,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import Link from 'next/link'
@@ -44,6 +45,7 @@ import {
   saveFlowNode,
   saveFlowEdge,
   deleteFlowEdge,
+  deleteFlowNode,
   updateNodePosition as persistNodePosition,
 } from '../services/flow.service'
 import { ProposalsBadge } from '../panels/ProposalsPanel'
@@ -291,7 +293,7 @@ function VerbumCanvasInner() {
     }, 2000)
   }, [user?.id, isReadOnly])
 
-  // ─── Persist node position on drag ───
+  // ─── Persist node position + deletion on change ───
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
       onNodesChange(changes)
@@ -311,9 +313,35 @@ function VerbumCanvasInner() {
           }, 500)
           triggerSave()
         }
+
+        // Persist node deletions — edges cascade-deleted via FK ON DELETE CASCADE
+        if (change.type === 'remove' && change.id !== TRINITAS_NODE_ID) {
+          deleteFlowNode(change.id).catch(() => setSaveStatus('unsaved'))
+          triggerSave()
+        }
       }
     },
     [onNodesChange, user?.id, isReadOnly, triggerSave]
+  )
+
+  // ─── Persist edge deletions ───
+  const handleEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      onEdgesChange(changes)
+
+      if (!currentFlowRef.current || !user?.id || isReadOnly) return
+
+      for (const change of changes) {
+        if (change.type === 'remove') {
+          deleteFlowEdge(change.id).catch(() => setSaveStatus('unsaved'))
+        }
+      }
+
+      if (changes.some(c => c.type === 'remove')) {
+        triggerSave()
+      }
+    },
+    [onEdgesChange, user?.id, isReadOnly, triggerSave]
   )
 
   // ─── beforeunload warning ───
@@ -958,7 +986,7 @@ function VerbumCanvasInner() {
         nodes={filteredNodes}
         edges={filteredEdges}
         onNodesChange={handleNodesChange}
-        onEdgesChange={onEdgesChange}
+        onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}
@@ -977,6 +1005,10 @@ function VerbumCanvasInner() {
         nodesDraggable={!isReadOnly}
         nodesConnectable={!isReadOnly}
         elementsSelectable={!isReadOnly}
+        deleteKeyCode={isReadOnly ? null : ['Backspace', 'Delete']}
+        multiSelectionKeyCode="Shift"
+        selectionOnDrag={!isReadOnly}
+        panOnDrag={isReadOnly ? true : [1, 2]}
       >
         <Background
           variant={BackgroundVariant.Dots}
