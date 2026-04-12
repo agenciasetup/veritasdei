@@ -18,6 +18,7 @@ import {
   Clock,
   Users,
   Heart,
+  ArrowLeft,
   ArrowRight,
   Compass,
   Share2,
@@ -129,16 +130,26 @@ export default function VerbumDashboard() {
       <div className="relative z-10 max-w-5xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1
-              className="text-2xl font-bold"
-              style={{ fontFamily: 'Cinzel, serif', color: GOLD, letterSpacing: '0.08em' }}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push('/')}
+              className="p-2 rounded-lg transition-colors hover:bg-white/5"
+              style={{ color: '#5C4A2A' }}
+              title="Voltar para Home"
             >
-              VERBUM
-            </h1>
-            <p className="text-xs mt-1" style={{ color: '#5C4A2A' }}>
-              Mappa Fidei — Seus grafos teológicos
-            </p>
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <h1
+                className="text-2xl font-bold"
+                style={{ fontFamily: 'Cinzel, serif', color: GOLD, letterSpacing: '0.08em' }}
+              >
+                VERBUM
+              </h1>
+              <p className="text-xs mt-1" style={{ color: '#5C4A2A' }}>
+                Mappa Fidei — Seus grafos teológicos
+              </p>
+            </div>
           </div>
           <button
             onClick={() => setShowNewModal(true)}
