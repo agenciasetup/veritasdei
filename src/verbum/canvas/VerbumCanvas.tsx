@@ -615,7 +615,7 @@ function VerbumCanvasInner() {
             layer_id: payload.layerId,
             historical_period: payload.canonicalEntity?.historical_period,
             bible_key_verse: payload.canonicalEntity?.bible_key_verse,
-            is_canonical: true,
+            is_canonical: false, // User nodes are never canonical — canonical_entity_id links to the source
             canonical_entity_id: payload.canonicalEntity?.id,
             visual_tier: payload.canonicalEntity?.visual_tier || 2,
           }

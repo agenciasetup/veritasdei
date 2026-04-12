@@ -25,7 +25,7 @@ export async function getComments(
 
   let query = supabase
     .from('verbum_comments')
-    .select('*, profiles:user_id(full_name, avatar_url)')
+    .select('*, profiles:user_id(name, profile_image_url)')
     .eq('flow_id', flowId)
     .order('created_at', { ascending: true })
     .limit(100)
@@ -53,8 +53,8 @@ export async function getComments(
       content: c.content as string,
       created_at: c.created_at as string,
       updated_at: c.updated_at as string,
-      user_name: (profile?.full_name as string) || null,
-      user_avatar: (profile?.avatar_url as string) || null,
+      user_name: (profile?.name as string) || null,
+      user_avatar: (profile?.profile_image_url as string) || null,
     } as VerbumComment
   })
 }
@@ -77,7 +77,7 @@ export async function addComment(
       edge_id: target.edgeId || null,
       content,
     })
-    .select('*, profiles:user_id(full_name, avatar_url)')
+    .select('*, profiles:user_id(name, profile_image_url)')
     .single()
 
   if (error) {
@@ -88,8 +88,8 @@ export async function addComment(
   const profile = (data as Record<string, unknown>).profiles as Record<string, unknown> | null
   return {
     ...(data as unknown as VerbumComment),
-    user_name: (profile?.full_name as string) || null,
-    user_avatar: (profile?.avatar_url as string) || null,
+    user_name: (profile?.name as string) || null,
+    user_avatar: (profile?.profile_image_url as string) || null,
   }
 }
 
