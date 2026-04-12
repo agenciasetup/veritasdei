@@ -106,7 +106,9 @@ export default function ParoquiaPublicPage({ params }: PageProps) {
   }
 
   const tipoLabel = TIPOS_IGREJA.find(t => t.value === paroquia.tipo_igreja)?.label
-  const isOwner = user?.id === paroquia.owner_user_id
+  const isOwner =
+    !!user?.id &&
+    (user.id === paroquia.owner_user_id || user.id === paroquia.criado_por)
   const photos = paroquia.fotos && paroquia.fotos.length > 0
     ? paroquia.fotos
     : paroquia.foto_url
