@@ -58,6 +58,20 @@ UPDATE public.paroquias
 --      UPDATE: owner can edit most fields EXCEPT verification flags;
 --              admins can edit everything (including verification).
 -- ─────────────────────────────────────────────────────────────────────────────
+-- Public browse: anyone can SELECT approved churches; owner/admin see own too.
+DROP POLICY IF EXISTS paroquias_select ON public.paroquias;
+CREATE POLICY paroquias_select ON public.paroquias
+  FOR SELECT
+  USING (
+    status = 'aprovada'
+    OR auth.uid() = owner_user_id
+    OR auth.uid() = criado_por
+    OR EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'::user_role
+    )
+  );
+
 DROP POLICY IF EXISTS paroquias_insert ON public.paroquias;
 CREATE POLICY paroquias_insert ON public.paroquias
   FOR INSERT
