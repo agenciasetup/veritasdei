@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, BookOpen, Church, Cross, Star } from 'lucide-react'
 import { VERBUM_COLORS, EDGE_WEIGHT_STROKE } from '../design-tokens'
+import CommentSection from './CommentSection'
 import type { VerbumSource, EdgeStatus } from '../types/verbum.types'
 
 interface EdgeDetailPanelProps {
@@ -19,6 +20,10 @@ interface EdgeDetailPanelProps {
     magisterialWeight: number
     status: EdgeStatus
   } | null
+  edgeId?: string | null
+  flowId?: string | null
+  userId?: string | null
+  isReadOnly?: boolean
   onApprove?: () => void
   onReject?: () => void
 }
@@ -36,7 +41,7 @@ function SourceIcon({ type }: { type: string }) {
   }
 }
 
-export default function EdgeDetailPanel({ visible, onClose, data, onApprove, onReject }: EdgeDetailPanelProps) {
+export default function EdgeDetailPanel({ visible, onClose, data, edgeId, flowId, userId, isReadOnly, onApprove, onReject }: EdgeDetailPanelProps) {
   if (!data) return null
 
   return (
@@ -236,6 +241,18 @@ export default function EdgeDetailPanel({ visible, onClose, data, onApprove, onR
                 >
                   Rejeitar
                 </button>
+              </div>
+            )}
+
+            {/* Comments */}
+            {flowId && userId && edgeId && (
+              <div style={{ borderTop: `1px solid ${VERBUM_COLORS.ui_border}`, paddingTop: '1rem' }}>
+                <CommentSection
+                  flowId={flowId}
+                  userId={userId}
+                  target={{ edgeId }}
+                  isReadOnly={isReadOnly ?? false}
+                />
               </div>
             )}
           </div>

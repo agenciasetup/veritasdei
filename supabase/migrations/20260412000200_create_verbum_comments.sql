@@ -1,0 +1,16 @@
+-- Create verbum_comments table for node/edge annotations
+-- Applied via Supabase MCP. This stub records the migration.
+--
+-- Table: verbum_comments
+--   - id (uuid PK)
+--   - flow_id (FK → verbum_flows, CASCADE)
+--   - user_id (FK → auth.users, CASCADE)
+--   - node_id (FK → verbum_nodes, CASCADE, nullable)
+--   - edge_id (FK → verbum_edges, CASCADE, nullable)
+--   - content (text, 1-2000 chars)
+--   - created_at, updated_at
+--
+-- RLS policies:
+--   - Users can manage own comments
+--   - Flow participants can read comments
+--   - Editors can add comments to shared flows

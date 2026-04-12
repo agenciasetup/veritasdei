@@ -1245,6 +1245,10 @@ function VerbumCanvasInner() {
       <EdgeDetailPanel
         visible={edgeDetail.visible}
         data={edgeDetail.data}
+        edgeId={edgeDetail.edgeId}
+        flowId={currentFlow?.id ?? null}
+        userId={user?.id ?? null}
+        isReadOnly={isReadOnly}
         onClose={() => setEdgeDetail({ visible: false, edgeId: null, data: null })}
         onApprove={onApproveEdge}
         onReject={onRejectEdge}
