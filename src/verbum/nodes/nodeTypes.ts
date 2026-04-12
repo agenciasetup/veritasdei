@@ -3,6 +3,7 @@ import FiguraNode from './FiguraNode'
 import VersiculoNode from './VersiculoNode'
 import DogmaNode from './DogmaNode'
 import EncarnacaoNode from './EncarnacaoNode'
+import PostItNode from './PostItNode'
 
 export const nodeTypes = {
   trinitas: TrinitasNode,
@@ -10,4 +11,5 @@ export const nodeTypes = {
   versiculo: VersiculoNode,
   dogma: DogmaNode,
   encarnado: EncarnacaoNode,
+  postit: PostItNode,
 } as const

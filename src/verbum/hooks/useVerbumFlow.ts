@@ -163,25 +163,42 @@ export function useVerbumFlow(): UseVerbumFlowReturn {
           // Convert DB nodes to React Flow nodes (filter out Trinitas to avoid duplicate)
           const loadedNodes: Node[] = [
             ...INITIAL_NODES,
-            ...dbNodes.filter((n: Record<string, unknown>) => n.id !== TRINITAS_NODE_ID).map((n: Record<string, unknown>) => ({
-              id: n.id as string,
-              type: n.node_type as string,
-              position: { x: n.pos_x as number, y: n.pos_y as number },
-              data: {
-                title: n.title,
-                title_latin: n.title_latin,
-                description: n.description,
-                layer_id: n.layer_id,
-                bible_reference: n.bible_reference,
-                bible_text: n.bible_text,
-                bible_book: n.bible_book,
-                testament: (n.bible_book as string)?.match(/^(Gn|Ex|Lv|Nm|Dt|Js|Jz|Rt|1Sm|2Sm|1Rs|2Rs|1Cr|2Cr|Esd|Ne|Tb|Jt|Est|1Mc|2Mc|Jó|Sl|Pr|Ecl|Ct|Sb|Eclo|Is|Jr|Lm|Br|Ez|Dn|Os|Jl|Am|Ab|Jn|Mq|Na|Hc|Sf|Ag|Zc|Ml)/) ? 'AT' : 'NT',
-                is_canonical: n.is_canonical,
-                canonical_entity_id: n.canonical_entity_id,
-                ccc_paragraph: n.ccc_paragraph,
-                ccc_text: n.ccc_text,
-              },
-            })),
+            ...dbNodes.filter((n: Record<string, unknown>) => n.id !== TRINITAS_NODE_ID).map((n: Record<string, unknown>) => {
+              // Post-it nodes use title_latin for color, description for body
+              if (n.node_type === 'postit') {
+                return {
+                  id: n.id as string,
+                  type: 'postit',
+                  position: { x: n.pos_x as number, y: n.pos_y as number },
+                  data: {
+                    title: n.title,
+                    body: n.description || '',
+                    color: n.title_latin || 'amber',
+                    layer_id: n.layer_id,
+                  },
+                }
+              }
+
+              return {
+                id: n.id as string,
+                type: n.node_type as string,
+                position: { x: n.pos_x as number, y: n.pos_y as number },
+                data: {
+                  title: n.title,
+                  title_latin: n.title_latin,
+                  description: n.description,
+                  layer_id: n.layer_id,
+                  bible_reference: n.bible_reference,
+                  bible_text: n.bible_text,
+                  bible_book: n.bible_book,
+                  testament: (n.bible_book as string)?.match(/^(Gn|Ex|Lv|Nm|Dt|Js|Jz|Rt|1Sm|2Sm|1Rs|2Rs|1Cr|2Cr|Esd|Ne|Tb|Jt|Est|1Mc|2Mc|Jó|Sl|Pr|Ecl|Ct|Sb|Eclo|Is|Jr|Lm|Br|Ez|Dn|Os|Jl|Am|Ab|Jn|Mq|Na|Hc|Sf|Ag|Zc|Ml)/) ? 'AT' : 'NT',
+                  is_canonical: n.is_canonical,
+                  canonical_entity_id: n.canonical_entity_id,
+                  ccc_paragraph: n.ccc_paragraph,
+                  ccc_text: n.ccc_text,
+                },
+              }
+            }),
           ]
 
           // Convert DB edges to React Flow edges

@@ -64,7 +64,7 @@ function VerbumCanvasInner() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; flowX: number; flowY: number } | null>(null)
 
   // AddNodePanel state
-  const [addPanel, setAddPanel] = useState<{ visible: boolean; mode: ContextMenuAction }>({
+  const [addPanel, setAddPanel] = useState<{ visible: boolean; mode: Exclude<ContextMenuAction, 'postit'> }>({
     visible: false,
     mode: 'figura',
   })
@@ -391,14 +391,86 @@ function VerbumCanvasInner() {
     })
   }, [scheduleProposalCheck])
 
+  // ─── Update node data (used by PostItNode for inline editing) ───
+  const onUpdateNodeData = useCallback((nodeId: string, updates: Record<string, unknown>) => {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === nodeId ? { ...n, data: { ...n.data, ...updates } } : n
+      )
+    )
+
+    // Persist to DB
+    if (currentFlow && user?.id) {
+      const node = nodesRef.current.find((n) => n.id === nodeId)
+      if (node) {
+        const merged = { ...node.data, ...updates } as Record<string, unknown>
+        saveFlowNode(currentFlow.id, user.id, {
+          id: nodeId,
+          node_type: node.type || 'postit',
+          title: (merged.title as string) || '',
+          title_latin: (merged.color as string) || null, // post-it color stored in title_latin
+          description: (merged.body as string) || (merged.description as string) || null,
+          layer_id: (merged.layer_id as number) || 5,
+          pos_x: node.position.x,
+          pos_y: node.position.y,
+        }).catch(() => setSaveStatus('unsaved'))
+      }
+    }
+    triggerSave()
+  }, [setNodes, currentFlow, user?.id, triggerSave])
+
   const canvasContextValue = useMemo(() => ({
     onAnalyzeNode,
+    onUpdateNodeData,
     isReadOnly,
-  }), [onAnalyzeNode, isReadOnly])
+  }), [onAnalyzeNode, onUpdateNodeData, isReadOnly])
+
+  // ─── Create a post-it directly (no AddNodePanel needed) ───
+  const createPostIt = useCallback(() => {
+    if (addingNodeRef.current) return
+    addingNodeRef.current = true
+    setTimeout(() => { addingNodeRef.current = false }, 500)
+
+    const newId = crypto.randomUUID()
+    const pos = insertPositionRef.current
+    const data = {
+      title: 'Nova Nota',
+      body: '',
+      color: 'amber',
+      layer_id: 5,
+    }
+
+    const newNode = {
+      id: newId,
+      type: 'postit' as const,
+      position: pos,
+      data,
+    }
+
+    setNodes((nds) => [...nds, newNode])
+
+    if (currentFlow && user?.id) {
+      saveFlowNode(currentFlow.id, user.id, {
+        id: newId,
+        node_type: 'postit',
+        title: data.title,
+        title_latin: data.color,
+        description: null,
+        layer_id: 5,
+        pos_x: pos.x,
+        pos_y: pos.y,
+      }).catch(() => setSaveStatus('unsaved'))
+    }
+    triggerSave()
+  }, [setNodes, currentFlow, user?.id, triggerSave])
 
   const onContextMenuSelect = useCallback((action: ContextMenuAction) => {
+    if (action === 'postit') {
+      createPostIt()
+      return
+    }
     setAddPanel({ visible: true, mode: action })
-  }, [])
+  }, [createPostIt])
 
   const onAddNode = useCallback(
     (payload: AddNodePayload) => {
