@@ -34,6 +34,8 @@ import { ProposalsBadge } from '../panels/ProposalsPanel'
 import { useVerbumFlow, TRINITAS_NODE_ID } from '../hooks/useVerbumFlow'
 import { VerbumCanvasProvider } from '../contexts/VerbumCanvasContext'
 import SelectionToolbar from './SelectionToolbar'
+import CanvasSearch from './CanvasSearch'
+import ConnectionFilter from './ConnectionFilter'
 const ProposalsPanel = lazy(() => import('../panels/ProposalsPanel'))
 const ShareModal = lazy(() => import('../panels/ShareModal'))
 const AISearchPanel = lazy(() => import('../panels/AISearchPanel'))
@@ -104,6 +106,9 @@ function VerbumCanvasInner() {
   const [focusNodeId, setFocusNodeId] = useState<string | null>(null)
   const [shareModalVisible, setShareModalVisible] = useState(false)
   const [searchPanelVisible, setSearchPanelVisible] = useState(false)
+  const [highlightNodeId, setHighlightNodeId] = useState<string | null>(null)
+  const [connectionFilterEntities, setConnectionFilterEntities] = useState<string[]>([])
+  const [connectionFilterRelation, setConnectionFilterRelation] = useState<string | null>(null)
 
   const addingNodeRef = useRef(false)
   const longPressRef = useRef<NodeJS.Timeout | null>(null)
@@ -761,6 +766,11 @@ function VerbumCanvasInner() {
     )
   }, [])
 
+  const onConnectionFilterChange = useCallback((entities: string[], relation: string | null) => {
+    setConnectionFilterEntities(entities)
+    setConnectionFilterRelation(relation)
+  }, [])
+
   const onNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
       if (event.altKey) {
@@ -794,6 +804,8 @@ function VerbumCanvasInner() {
         isFocused = connectedNodeIds.has(node.id)
       }
 
+      const isHighlighted = highlightNodeId === node.id
+
       return {
         ...node,
         hidden: !isLayerVisible,
@@ -801,10 +813,11 @@ function VerbumCanvasInner() {
           ...node.style,
           opacity: isFocused ? 1 : 0.15,
           transition: 'opacity 0.3s ease',
+          ...(isHighlighted ? { boxShadow: `0 0 20px ${VERBUM_COLORS.ui_gold}`, borderRadius: '12px' } : {}),
         },
       }
     })
-  }, [nodes, visibleLayers, focusNodeId, edges])
+  }, [nodes, visibleLayers, focusNodeId, edges, highlightNodeId])
 
   const filteredEdges = useMemo(() => {
     const hiddenNodeIds = new Set(
@@ -816,6 +829,9 @@ function VerbumCanvasInner() {
         .map((n) => n.id)
     )
 
+    const hasEntityFilter = connectionFilterEntities.length > 0
+    const entitySet = new Set(connectionFilterEntities)
+
     return edges.map((edge) => {
       const sourceHidden = hiddenNodeIds.has(edge.source)
       const targetHidden = hiddenNodeIds.has(edge.target)
@@ -825,8 +841,22 @@ function VerbumCanvasInner() {
         isFocused = edge.source === focusNodeId || edge.target === focusNodeId
       }
 
+      // Connection filter: hide edges not involving selected entities
+      let isFiltered = false
+      if (hasEntityFilter) {
+        isFiltered = !entitySet.has(edge.source) && !entitySet.has(edge.target)
+      }
+      if (connectionFilterRelation) {
+        const edgeData = edge.data as Record<string, unknown> | undefined
+        const rel = (edgeData?.relation_type as string) || edge.type || ''
+        if (rel !== connectionFilterRelation) isFiltered = true
+      }
+
       if (sourceHidden && targetHidden) {
         return { ...edge, hidden: true }
+      }
+      if (isFiltered) {
+        return { ...edge, style: { ...edge.style, opacity: 0.05, transition: 'opacity 0.3s ease' } }
       }
       if (sourceHidden || targetHidden) {
         return {
@@ -843,7 +873,7 @@ function VerbumCanvasInner() {
         },
       }
     })
-  }, [edges, nodes, visibleLayers, focusNodeId])
+  }, [edges, nodes, visibleLayers, focusNodeId, connectionFilterEntities, connectionFilterRelation])
 
   const defaultViewport = useMemo(() => ({ x: 0, y: 0, zoom: 0.8 }), [])
 
@@ -1079,6 +1109,15 @@ function VerbumCanvasInner() {
             <BookOpen className="w-3.5 h-3.5" />
           </button>
 
+          {/* Connection filter */}
+          <ConnectionFilter
+            nodes={nodes}
+            edges={edges}
+            filterEntities={connectionFilterEntities}
+            filterRelation={connectionFilterRelation}
+            onFilterChange={onConnectionFilterChange}
+          />
+
           {/* Quick add button */}
           {!isReadOnly && (
             <button
@@ -1220,6 +1259,9 @@ function VerbumCanvasInner() {
           />
         </Suspense>
       )}
+
+      {/* Canvas search (Cmd+F) */}
+      <CanvasSearch nodes={nodes} onHighlightNode={setHighlightNodeId} />
 
       {/* AI Search Panel */}
       <Suspense fallback={null}>
