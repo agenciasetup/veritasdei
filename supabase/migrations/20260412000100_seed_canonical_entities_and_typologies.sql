@@ -1,0 +1,23 @@
+-- Seed: 102 new canonical entities + 14 new typologies
+-- Applied directly via Supabase MCP. This stub records the migration.
+--
+-- Entities added:
+--   91 pessoa_biblica (Patriarcas, Profetas, Apostolos, Padres da Igreja, etc.)
+--    7 sacramento (Batismo, Eucaristia, Confirmacao, Confissao, Uncao, Ordem, Matrimonio)
+--    5 dogma (Imaculada Conceicao, Assuncao, Transubstanciacao, Infalibilidade, Comunhao dos Santos)
+--
+-- Typologies added:
+--   Adao -> Cristo (Novo Adao)
+--   Cordeiro Pascal -> Cristo Cordeiro
+--   Mana -> Eucaristia
+--   Diluvio/Arca -> Batismo
+--   Rocha que Jorra Agua -> Cristo
+--   Sumo Sacerdote -> Cristo Sacerdote Eterno
+--   Templo de Salomao -> Corpo de Cristo
+--   Gebira (Rainha Mae) -> Maria Rainha
+--   Elias -> Joao Batista
+--   Josue -> Jesus (mesmo nome)
+--   Davi Pastor -> Cristo Bom Pastor
+--   Melquisedec Pao e Vinho -> Eucaristia
+--   Passagem Mar Vermelho -> Batismo
+--   Filha de Siao -> Maria
