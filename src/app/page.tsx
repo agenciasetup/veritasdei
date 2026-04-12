@@ -1,35 +1,35 @@
 'use client'
 
-import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 
-// Layout
-import CrossIcon from '@/components/icons/CrossIcon'
-import SearchBox from '@/components/ui/SearchBox'
-import CatechismPopup from '@/components/ui/CatechismPopup'
 import LandingPage from '@/components/landing/LandingPage'
-
-// Dashboard sections
-import WelcomeGreeting from '@/components/dashboard/WelcomeGreeting'
-import IceBreakers from '@/components/dashboard/IceBreakers'
+import HojeHeader from '@/components/dashboard/today/HojeHeader'
+import LiturgiaHojeCard from '@/components/dashboard/today/LiturgiaHojeCard'
+import PropositosStrip from '@/components/dashboard/today/PropositosStrip'
+import AtalhosRapidos from '@/components/dashboard/today/AtalhosRapidos'
+import LembretesCard from '@/components/dashboard/today/LembretesCard'
 import ContinueLearning from '@/components/dashboard/ContinueLearning'
-import FeatureGrid from '@/components/dashboard/FeatureGrid'
-import ProgressOverview from '@/components/dashboard/ProgressOverview'
-import StudyStreak from '@/components/dashboard/StudyStreak'
-import SearchResults from '@/components/dashboard/SearchResults'
+import SantoDoDia from '@/components/ui/SantoDoDia'
 
-import type { QueryResponse } from '@/types'
-
+/**
+ * Home "Hoje" — perfil pessoal diário do católico.
+ *
+ * Ordem deliberada (mobile-first):
+ *   1. Header (avatar + saudação + busca + sino)
+ *   2. Card de Liturgia do dia
+ *   3. Strip de propósitos (rezar o terço, confissão, missa)
+ *   4. Atalhos rápidos (Terço · Orações · Paróquia)
+ *   5. Retomar (última trilha/estudo visto)
+ *   6. Lembretes (confissão, sexta-feira, terço do dia)
+ *   7. Santo do dia
+ *
+ * A antiga FeatureGrid com 15 botões foi removida — o conteúdo
+ * foi distribuído nos hubs /orar, /liturgia, /aprender.
+ */
 export default function Home() {
   const { isAuthenticated, isLoading: authLoading, profile, user } = useAuth()
   const router = useRouter()
-
-  const [response, setResponse] = useState<QueryResponse | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const resultsRef = useRef<HTMLDivElement>(null)
-  const [catechismPopup, setCatechismPopup] = useState<{ ref: string; rect: DOMRect | null } | null>(null)
 
   // ── Auth guards ──
   if (!authLoading && !isAuthenticated) {
@@ -52,160 +52,41 @@ export default function Home() {
     )
   }
 
-  // ── Search handlers ──
-  async function handleSearch(query: string) {
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      const res = await fetch('/api/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query }),
-      })
-
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Erro ao consultar as fontes.')
-      }
-
-      const data: QueryResponse = await res.json()
-      setResponse(data)
-
-      setTimeout(() => {
-        resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      }, 100)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro inesperado. Tente novamente.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  function handleRelatedClick(topic: string) {
-    handleSearch(topic)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  function handleCitationClick(reference: string, rect: DOMRect) {
-    setCatechismPopup({ ref: reference, rect })
-  }
-
-  const hasResponse = response !== null
-
   return (
-    <main className="flex flex-col min-h-screen relative" role="main">
+    <main
+      id="main-content"
+      className="flex flex-col min-h-screen relative pb-24"
+      role="main"
+    >
       <div className="bg-glow" />
 
-      {/* Catechism Popup */}
-      {catechismPopup && (
-        <CatechismPopup
-          reference={catechismPopup.ref}
-          anchorRect={catechismPopup.rect}
-          onClose={() => setCatechismPopup(null)}
-        />
-      )}
+      <HojeHeader />
 
-      {/* ══════════════════════════════════════════════
-          HERO — Welcome + Search (no results yet)
-          ══════════════════════════════════════════════ */}
-      {!hasResponse && !isLoading && (
-        <section className="relative z-10 flex flex-col items-center px-4 pt-12 md:pt-16 pb-6 transition-all duration-700 ease-out">
-          {/* Conversational greeting */}
-          <WelcomeGreeting profile={profile} />
+      <LiturgiaHojeCard />
 
-          {/* Search box */}
-          <div className="w-full max-w-2xl mx-auto mt-6">
-            <SearchBox onSearch={handleSearch} isLoading={isLoading} />
-          </div>
+      <PropositosStrip />
 
-          {/* Ice-breaker questions */}
-          <IceBreakers onSelect={handleSearch} disabled={isLoading} />
+      <AtalhosRapidos />
 
-          {/* Continue where you left off */}
-          <ContinueLearning userId={user?.id} />
+      <ContinueLearning userId={user?.id} />
 
-          {/* Study progress overview */}
-          <ProgressOverview userId={user?.id} />
+      <LembretesCard />
 
-          {/* Study streak */}
-          <StudyStreak userId={user?.id} />
-        </section>
-      )}
+      <div className="px-4 mb-8">
+        <SantoDoDia />
+      </div>
 
-      {/* ══════════════════════════════════════════════
-          COMPACT SEARCH — Sticky header when showing results
-          ══════════════════════════════════════════════ */}
-      {(hasResponse || isLoading) && (
-        <section
-          className="relative z-10 w-full pt-5 pb-4 px-4 md:px-8"
-          style={{
-            background: 'rgba(10,10,10,0.85)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            borderBottom: '1px solid rgba(201,168,76,0.08)',
-            position: 'sticky',
-            top: 0,
-            zIndex: 50,
-          }}
-        >
-          <div className="flex items-center gap-4 max-w-full mx-auto">
-            <span
-              className="text-lg font-bold tracking-widest uppercase flex-shrink-0 hidden md:block"
-              style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
-            >
-              Veritas Dei
-            </span>
-            <span className="flex-shrink-0 md:hidden"><CrossIcon size="sm" /></span>
-            <div className="flex-1">
-              <SearchBox onSearch={handleSearch} isLoading={isLoading} hideChips />
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Error banner */}
-      {error && (
-        <div className="relative z-10 w-full max-w-3xl mx-auto mt-6 px-4">
-          <div className="glass-card px-6 py-4 text-center" style={{ borderColor: 'rgba(107, 29, 42, 0.3)' }}>
-            <p className="text-sm" style={{ color: '#8B3145', fontFamily: 'Poppins, sans-serif' }}>{error}</p>
-          </div>
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════════
-          FEATURE GRID — Explore sections (no results yet)
-          ══════════════════════════════════════════════ */}
-      {!hasResponse && !isLoading && <FeatureGrid />}
-
-      {/* ══════════════════════════════════════════════
-          SEARCH RESULTS
-          ══════════════════════════════════════════════ */}
-      {(hasResponse || isLoading) && (
-        <div ref={resultsRef}>
-          <SearchResults
-            response={response}
-            isLoading={isLoading}
-            onRelatedClick={handleRelatedClick}
-            onCitationClick={handleCitationClick}
-          />
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════════
-          FOOTER
-          ══════════════════════════════════════════════ */}
-      <footer className="relative z-10 py-10 text-center mt-auto">
+      <footer className="relative z-10 py-8 text-center mt-auto">
         <div className="flex items-center justify-center gap-3 mb-3 max-w-[200px] mx-auto">
           <span className="flex-1 h-px bg-gradient-to-r from-transparent to-[rgba(201,168,76,0.15)]" />
-          <span style={{ color: '#C9A84C', opacity: 0.4, fontSize: '0.6rem' }}>&#10022;</span>
+          <span style={{ color: '#C9A84C', opacity: 0.4, fontSize: '0.6rem' }}>✦</span>
           <span className="flex-1 h-px bg-gradient-to-l from-transparent to-[rgba(201,168,76,0.15)]" />
         </div>
         <p
           className="text-xs tracking-wider"
           style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif', letterSpacing: '0.1em' }}
         >
-          Veritas Dei — Fiel ao Magistério. Consulte sempre as fontes.
+          Veritas Dei — Fiel ao Magistério
         </p>
       </footer>
     </main>

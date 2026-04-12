@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import Sidebar from './Sidebar'
 import BottomNav from './BottomNav'
 import LiturgicalBar from './LiturgicalBar'
+import { PropositosProvider } from '@/contexts/PropositosContext'
 
 const PUBLIC_PATHS = ['/login', '/auth', '/privacidade', '/termos', '/onboarding']
 const FULLSCREEN_PATHS = ['/verbum']
@@ -18,7 +19,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const showChrome = isAuthenticated && !isPublicPage && !isFullscreen
 
   return (
-    <>
+    <PropositosProvider>
       {/* Liturgical bar at the very top */}
       {showChrome && <LiturgicalBar />}
 
@@ -33,6 +34,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </div>
       {/* Bottom nav only on mobile */}
       {showChrome && <BottomNav />}
-    </>
+    </PropositosProvider>
   )
 }

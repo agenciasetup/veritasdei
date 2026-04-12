@@ -10,7 +10,7 @@ import {
   ChevronLeft, ChevronRight, Home, Church, Droplets, ScrollText,
   Tablets, BookOpen, Scale, Heart, GraduationCap, MapPin, Map,
   LogIn, User, LogOut, Shield, Users, Cross, ClipboardCheck, BookMarked,
-  Calendar, Library, Network,
+  Calendar, Library, Network, CalendarHeart,
 } from 'lucide-react'
 
 /* ─── Navigation structure with groups ─── */
@@ -26,14 +26,34 @@ interface NavGroup {
   items: NavItem[]
 }
 
+/**
+ * 5 hubs primários (espelham o BottomNav mobile) + grupos detalhados
+ * abaixo para descoberta no desktop.
+ */
 const NAV_MAIN: NavItem[] = [
-  { href: '/', icon: Home, label: 'Início' },
-  { href: '/calendario', icon: Calendar, label: 'Calendário Litúrgico' },
-  { href: '/paroquias', icon: MapPin, label: 'Paróquias' },
-  { href: '/comunidade', icon: Users, label: 'Comunidade' },
+  { href: '/',         icon: Home,          label: 'Hoje' },
+  { href: '/orar',     icon: Cross,         label: 'Orar' },
+  { href: '/liturgia', icon: CalendarHeart, label: 'Liturgia' },
+  { href: '/aprender', icon: BookOpen,      label: 'Aprender' },
 ]
 
 const NAV_GROUPS: NavGroup[] = [
+  {
+    label: 'Oração',
+    items: [
+      { href: '/rosario', icon: Cross, label: 'Santo Rosário' },
+      { href: '/oracoes', icon: BookOpen, label: 'Orações' },
+      { href: '/exame-consciencia', icon: ClipboardCheck, label: 'Exame de Consciência' },
+    ],
+  },
+  {
+    label: 'Liturgia',
+    items: [
+      { href: '/calendario', icon: Calendar, label: 'Calendário Litúrgico' },
+      { href: '/paroquias', icon: MapPin, label: 'Paróquias' },
+      { href: '/comunidade', icon: Users, label: 'Comunidade' },
+    ],
+  },
   {
     label: 'Aprender',
     items: [
@@ -44,14 +64,6 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/sacramentos', icon: Droplets, label: 'Sacramentos' },
       { href: '/catecismo-pio-x', icon: BookMarked, label: 'Catecismo Pio X' },
       { href: '/sao-tomas', icon: Library, label: 'São Tomás de Aquino' },
-    ],
-  },
-  {
-    label: 'Oração e Sacramentos',
-    items: [
-      { href: '/rosario', icon: Cross, label: 'Santo Rosário' },
-      { href: '/exame-consciencia', icon: ClipboardCheck, label: 'Exame de Consciência' },
-      { href: '/oracoes', icon: BookOpen, label: 'Orações' },
     ],
   },
   {

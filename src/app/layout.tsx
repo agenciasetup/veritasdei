@@ -1,16 +1,35 @@
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import "./globals.css"
 import AppShell from "@/components/layout/AppShell"
 import { AuthProvider } from "@/contexts/AuthContext"
+import PwaRegister from "@/components/layout/PwaRegister"
 
 export const metadata: Metadata = {
-  title: "Veritas Dei — O que a Igreja ensina",
-  description: "Sistema de consulta da fé católica com fontes da Bíblia, Magistério e Patrística.",
+  title: "Veritas Dei — Fé Católica",
+  description:
+    "Terço, liturgia do dia, orações, paróquias e aprendizado católico — tudo em um só lugar.",
+  applicationName: "Veritas Dei",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Veritas Dei",
+  },
   openGraph: {
-    title: "Veritas Dei — O que a Igreja ensina",
-    description: "Consulte a fé católica com as fontes: Bíblia, Magistério e Patrística.",
+    title: "Veritas Dei — Fé Católica",
+    description: "Terço, liturgia, orações, paróquias e aprendizado católico.",
     type: "website",
   },
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
+  },
+}
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: "#0A0A0A",
 }
 
 export default function RootLayout({
@@ -35,6 +54,7 @@ export default function RootLayout({
         <AuthProvider>
           <AppShell>{children}</AppShell>
         </AuthProvider>
+        <PwaRegister />
       </body>
     </html>
   )
