@@ -374,11 +374,14 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
       keywords: aiUnderstanding.knowledgeKeywords,
     })
 
-    // Search the curated knowledge base for the identified topic
+    // Search the curated knowledge base for the identified topic.
+    // Pass the raw user query so the KB lookup can also match specific
+    // terms (e.g. "utraquismo") that the LLM may have generalized away.
     const knowledgeMatches = await searchKnowledgeBase(
       supabase,
       aiUnderstanding.knowledgeKeywords,
       aiUnderstanding.primaryTopic,
+      query,
     )
 
     if (knowledgeMatches.length > 0) {
