@@ -463,28 +463,118 @@ function filterLowConfidenceBible(
 }
 
 /**
- * Curator filter: drop any result whose reference is NOT in the LLM's
- * sourceContext map AND is not in the must-include set. The LLM explicitly
- * commits to the citations it actually uses in its answer; anything else
- * from the retrieval pool is silently discarded before the UI sees it.
+ * Normalize a reference for fuzzy matching: lowercase, strip §,
+ * collapse whitespace, remove common punctuation. Lets us match
+ * "[CIC 2270]" (LLM output) against "CIC § 2270" (pool ref).
+ */
+function normalizeRef(ref: string): string {
+  return ref
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[§.,;:()[\]]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * Curator filter: keep only results that the LLM actually cited in its
+ * sourceContext map (plus must-include refs). Reference matching is
+ * NORMALIZED — "[CIC 2270]" in the LLM output will match "CIC § 2270"
+ * in the pool.
  *
- * This is the single most important quality filter in the pipeline — it
- * pushes the responsibility for "does this verse actually support the
- * answer?" onto the model, which has the full context of its own synthesis.
+ * Per-pillar fallback: if the LLM cited ZERO refs from this pillar
+ * but the retriever found rows, we still surface the top N of the
+ * original pool. This prevents the "Nenhuma fonte" empty state when
+ * the LLM simply forgot to curate a pillar.
  */
 function filterByCurator<T extends { reference: string }>(
   results: T[],
   sourceContext: Record<string, string> | undefined,
   mustIncludeRefs: string[] = [],
+  fallbackFloor: number = 3,
 ): T[] {
   if (!sourceContext || Object.keys(sourceContext).length === 0) {
-    // Curator produced no map → fall back to the full pool (don't leave
-    // the user with an empty "Fontes" section).
     return results
   }
-  const keep = new Set<string>(Object.keys(sourceContext))
-  for (const ref of mustIncludeRefs) keep.add(ref)
-  return results.filter(r => keep.has(r.reference))
+
+  // Build a normalized lookup from the LLM's curator map.
+  const normalizedKeys = new Set<string>()
+  for (const k of Object.keys(sourceContext)) normalizedKeys.add(normalizeRef(k))
+  for (const r of mustIncludeRefs) normalizedKeys.add(normalizeRef(r))
+
+  // First pass: strict match.
+  const strict = results.filter(r => normalizedKeys.has(normalizeRef(r.reference)))
+  if (strict.length > 0) return strict
+
+  // Second pass: substring match (e.g. "CIC 2270" substring of "CIC 2270 2271").
+  const loose = results.filter(r => {
+    const ref = normalizeRef(r.reference)
+    for (const key of normalizedKeys) {
+      if (key.includes(ref) || ref.includes(key)) return true
+    }
+    return false
+  })
+  if (loose.length > 0) return loose
+
+  // Final fallback: the LLM never mentioned any ref from this pillar.
+  // Return the top N by similarity so the UI isn't empty.
+  return results.slice(0, fallbackFloor)
+}
+
+/**
+ * Strip diacritics + lowercase for substring matching.
+ */
+function normalizeText(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+}
+
+/**
+ * Keep only etymologies whose term_pt actually appears in the user's
+ * query OR in the LLM's keyPoints array. We intentionally DON'T match
+ * against the full summary because the summary is long prose that often
+ * mentions reference words like "Catecismo" or "Igreja" incidentally —
+ * that caused false positives where "Catecismo" etymology leaked into
+ * an "aborto" query.
+ *
+ * Query + keyPoints is the tight signal: the user asked about X, or the
+ * LLM flagged X as a core concept of the answer.
+ */
+function filterEtymologyByRelevance(
+  etymologies: EtymologyHit[],
+  query: string,
+  keyPoints: string[],
+): EtymologyHit[] {
+  if (etymologies.length === 0) return etymologies
+  const haystack = normalizeText(`${query} ${keyPoints.join(' ')}`)
+  return etymologies.filter(e => {
+    const term = normalizeText(e.term_pt)
+    if (term.length < 3) return false
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    // Match whole-word (bounded by non-letter) to avoid "igreja"
+    // matching inside another word.
+    const bounded = new RegExp(`(^|[^a-z])${escaped}([^a-z]|$)`)
+    return bounded.test(haystack)
+  })
+}
+
+/**
+ * Parse a Bible reference like "Jo 4,23" or "1 Cor 13,4" into its
+ * components. Returns null for range refs ("Jo 4,23-24") or malformed
+ * strings — those stay standalone and never get merged.
+ */
+function parseBibleRef(ref: string): { book: string; chapter: number; verse: number } | null {
+  // Accept: "Jo 4,23", "1 Jo 4,23", "1Jo 4,23", "Gn 1,1". Reject ranges.
+  const match = ref.match(/^(\d?\s*[A-Za-zÀ-ÿ]+)\s+(\d+),(\d+)$/)
+  if (!match) return null
+  const book = match[1].replace(/\s+/g, '').toLowerCase()
+  const chapter = parseInt(match[2], 10)
+  const verse = parseInt(match[3], 10)
+  if (Number.isNaN(chapter) || Number.isNaN(verse)) return null
+  return { book, chapter, verse }
 }
 
 /**
@@ -493,14 +583,14 @@ function filterByCurator<T extends { reference: string }>(
  *   Input:  [Jo 2,1] [Jo 2,2] [Jo 2,3] [Jo 2,4] [Jo 2,5]
  *   Output: [Jo 2,1-5] with concatenated text
  *
+ * We parse the REFERENCE STRING (not RawResult.book/chapter/verse) because
+ * the search_biblia RPC doesn't return structural fields — only reference
+ * + text_pt. Parsing the ref is the only reliable path to detect runs.
+ *
  * Rules:
  *   - Only group within the same book + chapter.
- *   - Only group if ALL verses in the run share the same context
- *     (or all lack context) — if the curator flagged one verse with a
- *     specific explanation, keep that verse as an independent item so
- *     the UI can render its commentary.
- *   - Never merge a must-include verse with adjacent ones (they stay
- *     standalone so their per-verse context is preserved).
+ *   - Don't merge must-include verses (preserve their per-verse context).
+ *   - Don't merge verses that carry distinct curator commentary.
  */
 function groupConsecutiveVerses(
   results: RawResult[],
@@ -510,83 +600,93 @@ function groupConsecutiveVerses(
 
   const mustInclude = new Set(mustIncludeRefs)
 
-  // Sort by book, chapter, verse to identify runs
-  const sorted = [...results].sort((a, b) => {
-    const ba = a.book ?? ''
-    const bb = b.book ?? ''
-    if (ba !== bb) return ba.localeCompare(bb)
-    const ca = a.chapter ?? 0
-    const cb = b.chapter ?? 0
-    if (ca !== cb) return ca - cb
-    return (a.verse ?? 0) - (b.verse ?? 0)
+  // Attach parsed ref to each item once; fall back to original-only sort
+  // for items whose reference can't be parsed (they stay standalone).
+  type Parsed = { item: RawResult; parsed: { book: string; chapter: number; verse: number } | null }
+  const parsed: Parsed[] = results.map(r => ({ item: r, parsed: parseBibleRef(r.reference) }))
+
+  // Unparseable items go through as-is.
+  const unparseable = parsed.filter(p => p.parsed === null).map(p => p.item)
+  const parseable = parsed.filter(p => p.parsed !== null) as Array<{
+    item: RawResult
+    parsed: { book: string; chapter: number; verse: number }
+  }>
+
+  // Sort parseable by book, chapter, verse so runs are adjacent.
+  parseable.sort((a, b) => {
+    if (a.parsed.book !== b.parsed.book) return a.parsed.book.localeCompare(b.parsed.book)
+    if (a.parsed.chapter !== b.parsed.chapter) return a.parsed.chapter - b.parsed.chapter
+    return a.parsed.verse - b.parsed.verse
   })
 
   const grouped: RawResult[] = []
-  let run: RawResult[] = []
+  let run: Parsed[] = []
 
   const flushRun = () => {
     if (run.length === 0) return
     if (run.length === 1) {
-      grouped.push(run[0])
+      grouped.push(run[0].item)
       run = []
       return
     }
-    // Merge into a single range entry
     const first = run[0]
     const last = run[run.length - 1]
-    // Build a range reference like "Jo 2,1-5". Fall back to joining the
-    // individual refs if we can't parse the pattern.
-    const baseRef = first.reference
-    const rangeRef = baseRef.match(/^(.+\s+\d+),(\d+)$/)
-      ? baseRef.replace(/,(\d+)$/, `,$1-${last.verse ?? ''}`)
-      : run.map(r => r.reference).join('; ')
+    // Build a range ref like "Jo 4,23-24" by replacing the trailing verse.
+    const rangeRef = first.item.reference.replace(
+      /,(\d+)$/,
+      `,$1-${last.parsed?.verse ?? ''}`,
+    )
 
-    // Concatenate texts in verse order, prefixing each with its verse
-    // number so the reader can still see the boundaries.
+    // Concatenate text, prefixed with the verse number so the reader can
+    // still see the boundaries.
     const mergedText = run
-      .map(r => `${r.verse ?? ''}. ${r.text_pt ?? r.text ?? ''}`.trim())
+      .map(p => {
+        const v = p.parsed?.verse
+        const body = (p.item.text_pt ?? p.item.text ?? '').trim()
+        return v ? `${v}. ${body}` : body
+      })
       .join(' ')
 
     grouped.push({
-      ...first,
+      ...first.item,
       reference: rangeRef,
       text_pt: mergedText,
       text: mergedText,
-      // Keep the highest similarity in the run for ranking
-      similarity: Math.max(...run.map(r => r.similarity)),
+      similarity: Math.max(...run.map(p => p.item.similarity)),
     })
     run = []
   }
 
-  const canExtendRun = (prev: RawResult, next: RawResult): boolean => {
-    if (prev.book !== next.book) return false
-    if (prev.chapter !== next.chapter) return false
-    if ((prev.verse ?? -1) + 1 !== (next.verse ?? -2)) return false
-    // Don't merge must-include verses — keep them standalone
-    if (mustInclude.has(prev.reference) || mustInclude.has(next.reference)) return false
-    // Don't merge if either verse carries a per-verse context string
-    // (the curator gave it a distinct explanation).
-    if (prev.context && prev.context !== next.context) return false
+  const canExtendRun = (prev: Parsed, next: Parsed): boolean => {
+    if (!prev.parsed || !next.parsed) return false
+    if (prev.parsed.book !== next.parsed.book) return false
+    if (prev.parsed.chapter !== next.parsed.chapter) return false
+    if (prev.parsed.verse + 1 !== next.parsed.verse) return false
+    if (mustInclude.has(prev.item.reference) || mustInclude.has(next.item.reference)) return false
+    // Don't merge if either verse carries its own curator commentary.
+    if (prev.item.context && prev.item.context !== next.item.context) return false
+    if (next.item.context && prev.item.context !== next.item.context) return false
     return true
   }
 
-  for (const r of sorted) {
+  for (const p of parseable) {
     if (run.length === 0) {
-      run.push(r)
+      run.push(p)
       continue
     }
     const prev = run[run.length - 1]
-    if (canExtendRun(prev, r)) {
-      run.push(r)
+    if (canExtendRun(prev, p)) {
+      run.push(p)
     } else {
       flushRun()
-      run.push(r)
+      run.push(p)
     }
   }
   flushRun()
 
-  // Re-sort by similarity (highest first) so the UI shows the best hit first
-  return grouped.sort((a, b) => b.similarity - a.similarity)
+  // Re-add unparseable items and sort everything by similarity desc so
+  // the UI shows the strongest hit first.
+  return [...grouped, ...unparseable].sort((a, b) => b.similarity - a.similarity)
 }
 
 /**
@@ -1122,22 +1222,52 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
   const curatedMagisterio = filterByCurator(allMagisterioResults, sourceContext)
   const curatedPatristica = filterByCurator(patristicaResults, sourceContext)
 
+  // Build a normalized → rationale map so we can look up the LLM's
+  // per-source explanation even when the ref strings don't match byte-exact
+  // (e.g. LLM wrote "CIC 2270" but pool has "CIC § 2270").
+  const normalizedContext = new Map<string, string>()
+  if (sourceContext) {
+    for (const [k, v] of Object.entries(sourceContext)) {
+      if (typeof v === 'string' && v.trim().length > 0) {
+        normalizedContext.set(normalizeRef(k), v)
+      }
+    }
+  }
+  const lookupContext = (ref: string): string | undefined => {
+    const n = normalizeRef(ref)
+    if (normalizedContext.has(n)) return normalizedContext.get(n)
+    // Substring fallback: "cic 2270" matches "cic 2270 2271".
+    for (const [key, val] of normalizedContext) {
+      if (key.includes(n) || n.includes(key)) return val
+    }
+    return undefined
+  }
+
   // Attach curator rationale as context BEFORE grouping (the grouper
   // uses context to decide whether to keep a verse standalone).
   const withContext = (rows: RawResult[]): RawResult[] =>
-    rows.map(r => ({ ...r, context: sourceContext?.[r.reference] }))
+    rows.map(r => ({ ...r, context: lookupContext(r.reference) }))
 
   const bibliaWithContext = withContext(curatedBiblia)
   const groupedBiblia = groupConsecutiveVerses(bibliaWithContext, mustIncludeRefs)
 
   console.log(`[search] Curator: biblia ${bibliaResults.length}→${curatedBiblia.length}→${groupedBiblia.length} (grouped), magisterio ${allMagisterioResults.length}→${curatedMagisterio.length}, patristica ${patristicaResults.length}→${curatedPatristica.length}`)
 
+  // Etymology relevance filter: only surface terms whose term_pt appears
+  // in the query or the LLM's keyPoints. Stops "Catecismo" from leaking
+  // into a query about "aborto".
+  const relevantEtymology = filterEtymologyByRelevance(
+    etymologyResult,
+    query,
+    insight?.keyPoints ?? [],
+  )
+
   const toSearchResult = (item: RawResult, pillar: SearchResult['pillar']): SearchResult => ({
     id: item.id,
     pillar,
     reference: item.reference,
     text: item.text_pt ?? item.text ?? '',
-    context: item.context ?? sourceContext?.[item.reference],
+    context: item.context ?? lookupContext(item.reference),
     similarity: item.similarity,
   })
 
@@ -1170,6 +1300,6 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
     insight,
     sensitive,
     tags: topLevelTags,
-    etymology: etymologyResult,
+    etymology: relevantEtymology,
   }
 }
