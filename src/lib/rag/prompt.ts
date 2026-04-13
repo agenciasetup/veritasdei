@@ -14,6 +14,15 @@
  *    Default is "not_applicable" — we care more about false positives than
  *    coverage (no mislabeling doctrine as heresy).
  */
+export interface EtymologyForPrompt {
+  term_pt: string
+  term_original: string
+  original_language: string | null
+  transliteration: string | null
+  original_meaning: string | null
+  modern_difference: string | null
+}
+
 export function buildRAGPrompt(
   query: string,
   bibliaResults: Array<{ reference: string; text: string }>,
@@ -22,6 +31,8 @@ export function buildRAGPrompt(
   disambiguationNotes: string[] = [],
   knowledgeContext: string | null = null,
   objectionContext: string | null = null,
+  etymologyResults: EtymologyForPrompt[] = [],
+  isSensitive: boolean = false,
 ): string {
   const disambiguationSection = disambiguationNotes.length > 0
     ? `\nNOTAS DE DESAMBIGUAÇÃO (SIGA RIGOROSAMENTE):\n${disambiguationNotes.map((n, i) => `${i + 1}. ${n}`).join('\n')}\n`
@@ -33,6 +44,44 @@ export function buildRAGPrompt(
 
   const objectionSection = objectionContext
     ? `\nOBJEÇÃO IDENTIFICADA NA PERGUNTA:\nO usuário levanta a seguinte objeção/dúvida: "${objectionContext}"\nIMPORTANTE: Responda PRIMEIRO o tema central com clareza, e DEPOIS aborde a objeção diretamente no bloco protestantView.objections.\n`
+    : ''
+
+  // Only surface etymology to the LLM when we actually have hits AND they
+  // came from real rows. We cap at 3 to avoid cluttering the prompt.
+  const etymologySection = etymologyResults.length > 0
+    ? `\n=====================================================================
+ETIMOLOGIAS DOS TERMOS-CHAVE (use quando for útil para explicar o sentido original):
+=====================================================================
+${etymologyResults.slice(0, 3).map(e => {
+  const origLang = e.original_language ? ` [${e.original_language}]` : ''
+  const translit = e.transliteration ? ` (${e.transliteration})` : ''
+  const meaning = e.original_meaning ? `\n  significado original: ${e.original_meaning}` : ''
+  const modern = e.modern_difference ? `\n  diferença moderna: ${e.modern_difference}` : ''
+  return `• ${e.term_pt} → ${e.term_original}${translit}${origLang}${meaning}${modern}`
+}).join('\n')}
+
+INSTRUÇÃO: se uma dessas etimologias clarifica o tema central, mencione-a no summary
+(ex: "A palavra **Eucaristia** vem do grego εὐχαριστία (*eucharistía*), que significa 'ação de graças'").
+NÃO invente etimologias. Use APENAS as fornecidas acima.
+`
+    : ''
+
+  // When the topic is pastorally sensitive (divórcio, suicídio, aborto,
+  // homossexualidade…), prepend a framing that reminds the model to be
+  // doctrinally firm but pastorally compassionate — never cold or lecturing.
+  const sensitiveSection = isSensitive
+    ? `\n=====================================================================
+CUIDADO PASTORAL — TEMA SENSÍVEL:
+=====================================================================
+Este é um tema delicado. Muitas pessoas que perguntam estão sofrendo.
+Sua resposta DEVE:
+  1. Ser DOUTRINARIAMENTE FIEL ao Magistério (sem diluir o ensino).
+  2. Ser PASTORALMENTE acolhedora: reconheça a dor antes de ensinar.
+  3. Evitar TOM julgador, sentencioso ou frio.
+  4. Oferecer um caminho concreto ao final: buscar um sacerdote, confissão,
+     direção espiritual. A Igreja é Mãe, não apenas Mestra.
+  5. NUNCA minimizar o pecado nem maximizar a condenação. Verdade + Caridade.
+`
     : ''
 
   return `Você é um professor de teologia católica fiel ao Magistério da Igreja Católica Apostólica Romana.
@@ -91,7 +140,7 @@ DESAMBIGUAÇÃO DE NOMES BÍBLICOS:
 - "Judas" sem qualificação = Judas Iscariotes (distinga de São Judas Tadeu).
 - "Tiago" = Maior (Zebedeu) ou Menor (Alfeu) — sempre distinga.
 - "João" = Evangelista, Batista ou Crisóstomo — sempre distinga.
-${disambiguationSection}${knowledgeSection}${objectionSection}
+${disambiguationSection}${knowledgeSection}${objectionSection}${etymologySection}${sensitiveSection}
 =====================================================================
 CLASSIFICAÇÕES ESPECIAIS (moralTag e heresyTag):
 =====================================================================
