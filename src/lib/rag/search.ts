@@ -5,7 +5,7 @@ import { disambiguateQuery } from './disambiguation'
 import { understandQuery, searchKnowledgeBase, extractBibleRefsFromKnowledge } from './query-understanding'
 import { isSensitiveTopic } from '../utils/sensitive-topics'
 import { sanitizePostgrestFilter } from '../utils/sanitize'
-import type { QueryResponse, SearchResult, AIInsight, ProtestantView, ObjectionBlock, MoralTag, HeresyTag } from '@/types'
+import type { QueryResponse, SearchResult, AIInsight, ProtestantView, ObjectionBlock, MoralTag, HeresyTag, EtymologyHit } from '@/types'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -461,6 +461,180 @@ function filterLowConfidenceBible(
   return results.filter(r => mustIncludeSet.has(r.reference) || r.similarity >= hardFloor)
 }
 
+/**
+ * Extract 2–5 meaningful keywords from a query for FTS fallbacks on
+ * magisterio/patristica/etymo_terms. Strips short words + stopwords
+ * similar to searchBibliaKeyword.
+ */
+function extractKeywordsForFTS(query: string): string {
+  const stopWords = new Set([
+    'que', 'como', 'para', 'por', 'com', 'uma', 'dos', 'das',
+    'nos', 'nas', 'seu', 'sua', 'são', 'foi', 'era', 'tem', 'ter',
+    'ser', 'está', 'isso', 'este', 'esta', 'esse', 'essa', 'qual',
+    'quem', 'onde', 'quando', 'sobre', 'entre', 'depois', 'antes',
+    'mais', 'muito', 'toda', 'todo', 'cada', 'outro', 'outra',
+    'mesmo', 'ainda', 'também', 'porque', 'pelo', 'pela',
+    'dele', 'dela', 'deles', 'delas', 'aqui', 'ali',
+  ])
+  return query
+    .toLowerCase()
+    .replace(/[^\w\sáàâãéèêíìîóòôõúùûçñ]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length >= 3 && !stopWords.has(w))
+    .slice(0, 5)
+    .join(' ')
+}
+
+/**
+ * FTS fallback for magisterio — called when vector search returns 0 rows
+ * (e.g. because embeddings haven't been backfilled yet for those 40 rows).
+ */
+async function searchMagisterioFTS(
+  supabase: AnySupabaseClient,
+  query: string,
+  limit: number = 4,
+): Promise<RawResult[]> {
+  const kw = extractKeywordsForFTS(query)
+  if (!kw) return []
+  try {
+    const { data, error } = await supabase.rpc('search_magisterio_text', {
+      search_query: kw,
+      match_count: limit,
+    } as Record<string, unknown>)
+    if (error) {
+      console.warn('[search] search_magisterio_text error:', error.message)
+      return []
+    }
+    const rows = (data ?? []) as RawResult[]
+    console.log(`[search] Magisterio FTS returned ${rows.length} results`)
+    return rows.map(r => ({
+      ...r,
+      similarity: Math.min(0.7, 0.5 + (r.rank ?? 0) * 0.1),
+    }))
+  } catch (err) {
+    console.warn('[search] search_magisterio_text exception:', err instanceof Error ? err.message : err)
+    return []
+  }
+}
+
+/**
+ * FTS fallback for patristica — called when vector search returns 0 rows.
+ */
+async function searchPatristicaFTS(
+  supabase: AnySupabaseClient,
+  query: string,
+  limit: number = 4,
+): Promise<RawResult[]> {
+  const kw = extractKeywordsForFTS(query)
+  if (!kw) return []
+  try {
+    const { data, error } = await supabase.rpc('search_patristica_text', {
+      search_query: kw,
+      match_count: limit,
+    } as Record<string, unknown>)
+    if (error) {
+      console.warn('[search] search_patristica_text error:', error.message)
+      return []
+    }
+    const rows = (data ?? []) as RawResult[]
+    console.log(`[search] Patristica FTS returned ${rows.length} results`)
+    return rows.map(r => ({
+      ...r,
+      similarity: Math.min(0.7, 0.5 + (r.rank ?? 0) * 0.1),
+    }))
+  } catch (err) {
+    console.warn('[search] search_patristica_text exception:', err instanceof Error ? err.message : err)
+    return []
+  }
+}
+
+interface EtymoRow {
+  id: string
+  term_pt: string
+  term_original: string
+  original_language: string | null
+  transliteration: string | null
+  original_meaning: string | null
+  modern_difference: string | null
+  examples?: string[] | null
+  similarity?: number
+  rank?: number
+}
+
+/**
+ * Search etymo_terms for relevant Greek/Latin/Hebrew theological terms.
+ * Tries vector first (if we have an embedding and any rows are embedded),
+ * then falls back to the FTS RPC which works even with zero embeddings.
+ */
+async function searchEtymoTerms(
+  supabase: AnySupabaseClient,
+  queryEmbedding: number[] | null,
+  query: string,
+  limit: number = 3,
+): Promise<EtymologyHit[]> {
+  // 1) Try vector search if we have an embedding
+  if (queryEmbedding && queryEmbedding.length > 0) {
+    try {
+      const { data, error } = await supabase.rpc('search_etymo_terms', {
+        query_embedding: queryEmbedding,
+        match_threshold: 0.42,
+        match_count: limit,
+      } as Record<string, unknown>)
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        const rows = data as EtymoRow[]
+        console.log(`[search] Etymo vector returned ${rows.length} results`)
+        return rows.map(r => ({
+          id: r.id,
+          term_pt: r.term_pt,
+          term_original: r.term_original,
+          original_language: r.original_language,
+          transliteration: r.transliteration,
+          original_meaning: r.original_meaning,
+          modern_difference: r.modern_difference,
+          examples: Array.isArray(r.examples) ? r.examples : [],
+          similarity: r.similarity ?? 0.5,
+        }))
+      }
+      if (error) {
+        console.warn('[search] search_etymo_terms error:', error.message)
+      }
+    } catch (err) {
+      console.warn('[search] search_etymo_terms exception:', err instanceof Error ? err.message : err)
+    }
+  }
+
+  // 2) FTS fallback
+  const kw = extractKeywordsForFTS(query)
+  if (!kw) return []
+  try {
+    const { data, error } = await supabase.rpc('search_etymo_terms_text', {
+      search_query: kw,
+      match_count: limit,
+    } as Record<string, unknown>)
+    if (error) {
+      console.warn('[search] search_etymo_terms_text error:', error.message)
+      return []
+    }
+    const rows = (data ?? []) as EtymoRow[]
+    console.log(`[search] Etymo FTS returned ${rows.length} results`)
+    return rows.map(r => ({
+      id: r.id,
+      term_pt: r.term_pt,
+      term_original: r.term_original,
+      original_language: r.original_language,
+      transliteration: r.transliteration,
+      original_meaning: r.original_meaning,
+      modern_difference: r.modern_difference,
+      examples: Array.isArray(r.examples) ? r.examples : [],
+      similarity: Math.min(0.7, 0.5 + (r.rank ?? 0) * 0.1),
+    }))
+  } catch (err) {
+    console.warn('[search] search_etymo_terms_text exception:', err instanceof Error ? err.message : err)
+    return []
+  }
+}
+
 export async function searchCorpus(query: string): Promise<QueryResponse> {
   const supabase = getSupabaseAdmin()
 
@@ -592,8 +766,22 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
   // Hard floor applied AFTER reranking for Bible (must-include refs bypass this)
   const BIBLIA_HARD_FLOOR = 0.46
 
-  const [bibliaVectorResult, catecismoRaw, magisterioRaw, patristicaRaw, bibliaKeywordResult, mustIncludeResult] =
-    await Promise.all([
+  // Cheap early detection of sensitive topic — the prompt uses this to steer
+  // the LLM toward pastoral framing BEFORE we build the prompt. (Also
+  // propagated to the response for the UI banner.)
+  const sensitive = isSensitiveTopic(query)
+
+  const [
+    bibliaVectorResult,
+    catecismoRaw,
+    magisterioRaw,
+    patristicaRaw,
+    bibliaKeywordResult,
+    mustIncludeResult,
+    magisterioFTSResult,
+    patristicaFTSResult,
+    etymologyResult,
+  ] = await Promise.all([
       // Vector search for Bible (using refined embedding)
       hasEmbedding
         ? searchBibliaVector(supabase, queryEmbedding, 8, BIBLIA_VECTOR_THRESHOLD)
@@ -639,6 +827,21 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
       hasMustInclude
         ? fetchMustIncludeVerses(supabase, mustIncludeRefs)
         : Promise.resolve([] as RawResult[]),
+
+      // Magisterio FTS fallback (runs unconditionally — merged with vector
+      // results below; essential until all 40 magisterio rows are embedded).
+      searchMagisterioFTS(supabase, searchQuery, 4),
+
+      // Patristica FTS fallback (48 of 58 patristica rows lack embeddings).
+      searchPatristicaFTS(supabase, searchQuery, 4),
+
+      // Etymo_terms — vector if available, FTS fallback otherwise.
+      searchEtymoTerms(
+        supabase,
+        hasEmbedding ? queryEmbedding : null,
+        searchQuery,
+        3,
+      ),
     ])
 
   // Log errors
@@ -677,12 +880,21 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
   bibliaResults = groupRelatedVerses(bibliaResults)
 
   const catecismoResults: RawResult[] = catecismoRaw.data ?? []
-  const magisterioResults: RawResult[] = magisterioRaw.data ?? []
-  const patristicaResults: RawResult[] = patristicaRaw.data ?? []
+  const magisterioVector: RawResult[] = magisterioRaw.data ?? []
+  const patristicaVector: RawResult[] = patristicaRaw.data ?? []
+
+  // Merge vector + FTS for magisterio/patristica so the LLM gets SOMETHING
+  // even when embeddings haven't been backfilled yet. Dedupe by reference.
+  const magisterioResults = deduplicateResults([...magisterioVector, ...magisterioFTSResult])
+  const patristicaResults = deduplicateResults([...patristicaVector, ...patristicaFTSResult])
+
+  console.log(`[search] Magisterio: vector=${magisterioVector.length} + fts=${magisterioFTSResult.length} → ${magisterioResults.length}`)
+  console.log(`[search] Patristica: vector=${patristicaVector.length} + fts=${patristicaFTSResult.length} → ${patristicaResults.length}`)
+  console.log(`[search] Etymo: ${etymologyResult.length} hits`)
 
   const allMagisterioResults = [...catecismoResults, ...magisterioResults]
     .sort((a, b) => b.similarity - a.similarity)
-    .slice(0, 5)
+    .slice(0, 6)
 
   // ============================================================
   // PHASE 5: Build RAG prompt with full context
@@ -696,6 +908,15 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
     promptNotes,
     knowledgeContext,
     objectionContext,
+    etymologyResult.map(e => ({
+      term_pt: e.term_pt,
+      term_original: e.term_original,
+      original_language: e.original_language,
+      transliteration: e.transliteration,
+      original_meaning: e.original_meaning,
+      modern_difference: e.modern_difference,
+    })),
+    sensitive,
   )
 
   const totalResults = bibliaResults.length + allMagisterioResults.length + patristicaResults.length
@@ -791,7 +1012,8 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
       },
     ],
     insight,
-    sensitive: isSensitiveTopic(query),
+    sensitive,
     tags: topLevelTags,
+    etymology: etymologyResult,
   }
 }

@@ -62,20 +62,29 @@ export interface AIInsight {
   heresyName?: string | null // nome da heresia, se identificada (ex: "Arianismo")
 }
 
+/**
+ * Etymology hit — used when the RAG pipeline finds a term from etymo_terms
+ * that is relevant to the user's question. Surfaced to the LLM so the answer
+ * can explain the original Greek/Latin/Hebrew meaning of a key theological
+ * term (e.g. εὐχαριστία, sacramentum, ἐπίσκοπος).
+ */
+export interface EtymologyHit {
+  id: string
+  term_pt: string
+  term_original: string
+  original_language: string | null
+  transliteration: string | null
+  original_meaning: string | null
+  modern_difference: string | null
+  examples: string[]
+  similarity: number
+}
+
 export interface QueryResponse {
   query: string
   pillars: PillarResponse[]
   insight: AIInsight | null
   sensitive: boolean
   tags: string[]
-}
-
-export interface EtymologyEntry {
-  id: string
-  term_pt: string
-  term_original: string
-  transliteration: string
-  original_meaning: string
-  modern_difference: string
-  examples: string[]
+  etymology?: EtymologyHit[]
 }
