@@ -4,12 +4,12 @@ import { useState } from 'react'
 import {
   Sparkles, Lightbulb, ArrowRight, AlertTriangle, ShieldAlert, BookMarked,
   BookOpen, Feather, ShieldCheck, ShieldAlert as ShieldWarn, ShieldQuestion,
-  XCircle, CheckCircle2, AlertCircle, Flame, MessageCircle, Scale,
+  XCircle, CheckCircle2, AlertCircle, Flame, MessageCircle, Scale, Languages,
 } from 'lucide-react'
 import RichText from '@/components/ui/RichText'
 import PillarCard from '@/components/ui/PillarCard'
 import DisclaimerBanner from '@/components/ui/DisclaimerBanner'
-import type { QueryResponse, Pillar, AIInsight, MoralTag, HeresyTag } from '@/types'
+import type { QueryResponse, Pillar, AIInsight, MoralTag, HeresyTag, EtymologyHit } from '@/types'
 
 const PILLAR_ORDER: Pillar[] = ['biblia', 'magisterio', 'patristica']
 
@@ -33,6 +33,7 @@ export default function SearchResults({
   const hasProtestantView = !!insight?.protestantView
   const hasCuriosity = !!insight?.curiosity
   const hasSecondaryCard = hasProtestantView || hasCuriosity
+  const etymology = (response?.etymology ?? []).filter(e => e.original_meaning || e.modern_difference)
 
   const tabs: { id: TabId; label: string; icon: React.ElementType }[] = [
     { id: 'sintese', label: 'Síntese', icon: Sparkles },
@@ -79,12 +80,15 @@ export default function SearchResults({
           {/* ── Mobile: show active tab content ── */}
           <div className="xl:hidden">
             {activeTab === 'sintese' && (
-              <CatholicSummaryCard
-                insight={insight}
-                fullWidth={!hasSecondaryCard}
-                onRelatedClick={onRelatedClick}
-                onCitationClick={onCitationClick}
-              />
+              <>
+                <CatholicSummaryCard
+                  insight={insight}
+                  fullWidth={!hasSecondaryCard}
+                  onRelatedClick={onRelatedClick}
+                  onCitationClick={onCitationClick}
+                />
+                {etymology.length > 0 && <EtymologyCard terms={etymology} />}
+              </>
             )}
             {activeTab === 'fontes' && (
               <SourcesSection response={response} isLoading={isLoading} />
@@ -118,6 +122,13 @@ export default function SearchResults({
               <CuriosityCard curiosity={insight.curiosity!} />
             )}
           </div>
+
+          {/* ── Etymology (desktop, above confidence/sources) ── */}
+          {etymology.length > 0 && (
+            <div className="hidden xl:block mb-10 fade-in">
+              <EtymologyCard terms={etymology} />
+            </div>
+          )}
 
           {/* ── Confidence indicator ── */}
           {insight.confidenceLevel && (
@@ -668,6 +679,119 @@ function ClassificationBadges({ insight }: { insight: AIInsight }) {
           visual={heresyVisual}
           suffix={insight.heresyTag === 'heresy' ? insight.heresyName ?? undefined : undefined}
         />
+      )}
+    </div>
+  )
+}
+
+/* ─── Etymology Card ─── */
+
+function EtymologyCard({ terms }: { terms: EtymologyHit[] }) {
+  // Cap at 3 so the card stays visually tight.
+  const visible = terms.slice(0, 3)
+  return (
+    <div
+      className="rounded-2xl p-6 md:p-8 mb-6"
+      style={{
+        background: 'rgba(16,16,16,0.8)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(201,168,76,0.15)',
+        boxShadow: '0 12px 48px rgba(0,0,0,0.4)',
+      }}
+    >
+      <div className="flex items-center gap-3 mb-5 md:mb-6">
+        <div
+          className="w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center"
+          style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.2)' }}
+        >
+          <Languages className="w-5 h-5" style={{ color: '#C9A84C' }} />
+        </div>
+        <div>
+          <h2 className="text-base md:text-lg font-bold" style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}>
+            Raízes da palavra
+          </h2>
+          <p className="text-xs mt-0.5" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+            Do grego, do latim e do hebraico — a palavra original e seu sentido.
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {visible.map((term) => (
+          <EtymologyEntry key={term.id} term={term} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function EtymologyEntry({ term }: { term: EtymologyHit }) {
+  const langLabel = (term.original_language ?? '').trim()
+  return (
+    <div
+      className="rounded-xl p-4 md:p-5"
+      style={{
+        background: 'rgba(201,168,76,0.04)',
+        border: '1px solid rgba(201,168,76,0.1)',
+      }}
+    >
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-2">
+        <span
+          className="text-base md:text-lg font-bold"
+          style={{ color: '#E8DFC7', fontFamily: 'Cinzel, serif' }}
+        >
+          {term.term_pt}
+        </span>
+        <span className="text-xs" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+          vem de
+        </span>
+        <span
+          className="text-base md:text-lg"
+          style={{ color: '#C9A84C', fontFamily: 'Cinzel, serif' }}
+        >
+          {term.term_original}
+        </span>
+        {term.transliteration && (
+          <span
+            className="text-xs italic"
+            style={{ color: '#9C9488', fontFamily: 'Poppins, sans-serif' }}
+          >
+            ({term.transliteration})
+          </span>
+        )}
+        {langLabel && (
+          <span
+            className="text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider"
+            style={{
+              background: 'rgba(201,168,76,0.1)',
+              border: '1px solid rgba(201,168,76,0.2)',
+              color: '#C9A84C',
+              fontFamily: 'Poppins, sans-serif',
+            }}
+          >
+            {langLabel}
+          </span>
+        )}
+      </div>
+
+      {term.original_meaning && (
+        <p
+          className="text-sm leading-relaxed mb-2"
+          style={{ color: '#E8E2D8', fontFamily: 'Poppins, sans-serif' }}
+        >
+          <span style={{ color: '#7A7368' }}>Significado original: </span>
+          {term.original_meaning}
+        </p>
+      )}
+
+      {term.modern_difference && (
+        <p
+          className="text-sm leading-relaxed"
+          style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}
+        >
+          <span style={{ color: '#7A7368' }}>Hoje em dia: </span>
+          {term.modern_difference}
+        </p>
       )}
     </div>
   )
