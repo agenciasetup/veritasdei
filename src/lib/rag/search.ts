@@ -5,7 +5,7 @@ import { disambiguateQuery } from './disambiguation'
 import { understandQuery, searchKnowledgeBase, extractBibleRefsFromKnowledge } from './query-understanding'
 import { extractBibleRefsFromRows } from './extract-refs'
 import { isSensitiveTopic } from '../utils/sensitive-topics'
-import { sanitizePostgrestFilter } from '../utils/sanitize'
+import { sanitizeIlike, sanitizePostgrestFilter } from '../utils/sanitize'
 import type { QueryResponse, SearchResult, AIInsight, ProtestantView, ObjectionBlock, MoralTag, HeresyTag, EtymologyHit } from '@/types'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
@@ -295,26 +295,55 @@ async function fetchMustIncludeVerses(
 ): Promise<RawResult[]> {
   if (refs.length === 0) return []
 
+  const normalizedRefs = [...new Set(
+    refs
+      .map(r => r.trim())
+      .filter(Boolean),
+  )]
+
+  if (normalizedRefs.length === 0) return []
+
   try {
-    // References contain commas (e.g., "Mt 26,26") which can confuse
-    // PostgREST's .in() filter. Use .or() with individual eq conditions instead.
-    const orFilter = refs.map(r => `reference.eq.${r}`).join(',')
+    // Primary path: .in() on exact reference. This avoids PostgREST OR
+    // string escaping pitfalls with commas in refs like "Jr 1,5".
     const { data, error } = await supabase
+      .from('biblia')
+      .select('id, reference, text_pt, book, chapter, verse, testament')
+      .in('reference', normalizedRefs)
+
+    if (error) {
+      console.error('[search] Must-include fetch (.in) error:', error.message)
+    } else if (data && data.length > 0) {
+      console.log(`[search] Must-include (.in): requested ${normalizedRefs.length}, found ${data.length}`)
+      return (data as RawResult[]).map(r => ({
+        ...r,
+        similarity: 0.95, // High priority — these are theologically essential
+      }))
+    }
+
+    // Secondary path: escaped OR filter for deployments where .in() does not
+    // match because of reference formatting quirks.
+    const orFilter = normalizedRefs
+      .map(r => `reference.eq.${sanitizePostgrestFilter(r)}`)
+      .join(',')
+
+    const { data: orData, error: orError } = await supabase
       .from('biblia')
       .select('id, reference, text_pt, book, chapter, verse, testament')
       .or(orFilter)
 
-    if (error) {
-      console.error('[search] Must-include fetch error:', error.message)
-      // Fallback: try fetching by book/chapter/verse individually
-      return fetchMustIncludeByParts(supabase, refs)
+    if (orError) {
+      console.error('[search] Must-include fetch (.or) error:', orError.message)
+    } else if (orData && orData.length > 0) {
+      console.log(`[search] Must-include (.or): requested ${normalizedRefs.length}, found ${orData.length}`)
+      return (orData as RawResult[]).map(r => ({
+        ...r,
+        similarity: 0.95,
+      }))
     }
 
-    console.log(`[search] Must-include: requested ${refs.length}, found ${(data ?? []).length}`)
-    return ((data ?? []) as RawResult[]).map(r => ({
-      ...r,
-      similarity: 0.95, // High priority — these are theologically essential
-    }))
+    // Final fallback: parse refs and try structural lookup.
+    return fetchMustIncludeByParts(supabase, normalizedRefs)
   } catch (err) {
     console.error('[search] Must-include exception:', err)
     return []
@@ -338,28 +367,26 @@ async function fetchMustIncludeByParts(
 
   if (parsed.length === 0) return []
 
-  // Group by book to minimize queries
-  const byBook = new Map<string, Array<{ chapter: number; verse: number }>>()
+  const results: RawResult[] = []
+  // NOTE: We avoid depending on `book_abbr` column existence. Some deployments
+  // may not expose it in PostgREST even if local scripts reference it.
   for (const p of parsed) {
     if (!p) continue
-    const key = p.book_abbr
-    if (!byBook.has(key)) byBook.set(key, [])
-    byBook.get(key)!.push({ chapter: p.chapter, verse: p.verse })
-  }
+    const bookToken = sanitizeIlike(p.book_abbr)
 
-  const results: RawResult[] = []
-  for (const [bookAbbr, verses] of byBook.entries()) {
-    const chapters = [...new Set(verses.map(v => v.chapter))]
-    const verseNums = verses.map(v => v.verse)
-
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('biblia')
       .select('id, reference, text_pt, book, chapter, verse, testament')
-      .eq('book_abbr', bookAbbr)
-      .in('chapter', chapters)
-      .in('verse', verseNums)
+      .eq('chapter', p.chapter)
+      .eq('verse', p.verse)
+      .or(`reference.ilike.${bookToken} %,book.ilike.%${bookToken}%`)
 
-    if (data) {
+    if (error) {
+      console.warn('[search] Must-include (by parts) row error:', error.message)
+      continue
+    }
+
+    if (data && data.length > 0) {
       results.push(...(data as RawResult[]).map(r => ({
         ...r,
         similarity: 0.95,
@@ -494,9 +521,13 @@ function filterByCurator<T extends { reference: string }>(
   sourceContext: Record<string, string> | undefined,
   mustIncludeRefs: string[] = [],
   fallbackFloor: number = 3,
+  strictMustIncludeFallback: boolean = false,
 ): T[] {
   if (!sourceContext || Object.keys(sourceContext).length === 0) {
-    return results
+    if (!strictMustIncludeFallback) return results
+    if (mustIncludeRefs.length === 0) return []
+    const must = new Set(mustIncludeRefs.map(normalizeRef))
+    return results.filter(r => must.has(normalizeRef(r.reference)))
   }
 
   // Build a normalized lookup from the LLM's curator map.
@@ -519,7 +550,13 @@ function filterByCurator<T extends { reference: string }>(
   if (loose.length > 0) return loose
 
   // Final fallback: the LLM never mentioned any ref from this pillar.
-  // Return the top N by similarity so the UI isn't empty.
+  // For strict mode (Bible), only keep must-include refs; otherwise keep top N.
+  if (strictMustIncludeFallback) {
+    if (mustIncludeRefs.length === 0) return []
+    const must = new Set(mustIncludeRefs.map(normalizeRef))
+    return results.filter(r => must.has(normalizeRef(r.reference)))
+  }
+
   return results.slice(0, fallbackFloor)
 }
 
@@ -595,11 +632,9 @@ function parseBibleRef(ref: string): { book: string; chapter: number; verse: num
  */
 function groupConsecutiveVerses(
   results: RawResult[],
-  mustIncludeRefs: string[] = [],
+  _mustIncludeRefs: string[] = [],
 ): RawResult[] {
   if (results.length <= 1) return results
-
-  const mustInclude = new Set(mustIncludeRefs)
 
   // Attach parsed ref to each item once; fall back to original-only sort
   // for items whose reference can't be parsed (they stay standalone).
@@ -663,7 +698,6 @@ function groupConsecutiveVerses(
     if (prev.parsed.book !== next.parsed.book) return false
     if (prev.parsed.chapter !== next.parsed.chapter) return false
     if (prev.parsed.verse + 1 !== next.parsed.verse) return false
-    if (mustInclude.has(prev.item.reference) || mustInclude.has(next.item.reference)) return false
     // Don't merge if either verse carries its own curator commentary.
     if (prev.item.context && prev.item.context !== next.item.context) return false
     if (next.item.context && prev.item.context !== next.item.context) return false
@@ -1273,7 +1307,7 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
   // ("Jo 2,1-5") unless a verse carries per-verse commentary.
   // ============================================================
   const sourceContext = insight?.sourceContext
-  const curatedBiblia = filterByCurator(bibliaResults, sourceContext, mustIncludeRefs)
+  const curatedBiblia = filterByCurator(bibliaResults, sourceContext, mustIncludeRefs, 3, true)
   const curatedMagisterio = filterByCurator(allMagisterioResults, sourceContext)
   const curatedPatristica = filterByCurator(patristicaResults, sourceContext)
 

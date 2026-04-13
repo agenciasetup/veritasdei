@@ -294,6 +294,13 @@ interface TopicConfig {
  */
 const THEOLOGICAL_TOPICS: TopicConfig[] = [
   {
+    triggers: ['aborto', 'abortar', 'interrupção da gravidez', 'interrupcao da gravidez', 'vida no ventre', 'vida desde a concepção', 'vida desde a concepcao'],
+    queryEnrichment: 'dignidade da vida humana desde a concepção não matarás criança no ventre Jeremias formado no seio materno',
+    mustIncludeRefs: ['Jr 1,5', 'Ex 20,13', 'Sl 139,13', 'Sl 139,14', 'Sl 139,15', 'Sl 139,16'],
+    keywordTerms: ['antes de te formar no ventre', 'não matarás', 'teceste-me no seio', 'vida desde a concepção'],
+    promptNote: 'ABORTO: Priorize o ensino do Catecismo sobre a inviolabilidade da vida humana desde a concepção (CIC 2270–2275). Use como confirmação bíblica Jr 1,5, Ex 20,13 e Sl 139,13-16. Mantenha linguagem pastoral: verdade doutrinal com caridade.',
+  },
+  {
     triggers: ['eucaristia', 'eucarística', 'eucaristico', 'corpo e sangue', 'santa ceia', 'última ceia', 'ultima ceia', 'transubstanciação', 'transubstanciacao', 'presença real', 'presenca real', 'santo sacrifício', 'santo sacrificio'],
     queryEnrichment: 'Isto é o meu corpo isto é o meu sangue nova aliança Última Ceia pão da vida comer minha carne beber meu sangue eucaristia sacramento',
     mustIncludeRefs: ['Mt 26,26', 'Mt 26,27', 'Mt 26,28', 'Lc 22,19', 'Lc 22,20', 'Jo 6,51', 'Jo 6,53', 'Jo 6,54', 'Jo 6,55', 'Jo 6,56', '1Cor 11,24', '1Cor 11,25', '1Cor 11,26'],
