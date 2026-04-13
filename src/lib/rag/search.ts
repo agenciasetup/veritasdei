@@ -31,6 +31,7 @@ interface RawResult {
   testament?: string
   similarity: number
   rank?: number
+  context?: string
   [key: string]: unknown
 }
 
@@ -462,6 +463,133 @@ function filterLowConfidenceBible(
 }
 
 /**
+ * Curator filter: drop any result whose reference is NOT in the LLM's
+ * sourceContext map AND is not in the must-include set. The LLM explicitly
+ * commits to the citations it actually uses in its answer; anything else
+ * from the retrieval pool is silently discarded before the UI sees it.
+ *
+ * This is the single most important quality filter in the pipeline — it
+ * pushes the responsibility for "does this verse actually support the
+ * answer?" onto the model, which has the full context of its own synthesis.
+ */
+function filterByCurator<T extends { reference: string }>(
+  results: T[],
+  sourceContext: Record<string, string> | undefined,
+  mustIncludeRefs: string[] = [],
+): T[] {
+  if (!sourceContext || Object.keys(sourceContext).length === 0) {
+    // Curator produced no map → fall back to the full pool (don't leave
+    // the user with an empty "Fontes" section).
+    return results
+  }
+  const keep = new Set<string>(Object.keys(sourceContext))
+  for (const ref of mustIncludeRefs) keep.add(ref)
+  return results.filter(r => keep.has(r.reference))
+}
+
+/**
+ * Group consecutive Bible verses into a single entry when they form a run
+ * AND none of them has a per-verse curator rationale. Example:
+ *   Input:  [Jo 2,1] [Jo 2,2] [Jo 2,3] [Jo 2,4] [Jo 2,5]
+ *   Output: [Jo 2,1-5] with concatenated text
+ *
+ * Rules:
+ *   - Only group within the same book + chapter.
+ *   - Only group if ALL verses in the run share the same context
+ *     (or all lack context) — if the curator flagged one verse with a
+ *     specific explanation, keep that verse as an independent item so
+ *     the UI can render its commentary.
+ *   - Never merge a must-include verse with adjacent ones (they stay
+ *     standalone so their per-verse context is preserved).
+ */
+function groupConsecutiveVerses(
+  results: RawResult[],
+  mustIncludeRefs: string[] = [],
+): RawResult[] {
+  if (results.length <= 1) return results
+
+  const mustInclude = new Set(mustIncludeRefs)
+
+  // Sort by book, chapter, verse to identify runs
+  const sorted = [...results].sort((a, b) => {
+    const ba = a.book ?? ''
+    const bb = b.book ?? ''
+    if (ba !== bb) return ba.localeCompare(bb)
+    const ca = a.chapter ?? 0
+    const cb = b.chapter ?? 0
+    if (ca !== cb) return ca - cb
+    return (a.verse ?? 0) - (b.verse ?? 0)
+  })
+
+  const grouped: RawResult[] = []
+  let run: RawResult[] = []
+
+  const flushRun = () => {
+    if (run.length === 0) return
+    if (run.length === 1) {
+      grouped.push(run[0])
+      run = []
+      return
+    }
+    // Merge into a single range entry
+    const first = run[0]
+    const last = run[run.length - 1]
+    // Build a range reference like "Jo 2,1-5". Fall back to joining the
+    // individual refs if we can't parse the pattern.
+    const baseRef = first.reference
+    const rangeRef = baseRef.match(/^(.+\s+\d+),(\d+)$/)
+      ? baseRef.replace(/,(\d+)$/, `,$1-${last.verse ?? ''}`)
+      : run.map(r => r.reference).join('; ')
+
+    // Concatenate texts in verse order, prefixing each with its verse
+    // number so the reader can still see the boundaries.
+    const mergedText = run
+      .map(r => `${r.verse ?? ''}. ${r.text_pt ?? r.text ?? ''}`.trim())
+      .join(' ')
+
+    grouped.push({
+      ...first,
+      reference: rangeRef,
+      text_pt: mergedText,
+      text: mergedText,
+      // Keep the highest similarity in the run for ranking
+      similarity: Math.max(...run.map(r => r.similarity)),
+    })
+    run = []
+  }
+
+  const canExtendRun = (prev: RawResult, next: RawResult): boolean => {
+    if (prev.book !== next.book) return false
+    if (prev.chapter !== next.chapter) return false
+    if ((prev.verse ?? -1) + 1 !== (next.verse ?? -2)) return false
+    // Don't merge must-include verses — keep them standalone
+    if (mustInclude.has(prev.reference) || mustInclude.has(next.reference)) return false
+    // Don't merge if either verse carries a per-verse context string
+    // (the curator gave it a distinct explanation).
+    if (prev.context && prev.context !== next.context) return false
+    return true
+  }
+
+  for (const r of sorted) {
+    if (run.length === 0) {
+      run.push(r)
+      continue
+    }
+    const prev = run[run.length - 1]
+    if (canExtendRun(prev, r)) {
+      run.push(r)
+    } else {
+      flushRun()
+      run.push(r)
+    }
+  }
+  flushRun()
+
+  // Re-sort by similarity (highest first) so the UI shows the best hit first
+  return grouped.sort((a, b) => b.similarity - a.similarity)
+}
+
+/**
  * Extract 2–5 meaningful keywords from a query for FTS fallbacks on
  * magisterio/patristica/etymo_terms. Strips short words + stopwords
  * similar to searchBibliaKeyword.
@@ -782,35 +910,37 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
     patristicaFTSResult,
     etymologyResult,
   ] = await Promise.all([
-      // Vector search for Bible (using refined embedding)
+      // Vector search for Bible (using refined embedding).
+      // Pool is 12 so the curator has plenty to choose from; it'll
+      // filter down to the 3–6 that actually fortify the thesis.
       hasEmbedding
-        ? searchBibliaVector(supabase, queryEmbedding, 8, BIBLIA_VECTOR_THRESHOLD)
+        ? searchBibliaVector(supabase, queryEmbedding, 12, BIBLIA_VECTOR_THRESHOLD)
         : Promise.resolve({ data: [] as RawResult[], error: 'No embedding' }),
 
-      // Catecismo vector search
+      // Catecismo vector search — pool of 8
       hasEmbedding
         ? supabase.rpc('search_catecismo', {
+            query_embedding: queryEmbedding,
+            match_threshold: MAGISTERIO_VECTOR_THRESHOLD,
+            match_count: 8,
+          } as Record<string, unknown>)
+        : Promise.resolve({ data: [], error: null }),
+
+      // Magisterio vector search — pool of 5
+      hasEmbedding
+        ? supabase.rpc('search_magisterio', {
             query_embedding: queryEmbedding,
             match_threshold: MAGISTERIO_VECTOR_THRESHOLD,
             match_count: 5,
           } as Record<string, unknown>)
         : Promise.resolve({ data: [], error: null }),
 
-      // Magisterio vector search
-      hasEmbedding
-        ? supabase.rpc('search_magisterio', {
-            query_embedding: queryEmbedding,
-            match_threshold: MAGISTERIO_VECTOR_THRESHOLD,
-            match_count: 3,
-          } as Record<string, unknown>)
-        : Promise.resolve({ data: [], error: null }),
-
-      // Patristica vector search
+      // Patristica vector search — pool of 6
       hasEmbedding
         ? supabase.rpc('search_patristica', {
             query_embedding: queryEmbedding,
             match_threshold: MAGISTERIO_VECTOR_THRESHOLD,
-            match_count: 4,
+            match_count: 6,
           } as Record<string, unknown>)
         : Promise.resolve({ data: [], error: null }),
 
@@ -870,7 +1000,8 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
     const reranked = rerankBibliaResults(deduped, preferredBooks, mustIncludeRefs)
     // Drop anything below the hard floor (except must-include refs)
     const filtered = filterLowConfidenceBible(reranked, mustIncludeRefs, BIBLIA_HARD_FLOOR)
-    bibliaResults = filtered.slice(0, 10)
+    // Expand pool to 14 so the curator has room to pick the best 3–6
+    bibliaResults = filtered.slice(0, 14)
     console.log(`[search] Bible after rerank+filter: ${bibliaResults.length} verses (dropped ${deduped.length - bibliaResults.length})`)
   } else {
     console.warn('[search] No Bible results from any source')
@@ -894,7 +1025,7 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
 
   const allMagisterioResults = [...catecismoResults, ...magisterioResults]
     .sort((a, b) => b.similarity - a.similarity)
-    .slice(0, 6)
+    .slice(0, 12)
 
   // ============================================================
   // PHASE 5: Build RAG prompt with full context
@@ -976,12 +1107,37 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
     }
   }
 
+  // ============================================================
+  // PHASE 6: Curator filter + verse grouping
+  // The LLM committed to which references it actually used via
+  // sourceContext. Drop every pillar row that wasn't picked (except
+  // must-include). Then attach the curator's rationale as `context`
+  // so the UI can render each source with its explanation.
+  //
+  // Finally, collapse consecutive Bible verses into ranges
+  // ("Jo 2,1-5") unless a verse carries per-verse commentary.
+  // ============================================================
+  const sourceContext = insight?.sourceContext
+  const curatedBiblia = filterByCurator(bibliaResults, sourceContext, mustIncludeRefs)
+  const curatedMagisterio = filterByCurator(allMagisterioResults, sourceContext)
+  const curatedPatristica = filterByCurator(patristicaResults, sourceContext)
+
+  // Attach curator rationale as context BEFORE grouping (the grouper
+  // uses context to decide whether to keep a verse standalone).
+  const withContext = (rows: RawResult[]): RawResult[] =>
+    rows.map(r => ({ ...r, context: sourceContext?.[r.reference] }))
+
+  const bibliaWithContext = withContext(curatedBiblia)
+  const groupedBiblia = groupConsecutiveVerses(bibliaWithContext, mustIncludeRefs)
+
+  console.log(`[search] Curator: biblia ${bibliaResults.length}→${curatedBiblia.length}→${groupedBiblia.length} (grouped), magisterio ${allMagisterioResults.length}→${curatedMagisterio.length}, patristica ${patristicaResults.length}→${curatedPatristica.length}`)
+
   const toSearchResult = (item: RawResult, pillar: SearchResult['pillar']): SearchResult => ({
     id: item.id,
     pillar,
     reference: item.reference,
     text: item.text_pt ?? item.text ?? '',
-    context: insight?.sourceContext[item.reference],
+    context: item.context ?? sourceContext?.[item.reference],
     similarity: item.similarity,
   })
 
@@ -1000,15 +1156,15 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
     pillars: [
       {
         pillar: 'biblia',
-        results: bibliaResults.map(r => toSearchResult(r, 'biblia')),
+        results: groupedBiblia.map(r => toSearchResult(r, 'biblia')),
       },
       {
         pillar: 'magisterio',
-        results: allMagisterioResults.map(r => toSearchResult(r, 'magisterio')),
+        results: withContext(curatedMagisterio).map(r => toSearchResult(r, 'magisterio')),
       },
       {
         pillar: 'patristica',
-        results: patristicaResults.map(r => toSearchResult(r, 'patristica')),
+        results: withContext(curatedPatristica).map(r => toSearchResult(r, 'patristica')),
       },
     ],
     insight,

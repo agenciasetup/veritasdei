@@ -60,9 +60,13 @@ ${etymologyResults.slice(0, 3).map(e => {
   return `• ${e.term_pt} → ${e.term_original}${translit}${origLang}${meaning}${modern}`
 }).join('\n')}
 
-INSTRUÇÃO: se uma dessas etimologias clarifica o tema central, mencione-a no summary
-(ex: "A palavra **Eucaristia** vem do grego εὐχαριστία (*eucharistía*), que significa 'ação de graças'").
-NÃO invente etimologias. Use APENAS as fornecidas acima.
+INSTRUÇÃO OBRIGATÓRIA: quando uma dessas etimologias clarifica o tema central,
+VOCÊ DEVE mencioná-la no summary ao apresentar o termo pela primeira vez.
+Formato esperado, integrado ao texto:
+  "A palavra **Eucaristia** vem do grego εὐχαριστία (*eucharistía*),
+   que significa 'ação de graças'."
+NÃO invente etimologias. Use APENAS as fornecidas acima. Se nenhuma
+etimologia conecta ao tema, NÃO force — deixe passar.
 `
     : ''
 
@@ -125,17 +129,30 @@ REGRAS ANTI-ALUCINAÇÃO (INVIOLÁVEIS):
 - É MELHOR uma resposta curta e honesta do que uma inventada e completa.
 
 =====================================================================
-COERÊNCIA TEMÁTICA:
+COERÊNCIA TEMÁTICA (REGRA DO CURADOR):
 =====================================================================
-- Todos os versículos e citações devem estar conectados ao TEMA CENTRAL.
-- Se a pergunta menciona "idolatria" mas o tema é Eucaristia, os
-  versículos devem ser sobre EUCARISTIA, não idolatria.
-- Não jogue versículos soltos: contextualize (quem fala, para quem, por quê).
-- Prefira os versículos que a Tradição católica usa para fundamentar o tema.
+Você recebe um POOL de trechos abaixo. Nem todos estão relacionados ao tema
+central — alguns são ruído do retriever (casam palavras superficialmente).
 
-=====================================================================
-DESAMBIGUAÇÃO DE NOMES BÍBLICOS:
-=====================================================================
+Seu trabalho como CURADOR é SELECIONAR, não listar. Para cada pilar
+(Bíblia, Magistério, Patrística) você DEVE:
+
+  1. Ler todos os trechos oferecidos.
+  2. DESCARTAR silenciosamente os que não conectam ao tema. Ex.: se a
+     pergunta é sobre ABORTO, um versículo sobre as bodas de Caná é RUÍDO.
+     Não cite, não mencione, não coloque em sourceContext.
+  3. MANTER apenas os 3–6 trechos que DIRETAMENTE sustentam a tese.
+  4. Para cada trecho mantido, explicar em \`sourceContext\` POR QUE ele
+     importa (quem fala, contexto histórico, como fundamenta o tema).
+
+REGRA DE OURO DO CURADOR:
+  → Se você NÃO cita uma referência no summary/keyPoints/objections E
+    NÃO tem uma razão clara pra ela estar ali, NÃO a coloque em
+    sourceContext. A ausência de uma referência em sourceContext é o
+    sinal que o sistema usa pra descartá-la da UI.
+  → É MELHOR 3 versículos que fortalecem a tese do que 10 versículos
+    soltos. Qualidade > quantidade. SEMPRE.
+
 - "Maria" sem qualificação = Virgem Maria, Mãe de Deus.
 - "Judas" sem qualificação = Judas Iscariotes (distinga de São Judas Tadeu).
 - "Tiago" = Maior (Zebedeu) ou Menor (Alfeu) — sempre distinga.
@@ -203,7 +220,7 @@ RESPONDA OBRIGATORIAMENTE EM JSON PURO (sem markdown fences):
   "keyPoints": ["Ponto 1 — uma frase curta e clara", "Ponto 2", "Ponto 3", "Ponto 4"],
   "relatedTopics": ["Tema relacionado 1", "Tema 2", "Tema 3"],
   "sourceContext": {
-    "Referência exata": "Em 1 frase: QUEM fala, PARA QUEM, POR QUE é importante para o tema. NÃO repita o texto da passagem."
+    "Referência exata": "Em 1 frase: QUEM fala, PARA QUEM, POR QUE esta passagem FORTALECE a tese deste tema. NÃO repita o texto da passagem. INCLUA AQUI APENAS as referências que VOCÊ REALMENTE usou no summary/keyPoints/objections — qualquer referência ausente deste mapa será DESCARTADA da UI. Se uma passagem do pool não fortalece a tese, NÃO a adicione aqui."
   },
   "isControversial": true,
   "protestantView": {
