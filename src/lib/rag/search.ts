@@ -5,7 +5,7 @@ import { disambiguateQuery } from './disambiguation'
 import { understandQuery, searchKnowledgeBase, extractBibleRefsFromKnowledge } from './query-understanding'
 import { isSensitiveTopic } from '../utils/sensitive-topics'
 import { sanitizePostgrestFilter } from '../utils/sanitize'
-import type { QueryResponse, SearchResult, AIInsight, ProtestantView } from '@/types'
+import type { QueryResponse, SearchResult, AIInsight, ProtestantView, ObjectionBlock, MoralTag, HeresyTag } from '@/types'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -34,15 +34,61 @@ interface RawResult {
   [key: string]: unknown
 }
 
+function parseObjections(raw: unknown): ObjectionBlock[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((item): ObjectionBlock | null => {
+      if (!item || typeof item !== 'object') return null
+      const obj = item as Record<string, unknown>
+      if (typeof obj.claim !== 'string' || typeof obj.refutation !== 'string') return null
+      const claim = obj.claim.trim()
+      const refutation = obj.refutation.trim()
+      if (claim.length === 0 || refutation.length === 0) return null
+      return { claim, refutation }
+    })
+    .filter((b): b is ObjectionBlock => b !== null)
+}
+
 function parseProtestantView(raw: unknown): ProtestantView | null {
   if (!raw || typeof raw !== 'object') return null
   const obj = raw as Record<string, unknown>
-  if (typeof obj.summary !== 'string' || typeof obj.refutation !== 'string') return null
+  if (typeof obj.summary !== 'string') return null
+
+  const objections = parseObjections(obj.objections)
+  // Refutation is optional if we have structured objections; fall back to
+  // joining the objection refutations so legacy UIs keep working.
+  const explicitRefutation = typeof obj.refutation === 'string' ? obj.refutation : ''
+  const refutation = explicitRefutation.length > 0
+    ? explicitRefutation
+    : objections.map(o => `**${o.claim}**\n\n${o.refutation}`).join('\n\n')
+
+  if (refutation.length === 0 && objections.length === 0) return null
+
   return {
     summary: obj.summary,
-    denominations: Array.isArray(obj.denominations) ? obj.denominations : [],
-    refutation: obj.refutation,
+    denominations: Array.isArray(obj.denominations)
+      ? obj.denominations.filter((d): d is string => typeof d === 'string')
+      : [],
+    objections,
+    refutation,
   }
+}
+
+const VALID_MORAL_TAGS: ReadonlySet<MoralTag> = new Set(['sin', 'moderate', 'not_sin', 'not_applicable'])
+const VALID_HERESY_TAGS: ReadonlySet<HeresyTag> = new Set(['heresy', 'orthodox', 'not_applicable'])
+
+function parseMoralTag(raw: unknown): MoralTag {
+  if (typeof raw === 'string' && VALID_MORAL_TAGS.has(raw as MoralTag)) {
+    return raw as MoralTag
+  }
+  return 'not_applicable'
+}
+
+function parseHeresyTag(raw: unknown): HeresyTag {
+  if (typeof raw === 'string' && VALID_HERESY_TAGS.has(raw as HeresyTag)) {
+    return raw as HeresyTag
+  }
+  return 'not_applicable'
 }
 
 function parseAIResponse(raw: string): AIInsight | null {
@@ -60,6 +106,11 @@ function parseAIResponse(raw: string): AIInsight | null {
       isControversial: parsed.isControversial === true,
       protestantView: parseProtestantView(parsed.protestantView),
       curiosity: typeof parsed.curiosity === 'string' ? parsed.curiosity : null,
+      moralTag: parseMoralTag(parsed.moralTag),
+      heresyTag: parseHeresyTag(parsed.heresyTag),
+      heresyName: typeof parsed.heresyName === 'string' && parsed.heresyName.trim().length > 0
+        ? parsed.heresyName.trim()
+        : null,
     }
   } catch {
     if (raw.length > 50) {
@@ -71,6 +122,9 @@ function parseAIResponse(raw: string): AIInsight | null {
         isControversial: false,
         protestantView: null,
         curiosity: null,
+        moralTag: 'not_applicable',
+        heresyTag: 'not_applicable',
+        heresyName: null,
       }
     }
     return null
@@ -112,7 +166,6 @@ async function searchBibliaKeyword(
 
   // Try full-text search RPC first (uses PostgreSQL's FTS)
   try {
-    const ftsQuery = keywords.join(' & ')
     const { data: ftsData, error: ftsError } = await supabase.rpc('search_biblia_text', {
       search_query: keywords.join(' '),
       match_count: limit,
@@ -136,20 +189,27 @@ async function searchBibliaKeyword(
   // Fallback: ilike search
   const orConditions = keywords.map(k => `text_pt.ilike.%${sanitizePostgrestFilter(k)}%`).join(',')
 
-  let queryBuilder = supabase
-    .from('biblia')
-    .select('id, reference, text_pt, book, chapter, verse, testament')
-    .or(orConditions)
-
-  if (testamentFilter) {
-    queryBuilder = queryBuilder.eq('testament', testamentFilter)
-  }
-
-  // Prioritize preferred books if specified
+  // Prioritize preferred books if specified.
+  // NOTE: the `biblia` table stores Gospels with the "São " prefix
+  // ("São Mateus", "São João", …) so a plain .in() against
+  // ["Mateus","João",…] silently matches nothing. We use .or() with
+  // ILIKE patterns to match tolerantly.
   if (preferredBooks.length > 0) {
-    const { data: preferred, error: prefError } = await queryBuilder
-      .in('book', preferredBooks)
-      .limit(limit)
+    const bookOr = preferredBooks
+      .map(b => `book.ilike.%${sanitizePostgrestFilter(b)}%`)
+      .join(',')
+
+    let preferredQuery = supabase
+      .from('biblia')
+      .select('id, reference, text_pt, book, chapter, verse, testament')
+      .or(orConditions)
+      .or(bookOr)
+
+    if (testamentFilter) {
+      preferredQuery = preferredQuery.eq('testament', testamentFilter)
+    }
+
+    const { data: preferred, error: prefError } = await preferredQuery.limit(limit)
 
     if (!prefError && preferred && preferred.length >= 3) {
       console.log(`[search] Keyword (preferred books) returned ${preferred.length} results`)
@@ -160,12 +220,17 @@ async function searchBibliaKeyword(
     }
   }
 
-  // General keyword search
-  const { data, error } = await supabase
+  // General keyword search (respects testament filter if present)
+  let generalQuery = supabase
     .from('biblia')
     .select('id, reference, text_pt, book, chapter, verse, testament')
     .or(orConditions)
-    .limit(limit)
+
+  if (testamentFilter) {
+    generalQuery = generalQuery.eq('testament', testamentFilter)
+  }
+
+  const { data, error } = await generalQuery.limit(limit)
 
   if (error) {
     console.error('[search] Keyword search error:', error.message)
@@ -336,6 +401,66 @@ function groupRelatedVerses(results: RawResult[]): RawResult[] {
   return sorted.sort((a, b) => b.similarity - a.similarity)
 }
 
+/**
+ * Normalize a book name for tolerant matching. The `biblia` table stores
+ * Gospels as "São Mateus" / "São Lucas" / "São João" / "São Marcos", but
+ * disambiguation.ts declares preferred books as "Mateus" / "Lucas" / "João"
+ * / "Marcos". Strip "São "/"Santo " prefixes, diacritics, lowercase, trim.
+ */
+function normalizeBookName(name: string): string {
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/^(sao|santo|santa)\s+/, '')
+    .trim()
+}
+
+/**
+ * Rerank Bible results with a simple topical boost:
+ * - +0.20 if the verse is a must-include ref from the knowledge base
+ *   (already at 0.95 similarity, this just pushes it above anything else)
+ * - +0.12 if the verse book is in the preferred books for the theme
+ *   (e.g., Eucaristia → Jo, 1Cor, Mt, Lc). Normalized to handle "São X".
+ * - no penalty for others; the sort stays stable by similarity
+ */
+function rerankBibliaResults(
+  results: RawResult[],
+  preferredBooks: string[],
+  mustIncludeRefs: string[],
+): RawResult[] {
+  if (results.length === 0) return results
+
+  const preferredSet = new Set(preferredBooks.map(normalizeBookName))
+  const mustIncludeSet = new Set(mustIncludeRefs)
+
+  const boosted = results.map(r => {
+    let sim = r.similarity
+    if (mustIncludeSet.has(r.reference)) sim += 0.2
+    if (preferredSet.size > 0 && r.book && preferredSet.has(normalizeBookName(r.book))) {
+      sim += 0.12
+    }
+    return { ...r, similarity: Math.min(1, sim) }
+  })
+
+  return boosted.sort((a, b) => b.similarity - a.similarity)
+}
+
+/**
+ * Filter out Bible results whose similarity is too low to be relevant.
+ * This is the LAST line of defense against "nonsense verses" — anything
+ * below the hard floor is dropped even if there are no better options.
+ */
+function filterLowConfidenceBible(
+  results: RawResult[],
+  mustIncludeRefs: string[],
+  hardFloor: number,
+): RawResult[] {
+  if (results.length === 0) return results
+  const mustIncludeSet = new Set(mustIncludeRefs)
+  return results.filter(r => mustIncludeSet.has(r.reference) || r.similarity >= hardFloor)
+}
+
 export async function searchCorpus(query: string): Promise<QueryResponse> {
   const supabase = getSupabaseAdmin()
 
@@ -436,13 +561,18 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
 
   // ============================================================
   // PHASE 2: Generate embedding from the REFINED query
-  // The searchQuery is now focused on the true topic, not polluted
-  // by surface-level keywords like "idolatria" when the topic is
-  // actually "Eucaristia".
+  // We build the embedding text from TOPIC + SEARCH QUERY so that
+  // the primary topic (e.g., "Eucaristia") anchors the vector even
+  // if the user's phrasing is unusual. This also pulls the vector
+  // away from surface-level keywords from the objection.
   // ============================================================
+  const embeddingText = aiUnderstanding && aiUnderstanding.primaryTopic
+    ? `${aiUnderstanding.primaryTopic}. ${searchQuery}`
+    : searchQuery
+
   let queryEmbedding: number[]
   try {
-    queryEmbedding = await generateEmbedding(searchQuery)
+    queryEmbedding = await generateEmbedding(embeddingText)
   } catch (err) {
     console.error('[search] Embedding generation failed:', err)
     queryEmbedding = []
@@ -454,18 +584,26 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
   const hasEmbedding = queryEmbedding.length > 0
   const hasMustInclude = mustIncludeRefs.length > 0
 
+  // Threshold tuning: 0.42 was too permissive and caused "nonsense verses".
+  // 0.48 is the sweet spot for text-embedding-3-small (empirically tuned on
+  // Catholic theological queries); below this, verses are usually topical noise.
+  const BIBLIA_VECTOR_THRESHOLD = 0.48
+  const MAGISTERIO_VECTOR_THRESHOLD = 0.48
+  // Hard floor applied AFTER reranking for Bible (must-include refs bypass this)
+  const BIBLIA_HARD_FLOOR = 0.46
+
   const [bibliaVectorResult, catecismoRaw, magisterioRaw, patristicaRaw, bibliaKeywordResult, mustIncludeResult] =
     await Promise.all([
       // Vector search for Bible (using refined embedding)
       hasEmbedding
-        ? searchBibliaVector(supabase, queryEmbedding, 7, 0.42)
+        ? searchBibliaVector(supabase, queryEmbedding, 8, BIBLIA_VECTOR_THRESHOLD)
         : Promise.resolve({ data: [] as RawResult[], error: 'No embedding' }),
 
       // Catecismo vector search
       hasEmbedding
         ? supabase.rpc('search_catecismo', {
             query_embedding: queryEmbedding,
-            match_threshold: 0.42,
+            match_threshold: MAGISTERIO_VECTOR_THRESHOLD,
             match_count: 5,
           } as Record<string, unknown>)
         : Promise.resolve({ data: [], error: null }),
@@ -474,7 +612,7 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
       hasEmbedding
         ? supabase.rpc('search_magisterio', {
             query_embedding: queryEmbedding,
-            match_threshold: 0.42,
+            match_threshold: MAGISTERIO_VECTOR_THRESHOLD,
             match_count: 3,
           } as Record<string, unknown>)
         : Promise.resolve({ data: [], error: null }),
@@ -483,7 +621,7 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
       hasEmbedding
         ? supabase.rpc('search_patristica', {
             query_embedding: queryEmbedding,
-            match_threshold: 0.42,
+            match_threshold: MAGISTERIO_VECTOR_THRESHOLD,
             match_count: 4,
           } as Record<string, unknown>)
         : Promise.resolve({ data: [], error: null }),
@@ -524,7 +662,13 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
   let bibliaResults: RawResult[]
   if (allBibliaSources.length > 0) {
     console.log(`[search] Bible sources: must-include=${mustIncludeResult.length}, vector=${bibliaVectorResults.length}, keyword=${bibliaKeywordResults.length}`)
-    bibliaResults = deduplicateResults(allBibliaSources).slice(0, 10)
+    const deduped = deduplicateResults(allBibliaSources)
+    // Rerank with preferred-books boost + must-include boost
+    const reranked = rerankBibliaResults(deduped, preferredBooks, mustIncludeRefs)
+    // Drop anything below the hard floor (except must-include refs)
+    const filtered = filterLowConfidenceBible(reranked, mustIncludeRefs, BIBLIA_HARD_FLOOR)
+    bibliaResults = filtered.slice(0, 10)
+    console.log(`[search] Bible after rerank+filter: ${bibliaResults.length} verses (dropped ${deduped.length - bibliaResults.length})`)
   } else {
     console.warn('[search] No Bible results from any source')
     bibliaResults = []
@@ -569,14 +713,21 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
       protestantView: null,
       curiosity: null,
       confidenceLevel: 'low',
+      moralTag: 'not_applicable',
+      heresyTag: 'not_applicable',
+      heresyName: null,
     }
   } else if (totalResults > 0) {
     try {
+      // Main response model: gpt-4o (not gpt-4o-mini) for better theological
+      // reasoning and stricter adherence to the structured output schema.
+      // JSON mode guarantees the parser won't choke on prose/markdown.
       const completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 4000,
         temperature: 0.3,
+        response_format: { type: 'json_object' },
       })
 
       const rawResponse = completion.choices[0].message.content ?? ''
@@ -613,6 +764,16 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
     similarity: item.similarity,
   })
 
+  // Build top-level tags from the insight classifications so the UI can
+  // render them without re-reading the whole insight object.
+  const topLevelTags: string[] = []
+  if (insight?.moralTag && insight.moralTag !== 'not_applicable') {
+    topLevelTags.push(`moral:${insight.moralTag}`)
+  }
+  if (insight?.heresyTag && insight.heresyTag !== 'not_applicable') {
+    topLevelTags.push(`heresy:${insight.heresyTag}`)
+  }
+
   return {
     query,
     pillars: [
@@ -631,6 +792,6 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
     ],
     insight,
     sensitive: isSensitiveTopic(query),
-    tags: [],
+    tags: topLevelTags,
   }
 }
