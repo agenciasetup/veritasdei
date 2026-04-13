@@ -102,54 +102,72 @@ export type PropositoDraft = {
   ativo: boolean
 }
 
+/**
+ * Mutations vão pelas rotas server-side (/api/propositos[/id]) em vez de
+ * bater direto no postgrest pelo browser client. Em algumas redes/extensões
+ * o PATCH/POST do browser fica pendurado e a promise nunca resolve (o botão
+ * de salvar fica eternamente em "Salvando…"). A rota server roda sobre
+ * cookies já autenticados e devolve JSON rápido.
+ */
+
 export async function createProposito(
-  userId: string,
+  _userId: string,
   draft: PropositoDraft,
-): Promise<{ id: string | null; error: string | null }> {
-  const supabase = createClient()
-  if (!supabase) return { id: null, error: 'Supabase não configurado.' }
-  const { data, error } = await supabase
-    .from('user_propositos')
-    .insert({
-      user_id: userId,
-      tipo: draft.tipo,
-      titulo: draft.titulo,
-      descricao: draft.descricao ?? null,
-      cadencia: draft.cadencia,
-      meta_por_periodo: draft.meta_por_periodo,
-      dias_semana: draft.dias_semana ?? null,
-      horario_sugerido: draft.horario_sugerido ?? null,
-      ativo: draft.ativo,
+): Promise<{ id: string | null; proposito: Proposito | null; error: string | null }> {
+  try {
+    const res = await fetch('/api/propositos', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(draft),
+      credentials: 'include',
     })
-    .select('id')
-    .single()
-  if (error) return { id: null, error: error.message }
-  return { id: (data as { id: string }).id, error: null }
+    const json = (await res.json()) as { proposito?: Proposito; error?: string }
+    if (!res.ok || !json.proposito) {
+      return { id: null, proposito: null, error: json.error ?? `HTTP ${res.status}` }
+    }
+    return { id: json.proposito.id, proposito: json.proposito, error: null }
+  } catch (e) {
+    return { id: null, proposito: null, error: (e as Error).message }
+  }
 }
 
 export async function updateProposito(
   propositoId: string,
   patch: Partial<PropositoDraft>,
-): Promise<{ error: string | null }> {
-  const supabase = createClient()
-  if (!supabase) return { error: 'Supabase não configurado.' }
-  const { error } = await supabase
-    .from('user_propositos')
-    .update(patch)
-    .eq('id', propositoId)
-  return { error: error?.message ?? null }
+): Promise<{ proposito: Proposito | null; error: string | null }> {
+  try {
+    const res = await fetch(`/api/propositos/${propositoId}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(patch),
+      credentials: 'include',
+    })
+    const json = (await res.json()) as { proposito?: Proposito; error?: string }
+    if (!res.ok || !json.proposito) {
+      return { proposito: null, error: json.error ?? `HTTP ${res.status}` }
+    }
+    return { proposito: json.proposito, error: null }
+  } catch (e) {
+    return { proposito: null, error: (e as Error).message }
+  }
 }
 
 export async function deleteProposito(
   propositoId: string,
 ): Promise<{ error: string | null }> {
-  const supabase = createClient()
-  if (!supabase) return { error: 'Supabase não configurado.' }
-  const { error } = await supabase
-    .from('user_propositos')
-    .delete()
-    .eq('id', propositoId)
-  return { error: error?.message ?? null }
+  try {
+    const res = await fetch(`/api/propositos/${propositoId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    })
+    if (!res.ok) {
+      const json = (await res.json().catch(() => ({}))) as { error?: string }
+      return { error: json.error ?? `HTTP ${res.status}` }
+    }
+    return { error: null }
+  } catch (e) {
+    return { error: (e as Error).message }
+  }
 }
 
 /* ─── Seed lazy ───────────────────────────────────────────────────── */
