@@ -3,6 +3,7 @@ import { openai } from '../openai/client'
 import { buildRAGPrompt } from './prompt'
 import { disambiguateQuery } from './disambiguation'
 import { understandQuery, searchKnowledgeBase, extractBibleRefsFromKnowledge } from './query-understanding'
+import { extractBibleRefsFromRows } from './extract-refs'
 import { isSensitiveTopic } from '../utils/sensitive-topics'
 import { sanitizePostgrestFilter } from '../utils/sanitize'
 import type { QueryResponse, SearchResult, AIInsight, ProtestantView, ObjectionBlock, MoralTag, HeresyTag, EtymologyHit } from '@/types'
@@ -981,10 +982,21 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
   }
 
   // ============================================================
-  // PHASE 3: Execute all searches in parallel
+  // PHASE 3a: CATECHISM FIRST (serialized on purpose)
+  // ============================================================
+  // The Catechism is the doctrinal index of the whole Christian
+  // tradition — it already cites every Bible verse that justifies a
+  // teaching. We retrieve it FIRST, synchronously, so we can read
+  // its text and extract the Bible refs it explicitly cites. Those
+  // become the must-include pool for the biblical retrieval that
+  // follows. This bypasses the semantic-gap problem for topics where
+  // Scripture uses ancient/metaphorical language ("aborto" does not
+  // appear in the Bible text, but CIC 2270 cites Jr 1,5 directly).
+  //
+  // Also cheap: catechism retrieval is 1 RPC, ~100–200ms. That is
+  // the correctness budget we willingly pay.
   // ============================================================
   const hasEmbedding = queryEmbedding.length > 0
-  const hasMustInclude = mustIncludeRefs.length > 0
 
   // Threshold tuning: 0.42 was too permissive and caused "nonsense verses".
   // 0.48 is the sweet spot for text-embedding-3-small (empirically tuned on
@@ -999,9 +1011,42 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
   // propagated to the response for the UI banner.)
   const sensitive = isSensitiveTopic(query)
 
+  // Run the catechism vector lookup — this is the ONE query whose
+  // result drives everything else, so we wait for it before fanning
+  // out. Keep it cheap (1 RPC, ~100-200ms).
+  const catecismoRaw = hasEmbedding
+    ? await supabase.rpc('search_catecismo', {
+        query_embedding: queryEmbedding,
+        match_threshold: MAGISTERIO_VECTOR_THRESHOLD,
+        match_count: 8,
+      } as Record<string, unknown>)
+    : { data: [] as RawResult[], error: null }
+
+  if (catecismoRaw.error) console.error('[search] catecismo error:', catecismoRaw.error)
+
+  const catecismoResults: RawResult[] = (catecismoRaw.data ?? []) as RawResult[]
+
+  // PHASE 3b — Extract Bible refs from the catechism text.
+  // These refs become authoritative must-include refs — they come
+  // directly from the Magisterium's own footnotes. We MERGE (not
+  // replace) them with the existing knowledge-base/disambiguation
+  // refs so both signals contribute.
+  const catecismoCitedBibleRefs = extractBibleRefsFromRows(
+    catecismoResults.map(r => ({ text: r.text ?? r.text_pt })),
+  )
+  if (catecismoCitedBibleRefs.length > 0) {
+    console.log(`[search] Catechism-cited Bible refs: ${catecismoCitedBibleRefs.length} extracted`, catecismoCitedBibleRefs.slice(0, 12))
+  }
+  mustIncludeRefs = [...new Set([...mustIncludeRefs, ...catecismoCitedBibleRefs])]
+  const hasMustInclude = mustIncludeRefs.length > 0
+
+  // ============================================================
+  // PHASE 3c: Everything else in parallel
+  // Now that we know the must-include pool (enriched by the
+  // catechism's own citations), fan out the rest of the retrieval.
+  // ============================================================
   const [
     bibliaVectorResult,
-    catecismoRaw,
     magisterioRaw,
     patristicaRaw,
     bibliaKeywordResult,
@@ -1010,21 +1055,13 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
     patristicaFTSResult,
     etymologyResult,
   ] = await Promise.all([
-      // Vector search for Bible (using refined embedding).
-      // Pool is 12 so the curator has plenty to choose from; it'll
-      // filter down to the 3–6 that actually fortify the thesis.
+      // Vector search for Bible — complementary now, not primary.
+      // The catechism-cited refs in `mustIncludeResult` carry the
+      // theological weight; this pool just catches verses the CIC
+      // might have missed that are still semantically relevant.
       hasEmbedding
         ? searchBibliaVector(supabase, queryEmbedding, 12, BIBLIA_VECTOR_THRESHOLD)
         : Promise.resolve({ data: [] as RawResult[], error: 'No embedding' }),
-
-      // Catecismo vector search — pool of 8
-      hasEmbedding
-        ? supabase.rpc('search_catecismo', {
-            query_embedding: queryEmbedding,
-            match_threshold: MAGISTERIO_VECTOR_THRESHOLD,
-            match_count: 8,
-          } as Record<string, unknown>)
-        : Promise.resolve({ data: [], error: null }),
 
       // Magisterio vector search — pool of 5
       hasEmbedding
@@ -1053,7 +1090,8 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
         8
       ),
 
-      // Must-include references from knowledge base + disambiguation
+      // Must-include references: catechism-cited + knowledge base +
+      // disambiguation. THIS is now the primary Bible source.
       hasMustInclude
         ? fetchMustIncludeVerses(supabase, mustIncludeRefs)
         : Promise.resolve([] as RawResult[]),
@@ -1075,7 +1113,6 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
     ])
 
   // Log errors
-  if (catecismoRaw.error) console.error('[search] catecismo error:', catecismoRaw.error)
   if (magisterioRaw.error) console.error('[search] magisterio error:', magisterioRaw.error)
   if (patristicaRaw.error) console.error('[search] patristica error:', patristicaRaw.error)
 
@@ -1110,7 +1147,6 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
 
   bibliaResults = groupRelatedVerses(bibliaResults)
 
-  const catecismoResults: RawResult[] = catecismoRaw.data ?? []
   const magisterioVector: RawResult[] = magisterioRaw.data ?? []
   const patristicaVector: RawResult[] = patristicaRaw.data ?? []
 
@@ -1130,7 +1166,26 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
   // ============================================================
   // PHASE 5: Build RAG prompt with full context
   // Includes: knowledge base context, objection info, disambiguation
+  //
+  // Pre-filter etymology BEFORE it reaches the LLM. The post-filter
+  // at Phase 6 still runs (narrower, uses keyPoints) for the UI, but
+  // the LLM must never see tangential etymologies like "Catecismo"
+  // for an "aborto" query — otherwise it poisons the `curiosity`
+  // field with off-topic content.
   // ============================================================
+  const etymologyPreHaystack = [
+    query,
+    aiUnderstanding?.primaryTopic ?? '',
+    ...(aiUnderstanding?.knowledgeKeywords ?? []),
+    searchQuery,
+  ].join(' ')
+  const preFilteredEtymology = filterEtymologyByRelevance(
+    etymologyResult,
+    etymologyPreHaystack,
+    [],
+  )
+  console.log(`[search] Etymo pre-filter: ${etymologyResult.length} → ${preFilteredEtymology.length}`)
+
   const prompt = buildRAGPrompt(
     query,
     bibliaResults.map(r => ({ reference: r.reference, text: r.text_pt ?? r.text ?? '' })),
@@ -1139,7 +1194,7 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
     promptNotes,
     knowledgeContext,
     objectionContext,
-    etymologyResult.map(e => ({
+    preFilteredEtymology.map(e => ({
       term_pt: e.term_pt,
       term_original: e.term_original,
       original_language: e.original_language,
@@ -1253,11 +1308,11 @@ export async function searchCorpus(query: string): Promise<QueryResponse> {
 
   console.log(`[search] Curator: biblia ${bibliaResults.length}→${curatedBiblia.length}→${groupedBiblia.length} (grouped), magisterio ${allMagisterioResults.length}→${curatedMagisterio.length}, patristica ${patristicaResults.length}→${curatedPatristica.length}`)
 
-  // Etymology relevance filter: only surface terms whose term_pt appears
-  // in the query or the LLM's keyPoints. Stops "Catecismo" from leaking
-  // into a query about "aborto".
+  // Etymology relevance filter (UI pass): start from the already
+  // pre-filtered pool and narrow further using the LLM's keyPoints.
+  // Stops "Catecismo" from leaking into a query about "aborto".
   const relevantEtymology = filterEtymologyByRelevance(
-    etymologyResult,
+    preFilteredEtymology,
     query,
     insight?.keyPoints ?? [],
   )
