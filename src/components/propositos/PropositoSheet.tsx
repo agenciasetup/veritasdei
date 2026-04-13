@@ -124,7 +124,7 @@ export function usePropositoSheet(): SheetCtx {
 
 function PropositoSheet({ mode, onClose }: { mode: Mode; onClose: () => void }) {
   const { user } = useAuth()
-  const { reload } = usePropositos()
+  const { reload, upsertLocal, removeLocal } = usePropositos()
 
   const existing = mode.kind === 'edit' ? mode.proposito : null
 
@@ -164,17 +164,21 @@ function PropositoSheet({ mode, onClose }: { mode: Mode; onClose: () => void }) 
     }
     try {
       if (mode.kind === 'edit' && existing) {
-        const { error } = await updateProposito(existing.id, draft)
-        if (error) throw new Error(error)
+        const { proposito, error } = await updateProposito(existing.id, draft)
+        if (error || !proposito) throw new Error(error ?? 'Erro desconhecido')
+        upsertLocal(proposito)
       } else {
-        const { error } = await createProposito(user.id, draft)
-        if (error) throw new Error(error)
+        const { proposito, error } = await createProposito(user.id, draft)
+        if (error || !proposito) throw new Error(error ?? 'Erro desconhecido')
+        upsertLocal(proposito)
       }
-      await reload()
+      // fecha imediatamente — reload roda em background só pra reconciliar
+      setSaving(false)
       onClose()
+      void reload()
+      return
     } catch (err) {
       setErro((err as Error).message ?? 'Erro ao salvar')
-    } finally {
       setSaving(false)
     }
   }
@@ -186,11 +190,13 @@ function PropositoSheet({ mode, onClose }: { mode: Mode; onClose: () => void }) 
     try {
       const { error } = await deleteProposito(existing.id)
       if (error) throw new Error(error)
-      await reload()
+      removeLocal(existing.id)
+      setSaving(false)
       onClose()
+      void reload()
+      return
     } catch (err) {
       setErro((err as Error).message ?? 'Erro ao apagar')
-    } finally {
       setSaving(false)
     }
   }

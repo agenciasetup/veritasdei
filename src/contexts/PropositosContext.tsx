@@ -39,6 +39,10 @@ interface PropositosContextValue {
   checkIn: (propositoId: string) => Promise<void>
   desfazer: (propositoId: string, feitoEm: string) => Promise<void>
   reload: () => Promise<void>
+  /** Aplica um propósito criado/atualizado no estado local imediatamente. */
+  upsertLocal: (p: Proposito) => void
+  /** Remove um propósito do estado local imediatamente. */
+  removeLocal: (propositoId: string) => void
 }
 
 const PropositosContext = createContext<PropositosContextValue | null>(null)
@@ -152,6 +156,21 @@ export function PropositosProvider({ children }: { children: ReactNode }) {
     [user?.id, load],
   )
 
+  const upsertLocal = useCallback((p: Proposito) => {
+    setPropositos(prev => {
+      const idx = prev.findIndex(x => x.id === p.id)
+      if (idx === -1) return [...prev, p]
+      const copy = prev.slice()
+      copy[idx] = p
+      return copy
+    })
+  }, [])
+
+  const removeLocal = useCallback((propositoId: string) => {
+    setPropositos(prev => prev.filter(p => p.id !== propositoId))
+    setLogs(prev => prev.filter(l => l.proposito_id !== propositoId))
+  }, [])
+
   const value: PropositosContextValue = {
     propositos: enriquecidos,
     propositosAtivos: ativos,
@@ -162,6 +181,8 @@ export function PropositosProvider({ children }: { children: ReactNode }) {
     checkIn,
     desfazer,
     reload: load,
+    upsertLocal,
+    removeLocal,
   }
 
   return <PropositosContext.Provider value={value}>{children}</PropositosContext.Provider>
@@ -181,6 +202,8 @@ export function usePropositos(): PropositosContextValue {
       checkIn: async () => {},
       desfazer: async () => {},
       reload: async () => {},
+      upsertLocal: () => {},
+      removeLocal: () => {},
     }
   }
   return ctx

@@ -207,55 +207,71 @@ function EditarContent({ id }: { id: string }) {
 
     const enderecoFormatado = [rua, numero, bairro].filter(Boolean).join(', ')
 
-    const { error: updateError } = await supabase
-      .from('paroquias')
-      .update({
-        nome: nome.trim(),
-        cnpj: cnpjDigits || null,
-        tipo_igreja: tipoIgreja,
-        diocese: diocese.trim() || null,
-        endereco: enderecoFormatado || null,
-        rua: rua.trim() || null,
-        numero: numero.trim() || null,
-        bairro: bairro.trim() || null,
-        complemento: complemento.trim() || null,
-        cidade: cidade.trim(),
-        estado,
-        pais: pais.trim() || null,
-        cep: cep.trim() || null,
-        padre_responsavel: padreResponsavel.trim() || null,
-        telefone: telefone.trim() || null,
-        email: email.trim() || null,
-        foto_url: fotos[0]?.url ?? null,
-        fotos,
-        foto_capa_url: fotoCapaUrl,
-        foto_perfil_url: fotoPerfilUrl,
-        historia_blocks: historiaBlocks,
-        santo_nome: santoNome.trim() || null,
-        santo_descricao: santoDescricao.trim() || null,
-        santo_imagem_url: santoImagemUrl,
-        santo_data_festa: santoDataFesta.trim() || null,
-        curiosidades,
-        informacoes_uteis: informacoesUteis,
-        seo_title: seoTitle.trim() || null,
-        seo_description: seoDescription.trim() || null,
-        seo_keywords: seoKeywords.trim() || null,
-        instagram: instagramHandle.trim() || null,
-        facebook: facebookHandle.trim() || null,
-        site: site.trim() || null,
-        informacoes_extras: informacoesExtras.trim() || null,
-        horarios_missa: horariosMissa,
-        horarios_confissao: horariosConfissao,
-      })
-      .eq('id', paroquia.id)
+    // As mutações agora passam por /api/paroquias/[id] (server-side). O PATCH
+    // direto pelo browser client ficava pendurado em alguns ambientes de rede
+    // (nenhum request chegava no postgrest), travando o botão em "Salvando…".
+    async function patchParoquia(patch: Record<string, unknown>): Promise<string | null> {
+      try {
+        const res = await fetch(`/api/paroquias/${paroquia!.id}`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(patch),
+          credentials: 'include',
+        })
+        const json = (await res.json().catch(() => ({}))) as { error?: string }
+        if (!res.ok) return json.error ?? `HTTP ${res.status}`
+        return null
+      } catch (err) {
+        return (err as Error).message
+      }
+    }
+
+    const updateError = await patchParoquia({
+      nome: nome.trim(),
+      cnpj: cnpjDigits || null,
+      tipo_igreja: tipoIgreja,
+      diocese: diocese.trim() || null,
+      endereco: enderecoFormatado || null,
+      rua: rua.trim() || null,
+      numero: numero.trim() || null,
+      bairro: bairro.trim() || null,
+      complemento: complemento.trim() || null,
+      cidade: cidade.trim(),
+      estado,
+      pais: pais.trim() || null,
+      cep: cep.trim() || null,
+      padre_responsavel: padreResponsavel.trim() || null,
+      telefone: telefone.trim() || null,
+      email: email.trim() || null,
+      foto_url: fotos[0]?.url ?? null,
+      fotos,
+      foto_capa_url: fotoCapaUrl,
+      foto_perfil_url: fotoPerfilUrl,
+      historia_blocks: historiaBlocks,
+      santo_nome: santoNome.trim() || null,
+      santo_descricao: santoDescricao.trim() || null,
+      santo_imagem_url: santoImagemUrl,
+      santo_data_festa: santoDataFesta.trim() || null,
+      curiosidades,
+      informacoes_uteis: informacoesUteis,
+      seo_title: seoTitle.trim() || null,
+      seo_description: seoDescription.trim() || null,
+      seo_keywords: seoKeywords.trim() || null,
+      instagram: instagramHandle.trim() || null,
+      facebook: facebookHandle.trim() || null,
+      site: site.trim() || null,
+      informacoes_extras: informacoesExtras.trim() || null,
+      horarios_missa: horariosMissa,
+      horarios_confissao: horariosConfissao,
+    })
 
     if (updateError) {
-      setError(updateError.message)
+      setError(updateError)
       setSaving(false)
       return
     }
 
-    // Upload do doc de verificação se novo
+    // Upload do doc de verificação se novo (storage ainda via browser client)
     if (verificacaoFile) {
       const ext = verificacaoFile.name.split('.').pop() ?? 'pdf'
       const path = `${user.id}/${paroquia.id}/doc-${Date.now()}.${ext}`
@@ -268,27 +284,23 @@ function EditarContent({ id }: { id: string }) {
         setSaving(false)
         return
       }
-      const { error: verifUpdateErr } = await supabase
-        .from('paroquias')
-        .update({
-          verificacao_documento_path: path,
-          verificacao_solicitada_em: new Date().toISOString(),
-          verificacao_notas: verificacaoNotas.trim() || null,
-        })
-        .eq('id', paroquia.id)
+      const verifUpdateErr = await patchParoquia({
+        verificacao_documento_path: path,
+        verificacao_solicitada_em: new Date().toISOString(),
+        verificacao_notas: verificacaoNotas.trim() || null,
+      })
       if (verifUpdateErr) {
         console.error('[editar] Falha ao registrar solicitação:', verifUpdateErr)
         setError(
-          `Documento enviado, mas a solicitação de verificação não foi registrada: ${verifUpdateErr.message}`,
+          `Documento enviado, mas a solicitação de verificação não foi registrada: ${verifUpdateErr}`,
         )
         setSaving(false)
         return
       }
     } else if (verificacaoNotas && verificacaoNotas !== (paroquia.verificacao_notas ?? '')) {
-      const { error: notasErr } = await supabase
-        .from('paroquias')
-        .update({ verificacao_notas: verificacaoNotas.trim() || null })
-        .eq('id', paroquia.id)
+      const notasErr = await patchParoquia({
+        verificacao_notas: verificacaoNotas.trim() || null,
+      })
       if (notasErr) {
         console.error('[editar] Falha ao atualizar observações:', notasErr)
       }
