@@ -4,11 +4,12 @@ import { useState } from 'react'
 import {
   Sparkles, Lightbulb, ArrowRight, AlertTriangle, ShieldAlert, BookMarked,
   BookOpen, Feather, ShieldCheck, ShieldAlert as ShieldWarn, ShieldQuestion,
+  XCircle, CheckCircle2, AlertCircle, Flame, MessageCircle, Scale,
 } from 'lucide-react'
 import RichText from '@/components/ui/RichText'
 import PillarCard from '@/components/ui/PillarCard'
 import DisclaimerBanner from '@/components/ui/DisclaimerBanner'
-import type { QueryResponse, Pillar } from '@/types'
+import type { QueryResponse, Pillar, AIInsight, MoralTag, HeresyTag } from '@/types'
 
 const PILLAR_ORDER: Pillar[] = ['biblia', 'magisterio', 'patristica']
 
@@ -215,6 +216,8 @@ function CatholicSummaryCard({
         </div>
       </div>
 
+      <ClassificationBadges insight={insight} />
+
       <div className={`mb-6 md:mb-8 ${fullWidth ? 'max-w-4xl' : ''}`} style={{ color: '#E8E2D8', fontSize: '1.05rem' }}>
         <RichText text={insight.summary} accentColor="#C9A84C" onCitationClick={onCitationClick} />
       </div>
@@ -321,24 +324,42 @@ function ProtestantViewCard({
         </div>
       )}
 
+      {/* Bloco 1 — O QUE O PROTESTANTE DIZ (visão geral) */}
+      <BlockHeader
+        icon={MessageCircle}
+        color="#D94F5C"
+        label="O que o protestante diz"
+      />
       <div className="mb-5 md:mb-6" style={{ color: '#B8AFA2', fontSize: '0.92rem' }}>
         <RichText text={protestantView.summary} accentColor="#D94F5C" />
       </div>
 
-      <div className="flex items-center gap-3 my-3 md:my-4">
-        <span className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.15)' }} />
-        <div className="flex items-center gap-2">
-          <ShieldAlert className="w-4 h-4" style={{ color: '#C9A84C' }} />
-          <span className="text-xs tracking-[0.1em] uppercase" style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}>
-            Refutação Católica
-          </span>
+      {/* Bloco 2+ — Objeções específicas: [Objeção] [Como a Igreja Católica responde] */}
+      {protestantView.objections.length > 0 ? (
+        <div className="space-y-4 md:space-y-5 mb-5 md:mb-6">
+          {protestantView.objections.map((obj, i) => (
+            <ObjectionBlockCard
+              key={i}
+              index={i + 1}
+              claim={obj.claim}
+              refutation={obj.refutation}
+              onCitationClick={onCitationClick}
+            />
+          ))}
         </div>
-        <span className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.15)' }} />
-      </div>
-
-      <div className="mb-5 md:mb-6" style={{ color: '#E8E2D8', fontSize: '0.92rem' }}>
-        <RichText text={protestantView.refutation} accentColor="#C9A84C" onCitationClick={onCitationClick} />
-      </div>
+      ) : (
+        <>
+          {/* Fallback legado: refutação consolidada (para respostas antigas) */}
+          <BlockHeader
+            icon={ShieldAlert}
+            color="#C9A84C"
+            label="Como a Igreja Católica combate"
+          />
+          <div className="mb-5 md:mb-6" style={{ color: '#E8E2D8', fontSize: '0.92rem' }}>
+            <RichText text={protestantView.refutation} accentColor="#C9A84C" onCitationClick={onCitationClick} />
+          </div>
+        </>
+      )}
 
       <div
         className="mt-auto rounded-xl p-4 flex items-start gap-3"
@@ -438,6 +459,216 @@ function ConfidenceIndicator({ level }: { level: 'high' | 'medium' | 'low' }) {
       <span className="text-xs" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
         — {c.description}
       </span>
+    </div>
+  )
+}
+
+/* ─── Block Header (shared between protestant card sections) ─── */
+
+function BlockHeader({
+  icon: Icon,
+  color,
+  label,
+}: {
+  icon: React.ElementType
+  color: string
+  label: string
+}) {
+  return (
+    <div className="flex items-center gap-2 mb-3">
+      <Icon className="w-4 h-4" style={{ color }} />
+      <span
+        className="text-[11px] tracking-[0.12em] uppercase"
+        style={{ fontFamily: 'Cinzel, serif', color }}
+      >
+        {label}
+      </span>
+      <span className="flex-1 h-px" style={{ background: `${color}22` }} />
+    </div>
+  )
+}
+
+/* ─── Objection Block (one pair: [claim] + [refutation]) ─── */
+
+function ObjectionBlockCard({
+  index,
+  claim,
+  refutation,
+  onCitationClick,
+}: {
+  index: number
+  claim: string
+  refutation: string
+  onCitationClick: (reference: string, rect: DOMRect) => void
+}) {
+  return (
+    <div
+      className="rounded-xl p-4 md:p-5"
+      style={{
+        background: 'rgba(16,16,16,0.35)',
+        border: '1px solid rgba(201,168,76,0.12)',
+      }}
+    >
+      {/* Objeção do protestante */}
+      <div className="mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <span
+            className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
+            style={{
+              background: 'rgba(139,49,69,0.2)',
+              color: '#D94F5C',
+              fontFamily: 'Cinzel, serif',
+            }}
+          >
+            {index}
+          </span>
+          <span
+            className="text-[11px] tracking-[0.1em] uppercase"
+            style={{ fontFamily: 'Cinzel, serif', color: '#D94F5C' }}
+          >
+            Objeção
+          </span>
+        </div>
+        <div
+          className="pl-7 text-[0.88rem] leading-relaxed"
+          style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}
+        >
+          <RichText text={claim} accentColor="#D94F5C" />
+        </div>
+      </div>
+
+      {/* Refutação católica */}
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <ShieldCheck className="w-4 h-4" style={{ color: '#C9A84C' }} />
+          <span
+            className="text-[11px] tracking-[0.1em] uppercase"
+            style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
+          >
+            Como a Igreja Católica responde
+          </span>
+        </div>
+        <div
+          className="pl-6 text-[0.9rem] leading-relaxed"
+          style={{ color: '#E8E2D8', fontFamily: 'Poppins, sans-serif' }}
+        >
+          <RichText text={refutation} accentColor="#C9A84C" onCitationClick={onCitationClick} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Classification Badges (moral + heresy) ─── */
+
+interface BadgeVisual {
+  icon: React.ElementType
+  label: string
+  description: string
+  color: string
+  bg: string
+  border: string
+}
+
+const MORAL_BADGE_CONFIG: Record<Exclude<MoralTag, 'not_applicable'>, BadgeVisual> = {
+  sin: {
+    icon: XCircle,
+    label: 'Pecado',
+    description: 'Contrário ao ensino católico',
+    color: '#E04E5C',
+    bg: 'rgba(224,78,92,0.08)',
+    border: 'rgba(224,78,92,0.25)',
+  },
+  moderate: {
+    icon: AlertCircle,
+    label: 'Precisa de moderação',
+    description: 'Depende das circunstâncias e da intenção',
+    color: '#E8B642',
+    bg: 'rgba(232,182,66,0.08)',
+    border: 'rgba(232,182,66,0.25)',
+  },
+  not_sin: {
+    icon: CheckCircle2,
+    label: 'Não é pecado',
+    description: 'Permitido segundo o Catecismo',
+    color: '#5BA86E',
+    bg: 'rgba(91,168,110,0.08)',
+    border: 'rgba(91,168,110,0.25)',
+  },
+}
+
+const HERESY_BADGE_CONFIG: Record<Exclude<HeresyTag, 'not_applicable'>, BadgeVisual> = {
+  heresy: {
+    icon: Flame,
+    label: 'Heresia',
+    description: 'Condenada pelo Magistério',
+    color: '#E04E5C',
+    bg: 'rgba(224,78,92,0.08)',
+    border: 'rgba(224,78,92,0.3)',
+  },
+  orthodox: {
+    icon: Scale,
+    label: 'Doutrina católica',
+    description: 'Ensino fiel ao Magistério',
+    color: '#C9A84C',
+    bg: 'rgba(201,168,76,0.08)',
+    border: 'rgba(201,168,76,0.25)',
+  },
+}
+
+function ClassificationBadge({
+  visual,
+  suffix,
+}: {
+  visual: BadgeVisual
+  suffix?: string
+}) {
+  const Icon = visual.icon
+  return (
+    <div
+      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg"
+      style={{
+        background: visual.bg,
+        border: `1px solid ${visual.border}`,
+      }}
+    >
+      <Icon className="w-3.5 h-3.5" style={{ color: visual.color }} />
+      <span
+        className="text-[11px] font-semibold tracking-[0.05em]"
+        style={{ color: visual.color, fontFamily: 'Poppins, sans-serif' }}
+      >
+        {visual.label}
+        {suffix ? `: ${suffix}` : ''}
+      </span>
+      <span
+        className="text-[11px] hidden md:inline"
+        style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+      >
+        · {visual.description}
+      </span>
+    </div>
+  )
+}
+
+function ClassificationBadges({ insight }: { insight: AIInsight }) {
+  const moralVisual = insight.moralTag && insight.moralTag !== 'not_applicable'
+    ? MORAL_BADGE_CONFIG[insight.moralTag]
+    : null
+  const heresyVisual = insight.heresyTag && insight.heresyTag !== 'not_applicable'
+    ? HERESY_BADGE_CONFIG[insight.heresyTag]
+    : null
+
+  if (!moralVisual && !heresyVisual) return null
+
+  return (
+    <div className="flex flex-wrap gap-2 mb-5 md:mb-6">
+      {moralVisual && <ClassificationBadge visual={moralVisual} />}
+      {heresyVisual && (
+        <ClassificationBadge
+          visual={heresyVisual}
+          suffix={insight.heresyTag === 'heresy' ? insight.heresyName ?? undefined : undefined}
+        />
+      )}
     </div>
   )
 }
