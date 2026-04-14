@@ -1,21 +1,31 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState, type ElementType } from 'react'
+import Link from 'next/link'
+import {
+  Church,
+  ClipboardCheck,
+  Cross,
+  HeartHandshake,
+  Loader2,
+  LogIn,
+  MapPin,
+  Navigation,
+  Search,
+  UserPlus,
+  BookOpen,
+  CalendarHeart,
+  Lock,
+} from 'lucide-react'
+
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
 import { sanitizeIlike } from '@/lib/utils/sanitize'
-import Link from 'next/link'
-import {
-  Users, Church, HeartHandshake, UserPlus, LogIn, MapPin, Clock, Search,
-  BookOpen, GraduationCap, CreditCard, MessageSquare,
-  Navigation, Loader2,
-} from 'lucide-react'
 import type { Paroquia, ParoquiaNearby } from '@/types/paroquia'
-import CrossIcon from '@/components/icons/CrossIcon'
-import SeloVerificado from '@/components/paroquias/SeloVerificado'
-import CityAutocomplete from '@/components/CityAutocomplete'
 import { useGeolocation } from '@/hooks/useGeolocation'
 import { formatDistance } from '@/lib/utils/geo'
+import CityAutocomplete from '@/components/CityAutocomplete'
+import { getLiturgicalDay } from '@/lib/liturgical-calendar'
 
 interface Stats {
   catolicos: number
@@ -26,8 +36,8 @@ interface Stats {
 export default function LandingPage() {
   const { isAuthenticated } = useAuth()
   const geo = useGeolocation()
+
   const [stats, setStats] = useState<Stats>({ catolicos: 0, convertidos: 0, igrejas: 0 })
-  const [animated, setAnimated] = useState(false)
   const [searchCity, setSearchCity] = useState('')
   const [searchResults, setSearchResults] = useState<Paroquia[]>([])
   const [nearbyResults, setNearbyResults] = useState<Paroquia[]>([])
@@ -35,36 +45,47 @@ export default function LandingPage() {
   const [searched, setSearched] = useState(false)
   const [searching, setSearching] = useState(false)
 
+  const liturgical = useMemo(() => getLiturgicalDay(new Date()), [])
+  const hoje = useMemo(
+    () =>
+      new Date().toLocaleDateString('pt-BR', {
+        weekday: 'long',
+        day: '2-digit',
+        month: 'long',
+      }),
+    [],
+  )
+
   useEffect(() => {
     const supabase = createClient()
     if (!supabase) return
 
-    // Use SECURITY DEFINER function — bypasses RLS safely, returns only counts
-    supabase.rpc('get_landing_stats').then((res: { data: Stats[] | null; error: unknown }) => {
-      if (res.error || !res.data || res.data.length === 0) return
-      const row = res.data[0]
-      setStats({
-        catolicos: Number(row.catolicos) || 0,
-        convertidos: Number(row.convertidos) || 0,
-        igrejas: Number(row.igrejas) || 0,
+    supabase
+      .rpc('get_landing_stats')
+      .then((res: { data: Stats[] | null; error: unknown }) => {
+        if (res.error || !res.data || res.data.length === 0) return
+        const row = res.data[0]
+        setStats({
+          catolicos: Number(row.catolicos) || 0,
+          convertidos: Number(row.convertidos) || 0,
+          igrejas: Number(row.igrejas) || 0,
+        })
       })
-    }).catch(() => {
-      // Stats are non-critical — show zeros on failure
-    })
-
-    setTimeout(() => setAnimated(true), 100)
+      .catch(() => {
+        // Stats são opcionais para a landing.
+      })
   }, [])
 
   const handleSearch = async () => {
     const supabase = createClient()
     if (!supabase || !searchCity.trim()) return
+
     setSearching(true)
     setSearched(true)
     setGeoResults([])
 
     const termo = searchCity.trim()
-    const SELECT =
-      'id, nome, diocese, cidade, estado, padre_responsavel, telefone, horarios_missa, horarios_confissao, tipo_igreja, foto_url, fotos, verificado, status'
+    const SELECT = 'id, nome, diocese, cidade, estado, verificado, status'
 
     const { data } = await supabase
       .from('paroquias')
@@ -73,12 +94,11 @@ export default function LandingPage() {
       .ilike('cidade', `%${sanitizeIlike(termo)}%`)
       .order('verificado', { ascending: false })
       .order('created_at', { ascending: false })
-      .limit(6)
+      .limit(8)
 
     const exact = (data as Paroquia[]) ?? []
     setSearchResults(exact)
 
-    // Busca igrejas de cidades próximas: mesmo estado, cidade diferente.
     if (exact.length > 0) {
       const uf = exact[0].estado
       const cidadesDigitadas = new Set(exact.map(p => p.cidade.toLowerCase()))
@@ -89,10 +109,11 @@ export default function LandingPage() {
         .eq('estado', uf)
         .order('verificado', { ascending: false })
         .order('created_at', { ascending: false })
-        .limit(12)
+        .limit(20)
+
       const filtered = ((nearby as Paroquia[]) ?? [])
         .filter(p => !cidadesDigitadas.has(p.cidade.toLowerCase()))
-        .slice(0, 6)
+        .slice(0, 8)
       setNearbyResults(filtered)
     } else {
       setNearbyResults([])
@@ -101,9 +122,9 @@ export default function LandingPage() {
     setSearching(false)
   }
 
-  // Busca automática por raio quando a geolocalização estiver disponível.
   useEffect(() => {
     if (geo.status !== 'granted' || !geo.coords) return
+
     const supabase = createClient()
     if (!supabase) return
 
@@ -123,7 +144,6 @@ export default function LandingPage() {
       .then((res: { data: ParoquiaNearby[] | null; error: unknown }) => {
         if (cancelled) return
         setGeoResults(res.data ?? [])
-        // Prefill cidade no input caso conheça a cidade
         if (geo.coords?.cidade && !searchCity) {
           setSearchCity(geo.coords.cidade)
         }
@@ -139,102 +159,133 @@ export default function LandingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geo.status, geo.coords?.latitude, geo.coords?.longitude])
 
+  const jumpToChurchFinder = () => {
+    document.getElementById('church-finder')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    if (geo.status === 'idle') {
+      geo.request()
+    }
+  }
+
   if (isAuthenticated) return null
 
   return (
-    <div className="flex flex-col items-center min-h-screen px-4 pt-16 pb-10 relative">
+    <main className="min-h-screen px-4 pt-8 pb-28 md:pb-12 relative">
       <div className="bg-glow" />
 
-      {/* ── Cross ── */}
-      <div className="relative z-10 mb-8">
-        <CrossIcon size="lg" className="gothic-cross" />
-      </div>
-
-      {/* ── Headline ── */}
-      <h1
-        className="relative z-10 text-4xl md:text-6xl lg:text-7xl font-bold tracking-widest uppercase text-center"
-        style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
-      >
-        Veritas Dei
-      </h1>
-
-      {/* ── Ornament ── */}
-      <div className="relative z-10 flex items-center justify-center gap-4 mt-4 mb-3 max-w-xs mx-auto w-full">
-        <span className="flex-1 h-px bg-gradient-to-r from-transparent to-[rgba(201,168,76,0.3)]" />
-        <span style={{ color: '#C9A84C', opacity: 0.5, fontSize: '0.75rem' }}>&#10022;</span>
-        <span style={{ color: '#6B1D2A', opacity: 0.7, fontSize: '0.6rem' }}>&#9670;</span>
-        <span style={{ color: '#C9A84C', opacity: 0.5, fontSize: '0.75rem' }}>&#10022;</span>
-        <span className="flex-1 h-px bg-gradient-to-l from-transparent to-[rgba(201,168,76,0.3)]" />
-      </div>
-
-      {/* ── Subtitle ── */}
-      <p
-        className="relative z-10 text-base md:text-lg text-center max-w-lg mb-12"
-        style={{ fontFamily: 'Cormorant Garamond, serif', color: '#B8AFA2', fontStyle: 'italic', lineHeight: 1.6 }}
-      >
-        A maior comunidade católica digital do Brasil.
-        <br />
-        Estudo, formação, comunidade e fé — tudo em um só lugar.
-      </p>
-
-      {/* ── Counters ── */}
-      <div
-        className={`relative z-10 flex flex-wrap justify-center gap-4 md:gap-6 mb-12 transition-all duration-1000 ${animated ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
-      >
-        <CounterCard icon={Users} value={stats.catolicos} label="Católicos" />
-        <CounterCard icon={HeartHandshake} value={stats.convertidos} label="Convertidos" />
-        <CounterCard icon={Church} value={stats.igrejas} label="Igrejas cadastradas" />
-      </div>
-
-      {/* ── Value Propositions ── */}
-      <div className="relative z-10 w-full max-w-4xl mb-12 px-2">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {[
-            { icon: CreditCard, title: 'Carteirinha Católica', desc: 'Sua identidade católica digital com sacramentos, paróquia e vocação.' },
-            { icon: BookOpen, title: 'Biblioteca da Fé', desc: 'Bíblia, Catecismo, Magistério e Patrística em um só lugar.' },
-            { icon: GraduationCap, title: 'Formação Católica', desc: 'Trilhas de estudo: Mariologia, Escatologia, Apologética e mais.' },
-            { icon: Search, title: 'Busca Inteligente', desc: 'Pergunte qualquer dúvida e receba respostas com fontes da Igreja.' },
-            { icon: Church, title: 'Encontre Paróquias', desc: 'Mapa de igrejas, horários de missa e padres de todo o Brasil.' },
-            { icon: MessageSquare, title: 'Comunidade Católica', desc: 'Conecte-se com outros fiéis, compartilhe reflexões e testemunhos.' },
-          ].map(({ icon: Icon, title, desc }) => (
-            <div
-              key={title}
-              className="flex items-start gap-3 p-4 rounded-xl"
-              style={{
-                background: 'rgba(16,16,16,0.5)',
-                border: '1px solid rgba(201,168,76,0.08)',
-              }}
-            >
-              <div
-                className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.15)' }}
-              >
-                <Icon className="w-4 h-4" style={{ color: '#C9A84C' }} />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold mb-0.5" style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}>
-                  {title}
-                </h3>
-                <p className="text-xs leading-relaxed" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
-                  {desc}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Church Search ── */}
-      <div className="relative z-10 w-full max-w-2xl mb-12">
-        <h2
-          className="text-lg font-bold tracking-wider uppercase text-center mb-4"
-          style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
+      <section className="relative z-10 max-w-4xl mx-auto rounded-3xl p-6 md:p-8 mb-8" style={{
+        background: 'rgba(16,16,16,0.78)',
+        border: '1px solid rgba(201,168,76,0.15)',
+      }}>
+        <div
+          className="inline-flex flex-col gap-1 rounded-xl px-3 py-2 mb-5"
+          style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.2)' }}
         >
-          Encontre sua Paróquia
-        </h2>
+          <span
+            className="text-[10px] uppercase tracking-[0.16em] capitalize"
+            style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}
+          >
+            {hoje}
+          </span>
+          <span className="text-[11px]" style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}>
+            Leituras de hoje: {liturgical.name}
+          </span>
+        </div>
 
-        {/* Barra de localização */}
-        <div className="mb-3 flex items-center justify-center gap-2">
+        <h1
+          className="text-3xl md:text-5xl font-bold tracking-widest uppercase mb-2"
+          style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
+        >
+          Veritas Dei
+        </h1>
+        <p className="text-sm md:text-base mb-6" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
+          Encontre missa perto de você e reze todos os dias com orientação simples.
+        </p>
+
+        <div className="mb-3">
+          <button
+            onClick={jumpToChurchFinder}
+            className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold uppercase tracking-wider"
+            style={{
+              background: 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
+              color: '#0A0A0A',
+              fontFamily: 'Cinzel, serif',
+            }}
+          >
+            <MapPin className="w-4 h-4" />
+            Encontrar missa perto de mim
+          </button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 mb-2">
+          <LogIn className="w-3.5 h-3.5" style={{ color: '#C9A84C' }} />
+          <Link
+            href="/login?tab=registro"
+            className="text-xs underline"
+            style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
+          >
+            Criar conta grátis
+          </Link>
+          <span style={{ color: '#7A7368' }}>·</span>
+          <Link
+            href="/login?tab=login"
+            className="text-xs underline"
+            style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
+          >
+            Já tenho conta
+          </Link>
+        </div>
+        <p className="text-xs" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+          Leva menos de 1 minuto. Sem spam.
+        </p>
+
+        {searching && (
+          <p className="text-xs inline-flex items-center gap-2" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            Procurando igrejas próximas...
+          </p>
+        )}
+
+        {!searching && geoResults.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {geoResults.slice(0, 8).map(p => (
+              <MiniChurchPill
+                key={p.id}
+                href={`/paroquias/${p.id}`}
+                name={p.nome}
+                suffix={formatDistance(p.distancia_km)}
+              />
+            ))}
+          </div>
+        )}
+
+        {!searching && geoResults.length === 0 && geo.status === 'idle' && (
+          <p className="text-xs" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+            Ative sua localização para ver igrejas próximas em formato rápido: Nome [x km].
+          </p>
+        )}
+      </section>
+
+      <section className="relative z-10 max-w-5xl mx-auto mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <CounterCard icon={Church} value={stats.igrejas} label="Igrejas cadastradas" />
+          <CounterCard icon={HeartHandshake} value={stats.convertidos} label="Convertidos" />
+          <CounterCard icon={UserPlus} value={stats.catolicos} label="Católicos" />
+        </div>
+      </section>
+
+      <section
+        id="church-finder"
+        className="relative z-10 max-w-4xl mx-auto rounded-2xl p-5 md:p-6 mb-8"
+        style={{ background: 'rgba(16,16,16,0.72)', border: '1px solid rgba(201,168,76,0.12)' }}
+      >
+        <h2 className="text-xl md:text-2xl mb-1" style={{ fontFamily: 'Cormorant Garamond, serif', color: '#F2EDE4' }}>
+          Encontrar igreja e missa perto de você
+        </h2>
+        <p className="text-sm mb-4" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+          Em 30 segundos: toque em localização ou digite sua cidade.
+        </p>
+
+        <div className="mb-4 flex flex-wrap items-center gap-2">
           <button
             onClick={() => geo.request()}
             disabled={geo.status === 'prompting' || geo.status === 'loading'}
@@ -257,7 +308,11 @@ export default function LandingPage() {
           </button>
           {geo.status === 'granted' && (
             <button
-              onClick={() => { geo.clear(); setGeoResults([]); setSearched(false) }}
+              onClick={() => {
+                geo.clear()
+                setGeoResults([])
+                setSearched(false)
+              }}
               className="text-xs underline"
               style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif', background: 'none', border: 'none' }}
             >
@@ -265,8 +320,9 @@ export default function LandingPage() {
             </button>
           )}
         </div>
+
         {geo.error && (
-          <p className="text-xs text-center mb-3" style={{ color: '#D94F5C', fontFamily: 'Poppins, sans-serif' }}>
+          <p className="text-xs mb-3" style={{ color: '#D94F5C', fontFamily: 'Poppins, sans-serif' }}>
             {geo.error}
           </p>
         )}
@@ -288,7 +344,7 @@ export default function LandingPage() {
           <button
             onClick={handleSearch}
             disabled={searching || !searchCity.trim()}
-            className="px-5 rounded-xl flex items-center gap-2 text-sm font-medium transition-all"
+            className="px-5 rounded-xl flex items-center gap-2 text-sm font-medium"
             style={{
               background: 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
               color: '#0A0A0A',
@@ -296,139 +352,174 @@ export default function LandingPage() {
               opacity: !searchCity.trim() ? 0.5 : 1,
             }}
           >
-            {searching ? (
-              <div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(10,10,10,0.3)', borderTopColor: '#0A0A0A' }} />
-            ) : (
-              <Search className="w-4 h-4" />
-            )}
+            {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
           </button>
         </div>
 
-        {/* Geo Results (quando geolocation ativa) */}
         {searched && !searching && geoResults.length > 0 && (
           <div className="mt-4">
-            <h3
-              className="text-xs tracking-wider uppercase mb-3 text-center"
-              style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
-            >
+            <p className="text-xs uppercase tracking-[0.16em] mb-2" style={{ color: '#C9A84C', fontFamily: 'Cinzel, serif' }}>
               Próximas a você
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {geoResults.slice(0, 6).map(p => (
-                <LandingNearbyCard key={p.id} p={p} />
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {geoResults.map(p => (
+                <MiniChurchPill
+                  key={p.id}
+                  href={`/paroquias/${p.id}`}
+                  name={p.nome}
+                  suffix={formatDistance(p.distancia_km)}
+                />
               ))}
-            </div>
-            <div className="mt-4 text-center">
-              <Link
-                href={`/paroquias/buscar?lat=${geo.coords?.latitude ?? ''}&lng=${geo.coords?.longitude ?? ''}`}
-                className="inline-flex items-center gap-2 text-xs tracking-wider uppercase"
-                style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
-              >
-                Ver todas as igrejas próximas →
-              </Link>
             </div>
           </div>
         )}
 
-        {/* Text Search Results */}
         {searched && !searching && geoResults.length === 0 && (
-          <div className="mt-4">
+          <div className="mt-4 space-y-4">
             {searchResults.length === 0 && nearbyResults.length === 0 ? (
-              <p className="text-sm text-center py-4" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
-                Nenhuma paróquia encontrada em &quot;{searchCity}&quot;. Cadastre-se e ajude a registrar!
+              <p className="text-sm" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+                Nenhuma igreja encontrada em &quot;{searchCity}&quot;. Tente outra cidade próxima.
               </p>
             ) : (
               <>
                 {searchResults.length > 0 && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {searchResults.map(p => (
-                      <LandingChurchCard key={p.id} p={p} />
-                    ))}
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.16em] mb-2" style={{ color: '#C9A84C', fontFamily: 'Cinzel, serif' }}>
+                      Na sua busca
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {searchResults.map(p => (
+                        <MiniChurchPill
+                          key={p.id}
+                          href={`/paroquias/${p.id}`}
+                          name={p.nome}
+                          suffix={`${p.cidade}-${p.estado}`}
+                        />
+                      ))}
+                    </div>
                   </div>
                 )}
 
                 {nearbyResults.length > 0 && (
-                  <>
-                    <h3
-                      className="text-xs tracking-wider uppercase mt-6 mb-3"
-                      style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
-                    >
-                      Em cidades próximas
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.16em] mb-2" style={{ color: '#C9A84C', fontFamily: 'Cinzel, serif' }}>
+                      Cidades próximas
+                    </p>
+                    <div className="flex flex-wrap gap-2">
                       {nearbyResults.map(p => (
-                        <LandingChurchCard key={p.id} p={p} />
+                        <MiniChurchPill
+                          key={p.id}
+                          href={`/paroquias/${p.id}`}
+                          name={p.nome}
+                          suffix={`${p.cidade}-${p.estado}`}
+                        />
                       ))}
                     </div>
-                  </>
+                  </div>
                 )}
-
-                <div className="mt-4 text-center">
-                  <Link
-                    href={`/paroquias/buscar?cidade=${encodeURIComponent(searchCity.trim())}`}
-                    className="inline-flex items-center gap-2 text-xs tracking-wider uppercase"
-                    style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
-                  >
-                    Ver todas as igrejas →
-                  </Link>
-                </div>
               </>
             )}
           </div>
         )}
-      </div>
+      </section>
 
-      {/* ── CTA ── */}
-      <div className="relative z-10 flex flex-col sm:flex-row gap-3 w-full max-w-md">
-        <Link
-          href="/login?tab=registro"
-          className="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl text-sm font-semibold tracking-wider uppercase transition-all hover:scale-[1.02]"
-          style={{
-            fontFamily: 'Cinzel, serif',
-            background: 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
-            color: '#0A0A0A',
-            boxShadow: '0 8px 32px rgba(201,168,76,0.25)',
-          }}
-        >
-          <UserPlus className="w-4 h-4" />
-          Criar Conta
-        </Link>
-        <Link
-          href="/login"
-          className="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl text-sm font-semibold tracking-wider uppercase transition-all hover:scale-[1.02]"
-          style={{
-            fontFamily: 'Cinzel, serif',
-            background: 'rgba(201,168,76,0.08)',
-            color: '#C9A84C',
-            border: '1px solid rgba(201,168,76,0.25)',
-          }}
-        >
-          <LogIn className="w-4 h-4" />
-          Entrar
-        </Link>
-      </div>
-
-      {/* ── Bottom text ── */}
-      <p
-        className="relative z-10 text-xs text-center mt-8 max-w-sm"
-        style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif', lineHeight: 1.7 }}
+      <section
+        className="relative z-10 max-w-4xl mx-auto rounded-2xl p-5 md:p-6 mb-8"
+        style={{ background: 'rgba(16,16,16,0.72)', border: '1px solid rgba(201,168,76,0.12)' }}
       >
-        Cadastre-se e garanta sua carteirinha católica digital.
-        <br />
-        Ajude a construir o maior censo católico do Brasil.
-      </p>
+        <h2 className="text-xl md:text-2xl mb-2" style={{ fontFamily: 'Cormorant Garamond, serif', color: '#F2EDE4' }}>
+          Faça uma doação para apoiar o projeto
+        </h2>
+        <p className="text-sm mb-4" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+          Este espaço já está preparado para receber o sistema de doação quando a integração de pagamento for ativada.
+        </p>
+        <button
+          type="button"
+          disabled
+          className="px-4 py-2 rounded-xl text-sm"
+          style={{
+            background: 'rgba(201,168,76,0.08)',
+            border: '1px dashed rgba(201,168,76,0.3)',
+            color: '#C9A84C',
+            fontFamily: 'Poppins, sans-serif',
+          }}
+        >
+          Doação (em breve)
+        </button>
+      </section>
 
-      {/* ── Footer ── */}
-      <footer className="relative z-10 mt-auto pt-16 pb-6">
-        <div className="flex items-center justify-center gap-3 mb-3 max-w-[200px] mx-auto">
-          <span className="flex-1 h-px bg-gradient-to-r from-transparent to-[rgba(201,168,76,0.15)]" />
-          <span style={{ color: '#C9A84C', opacity: 0.4, fontSize: '0.6rem' }}>&#10022;</span>
-          <span className="flex-1 h-px bg-gradient-to-l from-transparent to-[rgba(201,168,76,0.15)]" />
+      <section className="relative z-10 max-w-4xl mx-auto mb-8">
+        <h2 className="text-xl md:text-2xl mb-3" style={{ fontFamily: 'Cormorant Garamond, serif', color: '#F2EDE4' }}>
+          Com sua conta você acessa
+        </h2>
+        <p className="text-sm mb-4" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+          Sua rotina espiritual diária com passos simples.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <FeatureAccessCard
+            icon={CalendarHeart}
+            title="Leituras de hoje"
+            description="Leituras diárias com calendário litúrgico."
+            href="/liturgia/hoje"
+          />
+          <FeatureAccessCard
+            icon={BookOpen}
+            title="Orações prontas"
+            description="Pai-Nosso, Ave-Maria e mais em um toque."
+            href="/oracoes"
+          />
+          <FeatureAccessCard
+            icon={Cross}
+            title="Rezar o Santo Terço"
+            description="Mistérios do dia com guia para acompanhar."
+            href="/rosario"
+          />
+          <FeatureAccessCard
+            icon={ClipboardCheck}
+            title="Preparar confissão"
+            description="Exame de consciência direto e objetivo."
+            href="/exame-consciencia"
+          />
         </div>
+      </section>
+
+      <div
+        className="fixed bottom-3 left-3 right-3 z-40 md:hidden rounded-2xl p-2"
+        style={{ background: 'rgba(16,16,16,0.9)', border: '1px solid rgba(201,168,76,0.2)' }}
+      >
+        <div className="grid grid-cols-[1fr_auto] gap-2">
+          <button
+            onClick={jumpToChurchFinder}
+            className="inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider"
+            style={{
+              background: 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
+              color: '#0A0A0A',
+              fontFamily: 'Cinzel, serif',
+            }}
+          >
+            <MapPin className="w-3.5 h-3.5" />
+            Encontrar missa
+          </button>
+          <Link
+            href="/login?tab=registro"
+            className="inline-flex items-center justify-center px-3 py-2.5 rounded-xl text-xs"
+            style={{
+              background: 'rgba(201,168,76,0.08)',
+              border: '1px solid rgba(201,168,76,0.25)',
+              color: '#C9A84C',
+              fontFamily: 'Poppins, sans-serif',
+            }}
+          >
+            Criar conta
+          </Link>
+        </div>
+      </div>
+
+      <footer className="relative z-10 pt-4 pb-2 text-center">
         <div className="flex items-center justify-center gap-4 mb-3">
           <Link
             href="/privacidade"
-            className="text-xs underline transition-colors hover:opacity-80"
+            className="text-xs underline"
             style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
           >
             Política de Privacidade
@@ -436,163 +527,112 @@ export default function LandingPage() {
           <span style={{ color: 'rgba(201,168,76,0.2)' }}>|</span>
           <Link
             href="/termos"
-            className="text-xs underline transition-colors hover:opacity-80"
+            className="text-xs underline"
             style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
           >
             Termos de Serviço
           </Link>
         </div>
-        <p className="text-xs tracking-wider text-center" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+        <p className="text-xs" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
           Fiel ao Magistério. Consulte sempre as fontes.
         </p>
       </footer>
-    </div>
+    </main>
   )
 }
 
-function CounterCard({ icon: Icon, value, label }: { icon: React.ElementType; value: number; label: string }) {
+function CounterCard({ icon: Icon, value, label }: { icon: ElementType; value: number; label: string }) {
   return (
     <div
-      className="flex items-center gap-3 px-5 py-3.5 rounded-2xl min-w-[160px]"
+      className="rounded-2xl p-4"
       style={{
-        background: 'rgba(16,16,16,0.7)',
-        backdropFilter: 'blur(16px)',
-        border: '1px solid rgba(201,168,76,0.12)',
-        boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
+        background: 'rgba(16,16,16,0.72)',
+        border: '1px solid rgba(201,168,76,0.1)',
       }}
     >
-      <div
-        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.15)' }}
-      >
-        <Icon className="w-5 h-5" style={{ color: '#C9A84C' }} />
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'rgba(201,168,76,0.1)' }}>
+          <Icon className="w-4 h-4" style={{ color: '#C9A84C' }} />
+        </div>
+        <strong style={{ color: '#F2EDE4', fontFamily: 'Cinzel, serif' }}>{value}</strong>
       </div>
-      <div>
-        <span
-          className="text-xl font-bold block"
-          style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
-        >
-          {value}
-        </span>
-        <span className="text-[11px] uppercase tracking-wider" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
-          {label}
-        </span>
-      </div>
+      <p className="text-xs" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+        {label}
+      </p>
     </div>
   )
 }
 
-function LandingChurchCard({ p }: { p: Paroquia }) {
+function MiniChurchPill({ href, name, suffix }: { href: string; name: string; suffix: string }) {
   return (
     <Link
-      href={`/paroquias/${p.id}`}
-      className="block rounded-xl p-4 transition-all hover:border-[rgba(201,168,76,0.25)]"
+      href={href}
+      className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs max-w-full"
       style={{
-        background: 'rgba(16,16,16,0.7)',
-        border: '1px solid rgba(201,168,76,0.1)',
+        background: 'rgba(16,16,16,0.76)',
+        border: '1px solid rgba(201,168,76,0.18)',
+        color: '#F2EDE4',
+        fontFamily: 'Poppins, sans-serif',
       }}
+      title={name}
     >
-      <div className="flex items-start justify-between gap-2 mb-1">
-        <h4 className="text-sm font-bold" style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}>
-          {p.nome}
-        </h4>
-        {p.verificado && <SeloVerificado size="sm" showLabel={false} />}
-      </div>
-      {p.diocese && (
-        <p className="text-xs mb-1.5" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
-          {p.diocese}
-        </p>
-      )}
-      <div className="flex items-center gap-1.5 text-xs mb-1" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
-        <MapPin className="w-3 h-3" style={{ color: '#C9A84C' }} />
-        {p.cidade}, {p.estado}
-      </div>
-      {p.horarios_missa && p.horarios_missa.length > 0 && (
-        <div className="flex items-start gap-1.5 text-xs mb-0.5" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
-          <Clock className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: '#C9A84C' }} />
-          <span>
-            Missa: {p.horarios_missa.slice(0, 2).map(h => `${h.dia.slice(0, 3)} ${h.horario}`).join(', ')}
-          </span>
-        </div>
-      )}
-      {p.horarios_confissao && p.horarios_confissao.length > 0 && (
-        <div className="flex items-start gap-1.5 text-xs" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
-          <Clock className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: '#D94F5C' }} />
-          <span>
-            Confissão: {p.horarios_confissao.slice(0, 2).map(h => `${h.dia.slice(0, 3)} ${h.horario}`).join(', ')}
-          </span>
-        </div>
-      )}
-      {p.padre_responsavel && (
-        <div className="flex items-center gap-1.5 text-xs mt-1" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
-          <Church className="w-3 h-3" style={{ color: '#C9A84C' }} />
-          Pe. {p.padre_responsavel}
-        </div>
-      )}
+      <MapPin className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#C9A84C' }} />
+      <span className="truncate">{name}</span>
+      <span style={{ color: '#C9A84C' }}>[{suffix}]</span>
     </Link>
   )
 }
 
-function LandingNearbyCard({ p }: { p: ParoquiaNearby }) {
+function FeatureAccessCard({
+  icon: Icon,
+  title,
+  description,
+  href,
+}: {
+  icon: ElementType
+  title: string
+  description: string
+  href: string
+}) {
+  const nextParam = encodeURIComponent(href)
+
   return (
-    <Link
-      href={`/paroquias/${p.id}`}
-      className="block rounded-xl p-4 transition-all hover:border-[rgba(201,168,76,0.25)]"
+    <article
+      className="rounded-2xl p-4"
       style={{
-        background: 'rgba(16,16,16,0.7)',
+        background: 'rgba(16,16,16,0.72)',
         border: '1px solid rgba(201,168,76,0.1)',
       }}
     >
-      <div className="flex items-start justify-between gap-2 mb-1">
-        <h4 className="text-sm font-bold" style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}>
-          {p.nome}
-        </h4>
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          {p.verificado && <SeloVerificado size="sm" showLabel={false} />}
-          <span
-            className="text-[10px] px-2 py-0.5 rounded-full"
-            style={{
-              background: 'rgba(201,168,76,0.1)',
-              border: '1px solid rgba(201,168,76,0.2)',
-              color: '#C9A84C',
-              fontFamily: 'Poppins, sans-serif',
-            }}
-          >
-            {formatDistance(p.distancia_km)}
-          </span>
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'rgba(201,168,76,0.1)' }}>
+          <Icon className="w-4 h-4" style={{ color: '#C9A84C' }} />
         </div>
+        <h3 className="text-sm" style={{ color: '#F2EDE4', fontFamily: 'Cinzel, serif' }}>{title}</h3>
       </div>
-      {p.diocese && (
-        <p className="text-xs mb-1.5" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
-          {p.diocese}
-        </p>
-      )}
-      <div className="flex items-center gap-1.5 text-xs mb-1" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
-        <MapPin className="w-3 h-3" style={{ color: '#C9A84C' }} />
-        {p.cidade}, {p.estado}
+
+      <p className="text-xs mb-3" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+        {description}
+      </p>
+
+      <div className="flex items-center gap-2">
+        <Lock className="w-3.5 h-3.5" style={{ color: '#C9A84C' }} />
+        <Link
+          href={`/login?tab=login&next=${nextParam}`}
+          className="text-xs underline"
+          style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
+        >
+          Entrar para abrir
+        </Link>
+        <span style={{ color: '#7A7368' }}>·</span>
+        <Link
+          href={`/login?tab=registro&next=${nextParam}`}
+          className="text-xs underline"
+          style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
+        >
+          Criar conta grátis
+        </Link>
       </div>
-      {p.horarios_missa && p.horarios_missa.length > 0 && (
-        <div className="flex items-start gap-1.5 text-xs mb-0.5" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
-          <Clock className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: '#C9A84C' }} />
-          <span>
-            Missa: {p.horarios_missa.slice(0, 2).map(h => `${h.dia.slice(0, 3)} ${h.horario}`).join(', ')}
-          </span>
-        </div>
-      )}
-      {p.horarios_confissao && p.horarios_confissao.length > 0 && (
-        <div className="flex items-start gap-1.5 text-xs" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
-          <Clock className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: '#D94F5C' }} />
-          <span>
-            Confissão: {p.horarios_confissao.slice(0, 2).map(h => `${h.dia.slice(0, 3)} ${h.horario}`).join(', ')}
-          </span>
-        </div>
-      )}
-      {p.padre_responsavel && (
-        <div className="flex items-center gap-1.5 text-xs mt-1" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
-          <Church className="w-3 h-3" style={{ color: '#C9A84C' }} />
-          Pe. {p.padre_responsavel}
-        </div>
-      )}
-    </Link>
+    </article>
   )
 }

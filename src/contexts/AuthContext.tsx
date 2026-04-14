@@ -26,10 +26,10 @@ interface AuthState {
 type OAuthProvider = 'google' | 'facebook' | 'apple'
 
 interface AuthContextValue extends AuthState {
-  signUp: (email: string, password: string, name: string) => Promise<{ error: string | null }>
+  signUp: (email: string, password: string, name: string, nextPath?: string) => Promise<{ error: string | null }>
   signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>
-  signInWithMagicLink: (email: string) => Promise<{ error: string | null }>
-  signInWithOAuth: (provider: OAuthProvider) => Promise<{ error: string | null }>
+  signInWithMagicLink: (email: string, nextPath?: string) => Promise<{ error: string | null }>
+  signInWithOAuth: (provider: OAuthProvider, nextPath?: string) => Promise<{ error: string | null }>
   resetPassword: (email: string) => Promise<{ error: string | null }>
   updatePassword: (password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
@@ -80,6 +80,18 @@ function getBaseUrl(): string {
   if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL
   if (typeof window !== 'undefined') return window.location.origin
   return ''
+}
+
+function normalizeNextPath(nextPath?: string): string {
+  if (!nextPath) return '/'
+  if (!nextPath.startsWith('/') || nextPath.startsWith('//')) return '/'
+  return nextPath
+}
+
+function getAuthCallbackUrl(baseUrl: string, nextPath?: string): string {
+  const safeNext = normalizeNextPath(nextPath)
+  if (safeNext === '/') return `${baseUrl}/auth/callback`
+  return `${baseUrl}/auth/callback?next=${encodeURIComponent(safeNext)}`
 }
 
 function AuthProviderInner({
@@ -224,13 +236,13 @@ function AuthProviderInner({
     return () => document.removeEventListener('visibilitychange', handleVisibility)
   }, [supabase, setAuthState])
 
-  const signUp = async (email: string, password: string, name: string) => {
+  const signUp = async (email: string, password: string, name: string, nextPath?: string) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { name },
-        emailRedirectTo: `${getBaseUrl()}/auth/callback`,
+        emailRedirectTo: getAuthCallbackUrl(getBaseUrl(), nextPath),
       },
     })
     return { error: error?.message ?? null }
@@ -241,21 +253,21 @@ function AuthProviderInner({
     return { error: error?.message ?? null }
   }
 
-  const signInWithOAuth = async (provider: OAuthProvider) => {
+  const signInWithOAuth = async (provider: OAuthProvider, nextPath?: string) => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${getBaseUrl()}/auth/callback`,
+        redirectTo: getAuthCallbackUrl(getBaseUrl(), nextPath),
       },
     })
     return { error: error?.message ?? null }
   }
 
-  const signInWithMagicLink = async (email: string) => {
+  const signInWithMagicLink = async (email: string, nextPath?: string) => {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${getBaseUrl()}/auth/callback`,
+        emailRedirectTo: getAuthCallbackUrl(getBaseUrl(), nextPath),
       },
     })
     return { error: error?.message ?? null }

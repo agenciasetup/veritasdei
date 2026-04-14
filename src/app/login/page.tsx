@@ -11,6 +11,12 @@ import CrossIcon from '@/components/icons/CrossIcon'
 
 type Tab = 'login' | 'registro' | 'primeiro-acesso'
 
+function normalizeNextPath(nextPath: string | null): string {
+  if (!nextPath) return '/'
+  if (!nextPath.startsWith('/') || nextPath.startsWith('//')) return '/'
+  return nextPath
+}
+
 export default function LoginPage() {
   return (
     <Suspense fallback={
@@ -26,6 +32,7 @@ export default function LoginPage() {
 function LoginPageInner() {
   const searchParams = useSearchParams()
   const initialTab = (searchParams.get('tab') as Tab) || 'login'
+  const nextPath = normalizeNextPath(searchParams.get('next'))
 
   const [tab, setTab] = useState<Tab>(initialTab)
   const [email, setEmail] = useState('')
@@ -42,8 +49,8 @@ function LoginPageInner() {
 
   // Redirect if already logged in
   useEffect(() => {
-    if (isAuthenticated) router.push('/')
-  }, [isAuthenticated, router])
+    if (isAuthenticated) router.push(nextPath)
+  }, [isAuthenticated, nextPath, router])
 
   const clearState = () => {
     setError(null)
@@ -59,7 +66,7 @@ function LoginPageInner() {
     if (error) {
       setError(traduzirErro(error))
     } else {
-      router.push('/')
+      router.push(nextPath)
     }
     setLoading(false)
   }
@@ -75,7 +82,7 @@ function LoginPageInner() {
       return
     }
 
-    const { error } = await signUp(email, password, name)
+    const { error } = await signUp(email, password, name, nextPath)
     if (error) {
       setError(traduzirErro(error))
     } else {
@@ -89,7 +96,7 @@ function LoginPageInner() {
     clearState()
     setLoading(true)
 
-    const { error } = await signInWithMagicLink(email)
+    const { error } = await signInWithMagicLink(email, nextPath)
     if (error) {
       setError(traduzirErro(error))
     } else {
@@ -101,7 +108,7 @@ function LoginPageInner() {
   const handleOAuth = async (provider: 'google' | 'facebook' | 'apple') => {
     clearState()
     setLoading(true)
-    const { error } = await signInWithOAuth(provider)
+    const { error } = await signInWithOAuth(provider, nextPath)
     if (error) setError(traduzirErro(error))
     setLoading(false)
   }
@@ -109,7 +116,7 @@ function LoginPageInner() {
   const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
     { key: 'login', label: 'Entrar', icon: <LogIn className="w-4 h-4" /> },
     { key: 'registro', label: 'Cadastrar', icon: <UserPlus className="w-4 h-4" /> },
-    { key: 'primeiro-acesso', label: 'Primeiro Acesso', icon: <Mail className="w-4 h-4" /> },
+    { key: 'primeiro-acesso', label: 'Link por e-mail', icon: <Mail className="w-4 h-4" /> },
   ]
 
   return (
@@ -152,6 +159,9 @@ function LoginPageInner() {
         }}
       >
         {/* ═══ OAuth Buttons ═══ */}
+        <p className="text-xs mb-2" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
+          Forma mais fácil: toque em Google e continue.
+        </p>
         <div className="space-y-2 mb-5">
           <OAuthButton provider="google" onClick={() => handleOAuth('google')} disabled={loading} />
         </div>
@@ -160,7 +170,7 @@ function LoginPageInner() {
         <div className="flex items-center gap-3 mb-5">
           <span className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.1)' }} />
           <span className="text-xs" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
-            ou com e-mail
+            ou use seu e-mail
           </span>
           <span className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.1)' }} />
         </div>
