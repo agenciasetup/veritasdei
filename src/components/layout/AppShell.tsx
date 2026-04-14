@@ -14,19 +14,20 @@ const PUBLIC_PATHS = ['/login', '/auth', '/privacidade', '/termos', '/onboarding
 const FULLSCREEN_PATHS = ['/verbum']
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated } = useAuth()
   const pathname = usePathname()
 
   const isPublicPage = PUBLIC_PATHS.some(p => pathname.startsWith(p))
   const isFullscreen = FULLSCREEN_PATHS.some(p => pathname.startsWith(p))
   const showChrome = isAuthenticated && !isPublicPage && !isFullscreen
+  const hideLiturgicalBar = pathname.startsWith('/liturgia/hoje')
 
   return (
     <SubscriptionProvider>
       <PropositosProvider>
         <PropositoSheetProvider>
           {/* Liturgical bar at the very top */}
-          {showChrome && <LiturgicalBar />}
+          {showChrome && !hideLiturgicalBar && <LiturgicalBar />}
 
           {/* Sidebar only on md+ screens */}
           {showChrome && (
