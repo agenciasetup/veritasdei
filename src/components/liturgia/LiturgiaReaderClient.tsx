@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, BookOpen, Music, Sparkles } from 'lucide-react'
+import { ArrowLeft, BookOpen, Check, Copy, Music, Sparkles } from 'lucide-react'
 import type { LiturgiaDia, LeituraRef } from '@/types/liturgia'
+import { sanitizeLiturgicalText } from '@/lib/liturgia/text'
 
 type ReadingTabKey = 'primeira' | 'salmo' | 'segunda' | 'aclamacao' | 'evangelho'
 type LeituraTabKey = ReadingTabKey | 'reflexao'
@@ -40,6 +41,13 @@ interface TabItem {
   icon: React.ReactNode
 }
 
+type LiturgicalSegmentType = 'text' | 'call' | 'response' | 'rubric'
+
+interface LiturgicalSegment {
+  type: LiturgicalSegmentType
+  content: string
+}
+
 const FONT_STORAGE_KEY = 'liturgia_font_scale_v1'
 const FONT_STEP = 0.05
 const FONT_MIN = 0.9
@@ -59,6 +67,16 @@ function isReferenceOnlyText(text: string, referencia?: string): boolean {
   if (!text.trim()) return true
   if (!referencia?.trim()) return text.trim().length < 40
   return normalizeCompare(text) === normalizeCompare(referencia) || text.trim().length < 40
+}
+
+function sanitizeLeitura(leitura: LeituraRef | null): LeituraRef | null {
+  if (!leitura) return null
+
+  const referencia = leitura.referencia?.trim() ?? ''
+  const texto = sanitizeLiturgicalText(leitura.texto ?? '')
+
+  if (!texto) return null
+  return { referencia, texto }
 }
 
 function extractEvangelhoChunk(rawText: string): {
@@ -99,34 +117,34 @@ function normalizeLiturgia(liturgia: LiturgiaDia): {
   aclamacao: LeituraRef | null
   evangelho: LeituraRef | null
 } {
-  const primeira = liturgia.primeira_leitura
-  const segunda = liturgia.segunda_leitura
+  const primeira = sanitizeLeitura(liturgia.primeira_leitura)
+  const segunda = sanitizeLeitura(liturgia.segunda_leitura)
 
-  const salmoRef = liturgia.salmo?.referencia ?? ''
-  let salmoText = liturgia.salmo?.texto ?? ''
+  const salmoRef = liturgia.salmo?.referencia?.trim() ?? ''
+  let salmoText = sanitizeLiturgicalText(liturgia.salmo?.texto ?? '')
 
-  const aclamacaoRef = liturgia.aclamacao?.referencia ?? ''
-  let aclamacaoText = liturgia.aclamacao?.texto ?? ''
+  const aclamacaoRef = liturgia.aclamacao?.referencia?.trim() ?? ''
+  let aclamacaoText = sanitizeLiturgicalText(liturgia.aclamacao?.texto ?? '')
 
-  let evangelhoRef = liturgia.evangelho?.referencia ?? ''
-  let evangelhoText = liturgia.evangelho?.texto ?? ''
+  let evangelhoRef = liturgia.evangelho?.referencia?.trim() ?? ''
+  let evangelhoText = sanitizeLiturgicalText(liturgia.evangelho?.texto ?? '')
 
   const salmoChunk = extractEvangelhoChunk(salmoText)
   if (salmoChunk) {
-    salmoText = salmoChunk.beforeText
+    salmoText = sanitizeLiturgicalText(salmoChunk.beforeText)
 
     if (isReferenceOnlyText(evangelhoText, evangelhoRef)) {
-      evangelhoText = salmoChunk.evangelhoText
+      evangelhoText = sanitizeLiturgicalText(salmoChunk.evangelhoText)
       if (!evangelhoRef && salmoChunk.evangelhoRef) evangelhoRef = salmoChunk.evangelhoRef
     }
   }
 
   const aclamacaoChunk = extractEvangelhoChunk(aclamacaoText)
   if (aclamacaoChunk) {
-    aclamacaoText = aclamacaoChunk.beforeText
+    aclamacaoText = sanitizeLiturgicalText(aclamacaoChunk.beforeText)
 
     if (isReferenceOnlyText(evangelhoText, evangelhoRef)) {
-      evangelhoText = aclamacaoChunk.evangelhoText
+      evangelhoText = sanitizeLiturgicalText(aclamacaoChunk.evangelhoText)
       if (!evangelhoRef && aclamacaoChunk.evangelhoRef) evangelhoRef = aclamacaoChunk.evangelhoRef
     }
   }
@@ -157,6 +175,64 @@ function splitParagraphs(text: string): string[] {
     .split(/\n\n+|\n(?=[A-ZÀ-Ý\-])/)
     .map((part) => part.trim())
     .filter(Boolean)
+}
+
+function normalizePhrase(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[.,;:!?]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+const LITURGICAL_RESPONSE_REGEX = /(Palavra da Salva[cç][aã]o|Palavra do Senhor|Gl[oó]ria a v[oó]s,\s*Senhor|Demos gra[cç]as a Deus|Gra[cç]as a Deus)\.?/gi
+
+function splitLiturgicalSegments(paragraph: string): LiturgicalSegment[] {
+  const content = paragraph.replace(/\s+/g, ' ').trim()
+  if (!content) return []
+
+  LITURGICAL_RESPONSE_REGEX.lastIndex = 0
+  const segments: LiturgicalSegment[] = []
+  let lastIndex = 0
+
+  for (const match of content.matchAll(LITURGICAL_RESPONSE_REGEX)) {
+    const matchText = match[0] ?? ''
+    const start = match.index ?? 0
+
+    const before = content
+      .slice(lastIndex, start)
+      .replace(/[—–-]+\s*$/g, '')
+      .trim()
+    if (before) {
+      segments.push({
+        type: /^Proclamação do Evangelho|^Aleluia/i.test(before) ? 'rubric' : 'text',
+        content: before,
+      })
+    }
+
+    const phrase = matchText.replace(/^[—–-\s]+/, '').replace(/[.,;:!?]+$/g, '').trim()
+    const normalized = normalizePhrase(phrase)
+
+    if (normalized === 'palavra da salvacao' || normalized === 'palavra do senhor') {
+      segments.push({ type: 'call', content: phrase })
+    } else {
+      segments.push({ type: 'response', content: phrase })
+    }
+
+    lastIndex = start + matchText.length
+  }
+
+  const tail = content.slice(lastIndex).replace(/^[—–-\s]+/, '').trim()
+  if (tail) {
+    segments.push({
+      type: /^Proclamação do Evangelho|^Aleluia/i.test(tail) ? 'rubric' : 'text',
+      content: tail,
+    })
+  }
+
+  return segments.length ? segments : [{ type: 'text', content }]
 }
 
 function renderVerseNumbers(text: string, accent: string): React.ReactNode {
@@ -274,22 +350,64 @@ function LeituraTexto({
   return (
     <div className="space-y-4">
       {paragraphs.map((paragraph, idx) => {
-        const liturgicalHighlight = /^(Aleluia|Glória a vós, Senhor|Palavra da Salvação|Proclamação do Evangelho)/i.test(paragraph)
+        const segments = splitLiturgicalSegments(paragraph)
 
         return (
-          <p
-            key={idx}
-            className="tracking-[0.01em]"
-            style={{
-              color: liturgicalHighlight ? '#F2EDE4' : '#ECE6DA',
-              fontFamily: 'Poppins, sans-serif',
-              fontWeight: liturgicalHighlight ? 600 : 350,
-              fontSize: `${1.08 * fontScale}rem`,
-              lineHeight: 1.95,
-            }}
-          >
-            {renderVerseNumbers(paragraph, accent)}
-          </p>
+          <div key={idx} className="space-y-2">
+            {segments.map((segment, segmentIndex) => {
+              const baseStyle = {
+                fontFamily: 'Poppins, sans-serif',
+                fontSize: `${1.08 * fontScale}rem`,
+                lineHeight: 1.95,
+              }
+
+              if (segment.type === 'call') {
+                return (
+                  <p
+                    key={`${idx}-call-${segmentIndex}`}
+                    className="tracking-[0.01em] font-semibold"
+                    style={{ ...baseStyle, color: '#F2EDE4' }}
+                  >
+                    {renderVerseNumbers(segment.content, accent)}
+                  </p>
+                )
+              }
+
+              if (segment.type === 'response') {
+                return (
+                  <p
+                    key={`${idx}-response-${segmentIndex}`}
+                    className="tracking-[0.01em] italic"
+                    style={{ ...baseStyle, color: '#E3D8C6', fontWeight: 500 }}
+                  >
+                    {renderVerseNumbers(segment.content, accent)}
+                  </p>
+                )
+              }
+
+              if (segment.type === 'rubric') {
+                return (
+                  <p
+                    key={`${idx}-rubric-${segmentIndex}`}
+                    className="tracking-[0.01em]"
+                    style={{ ...baseStyle, color: '#F2EDE4', fontWeight: 600 }}
+                  >
+                    {renderVerseNumbers(segment.content, accent)}
+                  </p>
+                )
+              }
+
+              return (
+                <p
+                  key={`${idx}-text-${segmentIndex}`}
+                  className="tracking-[0.01em]"
+                  style={{ ...baseStyle, color: '#ECE6DA', fontWeight: 350 }}
+                >
+                  {renderVerseNumbers(segment.content, accent)}
+                </p>
+              )
+            })}
+          </div>
         )
       })}
     </div>
@@ -386,6 +504,7 @@ export default function LiturgiaReaderClient({
   const [reflection, setReflection] = useState<ReflectionData | null>(null)
   const [reflectionError, setReflectionError] = useState<string | null>(null)
   const [isReflectionLoading, setIsReflectionLoading] = useState(false)
+  const [reflectionCopied, setReflectionCopied] = useState(false)
 
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
 
@@ -411,6 +530,43 @@ export default function LiturgiaReaderClient({
     setFontScale((current) => clampFontScale(current + delta))
   }
 
+  const copyReflection = async () => {
+    if (!reflection) return
+
+    const composed = [
+      reflection.titulo,
+      '',
+      `Conexão das leituras:\n${reflection.conexao}`,
+      '',
+      `Mensagem do dia:\n${reflection.mensagem}`,
+      '',
+      `Aplicação na vida:\n${reflection.aplicacao}`,
+      '',
+      `Oração:\n${reflection.oracao}`,
+      ...(reflection.pontos.length
+        ? ['', 'Pontos-chave:', ...reflection.pontos.map((ponto) => `- ${ponto}`)]
+        : []),
+    ].join('\n')
+
+    try {
+      await navigator.clipboard.writeText(composed)
+      setReflectionCopied(true)
+      window.setTimeout(() => setReflectionCopied(false), 1600)
+    } catch {
+      const textarea = document.createElement('textarea')
+      textarea.value = composed
+      textarea.setAttribute('readonly', '')
+      textarea.style.position = 'absolute'
+      textarea.style.left = '-9999px'
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+      setReflectionCopied(true)
+      window.setTimeout(() => setReflectionCopied(false), 1600)
+    }
+  }
+
   const loadReflection = async () => {
     if (!liturgia || reflection || isReflectionLoading) return
 
@@ -419,14 +575,8 @@ export default function LiturgiaReaderClient({
 
     try {
       const res = await fetch('/api/liturgia/reflexao', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          liturgia,
-          titulo,
-          season,
-          hoje,
-        }),
+        method: 'GET',
+        cache: 'no-store',
       })
 
       const json = (await res.json()) as ReflectionData & { error?: string }
@@ -660,6 +810,23 @@ export default function LiturgiaReaderClient({
 
             {reflection && (
               <div className="space-y-6">
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={copyReflection}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors"
+                    style={{
+                      border: `1px solid ${accent}44`,
+                      color: reflectionCopied ? '#F2EDE4' : '#D4CCBE',
+                      background: reflectionCopied ? `${accent}22` : 'rgba(20,18,14,0.45)',
+                      fontFamily: 'Poppins, sans-serif',
+                    }}
+                  >
+                    {reflectionCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    {reflectionCopied ? 'Copiado' : 'Copiar'}
+                  </button>
+                </div>
+
                 <h3
                   className="text-xl sm:text-2xl"
                   style={{ color: '#F2EDE4', fontFamily: 'Cormorant Garamond, serif' }}
