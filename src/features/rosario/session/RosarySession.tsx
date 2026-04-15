@@ -12,6 +12,8 @@ import {
 } from '@/features/rosario/session/rosarySessionStorage'
 import { useWakeLock } from '@/features/rosario/session/useWakeLock'
 import { useHapticFeedback } from '@/features/rosario/session/useHapticFeedback'
+import { useOnboarding } from '@/features/rosario/session/useOnboarding'
+import { OnboardingOverlay } from '@/features/rosario/components/OnboardingOverlay'
 import { MYSTERY_GROUPS, getMysteryForToday } from '@/features/rosario/data/mysteries'
 import type { MysterySet } from '@/features/rosario/data/types'
 
@@ -34,6 +36,11 @@ import type { MysterySet } from '@/features/rosario/data/types'
  * Sprint 1.8: modo silêncio — um toggle opt-in que esconde header, seletor
  * de mistérios, barra de progresso e rodapé, deixando apenas as contas e a
  * oração. Usa um botão X discreto no canto superior para sair.
+ *
+ * Sprint 1.9: onboarding iniciantes — overlay de boas-vindas (4 passos)
+ * para quem abre o terço pela primeira vez. Persistido em
+ * `veritasdei:rosario:onboarded`. Quem está retomando uma sessão salva
+ * pula o overlay. Há um botão discreto "Ver tutorial" que reabre.
  */
 
 export function RosarySession() {
@@ -66,6 +73,9 @@ export function RosarySession() {
 
   // Vibração discreta a cada passo (opt-out via localStorage).
   const haptic = useHapticFeedback()
+
+  // Onboarding de boas-vindas (opt-out persistido).
+  const onboarding = useOnboarding()
 
   // Modo silêncio: UI mínima, sem chrome, focada na oração.
   const [silentMode, setSilentMode] = useState(false)
@@ -164,6 +174,12 @@ export function RosarySession() {
   }, [completedIndices])
 
   const progressPct = Math.round(((currentIndex + (isCompleted ? 1 : 0)) / totalSteps) * 100)
+
+  // Overlay de boas-vindas: mostra só depois da hidratação, se o usuário
+  // nunca dispensou e se não está retomando uma sessão salva. Usuário em
+  // modo silêncio também não vê (é um estado deliberado de concentração).
+  const showOnboarding =
+    hydrated && !onboarding.dismissed && resumedFrom === null && !silentMode
 
   return (
     <main
@@ -362,6 +378,18 @@ export function RosarySession() {
             >
               Modo silêncio
             </button>
+            <button
+              type="button"
+              onClick={onboarding.reopen}
+              className="rounded-md px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition"
+              style={{
+                color: '#7A7368',
+                border: '1px solid rgba(122,115,104,0.35)',
+              }}
+              aria-label="Abrir tutorial de boas-vindas"
+            >
+              Tutorial
+            </button>
           </div>
         )}
 
@@ -405,6 +433,8 @@ export function RosarySession() {
           </div>
         )}
       </div>
+
+      {showOnboarding && <OnboardingOverlay onDismiss={onboarding.dismiss} />}
     </main>
   )
 }
