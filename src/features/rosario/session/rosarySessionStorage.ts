@@ -44,8 +44,19 @@ interface StoredPayload extends RosarySessionSnapshot {
   v: typeof SCHEMA_VERSION
 }
 
+/**
+ * Retorna `true` somente quando `window.localStorage` é acessível.
+ * O acesso está dentro de um try/catch porque alguns contextos (iframes com
+ * storage bloqueado, modo privado antigo do Safari, políticas estritas de
+ * privacidade) lançam `SecurityError` no simples `window.localStorage`.
+ */
 function isBrowser(): boolean {
-  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
+  if (typeof window === 'undefined') return false
+  try {
+    return typeof window.localStorage !== 'undefined'
+  } catch {
+    return false
+  }
 }
 
 /** Valida um objeto desconhecido e retorna um snapshot ou `null`. */
