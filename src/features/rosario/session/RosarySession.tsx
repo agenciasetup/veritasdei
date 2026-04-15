@@ -13,8 +13,10 @@ import {
 import { useWakeLock } from '@/features/rosario/session/useWakeLock'
 import { useHapticFeedback } from '@/features/rosario/session/useHapticFeedback'
 import { useOnboarding } from '@/features/rosario/session/useOnboarding'
+import { useSpeechSynthesis } from '@/features/rosario/session/useSpeechSynthesis'
 import { OnboardingOverlay } from '@/features/rosario/components/OnboardingOverlay'
 import { MYSTERY_GROUPS, getMysteryForToday } from '@/features/rosario/data/mysteries'
+import { getSpeechText } from '@/features/rosario/data/speechText'
 import type { MysterySet } from '@/features/rosario/data/types'
 
 /**
@@ -41,6 +43,11 @@ import type { MysterySet } from '@/features/rosario/data/types'
  * para quem abre o terço pela primeira vez. Persistido em
  * `veritasdei:rosario:onboarded`. Quem está retomando uma sessão salva
  * pula o overlay. Há um botão discreto "Ver tutorial" que reabre.
+ *
+ * Sprint 1.10: TTS guiado — leitura em voz alta das orações via
+ * Web Speech API, opt-in pelo usuário (default desligado), com escolha
+ * automática de voz pt-BR quando disponível. A cada passo o texto é
+ * derivado por `getSpeechText` e a utterance anterior é cancelada.
  */
 
 export function RosarySession() {
@@ -76,6 +83,9 @@ export function RosarySession() {
 
   // Onboarding de boas-vindas (opt-out persistido).
   const onboarding = useOnboarding()
+
+  // TTS guiado (leitura em voz alta das orações, opt-in persistido).
+  const tts = useSpeechSynthesis()
 
   // Modo silêncio: UI mínima, sem chrome, focada na oração.
   const [silentMode, setSilentMode] = useState(false)
@@ -140,6 +150,24 @@ export function RosarySession() {
     }
     saveSession({ mysterySetId, currentIndex, isCompleted })
   }, [hydrated, mysterySetId, currentIndex, isCompleted])
+
+  /**
+   * Fala o texto do passo atual quando o TTS está ligado. Cancela a utterance
+   * anterior implicitamente (o próprio `speak` chama `cancel`). Só roda após
+   * a hidratação para não disparar fala durante o SSR/restore. Quando o
+   * terço é concluído, para a fala.
+   */
+  const { enabled: ttsEnabled, speak: ttsSpeak, stop: ttsStop } = tts
+  useEffect(() => {
+    if (!hydrated) return
+    if (!ttsEnabled) return
+    if (isCompleted) {
+      ttsStop()
+      return
+    }
+    const text = getSpeechText(currentStep, mysteryGroup)
+    if (text) ttsSpeak(text)
+  }, [hydrated, ttsEnabled, ttsSpeak, ttsStop, currentStep, mysteryGroup, isCompleted])
 
   /** Esconde o banner de retomada assim que o usuário interagir. */
   const initialResumeIndexRef = useRef<number | null>(null)
@@ -351,7 +379,7 @@ export function RosarySession() {
         />
 
         {!silentMode && (
-          <div className="mt-3 flex items-center justify-center gap-2">
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
             {haptic.supported && (
               <button
                 type="button"
@@ -364,6 +392,20 @@ export function RosarySession() {
                 }}
               >
                 Vibração: {haptic.enabled ? 'ligada' : 'desligada'}
+              </button>
+            )}
+            {tts.supported && (
+              <button
+                type="button"
+                onClick={() => tts.setEnabled(!tts.enabled)}
+                className="rounded-md px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition"
+                aria-pressed={tts.enabled}
+                style={{
+                  color: tts.enabled ? '#D9C077' : '#7A7368',
+                  border: `1px solid ${tts.enabled ? 'rgba(201,168,76,0.35)' : 'rgba(122,115,104,0.35)'}`,
+                }}
+              >
+                Voz: {tts.enabled ? (tts.speaking ? 'falando…' : 'ligada') : 'desligada'}
               </button>
             )}
             <button
