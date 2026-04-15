@@ -30,6 +30,10 @@ import type { MysterySet } from '@/features/rosario/data/types'
  * Sprint 1.7: mantém a tela ligada (Wake Lock) enquanto a sessão estiver
  * ativa, e dispara vibração discreta a cada avanço (opt-out). A barra de
  * progresso e o pulso da conta atual respeitam `prefers-reduced-motion`.
+ *
+ * Sprint 1.8: modo silêncio — um toggle opt-in que esconde header, seletor
+ * de mistérios, barra de progresso e rodapé, deixando apenas as contas e a
+ * oração. Usa um botão X discreto no canto superior para sair.
  */
 
 export function RosarySession() {
@@ -62,6 +66,10 @@ export function RosarySession() {
 
   // Vibração discreta a cada passo (opt-out via localStorage).
   const haptic = useHapticFeedback()
+
+  // Modo silêncio: UI mínima, sem chrome, focada na oração.
+  const [silentMode, setSilentMode] = useState(false)
+  const toggleSilent = useCallback(() => setSilentMode((v) => !v), [])
 
   // Passo atual antes do avanço — usado pra detectar fronteira de dezena.
   const prevStepTypeRef = useRef(currentStep.type)
@@ -162,28 +170,46 @@ export function RosarySession() {
       className="relative min-h-screen w-full px-4 py-10 md:py-14"
       style={{ backgroundColor: '#0F0E0C', color: '#F2EDE4' }}
     >
-      <div className="bg-glow" aria-hidden />
+      {!silentMode && <div className="bg-glow" aria-hidden />}
+
+      {silentMode && (
+        <button
+          type="button"
+          onClick={toggleSilent}
+          className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border text-base transition"
+          style={{
+            borderColor: 'rgba(201, 168, 76, 0.35)',
+            color: '#D9C077',
+            backgroundColor: 'rgba(20, 18, 14, 0.6)',
+          }}
+          aria-label="Sair do modo silêncio"
+        >
+          ×
+        </button>
+      )}
 
       <div className="relative z-10 mx-auto max-w-xl">
-        <header className="mb-8 text-center">
-          <h1
-            className="font-serif text-3xl md:text-4xl"
-            style={{ color: '#F2EDE4', fontFamily: 'Cinzel, serif' }}
-          >
-            Santo Rosário
-          </h1>
-          <p
-            className="mt-2 text-xs md:text-sm"
-            style={{ color: '#7A7368' }}
-          >
-            Medite os mistérios da vida de Cristo com Nossa Senhora
-          </p>
-          <div className="ornament-divider max-w-xs mx-auto mt-4">
-            <span>&#10022;</span>
-          </div>
-        </header>
+        {!silentMode && (
+          <header className="mb-8 text-center">
+            <h1
+              className="font-serif text-3xl md:text-4xl"
+              style={{ color: '#F2EDE4', fontFamily: 'Cinzel, serif' }}
+            >
+              Santo Rosário
+            </h1>
+            <p
+              className="mt-2 text-xs md:text-sm"
+              style={{ color: '#7A7368' }}
+            >
+              Medite os mistérios da vida de Cristo com Nossa Senhora
+            </p>
+            <div className="ornament-divider max-w-xs mx-auto mt-4">
+              <span>&#10022;</span>
+            </div>
+          </header>
+        )}
 
-        {showResumeBanner && (
+        {!silentMode && showResumeBanner && (
           <div
             className="mb-4 flex items-center justify-between gap-3 rounded-xl border px-4 py-3"
             style={{
@@ -215,6 +241,7 @@ export function RosarySession() {
           </div>
         )}
 
+        {!silentMode && (
         <fieldset className="mb-6">
           <legend className="sr-only">Seleção de mistérios</legend>
           <div
@@ -265,6 +292,7 @@ export function RosarySession() {
             })}
           </div>
         </fieldset>
+        )}
 
         <div className="mb-4">
           <RosaryBeads
@@ -276,6 +304,7 @@ export function RosarySession() {
           />
         </div>
 
+        {!silentMode && (
         <div className="mb-4" aria-hidden>
           <div
             className="h-1 w-full overflow-hidden rounded-full"
@@ -296,6 +325,7 @@ export function RosarySession() {
             Passo {currentIndex + 1} / {totalSteps}
           </div>
         </div>
+        )}
 
         <PrayerStage
           step={currentStep}
@@ -304,19 +334,33 @@ export function RosarySession() {
           onAdvance={advanceWithHaptic}
         />
 
-        {haptic.supported && (
-          <div className="mt-3 flex items-center justify-center">
+        {!silentMode && (
+          <div className="mt-3 flex items-center justify-center gap-2">
+            {haptic.supported && (
+              <button
+                type="button"
+                onClick={() => haptic.setEnabled(!haptic.enabled)}
+                className="rounded-md px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition"
+                aria-pressed={haptic.enabled}
+                style={{
+                  color: haptic.enabled ? '#D9C077' : '#7A7368',
+                  border: `1px solid ${haptic.enabled ? 'rgba(201,168,76,0.35)' : 'rgba(122,115,104,0.35)'}`,
+                }}
+              >
+                Vibração: {haptic.enabled ? 'ligada' : 'desligada'}
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => haptic.setEnabled(!haptic.enabled)}
+              onClick={toggleSilent}
               className="rounded-md px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition"
-              aria-pressed={haptic.enabled}
+              aria-pressed={silentMode}
               style={{
-                color: haptic.enabled ? '#D9C077' : '#7A7368',
-                border: `1px solid ${haptic.enabled ? 'rgba(201,168,76,0.35)' : 'rgba(122,115,104,0.35)'}`,
+                color: '#7A7368',
+                border: '1px solid rgba(122,115,104,0.35)',
               }}
             >
-              Vibração: {haptic.enabled ? 'ligada' : 'desligada'}
+              Modo silêncio
             </button>
           </div>
         )}
@@ -330,34 +374,36 @@ export function RosarySession() {
           }
         `}</style>
 
-        <div className="mt-4 flex gap-2">
-          <button
-            type="button"
-            onClick={back}
-            disabled={isFirst}
-            className="flex-1 rounded-lg border px-4 py-2 text-sm transition disabled:opacity-30"
-            style={{
-              borderColor: 'rgba(201, 168, 76, 0.35)',
-              color: '#D9C077',
-            }}
-          >
-            Voltar
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              reset()
-              setResumedFrom(null)
-            }}
-            className="flex-1 rounded-lg border px-4 py-2 text-sm transition"
-            style={{
-              borderColor: 'rgba(201, 168, 76, 0.35)',
-              color: '#D9C077',
-            }}
-          >
-            Reiniciar
-          </button>
-        </div>
+        {!silentMode && (
+          <div className="mt-4 flex gap-2">
+            <button
+              type="button"
+              onClick={back}
+              disabled={isFirst}
+              className="flex-1 rounded-lg border px-4 py-2 text-sm transition disabled:opacity-30"
+              style={{
+                borderColor: 'rgba(201, 168, 76, 0.35)',
+                color: '#D9C077',
+              }}
+            >
+              Voltar
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                reset()
+                setResumedFrom(null)
+              }}
+              className="flex-1 rounded-lg border px-4 py-2 text-sm transition"
+              style={{
+                borderColor: 'rgba(201, 168, 76, 0.35)',
+                color: '#D9C077',
+              }}
+            >
+              Reiniciar
+            </button>
+          </div>
+        )}
       </div>
     </main>
   )
