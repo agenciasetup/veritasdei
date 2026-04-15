@@ -7,18 +7,24 @@ import type {
   RosaryRoomParticipant,
 } from '@/features/rosario/data/historyTypes'
 import { MYSTERY_GROUPS } from '@/features/rosario/data/mysteries'
+import {
+  ROSARY_STEPS,
+  firstStepForBead,
+  type BeadId,
+} from '@/features/rosario/data/beadSequence'
+import { RosaryBeads } from '@/features/rosario/components/RosaryBeads'
+import { PrayerStage } from '@/features/rosario/components/PrayerStage'
+import { useSharedRosaryProgress } from '@/features/rosario/session/useSharedRosaryProgress'
 
 /**
  * `<SharedRoomView />` — UI da sala compartilhada (lobby + sessão).
  *
- * Sprint 3.2: monta o lobby com código visível, lista de participantes
- * congelada no snapshot inicial, e um botão "Iniciar" para o host.
- * Após o estado virar 'rezando', mostra um placeholder da sessão
- * (a sincronização real via Realtime entra no sprint 3.3).
- *
- * O componente já recebe o snapshot hidratado via server component,
- * então o primeiro render é consistente com o cookie auth e não há
- * flash de "carregando".
+ * Sprint 3.2: lobby, lista de participantes, promoção a co-líder.
+ * Sprint 3.3: sincronização ao vivo via `useSharedRosaryProgress` —
+ *   quando o estado vira 'rezando', renderiza `<RosaryBeads/>` e
+ *   `<PrayerStage/>` lendo o `passo_index` do servidor. Host e
+ *   co-líder veem botões de avançar/voltar; demais ficam em modo
+ *   "seguir".
  */
 export interface SharedRoomViewProps {
   initialRoom: RosaryRoom
@@ -31,73 +37,59 @@ export function SharedRoomView({
   initialParticipants,
   viewerUserId,
 }: SharedRoomViewProps) {
-  const [room, setRoom] = useState<RosaryRoom>(initialRoom)
-  const [participants, setParticipants] =
-    useState<RosaryRoomParticipant[]>(initialParticipants)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const isHost = room.host_user_id === viewerUserId
-  const isCoHost = room.co_host_user_id === viewerUserId
-  const canControl = isHost || isCoHost
+  const shared = useSharedRosaryProgress(
+    initialRoom,
+    initialParticipants,
+    viewerUserId,
+  )
+  const { room, participants, currentIndex, isCompleted, canControl, isHost, pending, error } =
+    shared
+  const [localError, setLocalError] = useState<string | null>(null)
 
   const mysteryGroup = useMemo(
     () => MYSTERY_GROUPS.find((g) => g.id === room.mystery_set) ?? MYSTERY_GROUPS[0],
     [room.mystery_set],
   )
 
+  const currentStep = ROSARY_STEPS[Math.min(Math.max(currentIndex, 0), ROSARY_STEPS.length - 1)]
+
+  const completedBeadIds = useMemo<ReadonlySet<BeadId>>(() => {
+    const set = new Set<BeadId>()
+    for (let i = 0; i < currentIndex; i++) {
+      const b = ROSARY_STEPS[i]?.beadId
+      if (b) set.add(b)
+    }
+    if (isCompleted) {
+      const last = ROSARY_STEPS[ROSARY_STEPS.length - 1].beadId
+      if (last) set.add(last)
+    }
+    return set
+  }, [currentIndex, isCompleted])
+
   const copyCode = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(room.codigo)
     } catch {
-      // Ignorar — clipboard requer permissão em alguns contextos.
+      // Clipboard pode falhar em contextos inseguros — sem drama.
     }
   }, [room.codigo])
-
-  const patchRoom = useCallback(
-    async (patch: Record<string, unknown>) => {
-      setBusy(true)
-      setError(null)
-      try {
-        const res = await fetch(`/api/rosario/rooms/${room.codigo}`, {
-          method: 'PATCH',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(patch),
-        })
-        if (!res.ok) {
-          setError('Ação negada. Tente novamente.')
-          return
-        }
-        const data = (await res.json()) as {
-          room: RosaryRoom
-          participants: RosaryRoomParticipant[]
-        }
-        setRoom(data.room)
-        setParticipants(data.participants)
-      } catch {
-        setError('Erro de rede.')
-      } finally {
-        setBusy(false)
-      }
-    },
-    [room.codigo],
-  )
 
   const handleStart = useCallback(() => {
-    void patchRoom({ state: 'rezando' })
-  }, [patchRoom])
+    void shared.setState('rezando')
+  }, [shared])
 
   const handleLeave = useCallback(async () => {
-    setBusy(true)
     try {
-      await fetch(`/api/rosario/rooms/${room.codigo}/leave`, {
-        method: 'POST',
-      })
+      await fetch(`/api/rosario/rooms/${room.codigo}/leave`, { method: 'POST' })
       window.location.href = '/rosario/juntos'
     } catch {
-      setBusy(false)
+      setLocalError('Não foi possível sair.')
     }
   }, [room.codigo])
+
+  const displayError = error ?? localError
+
+  const showSession = room.state === 'rezando' || room.state === 'finalizada'
 
   return (
     <main
@@ -119,45 +111,150 @@ export function SharedRoomView({
           </p>
         </header>
 
-        {/* Código de convite */}
-        <section
-          className="mb-6 rounded-2xl border p-5 text-center"
-          style={{
-            borderColor: 'rgba(201, 168, 76, 0.22)',
-            backgroundColor: 'rgba(20, 18, 14, 0.6)',
-          }}
-        >
-          <div
-            className="text-[10px] uppercase tracking-[0.2em]"
-            style={{ color: '#7A7368' }}
-          >
-            Código de convite
-          </div>
-          <div
-            className="mt-2 font-mono text-3xl tracking-[0.4em]"
-            style={{ color: '#D9C077' }}
-          >
-            {room.codigo}
-          </div>
-          <button
-            type="button"
-            onClick={copyCode}
-            className="mt-3 rounded-md border px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition"
-            style={{
-              borderColor: 'rgba(201, 168, 76, 0.35)',
-              color: '#D9C077',
-            }}
-          >
-            Copiar código
-          </button>
-        </section>
-
         {/* Estado da sala */}
         <RoomStateBanner state={room.state} canControl={canControl} />
 
-        {/* Lista de participantes */}
+        {/* Código de convite — visível no lobby e discreto durante a sessão. */}
+        {room.state === 'aguardando' ? (
+          <section
+            className="mb-6 rounded-2xl border p-5 text-center"
+            style={{
+              borderColor: 'rgba(201, 168, 76, 0.22)',
+              backgroundColor: 'rgba(20, 18, 14, 0.6)',
+            }}
+          >
+            <div
+              className="text-[10px] uppercase tracking-[0.2em]"
+              style={{ color: '#7A7368' }}
+            >
+              Código de convite
+            </div>
+            <div
+              className="mt-2 font-mono text-3xl tracking-[0.4em]"
+              style={{ color: '#D9C077' }}
+            >
+              {room.codigo}
+            </div>
+            <button
+              type="button"
+              onClick={copyCode}
+              className="mt-3 rounded-md border px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition"
+              style={{
+                borderColor: 'rgba(201, 168, 76, 0.35)',
+                color: '#D9C077',
+              }}
+            >
+              Copiar código
+            </button>
+          </section>
+        ) : (
+          <div
+            className="mb-4 text-center font-mono text-[11px] tracking-[0.3em]"
+            style={{ color: '#7A7368' }}
+          >
+            Código {room.codigo}
+          </div>
+        )}
+
+        {/* Sessão ao vivo */}
+        {showSession && (
+          <section aria-label="Sessão do terço">
+            <div className="mb-4">
+              <RosaryBeads
+                currentBeadId={currentStep.beadId}
+                completedBeadIds={completedBeadIds}
+                // Navegação por clique só existe pra quem controla.
+                onBeadSelect={
+                  canControl
+                    ? (beadId: BeadId) => {
+                        const step = firstStepForBead(beadId)
+                        if (step) void shared.goTo(step.index)
+                      }
+                    : undefined
+                }
+                className="mx-auto h-auto w-full max-w-md"
+                ariaDescription={`Terço compartilhado — passo ${currentIndex + 1} de ${ROSARY_STEPS.length}`}
+              />
+            </div>
+
+            <div className="mb-4" aria-hidden>
+              <div
+                className="h-1 w-full overflow-hidden rounded-full"
+                style={{ background: 'rgba(201,168,76,0.08)' }}
+              >
+                <div
+                  className="rosary-progress-fill h-full"
+                  style={{
+                    width: `${Math.round(
+                      ((currentIndex + (isCompleted ? 1 : 0)) / ROSARY_STEPS.length) * 100,
+                    )}%`,
+                    background: 'linear-gradient(90deg, #C9A84C, #D9C077)',
+                  }}
+                />
+              </div>
+              <div
+                className="mt-2 text-center font-mono text-[11px] uppercase tracking-[0.25em]"
+                style={{ color: '#7A7368' }}
+              >
+                Passo {currentIndex + 1} / {ROSARY_STEPS.length}
+              </div>
+            </div>
+
+            <PrayerStage
+              step={currentStep}
+              mysteryGroup={mysteryGroup}
+              isCompleted={isCompleted}
+              onAdvance={canControl ? () => void shared.advance() : noop}
+            />
+
+            {!canControl && !isCompleted && (
+              <div
+                className="mt-3 rounded-md border px-3 py-2 text-center text-[11px]"
+                role="status"
+                aria-live="polite"
+                style={{
+                  borderColor: 'rgba(201, 168, 76, 0.22)',
+                  color: '#7A7368',
+                }}
+              >
+                O {room.co_host_user_id ? 'host ou co-líder' : 'host'} avança as contas.
+              </div>
+            )}
+
+            {canControl && !isCompleted && (
+              <div className="mt-4 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => void shared.back()}
+                  disabled={pending || currentIndex === 0}
+                  className="flex-1 rounded-lg border px-4 py-2 text-sm transition disabled:opacity-30"
+                  style={{
+                    borderColor: 'rgba(201, 168, 76, 0.35)',
+                    color: '#D9C077',
+                  }}
+                >
+                  Voltar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void shared.advance()}
+                  disabled={pending}
+                  className="flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-60"
+                  style={{
+                    background: 'linear-gradient(180deg, #C9A84C, #A88437)',
+                    color: '#0F0E0C',
+                  }}
+                >
+                  Próximo
+                </button>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Lista de participantes — sempre visível. */}
         <section
-          className="mb-6 rounded-2xl border p-5"
+          className="mt-6 rounded-2xl border p-5"
           style={{
             borderColor: 'rgba(201, 168, 76, 0.22)',
             backgroundColor: 'rgba(20, 18, 14, 0.6)',
@@ -224,26 +321,30 @@ export function SharedRoomView({
                         Co-líder
                       </span>
                     )}
-                    {isHost && !isP_Host && !isP_CoHost && room.state !== 'finalizada' && room.state !== 'encerrada' && (
-                      <button
-                        type="button"
-                        onClick={() => patchRoom({ co_host_user_id: p.user_id })}
-                        disabled={busy}
-                        className="rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.15em] transition disabled:opacity-40"
-                        style={{
-                          borderColor: 'rgba(122, 115, 104, 0.4)',
-                          color: '#7A7368',
-                        }}
-                        aria-label={`Promover ${p.display_name ?? 'participante'} a co-líder`}
-                      >
-                        Promover
-                      </button>
-                    )}
+                    {isHost &&
+                      !isP_Host &&
+                      !isP_CoHost &&
+                      room.state !== 'finalizada' &&
+                      room.state !== 'encerrada' && (
+                        <button
+                          type="button"
+                          onClick={() => void shared.setCoHost(p.user_id)}
+                          disabled={pending}
+                          className="rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.15em] transition disabled:opacity-40"
+                          style={{
+                            borderColor: 'rgba(122, 115, 104, 0.4)',
+                            color: '#7A7368',
+                          }}
+                          aria-label={`Promover ${p.display_name ?? 'participante'} a co-líder`}
+                        >
+                          Promover
+                        </button>
+                      )}
                     {isHost && isP_CoHost && (
                       <button
                         type="button"
-                        onClick={() => patchRoom({ co_host_user_id: null })}
-                        disabled={busy}
+                        onClick={() => void shared.setCoHost(null)}
+                        disabled={pending}
                         className="rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.15em] transition disabled:opacity-40"
                         style={{
                           borderColor: 'rgba(122, 115, 104, 0.4)',
@@ -260,9 +361,9 @@ export function SharedRoomView({
           </ul>
         </section>
 
-        {error && (
+        {displayError && (
           <div
-            className="mb-4 rounded-md border px-3 py-2 text-xs"
+            className="mt-4 rounded-md border px-3 py-2 text-xs"
             role="alert"
             style={{
               borderColor: 'rgba(201, 100, 100, 0.45)',
@@ -270,24 +371,24 @@ export function SharedRoomView({
               backgroundColor: 'rgba(70, 20, 20, 0.4)',
             }}
           >
-            {error}
+            {displayError}
           </div>
         )}
 
-        {/* Ações principais */}
-        <div className="flex flex-wrap gap-2">
+        {/* Ações principais do lobby / saída */}
+        <div className="mt-4 flex flex-wrap gap-2">
           {room.state === 'aguardando' && isHost && (
             <button
               type="button"
               onClick={handleStart}
-              disabled={busy}
+              disabled={pending}
               className="flex-1 rounded-lg px-5 py-2.5 text-sm font-semibold transition disabled:opacity-60"
               style={{
                 background: 'linear-gradient(180deg, #C9A84C, #A88437)',
                 color: '#0F0E0C',
               }}
             >
-              {busy ? 'Iniciando…' : 'Iniciar terço'}
+              {pending ? 'Iniciando…' : 'Iniciar terço'}
             </button>
           )}
           {room.state === 'aguardando' && !isHost && (
@@ -301,17 +402,6 @@ export function SharedRoomView({
               aria-live="polite"
             >
               Aguardando o host iniciar…
-            </div>
-          )}
-          {room.state === 'rezando' && (
-            <div
-              className="flex-1 rounded-lg border px-5 py-2.5 text-center text-sm"
-              style={{
-                borderColor: 'rgba(201, 168, 76, 0.22)',
-                color: '#D9C077',
-              }}
-            >
-              Terço em curso — sincronização ao vivo chega no próximo passo.
             </div>
           )}
           {(room.state === 'finalizada' || room.state === 'encerrada') && (
@@ -329,7 +419,7 @@ export function SharedRoomView({
           <button
             type="button"
             onClick={handleLeave}
-            disabled={busy}
+            disabled={pending}
             className="rounded-lg border px-5 py-2.5 text-sm transition disabled:opacity-60"
             style={{
               borderColor: 'rgba(122, 115, 104, 0.4)',
@@ -339,10 +429,19 @@ export function SharedRoomView({
             Sair
           </button>
         </div>
+
+        <style>{`
+          .rosary-progress-fill { transition: width 500ms ease-out; }
+          @media (prefers-reduced-motion: reduce) {
+            .rosary-progress-fill { transition: none; }
+          }
+        `}</style>
       </div>
     </main>
   )
 }
+
+function noop() {}
 
 function RoomStateBanner({
   state,
