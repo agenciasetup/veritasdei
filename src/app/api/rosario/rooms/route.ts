@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { lookupDisplayName } from '@/features/rosario/session/lookupDisplayName'
 
 /**
  * Sala de terço compartilhado — criação (Marco 3).
@@ -112,6 +113,18 @@ export async function POST(req: NextRequest) {
       { error: lastError ?? 'room_create_failed' },
       { status: 500 },
     )
+  }
+
+  // Preenche o display_name do host no registro de participante que o
+  // trigger já criou (o trigger roda como SECURITY DEFINER e não tem
+  // acesso ao profile no momento do INSERT).
+  const hostName = await lookupDisplayName(supabase, user.id, user.email)
+  if (hostName) {
+    await supabase
+      .from('rosary_room_participants')
+      .update({ display_name: hostName })
+      .eq('room_id', created.id)
+      .eq('user_id', user.id)
   }
 
   // Busca os participantes (o host foi inserido pelo trigger).

@@ -42,8 +42,18 @@ export function SharedRoomView({
     initialParticipants,
     viewerUserId,
   )
-  const { room, participants, currentIndex, isCompleted, canControl, isHost, pending, error } =
-    shared
+  const {
+    room,
+    participants,
+    currentIndex,
+    isCompleted,
+    canControl,
+    isHost,
+    onlineUserIds,
+    pending,
+    error,
+  } = shared
+  const onlineCount = onlineUserIds.size
   const [localError, setLocalError] = useState<string | null>(null)
 
   const mysteryGroup = useMemo(
@@ -261,18 +271,36 @@ export function SharedRoomView({
           }}
           aria-labelledby="participantes-titulo"
         >
-          <h2
-            id="participantes-titulo"
-            className="text-[10px] uppercase tracking-[0.2em]"
-            style={{ color: '#7A7368' }}
-          >
-            Na sala ({participants.length})
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2
+              id="participantes-titulo"
+              className="text-[10px] uppercase tracking-[0.2em]"
+              style={{ color: '#7A7368' }}
+            >
+              Na sala ({participants.length})
+            </h2>
+            <span
+              className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em]"
+              style={{ color: '#D9C077' }}
+              aria-label={`${onlineCount} online agora`}
+            >
+              <span
+                aria-hidden
+                className="inline-block h-1.5 w-1.5 rounded-full"
+                style={{
+                  backgroundColor: '#D9C077',
+                  boxShadow: '0 0 6px rgba(217,192,119,0.6)',
+                }}
+              />
+              {onlineCount} online
+            </span>
+          </div>
           <ul className="mt-3 flex flex-col gap-2">
             {participants.map((p) => {
               const isP_Host = p.user_id === room.host_user_id
               const isP_CoHost = p.user_id === room.co_host_user_id
               const isViewer = p.user_id === viewerUserId
+              const isOnline = onlineUserIds.has(p.user_id)
               return (
                 <li
                   key={p.id}
@@ -283,17 +311,33 @@ export function SharedRoomView({
                   }}
                 >
                   <div className="flex min-w-0 items-center gap-2">
-                    <span
-                      aria-hidden
-                      className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px]"
-                      style={{
-                        backgroundColor: 'rgba(201, 168, 76, 0.15)',
-                        color: '#D9C077',
-                      }}
-                    >
-                      {(p.display_name ?? 'A').trim().charAt(0).toUpperCase() || 'A'}
+                    <span className="relative inline-flex">
+                      <span
+                        aria-hidden
+                        className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px]"
+                        style={{
+                          backgroundColor: 'rgba(201, 168, 76, 0.15)',
+                          color: '#D9C077',
+                          opacity: isOnline ? 1 : 0.5,
+                        }}
+                      >
+                        {(p.display_name ?? 'A').trim().charAt(0).toUpperCase() || 'A'}
+                      </span>
+                      {isOnline && (
+                        <span
+                          aria-hidden
+                          className="absolute -bottom-0 -right-0 h-1.5 w-1.5 rounded-full"
+                          style={{
+                            backgroundColor: '#7CC28A',
+                            boxShadow: '0 0 0 1.5px #0F0E0C',
+                          }}
+                        />
+                      )}
                     </span>
-                    <span className="truncate" style={{ color: '#F2EDE4' }}>
+                    <span
+                      className="truncate"
+                      style={{ color: isOnline ? '#F2EDE4' : '#7A7368' }}
+                    >
                       {p.display_name ?? 'Anônimo'}
                       {isViewer ? ' (você)' : ''}
                     </span>

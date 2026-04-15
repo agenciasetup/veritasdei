@@ -40,6 +40,8 @@ export interface UseSharedRosaryProgressReturn {
   canControl: boolean
   isHost: boolean
   isCoHost: boolean
+  /** Ids de usuários conectados ao canal agora (via Supabase Realtime Presence). */
+  onlineUserIds: ReadonlySet<string>
   /** True quando a última ação otimista ainda não foi confirmada. */
   pending: boolean
   /** Última mensagem de erro (ação negada, rede, etc.), se houver. */
@@ -63,6 +65,9 @@ export function useSharedRosaryProgress(
   const [optimisticIndex, setOptimisticIndex] = useState<number | null>(null)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [onlineUserIds, setOnlineUserIds] = useState<ReadonlySet<string>>(
+    () => new Set([viewerUserId]),
+  )
 
   const roomIdRef = useRef(initialRoom.id)
   const codigoRef = useRef(initialRoom.codigo)
@@ -84,8 +89,11 @@ export function useSharedRosaryProgress(
     if (!supabase) return
 
     const roomId = roomIdRef.current
-    const channel = supabase
-      .channel(`rosario:sala:${roomId}`)
+    const channel = supabase.channel(`rosario:sala:${roomId}`, {
+      config: { presence: { key: viewerUserId } },
+    })
+
+    channel
       .on(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         'postgres_changes' as any,
@@ -124,7 +132,24 @@ export function useSharedRosaryProgress(
           void refreshFromServer()
         },
       )
-      .subscribe()
+      .on(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        'presence' as any,
+        { event: 'sync' },
+        () => {
+          // presenceState() retorna um record { key: [{ ... }] }.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const state = (channel as any).presenceState() as Record<string, unknown>
+          const ids = new Set<string>()
+          for (const key of Object.keys(state)) ids.add(key)
+          setOnlineUserIds(ids)
+        },
+      )
+      .subscribe((status: string) => {
+        if (status === 'SUBSCRIBED') {
+          void channel.track({ user_id: viewerUserId, at: Date.now() })
+        }
+      })
 
     return () => {
       void supabase.removeChannel(channel)
@@ -243,6 +268,7 @@ export function useSharedRosaryProgress(
     canControl,
     isHost,
     isCoHost,
+    onlineUserIds,
     pending,
     error,
     advance,
