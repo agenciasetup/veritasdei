@@ -747,13 +747,9 @@ main, [role="main"] {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  /* Light vignette + fractalNoise film grain (no diagonal stripes) */
+  /* Clean: apenas glow dourado sutil + vignette radial, sem textura */
   background-image:
-    radial-gradient(60% 50% at 80% 15%, rgba(201,168,76,0.10) 0%, transparent 60%),
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 0.95  0 0 0 0 0.78  0 0 0 0.5 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
-  background-size: auto, 220px 220px;
-  mix-blend-mode: normal;
-  opacity: 0.85;
+    radial-gradient(60% 50% at 80% 15%, rgba(201,168,76,0.10) 0%, transparent 60%);
   mask-image: radial-gradient(circle at 50% 45%, black 55%, transparent 100%);
 }
 
@@ -769,11 +765,9 @@ main, [role="main"] {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /* Clean: só o glow dourado no canto */
   background-image:
-    radial-gradient(70% 50% at 20% 20%, rgba(201,168,76,0.08) 0%, transparent 65%),
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 0.95  0 0 0 0 0.78  0 0 0 0.4 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
-  background-size: auto, 220px 220px;
-  opacity: 0.85;
+    radial-gradient(70% 50% at 20% 20%, rgba(201,168,76,0.08) 0%, transparent 65%);
 }
 
 .surface-parchment {
@@ -788,12 +782,9 @@ main, [role="main"] {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  /* Light vignette + inverted fractalNoise (dark grain on light paper) */
+  /* Clean: só uma vinheta vinho sutil no canto */
   background-image:
-    radial-gradient(50% 40% at 85% 10%, rgba(107,29,42,0.06) 0%, transparent 70%),
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.35  0 0 0 0 0.09  0 0 0 0 0.14  0 0 0 0.5 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
-  background-size: auto, 220px 220px;
-  opacity: 0.55;
+    radial-gradient(50% 40% at 85% 10%, rgba(107,29,42,0.06) 0%, transparent 70%);
 }
 
 /* Gold rules & ornaments */
