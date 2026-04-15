@@ -10,12 +10,6 @@ import type { GeoStatus } from '@/hooks/useGeolocation'
 import { HERO_COPY } from '../copy'
 import { ChurchChip } from '../components/ChurchChip'
 import { ScrollCue } from '../components/ScrollCue'
-import {
-  GothicCross,
-  QuatrefoilOrnament,
-  FleurDeLis,
-  PapalKeys,
-} from '../components/GothicOrnaments'
 
 interface HeroSectionProps {
   stats: { igrejas: number; convertidos: number; catolicos: number }
@@ -77,23 +71,83 @@ export function HeroSection({
         }}
       />
 
-      {/* ── Chaves de São Pedro (centered, top) ── */}
-      <PapalKeys
-        className="absolute top-2 left-1/2 -translate-x-1/2 w-[420px] xl:w-[520px] hidden lg:block pointer-events-none"
-        opacity={0.14}
+      {/* ── Film grain / ruído dourado sutil ── */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        aria-hidden
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.79  0 0 0 0 0.66  0 0 0 0 0.30  0 0 0 0.55 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>\")",
+          opacity: 0.16,
+          mixBlendMode: 'overlay',
+        }}
       />
-      {/* ── Gothic ornaments floating ── */}
-      <GothicCross
-        className="absolute top-[18%] right-[6%] w-[70px] hidden lg:block float-slow"
-        opacity={0.35}
+
+      {/* ── Sparks dourados (detalhes mínimos) ── */}
+      <span
+        aria-hidden
+        className="absolute hidden md:block rounded-full"
+        style={{
+          top: '22%',
+          left: '14%',
+          width: 3,
+          height: 3,
+          background: '#D9C077',
+          boxShadow: '0 0 10px rgba(217,192,119,0.7)',
+          opacity: 0.55,
+        }}
       />
-      <QuatrefoilOrnament
-        className="absolute bottom-[12%] left-[4%] w-[120px] hidden lg:block float-slow"
-        opacity={0.22}
+      <span
+        aria-hidden
+        className="absolute hidden md:block rounded-full"
+        style={{
+          top: '38%',
+          right: '18%',
+          width: 2,
+          height: 2,
+          background: '#E6D9B5',
+          boxShadow: '0 0 8px rgba(201,168,76,0.6)',
+          opacity: 0.45,
+        }}
       />
-      <FleurDeLis
-        className="absolute top-[50%] left-[8%] w-[48px] hidden xl:block float-slow"
-        opacity={0.4}
+      <span
+        aria-hidden
+        className="absolute hidden md:block rounded-full"
+        style={{
+          bottom: '28%',
+          left: '22%',
+          width: 2,
+          height: 2,
+          background: '#C9A84C',
+          boxShadow: '0 0 7px rgba(201,168,76,0.6)',
+          opacity: 0.5,
+        }}
+      />
+      <span
+        aria-hidden
+        className="absolute hidden md:block rounded-full"
+        style={{
+          top: '58%',
+          right: '28%',
+          width: 3,
+          height: 3,
+          background: '#D9C077',
+          boxShadow: '0 0 9px rgba(217,192,119,0.6)',
+          opacity: 0.4,
+        }}
+      />
+      <span
+        aria-hidden
+        className="absolute hidden lg:block rounded-full"
+        style={{
+          top: '30%',
+          right: '10%',
+          width: 2,
+          height: 2,
+          background: '#E6D9B5',
+          boxShadow: '0 0 6px rgba(230,217,181,0.7)',
+          opacity: 0.4,
+        }}
       />
 
       {/* ── Top liturgical strip ── */}
