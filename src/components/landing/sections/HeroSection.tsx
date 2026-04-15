@@ -71,18 +71,6 @@ export function HeroSection({
         }}
       />
 
-      {/* ── Film grain / ruído dourado sutil ── */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        aria-hidden
-        style={{
-          backgroundImage:
-            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.79  0 0 0 0 0.66  0 0 0 0 0.30  0 0 0 0.55 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>\")",
-          opacity: 0.16,
-          mixBlendMode: 'overlay',
-        }}
-      />
-
       {/* ── Sparks dourados (detalhes mínimos) ── */}
       <span
         aria-hidden

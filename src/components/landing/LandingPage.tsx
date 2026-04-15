@@ -22,11 +22,15 @@ import { QuoteSection } from './sections/QuoteSection'
 import { DonationSection } from './sections/DonationSection'
 import { LandingFooter } from './sections/LandingFooter'
 
+/**
+ * Alternância de tons: ChurchFinder (wine) → Liturgia (light) → Oracoes (dark) → …
+ * Invertida pra nunca ter duas seções vinho ou duas claras em sequência.
+ */
 const DEVOTION_LAYOUT = [
-  { tone: 'dark', Mockup: LiturgiaMockup, reverse: false },
-  { tone: 'light', Mockup: OracoesMockup, reverse: true },
-  { tone: 'dark', Mockup: TercoMockup, reverse: false },
-  { tone: 'light', Mockup: ExameMockup, reverse: true },
+  { tone: 'light', Mockup: LiturgiaMockup, reverse: false },
+  { tone: 'dark', Mockup: OracoesMockup, reverse: true },
+  { tone: 'light', Mockup: TercoMockup, reverse: false },
+  { tone: 'dark', Mockup: ExameMockup, reverse: true },
 ] as const
 
 export default function LandingPage() {
