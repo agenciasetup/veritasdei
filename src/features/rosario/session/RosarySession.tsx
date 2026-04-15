@@ -15,6 +15,7 @@ import { useHapticFeedback } from '@/features/rosario/session/useHapticFeedback'
 import { useOnboarding } from '@/features/rosario/session/useOnboarding'
 import { useSpeechSynthesis } from '@/features/rosario/session/useSpeechSynthesis'
 import { useOnlineStatus } from '@/features/rosario/session/useOnlineStatus'
+import { useRosaryHistoryRecord } from '@/features/rosario/session/useRosaryHistoryRecord'
 import { OnboardingOverlay } from '@/features/rosario/components/OnboardingOverlay'
 import { MYSTERY_GROUPS, getMysteryForToday } from '@/features/rosario/data/mysteries'
 import { getSpeechText } from '@/features/rosario/data/speechText'
@@ -54,6 +55,12 @@ import type { MysterySet } from '@/features/rosario/data/types'
  * o shell de `/rosario` e seus assets estáticos, e este componente mostra
  * um badge discreto "Offline" quando `navigator.onLine` cai, para
  * sinalizar ao usuário que a sessão está funcionando a partir do cache.
+ *
+ * Sprint 2.3: histórico no Supabase — ao completar um terço (e apenas ao
+ * completar, uma única vez por conclusão), dispara um POST best-effort
+ * para `/api/rosario/sessions` com mistério, duração e (no sprint 2.5)
+ * intenção. Se o usuário não estiver logado ou a rede falhar, a função
+ * engole o erro — o terço funciona 100% sem conta.
  */
 
 export function RosarySession() {
@@ -95,6 +102,9 @@ export function RosarySession() {
 
   // Status online/offline para mostrar o badge no header.
   const isOnline = useOnlineStatus()
+
+  // Gravação best-effort do histórico no Supabase (sprint 2.3).
+  const { recordSession } = useRosaryHistoryRecord()
 
   // Modo silêncio: UI mínima, sem chrome, focada na oração.
   const [silentMode, setSilentMode] = useState(false)
@@ -159,6 +169,53 @@ export function RosarySession() {
     }
     saveSession({ mysterySetId, currentIndex, isCompleted })
   }, [hydrated, mysterySetId, currentIndex, isCompleted])
+
+  /**
+   * Marca o início da sessão a primeira vez em que o usuário sai do passo 0
+   * após a hidratação. Usado para calcular `duration_seconds` quando
+   * gravamos o histórico no Supabase ao concluir.
+   *
+   * Se for um resume (retomada), o start conta como "agora" — perdemos a
+   * duração total da sessão original, mas registramos pelo menos o tempo
+   * gasto na retomada. Uma imprecisão aceitável para um MVP de histórico.
+   */
+  const sessionStartRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (!hydrated) return
+    if (currentIndex === 0) {
+      sessionStartRef.current = null
+      return
+    }
+    if (sessionStartRef.current === null) {
+      sessionStartRef.current = Date.now()
+    }
+  }, [hydrated, currentIndex])
+
+  /**
+   * Gravação no Supabase ao completar. Usa uma ref para garantir que cada
+   * conclusão seja registrada exatamente uma vez (reset permite nova
+   * gravação na próxima sessão completa).
+   */
+  const recordedCompletionRef = useRef(false)
+  useEffect(() => {
+    if (!hydrated) return
+    if (!isCompleted) {
+      recordedCompletionRef.current = false
+      return
+    }
+    if (recordedCompletionRef.current) return
+    recordedCompletionRef.current = true
+
+    const startTs = sessionStartRef.current ?? Date.now()
+    const durationSeconds = Math.max(0, Math.round((Date.now() - startTs) / 1000))
+
+    void recordSession({
+      mystery_set: mysterySetId,
+      intention_id: null, // preenchido no sprint 2.5
+      started_at: new Date(startTs).toISOString(),
+      duration_seconds: durationSeconds,
+    })
+  }, [hydrated, isCompleted, mysterySetId, recordSession])
 
   /**
    * Fala o texto do passo atual quando o TTS está ligado. Cancela a utterance
