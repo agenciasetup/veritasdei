@@ -31,6 +31,7 @@ interface SessionInsertBody {
   intention_id?: unknown
   started_at?: unknown
   duration_seconds?: unknown
+  sala_id?: unknown
 }
 
 function sanitizeInsert(body: SessionInsertBody) {
@@ -43,6 +44,13 @@ function sanitizeInsert(body: SessionInsertBody) {
     // UUID shallow validation — RLS faz a validação real.
     if (body.intention_id.length < 32 || body.intention_id.length > 64) return null
     intentionId = body.intention_id
+  }
+
+  let salaId: string | null = null
+  if (body.sala_id !== undefined && body.sala_id !== null) {
+    if (typeof body.sala_id !== 'string') return null
+    if (body.sala_id.length < 32 || body.sala_id.length > 64) return null
+    salaId = body.sala_id
   }
 
   let startedAt: string | null = null
@@ -66,6 +74,7 @@ function sanitizeInsert(body: SessionInsertBody) {
   return {
     mystery_set: body.mystery_set,
     intention_id: intentionId,
+    sala_id: salaId,
     started_at: startedAt,
     duration_seconds: durationSeconds,
   }
@@ -89,7 +98,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('rosary_sessions')
     .select(
-      `id, user_id, mystery_set, intention_id, started_at, completed_at, duration_seconds, created_at,
+      `id, user_id, mystery_set, intention_id, sala_id, started_at, completed_at, duration_seconds, created_at,
        intention:rosary_intentions ( id, titulo )`,
     )
     .eq('user_id', user.id)
@@ -131,6 +140,7 @@ export async function POST(req: NextRequest) {
       user_id: user.id,
       mystery_set: insert.mystery_set,
       intention_id: insert.intention_id,
+      sala_id: insert.sala_id,
       started_at: insert.started_at,
       duration_seconds: insert.duration_seconds,
     })

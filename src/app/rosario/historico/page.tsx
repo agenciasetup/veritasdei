@@ -33,7 +33,7 @@ export default async function HistoricoPage() {
   const { data, error } = await supabase
     .from('rosary_sessions')
     .select(
-      `id, user_id, mystery_set, intention_id, started_at, completed_at, duration_seconds, created_at,
+      `id, user_id, mystery_set, intention_id, sala_id, started_at, completed_at, duration_seconds, created_at,
        intention:rosary_intentions ( id, titulo )`,
     )
     .eq('user_id', user.id)

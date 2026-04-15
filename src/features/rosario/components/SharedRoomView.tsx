@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type {
   RosaryRoom,
   RosaryRoomParticipant,
@@ -15,6 +15,7 @@ import {
 import { RosaryBeads } from '@/features/rosario/components/RosaryBeads'
 import { PrayerStage } from '@/features/rosario/components/PrayerStage'
 import { useSharedRosaryProgress } from '@/features/rosario/session/useSharedRosaryProgress'
+import { useRosaryHistoryRecord } from '@/features/rosario/session/useRosaryHistoryRecord'
 
 /**
  * `<SharedRoomView />` — UI da sala compartilhada (lobby + sessão).
@@ -54,6 +55,30 @@ export function SharedRoomView({
     error,
   } = shared
   const onlineCount = onlineUserIds.size
+  const { recordSession } = useRosaryHistoryRecord()
+
+  /**
+   * Ao entrar em `finalizada`, cada viewer grava uma entrada individual
+   * no próprio histórico, com sala_id preenchido. Uma ref evita gravação
+   * dupla caso o broadcast dispare múltiplos UPDATE com o mesmo state.
+   */
+  const recordedRef = useRef(false)
+  useEffect(() => {
+    if (room.state !== 'finalizada') {
+      recordedRef.current = false
+      return
+    }
+    if (recordedRef.current) return
+    recordedRef.current = true
+    const start = room.started_at ? Date.parse(room.started_at) : Date.now()
+    const duration = Math.max(0, Math.round((Date.now() - start) / 1000))
+    void recordSession({
+      mystery_set: room.mystery_set,
+      sala_id: room.id,
+      started_at: room.started_at ?? null,
+      duration_seconds: duration,
+    })
+  }, [room.state, room.id, room.mystery_set, room.started_at, recordSession])
   const [localError, setLocalError] = useState<string | null>(null)
 
   const mysteryGroup = useMemo(

@@ -20,6 +20,7 @@ import type { MysterySet } from '@/features/rosario/data/types'
 export interface RecordSessionInput {
   mystery_set: MysterySet
   intention_id?: string | null
+  sala_id?: string | null
   started_at?: string | null
   duration_seconds?: number | null
 }
