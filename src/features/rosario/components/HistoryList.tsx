@@ -135,6 +135,17 @@ export function HistoryList({ sessions }: HistoryListProps) {
                         style={{ color: '#F2EDE4' }}
                       >
                         Mistérios {mysteryLabel}
+                        {session.sala_id && (
+                          <span
+                            className="ml-2 align-middle rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.15em]"
+                            style={{
+                              borderColor: 'rgba(201, 168, 76, 0.35)',
+                              color: '#D9C077',
+                            }}
+                          >
+                            Em grupo
+                          </span>
+                        )}
                       </h3>
                       {session.intention && (
                         <p

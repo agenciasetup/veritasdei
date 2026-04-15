@@ -55,4 +55,55 @@ export interface RosarySessionInsert {
  * intenção via JOIN leve no route handler de GET. */
 export interface RosarySessionWithIntention extends RosarySessionRecord {
   intention: { id: string; titulo: string } | null
+  /** ID da sala compartilhada (Marco 3), `null` para sessões solo. */
+  sala_id?: string | null
+}
+
+// ---------- rosary_rooms (Marco 3 — Terço compartilhado) ----------
+
+export type RosaryRoomState =
+  | 'aguardando'
+  | 'rezando'
+  | 'finalizada'
+  | 'encerrada'
+
+export interface RosaryRoom {
+  id: string
+  codigo: string
+  host_user_id: string
+  co_host_user_id: string | null
+  mystery_set: MysterySet
+  silencioso: boolean
+  state: RosaryRoomState
+  passo_index: number
+  titulo: string | null
+  created_at: string
+  updated_at: string
+  started_at: string | null
+  ended_at: string | null
+}
+
+export interface RosaryRoomCreateInput {
+  mystery_set: MysterySet
+  silencioso?: boolean
+  titulo?: string | null
+}
+
+export interface RosaryRoomParticipant {
+  id: string
+  room_id: string
+  user_id: string
+  display_name: string | null
+  joined_at: string
+  left_at: string | null
+}
+
+/** Snapshot completo retornado pelos route handlers de sala. */
+export interface RosaryRoomSnapshot {
+  room: RosaryRoom
+  participants: RosaryRoomParticipant[]
+  /** True se o viewer atual é host. */
+  isHost: boolean
+  /** True se o viewer atual é co-host. */
+  isCoHost: boolean
 }

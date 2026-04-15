@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ROSARY_STEPS, type BeadId } from '@/features/rosario/data/beadSequence'
 import { RosaryBeads } from '@/features/rosario/components/RosaryBeads'
@@ -578,7 +579,7 @@ export function RosarySession() {
             >
               Tutorial
             </button>
-            <a
+            <Link
               href="/rosario/historico"
               className="rounded-md px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition"
               style={{
@@ -588,7 +589,18 @@ export function RosarySession() {
               }}
             >
               Histórico
-            </a>
+            </Link>
+            <Link
+              href="/rosario/juntos"
+              className="rounded-md px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition"
+              style={{
+                color: '#D9C077',
+                border: '1px solid rgba(201,168,76,0.35)',
+                textDecoration: 'none',
+              }}
+            >
+              Em grupo
+            </Link>
           </div>
         )}
 
