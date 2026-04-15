@@ -516,6 +516,17 @@ export function RosarySession() {
             >
               Tutorial
             </button>
+            <a
+              href="/rosario/historico"
+              className="rounded-md px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition"
+              style={{
+                color: '#7A7368',
+                border: '1px solid rgba(122,115,104,0.35)',
+                textDecoration: 'none',
+              }}
+            >
+              Histórico
+            </a>
           </div>
         )}
 
