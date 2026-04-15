@@ -14,6 +14,7 @@ import { useWakeLock } from '@/features/rosario/session/useWakeLock'
 import { useHapticFeedback } from '@/features/rosario/session/useHapticFeedback'
 import { useOnboarding } from '@/features/rosario/session/useOnboarding'
 import { useSpeechSynthesis } from '@/features/rosario/session/useSpeechSynthesis'
+import { useOnlineStatus } from '@/features/rosario/session/useOnlineStatus'
 import { OnboardingOverlay } from '@/features/rosario/components/OnboardingOverlay'
 import { MYSTERY_GROUPS, getMysteryForToday } from '@/features/rosario/data/mysteries'
 import { getSpeechText } from '@/features/rosario/data/speechText'
@@ -48,6 +49,11 @@ import type { MysterySet } from '@/features/rosario/data/types'
  * Web Speech API, opt-in pelo usuário (default desligado), com escolha
  * automática de voz pt-BR quando disponível. A cada passo o texto é
  * derivado por `getSpeechText` e a utterance anterior é cancelada.
+ *
+ * Sprint 1.11: PWA offline — o service worker (`public/sw.js`) cacheia
+ * o shell de `/rosario` e seus assets estáticos, e este componente mostra
+ * um badge discreto "Offline" quando `navigator.onLine` cai, para
+ * sinalizar ao usuário que a sessão está funcionando a partir do cache.
  */
 
 export function RosarySession() {
@@ -86,6 +92,9 @@ export function RosarySession() {
 
   // TTS guiado (leitura em voz alta das orações, opt-in persistido).
   const tts = useSpeechSynthesis()
+
+  // Status online/offline para mostrar o badge no header.
+  const isOnline = useOnlineStatus()
 
   // Modo silêncio: UI mínima, sem chrome, focada na oração.
   const [silentMode, setSilentMode] = useState(false)
@@ -233,6 +242,24 @@ export function RosarySession() {
       )}
 
       <div className="relative z-10 mx-auto max-w-xl">
+        {!silentMode && !isOnline && (
+          <div
+            className="mb-4 flex items-center justify-center gap-2 rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.2em]"
+            style={{
+              borderColor: 'rgba(201, 168, 76, 0.35)',
+              color: '#D9C077',
+              backgroundColor: 'rgba(20,18,14,0.6)',
+              width: 'fit-content',
+              margin: '0 auto 1rem',
+            }}
+            role="status"
+            aria-live="polite"
+          >
+            <span aria-hidden>◉</span>
+            <span>Modo offline — rezando a partir do cache</span>
+          </div>
+        )}
+
         {!silentMode && (
           <header className="mb-8 text-center">
             <h1
