@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import Link from 'next/link'
-import { ChevronRight, Compass, Loader2, MapPin, Sparkles } from 'lucide-react'
+import { ChevronRight, Loader2, MapPin, Sparkles } from 'lucide-react'
 
 import { getLiturgicalDay } from '@/lib/liturgical-calendar'
 import type { GeoStatus } from '@/hooks/useGeolocation'
@@ -10,7 +10,12 @@ import type { GeoStatus } from '@/hooks/useGeolocation'
 import { HERO_COPY } from '../copy'
 import { ChurchChip } from '../components/ChurchChip'
 import { ScrollCue } from '../components/ScrollCue'
-import { GothicCross, QuatrefoilOrnament, FleurDeLis } from '../components/GothicOrnaments'
+import {
+  GothicCross,
+  QuatrefoilOrnament,
+  FleurDeLis,
+  PapalKeys,
+} from '../components/GothicOrnaments'
 
 interface HeroSectionProps {
   stats: { igrejas: number; convertidos: number; catolicos: number }
@@ -72,8 +77,12 @@ export function HeroSection({
         }}
       />
 
+      {/* ── Chaves de São Pedro (centered, top) ── */}
+      <PapalKeys
+        className="absolute top-2 left-1/2 -translate-x-1/2 w-[420px] xl:w-[520px] hidden lg:block pointer-events-none"
+        opacity={0.14}
+      />
       {/* ── Gothic ornaments floating ── */}
-      <ArchOrnament />
       <GothicCross
         className="absolute top-[18%] right-[6%] w-[70px] hidden lg:block float-slow"
         opacity={0.35}
@@ -180,7 +189,7 @@ export function HeroSection({
               onClick={onFindChurch}
               className="btn-gold inline-flex items-center justify-center gap-2 rounded-full px-8 py-4 text-[13px] font-semibold focus-visible:outline-none focus-visible:ring-2"
             >
-              <Compass className="w-4 h-4" />
+              <MapPin className="w-4 h-4" />
               {HERO_COPY.ctaPrimary}
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -200,8 +209,6 @@ export function HeroSection({
             <Link href="/login?tab=login" className="underline underline-offset-4" style={{ color: '#D9C077' }}>
               {HERO_COPY.alreadyHave}
             </Link>
-            <span style={{ color: '#8C8274' }}>·</span>
-            <span style={{ color: '#B8AFA2' }}>{HERO_COPY.trust}</span>
           </div>
 
           {/* ── Nearby chips strip ── */}
@@ -292,23 +299,3 @@ function MiniStat({ value, label }: { value: number; label: string }) {
   )
 }
 
-function ArchOrnament() {
-  return (
-    <svg
-      className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] hidden lg:block pointer-events-none"
-      viewBox="0 0 900 400"
-      fill="none"
-      aria-hidden
-      style={{ opacity: 0.08 }}
-    >
-      <g stroke="#C9A84C" strokeWidth="1" fill="none">
-        <path d="M50 400 L50 180 Q50 40 450 40 Q850 40 850 180 L850 400" />
-        <path d="M110 400 L110 190 Q110 80 450 80 Q790 80 790 190 L790 400" />
-        <path d="M170 400 L170 200 Q170 120 450 120 Q730 120 730 200 L730 400" />
-        <path d="M450 40 L450 180" />
-        <circle cx="450" cy="200" r="20" />
-        <path d="M450 220 L450 400" />
-      </g>
-    </svg>
-  )
-}

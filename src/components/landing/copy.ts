@@ -5,18 +5,18 @@
 
 export const HERO_COPY = {
   eyebrow: (dia: string, liturgia: string) => ({ dia, liturgia }),
-  titleLine1: 'A fé de sempre,',
-  titleLine2: 'no lugar onde você está.',
+  titleLine1: 'Liturgia, terço,',
+  titleLine2: 'e missa perto de você.',
   lead:
-    'Veritas Dei reúne liturgia, oração e vida sacramental em uma experiência silenciosa, elegante e fácil. Para quem está retomando — e para quem nunca parou.',
-  ctaPrimary: 'Encontrar minha igreja',
+    'Um app católico pra rezar o dia, encontrar sua paróquia e voltar à confissão. Gratuito, sem anúncios.',
+  ctaPrimary: 'Encontrar missa perto',
   ctaSecondary: 'Criar conta gratuita',
-  alreadyHave: 'Já sou batizado aqui',
-  trust: 'Sem spam. Em menos de um minuto.',
-  chipsNearbyLabel: 'Perto de você',
-  chipsIdle: 'Permita sua localização para ver igrejas próximas.',
-  chipsLoading: 'Procurando igrejas perto de você…',
-  chipsEmpty: 'Nenhuma igreja cadastrada por perto ainda.',
+  alreadyHave: 'Já tenho conta',
+  trust: '',
+  chipsNearbyLabel: 'Igrejas perto de você',
+  chipsIdle: 'Toque pra ver as paróquias mais próximas.',
+  chipsLoading: 'Procurando…',
+  chipsEmpty: 'Ainda não temos paróquias cadastradas por aqui.',
   scrollCue: 'descer',
   stats: {
     igrejas: 'Igrejas',
@@ -26,38 +26,38 @@ export const HERO_COPY = {
 } as const
 
 export const MANIFESTO_COPY = {
-  eyebrow: 'Manifesto',
-  title: 'Reverência, clareza e acolhida — em um só lugar.',
+  eyebrow: 'Por que existimos',
+  title: 'Feito por católicos, pra católicos.',
   lead:
-    'Tudo o que um católico leigo precisa para rezar o dia, encontrar uma paróquia e voltar aos sacramentos, sem ruído e sem acrobacias digitais.',
+    'Um lugar simples pra rezar, aprender a fé e viver os sacramentos. Sem propaganda, sem distração, fiel à Igreja.',
   pillars: [
     {
       key: 'fidelidade',
-      title: 'Fidelidade',
+      title: 'Fiel à Igreja',
       body:
-        'Conteúdo alinhado ao Magistério, liturgia conforme o calendário romano e orações clássicas da tradição.',
+        'Seguimos o Magistério, o calendário litúrgico romano e as orações da tradição católica.',
     },
     {
       key: 'clareza',
-      title: 'Clareza',
+      title: 'Simples de usar',
       body:
-        'Nada de poluição visual. Leitura confortável, tipografia reverente e caminhos curtos para cada devoção.',
+        'Tudo à mão: liturgia, terço, orações, santo do dia. Sem menus confusos.',
     },
     {
       key: 'acolhida',
-      title: 'Acolhida',
+      title: 'Pra todo mundo',
       body:
-        'Para quem está retomando a fé, para quem nunca parou e para quem apenas começa. Sem julgamentos, sem barreiras.',
+        'Pra quem está voltando à fé, pra quem nunca parou e pra quem está começando agora. Este lugar é seu.',
     },
   ],
 } as const
 
 export const FINDER_COPY = {
-  eyebrow: 'Encontre sua paróquia',
-  title: 'Uma igreja perto de você,',
-  titleEm: 'agora.',
+  eyebrow: 'Igrejas',
+  title: 'Encontre uma missa',
+  titleEm: 'perto de você.',
   lead:
-    'Ativamos sua localização com sua permissão. Se preferir, basta digitar sua cidade — o resultado vem com distância e direção.',
+    'Use sua localização ou digite o nome da sua cidade. Mostramos a paróquia, a distância e como chegar.',
   geoIdle: 'Usar minha localização',
   geoLoading: 'Localizando…',
   geoGranted: (label: string) => `Você está em ${label}`,
@@ -65,72 +65,72 @@ export const FINDER_COPY = {
   placeholder: 'Digite sua cidade…',
   searchAria: 'Buscar igreja',
   resultsEyebrow: 'Resultado',
-  stateInitial: 'Ative sua localização ou digite uma cidade para começar.',
-  stateLoading: 'Consultando paróquias aprovadas…',
-  stateEmpty: 'Não encontramos nessa cidade. Tente uma cidade vizinha.',
+  stateInitial: "Toque em \u2018Usar minha localização\u2019 ou digite uma cidade.",
+  stateLoading: 'Buscando paróquias…',
+  stateEmpty: 'Nada encontrado nessa cidade. Tente uma cidade vizinha.',
 } as const
 
 export const DEVOTION_COPY = [
   {
     key: 'liturgia',
     eyebrow: 'Liturgia do Dia',
-    title: 'A Palavra do dia,',
-    titleEm: 'sem atalhos.',
+    title: 'A liturgia de hoje,',
+    titleEm: 'de domingo a domingo.',
     description:
-      'Leituras, salmo responsorial, evangelho e oração do dia. Acompanhe o ano litúrgico sem se perder entre abas ou cliques.',
+      'Leitura, salmo, evangelho e santo do dia. Atualiza todos os dias seguindo o calendário litúrgico romano.',
     href: '/liturgia/hoje',
     features: [
-      'Leituras completas do dia',
-      'Cor e tempo litúrgico visíveis',
+      'Leituras do dia completas',
+      'Cor litúrgica do dia',
       'Santo do dia em destaque',
     ],
   },
   {
     key: 'oracoes',
     eyebrow: 'Orações',
-    title: 'As orações de sempre,',
-    titleEm: 'na sua mão.',
+    title: 'Orações católicas,',
+    titleEm: 'num lugar só.',
     description:
-      'Pai-Nosso, Ave-Maria, Credo, Ângelus, Salve-Rainha e muitas outras. Leitura confortável e caminho direto para rezar.',
+      'Pai-Nosso, Ave-Maria, Credo, Salve-Rainha, Ângelus, Magnificat e muitas outras. Em português, com letra grande e fácil de ler.',
     href: '/oracoes',
     features: [
-      'Orações clássicas reunidas',
-      'Tipografia serifada legível',
+      'Mais de 30 orações clássicas',
+      'Texto grande, fácil de ler',
       'Marque suas favoritas',
     ],
   },
   {
     key: 'terco',
     eyebrow: 'Santo Terço',
-    title: 'Reze o Santo Terço',
-    titleEm: 'passo a passo.',
+    title: 'Reze o terço,',
+    titleEm: 'mistério por mistério.',
     description:
-      'Mistérios do dia em destaque, estrutura clara e ritmo contemplativo para ajudar quem está retomando a vida de oração.',
+      'Os mistérios do dia já vêm escolhidos pra você. O app conta as Ave-Marias automaticamente — você só precisa rezar.',
     href: '/rosario',
     features: [
-      'Mistérios organizados por dia',
-      'Contagem automática das contas',
-      'Modo imersivo sem distrações',
+      'Mistérios do dia automáticos',
+      'Conta as Ave-Marias pra você',
+      'Modo silencioso, sem distração',
     ],
   },
   {
     key: 'exame',
     eyebrow: 'Exame de Consciência',
-    title: 'Prepare uma boa confissão',
-    titleEm: 'com segurança.',
+    title: 'Prepare sua confissão',
+    titleEm: 'com calma.',
     description:
-      'Um roteiro pastoral e acessível para apoiar quem deseja voltar aos sacramentos. Linguagem simples, fidelidade doutrinária.',
+      'Um roteiro pelos 10 mandamentos pra ajudar quem está voltando à confissão depois de um tempo. Sem julgamento, sem pressa.',
     href: '/exame-consciencia',
     features: [
-      'Roteiro pastoral por mandamento',
-      'Linguagem acolhedora e clara',
-      'Sugere passos até a confissão',
+      'Guia pelos 10 mandamentos',
+      'Linguagem simples e acolhedora',
+      'Dicas do que dizer ao padre',
     ],
   },
 ] as const
 
 export const QUOTE_COPY = {
-  eyebrow: 'Voz da Tradição',
+  eyebrow: 'Dos santos',
   text:
     'Tarde Vos amei, ó Beleza tão antiga e tão nova, tarde Vos amei! Eis que Vós estáveis dentro de mim e eu fora, e era fora que Vos buscava.',
   author: 'Santo Agostinho',
@@ -138,13 +138,13 @@ export const QUOTE_COPY = {
 } as const
 
 export const DONATION_COPY = {
-  eyebrow: 'Apoio ao projeto',
-  title: 'Esta obra vive',
-  titleEm: 'da generosidade dos fiéis.',
+  eyebrow: 'Apoie o projeto',
+  title: 'Este app é de graça',
+  titleEm: 'e quer continuar assim.',
   lead:
-    'Veritas Dei é mantido por quem acredita que a fé merece um lugar reverente e gratuito na internet. Em breve, abriremos um canal seguro para você apoiar esta missão.',
+    'Veritas Dei não tem anúncios nem cobra mensalidade. Quem sustenta esta obra é você. Em breve, abrimos um canal seguro pra apoiar por Pix, cartão ou doação única.',
   soon: 'Em breve',
-  methods: ['PIX direto', 'Cartão recorrente', 'Doação única'],
+  methods: ['Pix', 'Cartão recorrente', 'Doação única'],
 } as const
 
 export const FOOTER_COPY = {

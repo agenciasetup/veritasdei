@@ -1,10 +1,10 @@
-import { BookOpenText, Feather, HeartHandshake } from 'lucide-react'
+import { Church, HandHeart, Sparkles } from 'lucide-react'
 
 import { MANIFESTO_COPY } from '../copy'
 import { EyebrowTag } from '../components/EyebrowTag'
 import { FleurDeLis } from '../components/GothicOrnaments'
 
-const ICONS = [BookOpenText, Feather, HeartHandshake]
+const ICONS = [Church, Sparkles, HandHeart]
 
 export function ManifestoSection() {
   return (
