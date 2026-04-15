@@ -1,10 +1,10 @@
-import RosarioView from '@/features/rosario/RosarioView'
+import { RosarySession } from '@/features/rosario/session/RosarySession'
 
 export const metadata = {
   title: 'Santo Rosário — Veritas Dei',
-  description: 'Reze o Santo Rosário meditando os mistérios da vida de Cristo com Nossa Senhora.',
+  description: 'Reze o Santo Rosário interativo meditando os mistérios da vida de Cristo com Nossa Senhora.',
 }
 
 export default function RosarioPage() {
-  return <RosarioView />
+  return <RosarySession />
 }
