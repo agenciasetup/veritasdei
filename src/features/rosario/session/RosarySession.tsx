@@ -16,7 +16,9 @@ import { useOnboarding } from '@/features/rosario/session/useOnboarding'
 import { useSpeechSynthesis } from '@/features/rosario/session/useSpeechSynthesis'
 import { useOnlineStatus } from '@/features/rosario/session/useOnlineStatus'
 import { useRosaryHistoryRecord } from '@/features/rosario/session/useRosaryHistoryRecord'
+import { useIntentions } from '@/features/rosario/session/useIntentions'
 import { OnboardingOverlay } from '@/features/rosario/components/OnboardingOverlay'
+import { IntentionPicker } from '@/features/rosario/components/IntentionPicker'
 import { MYSTERY_GROUPS, getMysteryForToday } from '@/features/rosario/data/mysteries'
 import { getSpeechText } from '@/features/rosario/data/speechText'
 import type { MysterySet } from '@/features/rosario/data/types'
@@ -58,9 +60,14 @@ import type { MysterySet } from '@/features/rosario/data/types'
  *
  * Sprint 2.3: histórico no Supabase — ao completar um terço (e apenas ao
  * completar, uma única vez por conclusão), dispara um POST best-effort
- * para `/api/rosario/sessions` com mistério, duração e (no sprint 2.5)
- * intenção. Se o usuário não estiver logado ou a rede falhar, a função
- * engole o erro — o terço funciona 100% sem conta.
+ * para `/api/rosario/sessions` com mistério, duração e intenção. Se o
+ * usuário não estiver logado ou a rede falhar, a função engole o erro —
+ * o terço funciona 100% sem conta.
+ *
+ * Sprint 2.5: intenções pessoais — opcional, gated por autenticação. Um
+ * botão "Rezar por..." no topo abre o `IntentionPicker`, que permite
+ * escolher uma intenção salva ou criar uma nova inline. A intenção
+ * escolhida é enviada junto com o registro da sessão no Supabase.
  */
 
 export function RosarySession() {
@@ -105,6 +112,16 @@ export function RosarySession() {
 
   // Gravação best-effort do histórico no Supabase (sprint 2.3).
   const { recordSession } = useRosaryHistoryRecord()
+
+  // Intenções pessoais — só fica disponível se o usuário estiver autenticado
+  // (o hook detecta via 401 no fetch inicial e esconde a UI).
+  const intentionsState = useIntentions()
+  const [activeIntentionId, setActiveIntentionId] = useState<string | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const activeIntention = useMemo(() => {
+    if (!activeIntentionId) return null
+    return intentionsState.intentions.find((i) => i.id === activeIntentionId) ?? null
+  }, [activeIntentionId, intentionsState.intentions])
 
   // Modo silêncio: UI mínima, sem chrome, focada na oração.
   const [silentMode, setSilentMode] = useState(false)
@@ -211,11 +228,11 @@ export function RosarySession() {
 
     void recordSession({
       mystery_set: mysterySetId,
-      intention_id: null, // preenchido no sprint 2.5
+      intention_id: activeIntentionId,
       started_at: new Date(startTs).toISOString(),
       duration_seconds: durationSeconds,
     })
-  }, [hydrated, isCompleted, mysterySetId, recordSession])
+  }, [hydrated, isCompleted, mysterySetId, activeIntentionId, recordSession])
 
   /**
    * Fala o texto do passo atual quando o TTS está ligado. Cancela a utterance
@@ -335,6 +352,51 @@ export function RosarySession() {
               <span>&#10022;</span>
             </div>
           </header>
+        )}
+
+        {!silentMode && intentionsState.available && (
+          <div className="mb-4 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setPickerOpen(true)}
+              className="group flex max-w-full items-center gap-2 rounded-full border px-4 py-2 text-xs transition"
+              style={{
+                borderColor: activeIntention
+                  ? 'rgba(201, 168, 76, 0.45)'
+                  : 'rgba(201, 168, 76, 0.22)',
+                backgroundColor: activeIntention
+                  ? 'rgba(201, 168, 76, 0.08)'
+                  : 'rgba(20, 18, 14, 0.6)',
+                color: activeIntention ? '#F2EDE4' : '#D9C077',
+              }}
+              aria-label={
+                activeIntention
+                  ? `Rezando por: ${activeIntention.titulo}. Trocar intenção.`
+                  : 'Escolher intenção para este terço'
+              }
+            >
+              <span aria-hidden style={{ color: '#D9C077' }}>
+                &#10022;
+              </span>
+              {activeIntention ? (
+                <>
+                  <span
+                    className="text-[10px] uppercase tracking-[0.2em]"
+                    style={{ color: '#7A7368' }}
+                  >
+                    Rezando por
+                  </span>
+                  <span className="truncate" style={{ maxWidth: '14rem' }}>
+                    {activeIntention.titulo}
+                  </span>
+                </>
+              ) : (
+                <span className="uppercase tracking-[0.2em] text-[10px]">
+                  Rezar por uma intenção
+                </span>
+              )}
+            </button>
+          </div>
         )}
 
         {!silentMode && showResumeBanner && (
@@ -572,6 +634,24 @@ export function RosarySession() {
       </div>
 
       {showOnboarding && <OnboardingOverlay onDismiss={onboarding.dismiss} />}
+
+      {intentionsState.available && (
+        <IntentionPicker
+          open={pickerOpen}
+          intentions={intentionsState.intentions}
+          selectedId={activeIntentionId}
+          onSelect={(id) => setActiveIntentionId(id)}
+          onCreate={async (titulo, descricao) => {
+            const created = await intentionsState.create({ titulo, descricao })
+            if (created) setActiveIntentionId(created.id)
+          }}
+          onArchive={async (id) => {
+            await intentionsState.update(id, { arquivada: true })
+            if (activeIntentionId === id) setActiveIntentionId(null)
+          }}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
     </main>
   )
 }
