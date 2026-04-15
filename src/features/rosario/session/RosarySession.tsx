@@ -15,7 +15,10 @@ import { useHapticFeedback } from '@/features/rosario/session/useHapticFeedback'
 import { useOnboarding } from '@/features/rosario/session/useOnboarding'
 import { useSpeechSynthesis } from '@/features/rosario/session/useSpeechSynthesis'
 import { useOnlineStatus } from '@/features/rosario/session/useOnlineStatus'
+import { useRosaryHistoryRecord } from '@/features/rosario/session/useRosaryHistoryRecord'
+import { useIntentions } from '@/features/rosario/session/useIntentions'
 import { OnboardingOverlay } from '@/features/rosario/components/OnboardingOverlay'
+import { IntentionPicker } from '@/features/rosario/components/IntentionPicker'
 import { MYSTERY_GROUPS, getMysteryForToday } from '@/features/rosario/data/mysteries'
 import { getSpeechText } from '@/features/rosario/data/speechText'
 import type { MysterySet } from '@/features/rosario/data/types'
@@ -54,6 +57,17 @@ import type { MysterySet } from '@/features/rosario/data/types'
  * o shell de `/rosario` e seus assets estáticos, e este componente mostra
  * um badge discreto "Offline" quando `navigator.onLine` cai, para
  * sinalizar ao usuário que a sessão está funcionando a partir do cache.
+ *
+ * Sprint 2.3: histórico no Supabase — ao completar um terço (e apenas ao
+ * completar, uma única vez por conclusão), dispara um POST best-effort
+ * para `/api/rosario/sessions` com mistério, duração e intenção. Se o
+ * usuário não estiver logado ou a rede falhar, a função engole o erro —
+ * o terço funciona 100% sem conta.
+ *
+ * Sprint 2.5: intenções pessoais — opcional, gated por autenticação. Um
+ * botão "Rezar por..." no topo abre o `IntentionPicker`, que permite
+ * escolher uma intenção salva ou criar uma nova inline. A intenção
+ * escolhida é enviada junto com o registro da sessão no Supabase.
  */
 
 export function RosarySession() {
@@ -95,6 +109,19 @@ export function RosarySession() {
 
   // Status online/offline para mostrar o badge no header.
   const isOnline = useOnlineStatus()
+
+  // Gravação best-effort do histórico no Supabase (sprint 2.3).
+  const { recordSession } = useRosaryHistoryRecord()
+
+  // Intenções pessoais — só fica disponível se o usuário estiver autenticado
+  // (o hook detecta via 401 no fetch inicial e esconde a UI).
+  const intentionsState = useIntentions()
+  const [activeIntentionId, setActiveIntentionId] = useState<string | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const activeIntention = useMemo(() => {
+    if (!activeIntentionId) return null
+    return intentionsState.intentions.find((i) => i.id === activeIntentionId) ?? null
+  }, [activeIntentionId, intentionsState.intentions])
 
   // Modo silêncio: UI mínima, sem chrome, focada na oração.
   const [silentMode, setSilentMode] = useState(false)
@@ -159,6 +186,53 @@ export function RosarySession() {
     }
     saveSession({ mysterySetId, currentIndex, isCompleted })
   }, [hydrated, mysterySetId, currentIndex, isCompleted])
+
+  /**
+   * Marca o início da sessão a primeira vez em que o usuário sai do passo 0
+   * após a hidratação. Usado para calcular `duration_seconds` quando
+   * gravamos o histórico no Supabase ao concluir.
+   *
+   * Se for um resume (retomada), o start conta como "agora" — perdemos a
+   * duração total da sessão original, mas registramos pelo menos o tempo
+   * gasto na retomada. Uma imprecisão aceitável para um MVP de histórico.
+   */
+  const sessionStartRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (!hydrated) return
+    if (currentIndex === 0) {
+      sessionStartRef.current = null
+      return
+    }
+    if (sessionStartRef.current === null) {
+      sessionStartRef.current = Date.now()
+    }
+  }, [hydrated, currentIndex])
+
+  /**
+   * Gravação no Supabase ao completar. Usa uma ref para garantir que cada
+   * conclusão seja registrada exatamente uma vez (reset permite nova
+   * gravação na próxima sessão completa).
+   */
+  const recordedCompletionRef = useRef(false)
+  useEffect(() => {
+    if (!hydrated) return
+    if (!isCompleted) {
+      recordedCompletionRef.current = false
+      return
+    }
+    if (recordedCompletionRef.current) return
+    recordedCompletionRef.current = true
+
+    const startTs = sessionStartRef.current ?? Date.now()
+    const durationSeconds = Math.max(0, Math.round((Date.now() - startTs) / 1000))
+
+    void recordSession({
+      mystery_set: mysterySetId,
+      intention_id: activeIntentionId,
+      started_at: new Date(startTs).toISOString(),
+      duration_seconds: durationSeconds,
+    })
+  }, [hydrated, isCompleted, mysterySetId, activeIntentionId, recordSession])
 
   /**
    * Fala o texto do passo atual quando o TTS está ligado. Cancela a utterance
@@ -278,6 +352,51 @@ export function RosarySession() {
               <span>&#10022;</span>
             </div>
           </header>
+        )}
+
+        {!silentMode && intentionsState.available && (
+          <div className="mb-4 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setPickerOpen(true)}
+              className="group flex max-w-full items-center gap-2 rounded-full border px-4 py-2 text-xs transition"
+              style={{
+                borderColor: activeIntention
+                  ? 'rgba(201, 168, 76, 0.45)'
+                  : 'rgba(201, 168, 76, 0.22)',
+                backgroundColor: activeIntention
+                  ? 'rgba(201, 168, 76, 0.08)'
+                  : 'rgba(20, 18, 14, 0.6)',
+                color: activeIntention ? '#F2EDE4' : '#D9C077',
+              }}
+              aria-label={
+                activeIntention
+                  ? `Rezando por: ${activeIntention.titulo}. Trocar intenção.`
+                  : 'Escolher intenção para este terço'
+              }
+            >
+              <span aria-hidden style={{ color: '#D9C077' }}>
+                &#10022;
+              </span>
+              {activeIntention ? (
+                <>
+                  <span
+                    className="text-[10px] uppercase tracking-[0.2em]"
+                    style={{ color: '#7A7368' }}
+                  >
+                    Rezando por
+                  </span>
+                  <span className="truncate" style={{ maxWidth: '14rem' }}>
+                    {activeIntention.titulo}
+                  </span>
+                </>
+              ) : (
+                <span className="uppercase tracking-[0.2em] text-[10px]">
+                  Rezar por uma intenção
+                </span>
+              )}
+            </button>
+          </div>
         )}
 
         {!silentMode && showResumeBanner && (
@@ -459,6 +578,17 @@ export function RosarySession() {
             >
               Tutorial
             </button>
+            <a
+              href="/rosario/historico"
+              className="rounded-md px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition"
+              style={{
+                color: '#7A7368',
+                border: '1px solid rgba(122,115,104,0.35)',
+                textDecoration: 'none',
+              }}
+            >
+              Histórico
+            </a>
           </div>
         )}
 
@@ -504,6 +634,24 @@ export function RosarySession() {
       </div>
 
       {showOnboarding && <OnboardingOverlay onDismiss={onboarding.dismiss} />}
+
+      {intentionsState.available && (
+        <IntentionPicker
+          open={pickerOpen}
+          intentions={intentionsState.intentions}
+          selectedId={activeIntentionId}
+          onSelect={(id) => setActiveIntentionId(id)}
+          onCreate={async (titulo, descricao) => {
+            const created = await intentionsState.create({ titulo, descricao })
+            if (created) setActiveIntentionId(created.id)
+          }}
+          onArchive={async (id) => {
+            await intentionsState.update(id, { arquivada: true })
+            if (activeIntentionId === id) setActiveIntentionId(null)
+          }}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
     </main>
   )
 }
