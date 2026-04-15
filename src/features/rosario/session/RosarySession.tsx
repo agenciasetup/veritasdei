@@ -1,10 +1,15 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ROSARY_STEPS, type BeadId } from '@/features/rosario/data/beadSequence'
 import { RosaryBeads } from '@/features/rosario/components/RosaryBeads'
 import { PrayerStage } from '@/features/rosario/components/PrayerStage'
 import { useRosaryProgress } from '@/features/rosario/session/useRosaryProgress'
+import {
+  clearSession,
+  loadSession,
+  saveSession,
+} from '@/features/rosario/session/rosarySessionStorage'
 import { MYSTERY_GROUPS, getMysteryForToday } from '@/features/rosario/data/mysteries'
 import type { MysterySet } from '@/features/rosario/data/types'
 
@@ -16,8 +21,9 @@ import type { MysterySet } from '@/features/rosario/data/types'
  *   - `<RosaryBeads />`     (contas clicáveis e com navegação por teclado)
  *   - `<PrayerStage />`     (oração, mistério e botão de avançar)
  *
- * Essa tela substitui a `/rosario` antiga (lista colapsável estática) e
- * fica independente de persistência — `localStorage` entra no sprint 1.6.
+ * Sprint 1.6: retoma o passo salvo no `localStorage` (TTL de 24 h) e salva
+ * automaticamente a cada mudança. Se o terço foi concluído, limpa o salvo
+ * para que a próxima sessão comece do início.
  */
 
 export function RosarySession() {
@@ -41,8 +47,69 @@ export function RosarySession() {
     advance,
     back,
     reset,
+    goTo,
     goToBead,
   } = useRosaryProgress()
+
+  /**
+   * Hidratação: ao montar, tenta restaurar a sessão salva. Só começamos a
+   * persistir novas mudanças depois que isso rodou — senão o primeiro render
+   * sobrescreveria o snapshot salvo com `{ currentIndex: 0 }`.
+   */
+  const [hydrated, setHydrated] = useState(false)
+  const [resumedFrom, setResumedFrom] = useState<number | null>(null)
+
+  useEffect(() => {
+    const saved = loadSession()
+    if (saved && !saved.isCompleted && saved.currentIndex > 0) {
+      setMysterySetId(saved.mysterySetId)
+      goTo(saved.currentIndex)
+      setResumedFrom(saved.currentIndex)
+    }
+    setHydrated(true)
+    // Só queremos rodar 1x no mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  /** Salva o snapshot sempre que o estado muda (após hidratação). */
+  useEffect(() => {
+    if (!hydrated) return
+    if (isCompleted) {
+      clearSession()
+      return
+    }
+    if (currentIndex === 0) {
+      // Sessão no passo inicial é equivalente a "nenhuma sessão" — não
+      // precisamos guardar nada e evitamos mostrar um banner de retomar
+      // que aponta pro passo 1.
+      clearSession()
+      return
+    }
+    saveSession({ mysterySetId, currentIndex, isCompleted })
+  }, [hydrated, mysterySetId, currentIndex, isCompleted])
+
+  /** Esconde o banner de retomada assim que o usuário interagir. */
+  const initialResumeIndexRef = useRef<number | null>(null)
+  if (initialResumeIndexRef.current === null && resumedFrom !== null) {
+    initialResumeIndexRef.current = resumedFrom
+  }
+  const showResumeBanner =
+    resumedFrom !== null && currentIndex === initialResumeIndexRef.current
+
+  const dismissResume = useCallback(() => {
+    setResumedFrom(null)
+    reset()
+  }, [reset])
+
+  const handleMysteryChange = useCallback(
+    (nextId: MysterySet) => {
+      if (nextId === mysterySetId) return
+      setMysterySetId(nextId)
+      reset()
+      setResumedFrom(null)
+    },
+    [mysterySetId, reset],
+  )
 
   const completedBeadIds = useMemo<ReadonlySet<BeadId>>(() => {
     const set = new Set<BeadId>()
@@ -81,6 +148,38 @@ export function RosarySession() {
           </div>
         </header>
 
+        {showResumeBanner && (
+          <div
+            className="mb-4 flex items-center justify-between gap-3 rounded-xl border px-4 py-3"
+            style={{
+              borderColor: 'rgba(201, 168, 76, 0.35)',
+              backgroundColor: 'rgba(201, 168, 76, 0.08)',
+            }}
+            role="status"
+            aria-live="polite"
+          >
+            <div className="text-xs" style={{ color: '#F2EDE4' }}>
+              <span style={{ color: '#D9C077', fontWeight: 600 }}>
+                Retomando de onde parou
+              </span>
+              <span className="ml-1" style={{ color: '#7A7368' }}>
+                — passo {resumedFrom! + 1} de {totalSteps}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={dismissResume}
+              className="shrink-0 rounded-md border px-2 py-1 text-[11px] uppercase tracking-wider transition"
+              style={{
+                borderColor: 'rgba(201, 168, 76, 0.35)',
+                color: '#D9C077',
+              }}
+            >
+              Começar do início
+            </button>
+          </div>
+        )}
+
         <fieldset className="mb-6">
           <legend className="sr-only">Seleção de mistérios</legend>
           <div
@@ -101,10 +200,7 @@ export function RosarySession() {
                   type="button"
                   role="radio"
                   aria-checked={active}
-                  onClick={() => {
-                    setMysterySetId(g.id)
-                    reset()
-                  }}
+                  onClick={() => handleMysteryChange(g.id)}
                   className="min-w-0 flex-1 rounded-lg px-2 py-2 text-center transition"
                   style={{
                     background: active ? 'rgba(201,168,76,0.12)' : 'transparent',
@@ -188,7 +284,10 @@ export function RosarySession() {
           </button>
           <button
             type="button"
-            onClick={reset}
+            onClick={() => {
+              reset()
+              setResumedFrom(null)
+            }}
             className="flex-1 rounded-lg border px-4 py-2 text-sm transition"
             style={{
               borderColor: 'rgba(201, 168, 76, 0.35)',
