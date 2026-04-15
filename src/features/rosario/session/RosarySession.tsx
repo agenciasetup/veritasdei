@@ -10,6 +10,8 @@ import {
   loadSession,
   saveSession,
 } from '@/features/rosario/session/rosarySessionStorage'
+import { useWakeLock } from '@/features/rosario/session/useWakeLock'
+import { useHapticFeedback } from '@/features/rosario/session/useHapticFeedback'
 import { MYSTERY_GROUPS, getMysteryForToday } from '@/features/rosario/data/mysteries'
 import type { MysterySet } from '@/features/rosario/data/types'
 
@@ -24,6 +26,10 @@ import type { MysterySet } from '@/features/rosario/data/types'
  * Sprint 1.6: retoma o passo salvo no `localStorage` (TTL de 24 h) e salva
  * automaticamente a cada mudança. Se o terço foi concluído, limpa o salvo
  * para que a próxima sessão comece do início.
+ *
+ * Sprint 1.7: mantém a tela ligada (Wake Lock) enquanto a sessão estiver
+ * ativa, e dispara vibração discreta a cada avanço (opt-out). A barra de
+ * progresso e o pulso da conta atual respeitam `prefers-reduced-motion`.
  */
 
 export function RosarySession() {
@@ -50,6 +56,35 @@ export function RosarySession() {
     goTo,
     goToBead,
   } = useRosaryProgress()
+
+  // Mantém a tela ligada enquanto a sessão não foi concluída.
+  useWakeLock(!isCompleted)
+
+  // Vibração discreta a cada passo (opt-out via localStorage).
+  const haptic = useHapticFeedback()
+
+  // Passo atual antes do avanço — usado pra detectar fronteira de dezena.
+  const prevStepTypeRef = useRef(currentStep.type)
+  useEffect(() => {
+    prevStepTypeRef.current = currentStep.type
+  }, [currentStep.type])
+
+  const advanceWithHaptic = useCallback(() => {
+    // Detecta "fim de dezena" pelo próximo passo: glory após 10 Ave Marias.
+    const nextIndex = Math.min(currentIndex + 1, ROSARY_STEPS.length - 1)
+    const nextStep = ROSARY_STEPS[nextIndex]
+    const crossingDecade =
+      currentStep.type === 'hail_mary' &&
+      currentStep.decadePosition === 10 &&
+      nextStep.type === 'glory'
+    const isLastStep = currentIndex === ROSARY_STEPS.length - 1
+
+    if (isLastStep) haptic.pulse('complete')
+    else if (crossingDecade) haptic.pulse('decade')
+    else haptic.pulse('step')
+
+    advance()
+  }, [advance, currentIndex, currentStep, haptic])
 
   /**
    * Hidratação: ao montar, tenta restaurar a sessão salva. Só começamos a
@@ -247,7 +282,7 @@ export function RosarySession() {
             style={{ background: 'rgba(201,168,76,0.08)' }}
           >
             <div
-              className="h-full transition-all duration-500"
+              className="rosary-progress-fill h-full"
               style={{
                 width: `${progressPct}%`,
                 background: 'linear-gradient(90deg, #C9A84C, #D9C077)',
@@ -266,8 +301,34 @@ export function RosarySession() {
           step={currentStep}
           mysteryGroup={mysteryGroup}
           isCompleted={isCompleted}
-          onAdvance={advance}
+          onAdvance={advanceWithHaptic}
         />
+
+        {haptic.supported && (
+          <div className="mt-3 flex items-center justify-center">
+            <button
+              type="button"
+              onClick={() => haptic.setEnabled(!haptic.enabled)}
+              className="rounded-md px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition"
+              aria-pressed={haptic.enabled}
+              style={{
+                color: haptic.enabled ? '#D9C077' : '#7A7368',
+                border: `1px solid ${haptic.enabled ? 'rgba(201,168,76,0.35)' : 'rgba(122,115,104,0.35)'}`,
+              }}
+            >
+              Vibração: {haptic.enabled ? 'ligada' : 'desligada'}
+            </button>
+          </div>
+        )}
+
+        <style>{`
+          .rosary-progress-fill {
+            transition: width 500ms ease-out;
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .rosary-progress-fill { transition: none; }
+          }
+        `}</style>
 
         <div className="mt-4 flex gap-2">
           <button
