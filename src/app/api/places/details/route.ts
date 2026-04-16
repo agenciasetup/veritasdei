@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { rateLimit } from '@/lib/rate-limit'
 
 function extractFromNew(data: Record<string, unknown>) {
   const get = (type: string, useShort = false): string => {
@@ -49,14 +51,35 @@ function extractFromLegacy(result: Record<string, unknown>) {
 }
 
 export async function POST(req: NextRequest) {
+  // Gate: endpoint billable (Google Place Details). Exige auth + rate limit.
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
+  }
+
+  // Place Details é 1 chamada por seleção (finaliza sessão de autocomplete).
+  // 20/min é folgado para UX, curto para abuso.
+  if (!rateLimit(`places-det:${user.id}`, 20, 60_000)) {
+    return NextResponse.json({ error: 'Muitas requisições. Aguarde um momento.' }, { status: 429 })
+  }
+
   const apiKey = process.env.API_PLACES_NEW
   if (!apiKey) {
     return NextResponse.json({ error: 'API key não configurada.' }, { status: 500 })
   }
 
   const { placeId, sessionToken } = await req.json()
-  if (!placeId) {
-    return NextResponse.json({ error: 'placeId é obrigatório.' }, { status: 400 })
+  if (typeof placeId !== 'string' || placeId.length === 0 || placeId.length > 256) {
+    return NextResponse.json({ error: 'placeId inválido.' }, { status: 400 })
+  }
+  // placeId do Google Places não tem caracteres especiais; defensivo contra
+  // concatenação em URL (embora o fetch encode internamente).
+  if (!/^[A-Za-z0-9_-]+$/.test(placeId)) {
+    return NextResponse.json({ error: 'placeId com caracteres inválidos.' }, { status: 400 })
+  }
+  if (typeof sessionToken !== 'undefined' && (typeof sessionToken !== 'string' || sessionToken.length > 128)) {
+    return NextResponse.json({ error: 'sessionToken inválido.' }, { status: 400 })
   }
 
   // Try Places API (New) first

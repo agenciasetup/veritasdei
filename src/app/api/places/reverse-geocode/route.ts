@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { rateLimit } from '@/lib/rate-limit'
 
 interface AddressComponent {
   types: string[]
@@ -25,6 +27,17 @@ function pickComponent(
 }
 
 export async function POST(req: NextRequest) {
+  // Gate: endpoint billable (Google Geocoding API). Exige auth + rate limit.
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
+  }
+
+  if (!rateLimit(`places-rev:${user.id}`, 20, 60_000)) {
+    return NextResponse.json({ error: 'Muitas requisições. Aguarde um momento.' }, { status: 429 })
+  }
+
   const apiKey = process.env.API_PLACES_NEW
   if (!apiKey) {
     return NextResponse.json({ error: 'API key não configurada.' }, { status: 500 })
@@ -35,8 +48,11 @@ export async function POST(req: NextRequest) {
     longitude?: number
   }
 
-  if (typeof latitude !== 'number' || typeof longitude !== 'number') {
-    return NextResponse.json({ error: 'latitude e longitude obrigatórios.' }, { status: 400 })
+  if (
+    typeof latitude !== 'number' || !Number.isFinite(latitude) || latitude < -90  || latitude > 90  ||
+    typeof longitude !== 'number' || !Number.isFinite(longitude) || longitude < -180 || longitude > 180
+  ) {
+    return NextResponse.json({ error: 'latitude/longitude inválidos.' }, { status: 400 })
   }
 
   const url = new URL('https://maps.googleapis.com/maps/api/geocode/json')
