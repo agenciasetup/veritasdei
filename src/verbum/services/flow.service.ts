@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
-import { sanitizeIlike } from '@/lib/utils/sanitize'
+import { sanitizeIlike, sanitizePostgrestFilter } from '@/lib/utils/sanitize'
 import type { VerbumFlow, VerbumFlowShare, VerbumFlowFavorite } from '../types/verbum.types'
 
 // Lazy-init: deferred from module import to prevent premature Supabase auth init.
@@ -325,10 +325,15 @@ export async function getSharedWithMe(userId: string, email: string): Promise<(V
   supabase ??= createClient()
   if (!supabase)return []
 
+  // Sanitiza userId e email — apesar de virem da sessão, PostgREST interpreta
+  // vírgulas e parênteses dentro do .or() como separadores de filtro, então
+  // qualquer caractere desses no valor precisa estar escapado.
+  const safeUserId = sanitizePostgrestFilter(userId)
+  const safeEmail = sanitizePostgrestFilter(email)
   const { data } = await supabase
     .from('verbum_flow_shares')
     .select('*, flow:verbum_flows(*)')
-    .or(`shared_with_user.eq.${userId},shared_with_email.eq.${email}`)
+    .or(`shared_with_user.eq.${safeUserId},shared_with_email.eq.${safeEmail}`)
     .order('created_at', { ascending: false })
 
   return (data || []) as (VerbumFlowShare & { flow?: VerbumFlow })[]
