@@ -58,6 +58,7 @@ export interface NovenaProgressRecord {
   custom_novena_id: string | null
   intention_id: string | null
   current_day: number
+  com_terco: boolean
   started_at: string
   last_prayed_at: string | null
   completed_at: string | null
@@ -69,6 +70,7 @@ export interface NovenaProgressStartInput {
   builtin_slug?: string
   custom_novena_id?: string
   intention_id?: string | null
+  com_terco?: boolean
 }
 
 /** Progresso enriquecido com dados da fonte (builtin ou custom). */

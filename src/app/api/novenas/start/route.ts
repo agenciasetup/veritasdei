@@ -22,6 +22,7 @@ interface StartBody {
   builtin_slug?: unknown
   custom_novena_id?: unknown
   intention_id?: unknown
+  com_terco?: unknown
 }
 
 function sanitize(body: StartBody) {
@@ -53,7 +54,9 @@ function sanitize(body: StartBody) {
     intentionId = body.intention_id
   }
 
-  return { builtin_slug: builtinSlug, custom_novena_id: customNovenaId, intention_id: intentionId }
+  const comTerco = body.com_terco === true
+
+  return { builtin_slug: builtinSlug, custom_novena_id: customNovenaId, intention_id: intentionId, com_terco: comTerco }
 }
 
 export async function POST(req: NextRequest) {
@@ -84,6 +87,7 @@ export async function POST(req: NextRequest) {
       builtin_slug: input.builtin_slug,
       custom_novena_id: input.custom_novena_id,
       intention_id: input.intention_id,
+      com_terco: input.com_terco,
       current_day: 1,
     })
     .select('*')

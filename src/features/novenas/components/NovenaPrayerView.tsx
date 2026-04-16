@@ -22,6 +22,7 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
   const dia = novena.dias[dayIndex]
   const prayedDays = new Set(dailyLogs.map(l => l.day_number))
   const todayAlreadyPrayed = prayedDays.has(currentDay)
+  const comTerco = progress.com_terco
 
   // Calcular dias perdidos (flexível: não zera, apenas avisa)
   const startDate = new Date(progress.started_at)
@@ -133,7 +134,7 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
 
   return (
     <main
-      className="relative min-h-screen w-full px-4 py-10 md:py-14"
+      className="relative min-h-screen w-full px-4 py-10 md:py-14 pb-24"
       style={{ backgroundColor: '#0F0E0C', color: '#F2EDE4' }}
     >
       <div className="bg-glow" aria-hidden />
@@ -200,6 +201,35 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
                 : `Você pulou ${skippedDays} dias, mas não se preocupe — seu progresso continua.`}
             </p>
           </div>
+        )}
+
+        {/* Terço do dia (quando com_terco ativo) */}
+        {comTerco && (
+          <Link
+            href="/rosario"
+            className="flex items-center gap-4 rounded-xl p-4 mb-4 transition active:scale-[0.98]"
+            style={{
+              background: 'rgba(201, 168, 76, 0.06)',
+              border: '1px solid rgba(201, 168, 76, 0.2)',
+              textDecoration: 'none',
+            }}
+          >
+            <div
+              className="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-lg"
+              style={{ background: 'rgba(201, 168, 76, 0.12)' }}
+            >
+              <span style={{ color: '#C9A84C', fontSize: '18px' }}>✝</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium" style={{ color: '#F2EDE4' }}>
+                Terço do dia
+              </p>
+              <p className="text-[11px] mt-0.5" style={{ color: '#7A7368' }}>
+                Reze o Santo Rosário antes da oração do dia
+              </p>
+            </div>
+            <span style={{ color: '#7A7368', fontSize: '14px' }} aria-hidden>→</span>
+          </Link>
         )}
 
         {/* Oração Inicial */}
@@ -282,7 +312,7 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
               onClick={handlePray}
               disabled={loading}
               aria-busy={loading}
-              className="rounded-lg px-8 py-3.5 text-sm font-semibold transition disabled:opacity-50"
+              className="rounded-lg px-8 py-3.5 text-sm font-semibold transition disabled:opacity-50 active:scale-[0.97]"
               style={{
                 background: 'linear-gradient(180deg, #C9A84C, #A88437)',
                 color: '#0F0E0C',

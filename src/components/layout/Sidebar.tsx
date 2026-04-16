@@ -42,6 +42,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Oração',
     items: [
       { href: '/rosario', icon: Cross, label: 'Santo Rosário' },
+      { href: '/novenas', icon: CalendarHeart, label: 'Novenas' },
       { href: '/oracoes', icon: BookOpen, label: 'Orações' },
       { href: '/exame-consciencia', icon: ClipboardCheck, label: 'Exame de Consciência' },
     ],
