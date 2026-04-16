@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Cross } from 'lucide-react'
 import type { NovenaBuiltin, NovenaProgressRecord, NovenaDailyLogRecord } from '../data/types'
 
 interface Props {
@@ -218,7 +219,7 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
               className="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-lg"
               style={{ background: 'rgba(201, 168, 76, 0.12)' }}
             >
-              <span style={{ color: '#C9A84C', fontSize: '18px' }}>✝</span>
+              <Cross size={18} strokeWidth={1.5} style={{ color: '#C9A84C' }} />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium" style={{ color: '#F2EDE4' }}>

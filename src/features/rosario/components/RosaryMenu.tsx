@@ -1,7 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, type ReactNode } from 'react'
 import Link from 'next/link'
+import { Heart, Vibrate, Volume2, HelpCircle, Clock, Users, RotateCcw } from 'lucide-react'
 import type { MysteryGroup, MysterySet } from '@/features/rosario/data/types'
 import { MYSTERY_GROUPS, getMysteryForToday } from '@/features/rosario/data/mysteries'
 
@@ -167,7 +168,7 @@ export function RosaryMenu({
           {intentionAvailable && (
             <MenuRow
               label={intentionLabel ? `Rezando por: ${intentionLabel}` : 'Escolher intenção'}
-              icon="✦"
+              icon={<Heart size={16} strokeWidth={1.5} />}
               active={!!intentionLabel}
               onClick={() => {
                 onIntentionOpen()
@@ -178,7 +179,7 @@ export function RosaryMenu({
           {hapticSupported && (
             <MenuToggle
               label="Vibração"
-              icon="◉"
+              icon={<Vibrate size={16} strokeWidth={1.5} />}
               enabled={hapticEnabled}
               onToggle={onHapticToggle}
             />
@@ -186,7 +187,7 @@ export function RosaryMenu({
           {ttsSupported && (
             <MenuToggle
               label={ttsEnabled && ttsSpeaking ? 'Voz (falando…)' : 'Voz guiada'}
-              icon="♪"
+              icon={<Volume2 size={16} strokeWidth={1.5} />}
               enabled={ttsEnabled}
               onToggle={onTtsToggle}
             />
@@ -198,12 +199,12 @@ export function RosaryMenu({
 
         {/* Navigation links */}
         <section className="flex flex-col gap-1">
-          <MenuRow label="Tutorial" icon="?" onClick={onTutorial} />
-          <MenuLinkRow href="/rosario/historico" label="Histórico" icon="◎" />
-          <MenuLinkRow href="/rosario/juntos" label="Rezar em grupo" icon="❖" />
+          <MenuRow label="Tutorial" icon={<HelpCircle size={16} strokeWidth={1.5} />} onClick={onTutorial} />
+          <MenuLinkRow href="/rosario/historico" label="Histórico" icon={<Clock size={16} strokeWidth={1.5} />} />
+          <MenuLinkRow href="/rosario/juntos" label="Rezar em grupo" icon={<Users size={16} strokeWidth={1.5} />} />
           <MenuRow
             label="Reiniciar terço"
-            icon="↺"
+            icon={<RotateCcw size={16} strokeWidth={1.5} />}
             onClick={() => {
               onRestart()
               onClose()
@@ -234,7 +235,7 @@ function MenuRow({
   onClick,
 }: {
   label: string
-  icon: string
+  icon: ReactNode
   active?: boolean
   onClick?: () => void
 }) {
@@ -248,7 +249,7 @@ function MenuRow({
         color: active ? '#D9C077' : '#B8AFA2',
       }}
     >
-      <span className="w-5 text-center text-sm" style={{ color: '#7A7368' }}>
+      <span className="w-5 flex items-center justify-center" style={{ color: '#7A7368' }}>
         {icon}
       </span>
       <span className="text-sm truncate" style={{ fontFamily: 'Poppins, sans-serif' }}>
@@ -265,7 +266,7 @@ function MenuToggle({
   onToggle,
 }: {
   label: string
-  icon: string
+  icon: ReactNode
   enabled: boolean
   onToggle: () => void
 }) {
@@ -277,7 +278,7 @@ function MenuToggle({
       style={{ color: enabled ? '#D9C077' : '#B8AFA2' }}
       aria-pressed={enabled}
     >
-      <span className="w-5 text-center text-sm" style={{ color: '#7A7368' }}>
+      <span className="w-5 flex items-center justify-center" style={{ color: '#7A7368' }}>
         {icon}
       </span>
       <span className="flex-1 text-sm" style={{ fontFamily: 'Poppins, sans-serif' }}>
@@ -311,7 +312,7 @@ function MenuLinkRow({
 }: {
   href: string
   label: string
-  icon: string
+  icon: ReactNode
 }) {
   return (
     <Link
@@ -319,7 +320,7 @@ function MenuLinkRow({
       className="flex items-center gap-3 rounded-xl px-3 py-3 text-left transition active:scale-[0.98]"
       style={{ color: '#B8AFA2', textDecoration: 'none' }}
     >
-      <span className="w-5 text-center text-sm" style={{ color: '#7A7368' }}>
+      <span className="w-5 flex items-center justify-center" style={{ color: '#7A7368' }}>
         {icon}
       </span>
       <span className="text-sm" style={{ fontFamily: 'Poppins, sans-serif' }}>

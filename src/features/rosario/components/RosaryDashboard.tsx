@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { User, Users, Link2, Cross, Crown } from 'lucide-react'
 
 type PrayerMode = 'individual' | 'grupo' | 'entrar'
 type PrayerType = 'terco' | 'rosario'
@@ -88,14 +89,14 @@ export function RosaryDashboard({ onStartIndividual }: Props) {
             <ModeButton
               label="Sozinho"
               description="Oração individual"
-              icon="👤"
+              icon={<User size={22} strokeWidth={1.5} />}
               selected={mode === 'individual'}
               onClick={() => setMode('individual')}
             />
             <ModeButton
               label="Em grupo"
               description="Crie uma sala"
-              icon="👥"
+              icon={<Users size={22} strokeWidth={1.5} />}
               selected={mode === 'grupo'}
               onClick={() => setMode('grupo')}
             />
@@ -112,7 +113,7 @@ export function RosaryDashboard({ onStartIndividual }: Props) {
             }}
           >
             <span className="flex items-center gap-3">
-              <span className="text-lg">🔗</span>
+              <Link2 size={20} strokeWidth={1.5} style={{ color: mode === 'entrar' ? '#C9A84C' : '#7A7368' }} />
               <span>
                 <span
                   className="block text-sm"
@@ -141,14 +142,14 @@ export function RosaryDashboard({ onStartIndividual }: Props) {
               <ModeButton
                 label="Terço"
                 description="5 dezenas · 1 mistério"
-                icon="📿"
+                icon={<Cross size={22} strokeWidth={1.5} />}
                 selected={type === 'terco'}
                 onClick={() => setType('terco')}
               />
               <ModeButton
                 label="Rosário"
                 description="20 dezenas · 4 mistérios"
-                icon="✝"
+                icon={<Crown size={22} strokeWidth={1.5} />}
                 selected={type === 'rosario'}
                 onClick={() => setType('rosario')}
               />
@@ -240,7 +241,7 @@ function ModeButton({
 }: {
   label: string
   description: string
-  icon: string
+  icon: ReactNode
   selected: boolean
   onClick: () => void
 }) {
@@ -256,7 +257,9 @@ function ModeButton({
         border: `1px solid ${selected ? 'rgba(201, 168, 76, 0.3)' : 'rgba(201, 168, 76, 0.08)'}`,
       }}
     >
-      <span className="block text-xl mb-2">{icon}</span>
+      <span className="block mb-2" style={{ color: selected ? '#C9A84C' : '#7A7368' }}>
+        {icon}
+      </span>
       <span
         className="block text-sm font-medium"
         style={{ color: selected ? '#F2EDE4' : '#B8AFA2' }}
