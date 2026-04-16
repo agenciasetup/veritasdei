@@ -1,6 +1,6 @@
 'use client'
 
-import { Cross, BookOpen, ClipboardCheck, Clock } from 'lucide-react'
+import { Cross, BookOpen, ClipboardCheck, Clock, CalendarHeart } from 'lucide-react'
 import HubHeader from '@/components/hubs/HubHeader'
 import HubTile from '@/components/hubs/HubTile'
 import AuthGuard from '@/components/auth/AuthGuard'
@@ -28,6 +28,12 @@ export default function OrarPage() {
             title="Santo Rosário"
             subtitle="Reze os mistérios do dia"
             featured
+          />
+          <HubTile
+            href="/novenas"
+            icon={<CalendarHeart className="w-6 h-6" />}
+            title="Novenas"
+            subtitle="9 dias de oração com fé e devoção"
           />
           <HubTile
             href="/oracoes"

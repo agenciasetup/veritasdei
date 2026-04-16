@@ -12,13 +12,14 @@ import InstallPrompt from '@/components/pwa/InstallPrompt'
 
 const PUBLIC_PATHS = ['/login', '/auth', '/privacidade', '/termos', '/onboarding']
 const FULLSCREEN_PATHS = ['/verbum']
+const FULLSCREEN_EXACT = ['/rosario']
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth()
   const pathname = usePathname()
 
   const isPublicPage = PUBLIC_PATHS.some(p => pathname.startsWith(p))
-  const isFullscreen = FULLSCREEN_PATHS.some(p => pathname.startsWith(p))
+  const isFullscreen = FULLSCREEN_PATHS.some(p => pathname.startsWith(p)) || FULLSCREEN_EXACT.includes(pathname)
   const showChrome = isAuthenticated && !isPublicPage && !isFullscreen
   const hideLiturgicalBar = pathname.startsWith('/liturgia/hoje')
 

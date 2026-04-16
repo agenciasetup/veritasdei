@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ROSARY_STEPS, type BeadId } from '@/features/rosario/data/beadSequence'
 import { RosaryBeads } from '@/features/rosario/components/RosaryBeads'
-import { PrayerStage } from '@/features/rosario/components/PrayerStage'
 import { useRosaryProgress } from '@/features/rosario/session/useRosaryProgress'
 import {
   clearSession,
@@ -20,62 +19,48 @@ import { useRosaryHistoryRecord } from '@/features/rosario/session/useRosaryHist
 import { useIntentions } from '@/features/rosario/session/useIntentions'
 import { OnboardingOverlay } from '@/features/rosario/components/OnboardingOverlay'
 import { IntentionPicker } from '@/features/rosario/components/IntentionPicker'
+import { RosaryMenu } from '@/features/rosario/components/RosaryMenu'
 import { MYSTERY_GROUPS, getMysteryForToday } from '@/features/rosario/data/mysteries'
 import { getSpeechText } from '@/features/rosario/data/speechText'
+import { getPrayerById } from '@/features/rosario/data/prayerMap'
 import type { MysterySet } from '@/features/rosario/data/types'
 
 /**
  * `<RosarySession />` — orquestrador completo de uma sessão de terço.
  *
- * Junta as três peças já construídas nos sprints anteriores:
- *   - `useRosaryProgress`   (estado do passo atual)
- *   - `<RosaryBeads />`     (contas clicáveis e com navegação por teclado)
- *   - `<PrayerStage />`     (oração, mistério e botão de avançar)
- *
- * Sprint 1.6: retoma o passo salvo no `localStorage` (TTL de 24 h) e salva
- * automaticamente a cada mudança. Se o terço foi concluído, limpa o salvo
- * para que a próxima sessão comece do início.
- *
- * Sprint 1.7: mantém a tela ligada (Wake Lock) enquanto a sessão estiver
- * ativa, e dispara vibração discreta a cada avanço (opt-out). A barra de
- * progresso e o pulso da conta atual respeitam `prefers-reduced-motion`.
- *
- * Sprint 1.8: modo silêncio — um toggle opt-in que esconde header, seletor
- * de mistérios, barra de progresso e rodapé, deixando apenas as contas e a
- * oração. Usa um botão X discreto no canto superior para sair.
- *
- * Sprint 1.9: onboarding iniciantes — overlay de boas-vindas (4 passos)
- * para quem abre o terço pela primeira vez. Persistido em
- * `veritasdei:rosario:onboarded`. Quem está retomando uma sessão salva
- * pula o overlay. Há um botão discreto "Ver tutorial" que reabre.
- *
- * Sprint 1.10: TTS guiado — leitura em voz alta das orações via
- * Web Speech API, opt-in pelo usuário (default desligado), com escolha
- * automática de voz pt-BR quando disponível. A cada passo o texto é
- * derivado por `getSpeechText` e a utterance anterior é cancelada.
- *
- * Sprint 1.11: PWA offline — o service worker (`public/sw.js`) cacheia
- * o shell de `/rosario` e seus assets estáticos, e este componente mostra
- * um badge discreto "Offline" quando `navigator.onLine` cai, para
- * sinalizar ao usuário que a sessão está funcionando a partir do cache.
- *
- * Sprint 2.3: histórico no Supabase — ao completar um terço (e apenas ao
- * completar, uma única vez por conclusão), dispara um POST best-effort
- * para `/api/rosario/sessions` com mistério, duração e intenção. Se o
- * usuário não estiver logado ou a rede falhar, a função engole o erro —
- * o terço funciona 100% sem conta.
- *
- * Sprint 2.5: intenções pessoais — opcional, gated por autenticação. Um
- * botão "Rezar por..." no topo abre o `IntentionPicker`, que permite
- * escolher uma intenção salva ou criar uma nova inline. A intenção
- * escolhida é enviada junto com o registro da sessão no Supabase.
+ * Layout mobile-first redesenhado:
+ *   - Header compacto com nome do mistério + menu
+ *   - Contas SVG proeminentes
+ *   - Card de oração compacto
+ *   - Bottom bar fixa com Voltar / Avançar
+ *   - Floating menu (bottom sheet) com todas as opções
  */
+
+const ORDINALS: Record<number, string> = { 1: '1º', 2: '2º', 3: '3º', 4: '4º', 5: '5º' }
+
+const MYSTERY_SINGULAR: Record<string, string> = {
+  gozosos: 'Gozoso',
+  luminosos: 'Luminoso',
+  dolorosos: 'Doloroso',
+  gloriosos: 'Glorioso',
+}
+
+const STEP_LABELS: Record<string, string> = {
+  sign_of_cross: 'Sinal da Cruz',
+  creed: 'Credo Apostólico',
+  our_father: 'Pai Nosso',
+  hail_mary: 'Ave Maria',
+  glory: 'Glória ao Pai',
+  fatima: 'Oração de Fátima',
+  mystery_announce: 'Contemplação',
+  hail_holy_queen: 'Salve Rainha',
+  final_prayer: 'Oração Final',
+}
 
 export function RosarySession() {
   const [mysterySetId, setMysterySetId] = useState<MysterySet>(
     () => getMysteryForToday().id,
   )
-  const todayId = useMemo(() => getMysteryForToday().id, [])
   const mysteryGroup = useMemo(
     () => MYSTERY_GROUPS.find((g) => g.id === mysterySetId) ?? MYSTERY_GROUPS[0],
     [mysterySetId],
@@ -96,46 +81,23 @@ export function RosarySession() {
     goToBead,
   } = useRosaryProgress()
 
-  // Mantém a tela ligada enquanto a sessão não foi concluída.
   useWakeLock(!isCompleted)
-
-  // Vibração discreta a cada passo (opt-out via localStorage).
   const haptic = useHapticFeedback()
-
-  // Onboarding de boas-vindas (opt-out persistido).
   const onboarding = useOnboarding()
-
-  // TTS guiado (leitura em voz alta das orações, opt-in persistido).
   const tts = useSpeechSynthesis()
-
-  // Status online/offline para mostrar o badge no header.
   const isOnline = useOnlineStatus()
-
-  // Gravação best-effort do histórico no Supabase (sprint 2.3).
   const { recordSession } = useRosaryHistoryRecord()
-
-  // Intenções pessoais — só fica disponível se o usuário estiver autenticado
-  // (o hook detecta via 401 no fetch inicial e esconde a UI).
   const intentionsState = useIntentions()
   const [activeIntentionId, setActiveIntentionId] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const activeIntention = useMemo(() => {
     if (!activeIntentionId) return null
     return intentionsState.intentions.find((i) => i.id === activeIntentionId) ?? null
   }, [activeIntentionId, intentionsState.intentions])
 
-  // Modo silêncio: UI mínima, sem chrome, focada na oração.
-  const [silentMode, setSilentMode] = useState(false)
-  const toggleSilent = useCallback(() => setSilentMode((v) => !v), [])
-
-  // Passo atual antes do avanço — usado pra detectar fronteira de dezena.
-  const prevStepTypeRef = useRef(currentStep.type)
-  useEffect(() => {
-    prevStepTypeRef.current = currentStep.type
-  }, [currentStep.type])
-
+  // --- Haptic + advance ---
   const advanceWithHaptic = useCallback(() => {
-    // Detecta "fim de dezena" pelo próximo passo: glory após 10 Ave Marias.
     const nextIndex = Math.min(currentIndex + 1, ROSARY_STEPS.length - 1)
     const nextStep = ROSARY_STEPS[nextIndex]
     const crossingDecade =
@@ -151,11 +113,7 @@ export function RosarySession() {
     advance()
   }, [advance, currentIndex, currentStep, haptic])
 
-  /**
-   * Hidratação: ao montar, tenta restaurar a sessão salva. Só começamos a
-   * persistir novas mudanças depois que isso rodou — senão o primeiro render
-   * sobrescreveria o snapshot salvo com `{ currentIndex: 0 }`.
-   */
+  // --- Session persistence ---
   const [hydrated, setHydrated] = useState(false)
   const [resumedFrom, setResumedFrom] = useState<number | null>(null)
 
@@ -167,66 +125,32 @@ export function RosarySession() {
       setResumedFrom(saved.currentIndex)
     }
     setHydrated(true)
-    // Só queremos rodar 1x no mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  /** Salva o snapshot sempre que o estado muda (após hidratação). */
   useEffect(() => {
     if (!hydrated) return
-    if (isCompleted) {
-      clearSession()
-      return
-    }
-    if (currentIndex === 0) {
-      // Sessão no passo inicial é equivalente a "nenhuma sessão" — não
-      // precisamos guardar nada e evitamos mostrar um banner de retomar
-      // que aponta pro passo 1.
-      clearSession()
-      return
-    }
+    if (isCompleted) { clearSession(); return }
+    if (currentIndex === 0) { clearSession(); return }
     saveSession({ mysterySetId, currentIndex, isCompleted })
   }, [hydrated, mysterySetId, currentIndex, isCompleted])
 
-  /**
-   * Marca o início da sessão a primeira vez em que o usuário sai do passo 0
-   * após a hidratação. Usado para calcular `duration_seconds` quando
-   * gravamos o histórico no Supabase ao concluir.
-   *
-   * Se for um resume (retomada), o start conta como "agora" — perdemos a
-   * duração total da sessão original, mas registramos pelo menos o tempo
-   * gasto na retomada. Uma imprecisão aceitável para um MVP de histórico.
-   */
+  // --- Session timing for history ---
   const sessionStartRef = useRef<number | null>(null)
   useEffect(() => {
     if (!hydrated) return
-    if (currentIndex === 0) {
-      sessionStartRef.current = null
-      return
-    }
-    if (sessionStartRef.current === null) {
-      sessionStartRef.current = Date.now()
-    }
+    if (currentIndex === 0) { sessionStartRef.current = null; return }
+    if (sessionStartRef.current === null) sessionStartRef.current = Date.now()
   }, [hydrated, currentIndex])
 
-  /**
-   * Gravação no Supabase ao completar. Usa uma ref para garantir que cada
-   * conclusão seja registrada exatamente uma vez (reset permite nova
-   * gravação na próxima sessão completa).
-   */
   const recordedCompletionRef = useRef(false)
   useEffect(() => {
     if (!hydrated) return
-    if (!isCompleted) {
-      recordedCompletionRef.current = false
-      return
-    }
+    if (!isCompleted) { recordedCompletionRef.current = false; return }
     if (recordedCompletionRef.current) return
     recordedCompletionRef.current = true
-
     const startTs = sessionStartRef.current ?? Date.now()
     const durationSeconds = Math.max(0, Math.round((Date.now() - startTs) / 1000))
-
     void recordSession({
       mystery_set: mysterySetId,
       intention_id: activeIntentionId,
@@ -235,25 +159,17 @@ export function RosarySession() {
     })
   }, [hydrated, isCompleted, mysterySetId, activeIntentionId, recordSession])
 
-  /**
-   * Fala o texto do passo atual quando o TTS está ligado. Cancela a utterance
-   * anterior implicitamente (o próprio `speak` chama `cancel`). Só roda após
-   * a hidratação para não disparar fala durante o SSR/restore. Quando o
-   * terço é concluído, para a fala.
-   */
+  // --- TTS ---
   const { enabled: ttsEnabled, speak: ttsSpeak, stop: ttsStop } = tts
   useEffect(() => {
     if (!hydrated) return
     if (!ttsEnabled) return
-    if (isCompleted) {
-      ttsStop()
-      return
-    }
+    if (isCompleted) { ttsStop(); return }
     const text = getSpeechText(currentStep, mysteryGroup)
     if (text) ttsSpeak(text)
   }, [hydrated, ttsEnabled, ttsSpeak, ttsStop, currentStep, mysteryGroup, isCompleted])
 
-  /** Esconde o banner de retomada assim que o usuário interagir. */
+  // --- Resume banner ---
   const initialResumeIndexRef = useRef<number | null>(null)
   if (initialResumeIndexRef.current === null && resumedFrom !== null) {
     initialResumeIndexRef.current = resumedFrom
@@ -287,366 +203,367 @@ export function RosarySession() {
 
   const progressPct = Math.round(((currentIndex + (isCompleted ? 1 : 0)) / totalSteps) * 100)
 
-  // Overlay de boas-vindas: mostra só depois da hidratação, se o usuário
-  // nunca dispensou e se não está retomando uma sessão salva. Usuário em
-  // modo silêncio também não vê (é um estado deliberado de concentração).
   const showOnboarding =
-    hydrated && !onboarding.dismissed && resumedFrom === null && !silentMode
+    hydrated && !onboarding.dismissed && resumedFrom === null
+
+  // --- Derive prayer info for compact card ---
+  const prayer = getPrayerById(currentStep.prayerId)
+  const mystery =
+    currentStep.decade !== undefined ? mysteryGroup.mysteries[currentStep.decade - 1] : null
+  const isMysteryAnnounce = currentStep.type === 'mystery_announce'
+  const showAveCounter =
+    currentStep.type === 'hail_mary' && currentStep.decadePosition !== undefined
+
+  // Phase label for display
+  function getPhaseLabel(): string {
+    if (currentStep.phase === 'intro') return 'Introdução'
+    if (currentStep.phase === 'outro') return 'Conclusão'
+    if (currentStep.decade) {
+      const ord = ORDINALS[currentStep.decade] ?? `${currentStep.decade}º`
+      const singular = MYSTERY_SINGULAR[mysteryGroup.id] ?? 'Mistério'
+      return `${ord} Mistério ${singular}`
+    }
+    return ''
+  }
+
+  // Mystery name for header
+  const mysteryShortName = mysteryGroup.name.replace('Mistérios ', '')
 
   return (
-    <main
-      className="relative min-h-screen w-full px-4 py-10 md:py-14"
+    <div
+      className="fixed inset-0 flex flex-col"
       style={{ backgroundColor: '#0F0E0C', color: '#F2EDE4' }}
     >
-      {!silentMode && <div className="bg-glow" aria-hidden />}
+      {/* ── Top bar ── */}
+      <header
+        className="flex-shrink-0 flex items-center justify-between px-4 safe-top"
+        style={{
+          height: '52px',
+          borderBottom: '1px solid rgba(201, 168, 76, 0.08)',
+        }}
+      >
+        <Link
+          href="/orar"
+          className="flex items-center gap-1.5 text-xs transition"
+          style={{ color: '#7A7368', textDecoration: 'none' }}
+          aria-label="Voltar para Orar"
+        >
+          <span aria-hidden>←</span>
+          <span className="hidden sm:inline">Orar</span>
+        </Link>
 
-      {silentMode && (
+        <div className="text-center">
+          <h1
+            className="text-sm font-medium"
+            style={{ color: '#F2EDE4', fontFamily: 'Cinzel, serif' }}
+          >
+            {mysteryShortName}
+          </h1>
+          {!isOnline && (
+            <span className="text-[9px]" style={{ color: '#D9C077' }}>
+              Offline
+            </span>
+          )}
+        </div>
+
         <button
           type="button"
-          onClick={toggleSilent}
-          className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border text-base transition"
+          onClick={() => setMenuOpen(true)}
+          className="flex items-center justify-center w-9 h-9 rounded-full transition active:scale-95"
           style={{
-            borderColor: 'rgba(201, 168, 76, 0.35)',
+            background: 'rgba(201, 168, 76, 0.08)',
+            border: '1px solid rgba(201, 168, 76, 0.15)',
             color: '#D9C077',
-            backgroundColor: 'rgba(20, 18, 14, 0.6)',
           }}
-          aria-label="Sair do modo silêncio"
+          aria-label="Abrir opções"
         >
-          ×
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <circle cx="12" cy="5" r="1.5" fill="currentColor" />
+            <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+            <circle cx="12" cy="19" r="1.5" fill="currentColor" />
+          </svg>
         </button>
+      </header>
+
+      {/* ── Resume banner ── */}
+      {showResumeBanner && (
+        <div
+          className="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-2"
+          style={{
+            backgroundColor: 'rgba(201, 168, 76, 0.08)',
+            borderBottom: '1px solid rgba(201, 168, 76, 0.15)',
+          }}
+          role="status"
+          aria-live="polite"
+        >
+          <span className="text-xs" style={{ color: '#D9C077' }}>
+            Retomando — passo {resumedFrom! + 1}/{totalSteps}
+          </span>
+          <button
+            type="button"
+            onClick={dismissResume}
+            className="text-[11px] uppercase tracking-wider px-2 py-1 rounded transition"
+            style={{ color: '#D9C077', border: '1px solid rgba(201, 168, 76, 0.3)' }}
+          >
+            Recomeçar
+          </button>
+        </div>
       )}
 
-      <div className="relative z-10 mx-auto max-w-xl">
-        {!silentMode && !isOnline && (
-          <div
-            className="mb-4 flex items-center justify-center gap-2 rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.2em]"
+      {/* ── Main content area (flex-grow, scrollable) ── */}
+      <div className="flex-1 flex flex-col overflow-y-auto px-4 pt-2 pb-2">
+        {/* Intention pill (if set) */}
+        {activeIntention && (
+          <button
+            type="button"
+            onClick={() => setPickerOpen(true)}
+            className="self-center flex items-center gap-1.5 rounded-full px-3 py-1 mb-2 text-[10px] transition active:scale-[0.97]"
             style={{
-              borderColor: 'rgba(201, 168, 76, 0.35)',
+              border: '1px solid rgba(201, 168, 76, 0.3)',
+              background: 'rgba(201, 168, 76, 0.06)',
               color: '#D9C077',
-              backgroundColor: 'rgba(20,18,14,0.6)',
-              width: 'fit-content',
-              margin: '0 auto 1rem',
-            }}
-            role="status"
-            aria-live="polite"
-          >
-            <span aria-hidden>◉</span>
-            <span>Modo offline — rezando a partir do cache</span>
-          </div>
-        )}
-
-        {!silentMode && (
-          <header className="mb-8 text-center">
-            <h1
-              className="font-serif text-3xl md:text-4xl"
-              style={{ color: '#F2EDE4', fontFamily: 'Cinzel, serif' }}
-            >
-              Santo Rosário
-            </h1>
-            <p
-              className="mt-2 text-xs md:text-sm"
-              style={{ color: '#7A7368' }}
-            >
-              Medite os mistérios da vida de Cristo com Nossa Senhora
-            </p>
-            <div className="ornament-divider max-w-xs mx-auto mt-4">
-              <span>&#10022;</span>
-            </div>
-          </header>
-        )}
-
-        {!silentMode && intentionsState.available && (
-          <div className="mb-4 flex justify-center">
-            <button
-              type="button"
-              onClick={() => setPickerOpen(true)}
-              className="group flex max-w-full items-center gap-2 rounded-full border px-4 py-2 text-xs transition"
-              style={{
-                borderColor: activeIntention
-                  ? 'rgba(201, 168, 76, 0.45)'
-                  : 'rgba(201, 168, 76, 0.22)',
-                backgroundColor: activeIntention
-                  ? 'rgba(201, 168, 76, 0.08)'
-                  : 'rgba(20, 18, 14, 0.6)',
-                color: activeIntention ? '#F2EDE4' : '#D9C077',
-              }}
-              aria-label={
-                activeIntention
-                  ? `Rezando por: ${activeIntention.titulo}. Trocar intenção.`
-                  : 'Escolher intenção para este terço'
-              }
-            >
-              <span aria-hidden style={{ color: '#D9C077' }}>
-                &#10022;
-              </span>
-              {activeIntention ? (
-                <>
-                  <span
-                    className="text-[10px] uppercase tracking-[0.2em]"
-                    style={{ color: '#7A7368' }}
-                  >
-                    Rezando por
-                  </span>
-                  <span className="truncate" style={{ maxWidth: '14rem' }}>
-                    {activeIntention.titulo}
-                  </span>
-                </>
-              ) : (
-                <span className="uppercase tracking-[0.2em] text-[10px]">
-                  Rezar por uma intenção
-                </span>
-              )}
-            </button>
-          </div>
-        )}
-
-        {!silentMode && showResumeBanner && (
-          <div
-            className="mb-4 flex items-center justify-between gap-3 rounded-xl border px-4 py-3"
-            style={{
-              borderColor: 'rgba(201, 168, 76, 0.35)',
-              backgroundColor: 'rgba(201, 168, 76, 0.08)',
-            }}
-            role="status"
-            aria-live="polite"
-          >
-            <div className="text-xs" style={{ color: '#F2EDE4' }}>
-              <span style={{ color: '#D9C077', fontWeight: 600 }}>
-                Retomando de onde parou
-              </span>
-              <span className="ml-1" style={{ color: '#7A7368' }}>
-                — passo {resumedFrom! + 1} de {totalSteps}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={dismissResume}
-              className="shrink-0 rounded-md border px-2 py-1 text-[11px] uppercase tracking-wider transition"
-              style={{
-                borderColor: 'rgba(201, 168, 76, 0.35)',
-                color: '#D9C077',
-              }}
-            >
-              Começar do início
-            </button>
-          </div>
-        )}
-
-        {!silentMode && (
-        <fieldset className="mb-6">
-          <legend className="sr-only">Seleção de mistérios</legend>
-          <div
-            className="flex gap-1.5 rounded-xl p-1.5"
-            role="radiogroup"
-            aria-label="Mistérios do dia"
-            style={{
-              background: 'rgba(20,18,14,0.6)',
-              border: '1px solid rgba(201,168,76,0.08)',
             }}
           >
-            {MYSTERY_GROUPS.map((g) => {
-              const active = g.id === mysterySetId
-              const isToday = g.id === todayId
-              return (
-                <button
-                  key={g.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  onClick={() => handleMysteryChange(g.id)}
-                  className="min-w-0 flex-1 rounded-lg px-2 py-2 text-center transition"
-                  style={{
-                    background: active ? 'rgba(201,168,76,0.12)' : 'transparent',
-                    border: active ? '1px solid rgba(201,168,76,0.2)' : '1px solid transparent',
-                  }}
-                >
-                  <span
-                    className="block text-[11px] font-semibold tracking-wide"
-                    style={{
-                      fontFamily: 'Cinzel, serif',
-                      color: active ? '#C9A84C' : '#7A7368',
-                    }}
-                  >
-                    {g.name.replace('Mistérios ', '')}
-                  </span>
-                  <span
-                    className="mt-0.5 block text-[9px] tracking-wider"
-                    style={{
-                      color: isToday ? '#D9C077' : 'rgba(122,115,104,0.5)',
-                      fontFamily: 'Poppins, sans-serif',
-                    }}
-                  >
-                    {isToday ? '● Hoje' : g.days}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </fieldset>
+            <span aria-hidden>✦</span>
+            <span className="truncate" style={{ maxWidth: '12rem' }}>
+              {activeIntention.titulo}
+            </span>
+          </button>
         )}
 
-        <div className="mb-4">
+        {/* Rosary beads */}
+        <div className="flex-shrink-0 flex justify-center">
           <RosaryBeads
             currentBeadId={currentBeadId}
             completedBeadIds={completedBeadIds}
             onBeadSelect={goToBead}
-            className="mx-auto h-auto w-full max-w-md"
+            className="w-full max-w-[280px] h-auto"
             ariaDescription={`Terço — passo ${currentIndex + 1} de ${totalSteps}`}
           />
         </div>
 
-        {!silentMode && (
-        <div className="mb-4" aria-hidden>
+        {/* Compact progress */}
+        <div className="flex-shrink-0 mb-2" aria-hidden>
           <div
-            className="h-1 w-full overflow-hidden rounded-full"
-            style={{ background: 'rgba(201,168,76,0.08)' }}
+            className="h-0.5 w-full overflow-hidden rounded-full"
+            style={{ background: 'rgba(201, 168, 76, 0.08)' }}
           >
             <div
-              className="rosary-progress-fill h-full"
+              className="h-full transition-all duration-500 ease-out"
               style={{
                 width: `${progressPct}%`,
                 background: 'linear-gradient(90deg, #C9A84C, #D9C077)',
               }}
             />
           </div>
-          <div
-            className="mt-2 text-center font-mono text-[11px] uppercase tracking-[0.25em]"
-            style={{ color: '#7A7368' }}
+        </div>
+
+        {/* Prayer card */}
+        <section
+          className="flex-shrink-0 rounded-xl p-4"
+          style={{
+            background: 'rgba(20, 18, 14, 0.6)',
+            border: '1px solid rgba(201, 168, 76, 0.12)',
+          }}
+          aria-live="polite"
+        >
+          {/* Phase + counter */}
+          <div className="flex items-center justify-between mb-2">
+            <span
+              className="text-[10px] uppercase tracking-[0.2em]"
+              style={{ color: '#7A7368' }}
+            >
+              {getPhaseLabel()}
+            </span>
+            {showAveCounter && (
+              <span
+                className="font-mono text-[11px] uppercase tracking-wider"
+                style={{ color: '#D9C077' }}
+              >
+                {currentStep.decadePosition}/10
+              </span>
+            )}
+          </div>
+
+          {/* Mystery info (during decades) */}
+          {mystery && !isMysteryAnnounce && (
+            <div className="mb-2">
+              <h2
+                className="text-base leading-snug"
+                style={{ color: '#F2EDE4', fontFamily: 'Cinzel, serif' }}
+              >
+                {mystery.title}
+              </h2>
+              <p
+                className="text-[11px] italic mt-0.5"
+                style={{ color: '#7A7368' }}
+              >
+                Fruto: {mystery.fruit}
+              </p>
+            </div>
+          )}
+
+          {/* Prayer content */}
+          {isMysteryAnnounce && mystery ? (
+            <div>
+              <h3
+                className="text-sm mb-1"
+                style={{ color: '#D9C077', fontFamily: 'Cinzel, serif' }}
+              >
+                {mystery.title}
+              </h3>
+              <p
+                className="text-sm italic leading-relaxed"
+                style={{ color: '#F2EDE4', fontFamily: 'var(--font-cormorant, serif)' }}
+              >
+                {mystery.reflection}
+              </p>
+              <p className="mt-2 text-[10px] uppercase tracking-[0.15em]" style={{ color: '#7A7368' }}>
+                Contemple em silêncio
+              </p>
+            </div>
+          ) : prayer ? (
+            <div>
+              <h3 className="text-sm mb-1" style={{ color: '#D9C077' }}>
+                {prayer.name}
+              </h3>
+              <p
+                className="text-sm leading-relaxed"
+                style={{ color: '#F2EDE4' }}
+              >
+                {prayer.text}
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm" style={{ color: '#F2EDE4' }}>
+              {STEP_LABELS[currentStep.type] ?? currentStep.type}
+            </p>
+          )}
+        </section>
+      </div>
+
+      {/* ── Fixed bottom bar ── */}
+      {!isCompleted ? (
+        <div
+          className="flex-shrink-0 flex items-center gap-3 px-4 safe-bottom"
+          style={{
+            height: '72px',
+            borderTop: '1px solid rgba(201, 168, 76, 0.1)',
+            background: 'rgba(15, 14, 12, 0.95)',
+            backdropFilter: 'blur(12px)',
+          }}
+        >
+          <button
+            type="button"
+            onClick={back}
+            disabled={isFirst}
+            className="flex items-center justify-center w-12 h-12 rounded-xl border transition disabled:opacity-25 active:scale-95"
+            style={{
+              borderColor: 'rgba(201, 168, 76, 0.25)',
+              color: '#D9C077',
+            }}
+            aria-label="Voltar"
           >
-            Passo {currentIndex + 1} / {totalSteps}
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+
+          <button
+            type="button"
+            onClick={advanceWithHaptic}
+            className="flex-1 h-12 rounded-xl text-sm font-semibold transition active:scale-[0.97]"
+            style={{
+              background: 'linear-gradient(180deg, #C9A84C, #A88437)',
+              color: '#0F0E0C',
+            }}
+          >
+            Avançar
+          </button>
+
+          <div className="w-12 flex items-center justify-center">
+            <span
+              className="font-mono text-[10px]"
+              style={{ color: '#7A7368' }}
+            >
+              {currentIndex + 1}/{totalSteps}
+            </span>
           </div>
         </div>
-        )}
-
-        <PrayerStage
-          step={currentStep}
-          mysteryGroup={mysteryGroup}
-          isCompleted={isCompleted}
-          onAdvance={advanceWithHaptic}
-        />
-
-        {!silentMode && (
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-            {haptic.supported && (
-              <button
-                type="button"
-                onClick={() => haptic.setEnabled(!haptic.enabled)}
-                className="rounded-md px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition"
-                aria-pressed={haptic.enabled}
-                style={{
-                  color: haptic.enabled ? '#D9C077' : '#7A7368',
-                  border: `1px solid ${haptic.enabled ? 'rgba(201,168,76,0.35)' : 'rgba(122,115,104,0.35)'}`,
-                }}
-              >
-                Vibração: {haptic.enabled ? 'ligada' : 'desligada'}
-              </button>
-            )}
-            {tts.supported && (
-              <button
-                type="button"
-                onClick={() => tts.setEnabled(!tts.enabled)}
-                className="rounded-md px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition"
-                aria-pressed={tts.enabled}
-                style={{
-                  color: tts.enabled ? '#D9C077' : '#7A7368',
-                  border: `1px solid ${tts.enabled ? 'rgba(201,168,76,0.35)' : 'rgba(122,115,104,0.35)'}`,
-                }}
-              >
-                Voz: {tts.enabled ? (tts.speaking ? 'falando…' : 'ligada') : 'desligada'}
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={toggleSilent}
-              className="rounded-md px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition"
-              aria-pressed={silentMode}
-              style={{
-                color: '#7A7368',
-                border: '1px solid rgba(122,115,104,0.35)',
-              }}
-            >
-              Modo silêncio
-            </button>
-            <button
-              type="button"
-              onClick={onboarding.reopen}
-              className="rounded-md px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition"
-              style={{
-                color: '#7A7368',
-                border: '1px solid rgba(122,115,104,0.35)',
-              }}
-              aria-label="Abrir tutorial de boas-vindas"
-            >
-              Tutorial
-            </button>
-            <Link
-              href="/rosario/historico"
-              className="rounded-md px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition"
-              style={{
-                color: '#7A7368',
-                border: '1px solid rgba(122,115,104,0.35)',
-                textDecoration: 'none',
-              }}
-            >
-              Histórico
-            </Link>
-            <Link
-              href="/rosario/juntos"
-              className="rounded-md px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition"
-              style={{
-                color: '#D9C077',
-                border: '1px solid rgba(201,168,76,0.35)',
-                textDecoration: 'none',
-              }}
-            >
-              Em grupo
-            </Link>
-          </div>
-        )}
-
-        <style>{`
-          .rosary-progress-fill {
-            transition: width 500ms ease-out;
-          }
-          @media (prefers-reduced-motion: reduce) {
-            .rosary-progress-fill { transition: none; }
-          }
-        `}</style>
-
-        {!silentMode && (
-          <div className="mt-4 flex gap-2">
-            <button
-              type="button"
-              onClick={back}
-              disabled={isFirst}
-              className="flex-1 rounded-lg border px-4 py-2 text-sm transition disabled:opacity-30"
-              style={{
-                borderColor: 'rgba(201, 168, 76, 0.35)',
-                color: '#D9C077',
-              }}
-            >
-              Voltar
-            </button>
+      ) : (
+        /* ── Completion screen ── */
+        <div
+          className="flex-shrink-0 px-4 py-6 text-center safe-bottom"
+          style={{
+            borderTop: '1px solid rgba(201, 168, 76, 0.15)',
+            background: 'rgba(15, 14, 12, 0.95)',
+          }}
+        >
+          <div className="text-3xl mb-2" aria-hidden>✦</div>
+          <h2
+            className="text-xl mb-1"
+            style={{ color: '#D9C077', fontFamily: 'Cinzel, serif' }}
+          >
+            Terço completo
+          </h2>
+          <p className="text-xs mb-4" style={{ color: '#7A7368' }}>
+            Que Nossa Senhora interceda por você
+          </p>
+          <div className="flex justify-center gap-3">
             <button
               type="button"
               onClick={() => {
                 reset()
                 setResumedFrom(null)
               }}
-              className="flex-1 rounded-lg border px-4 py-2 text-sm transition"
+              className="rounded-xl px-5 py-2.5 text-sm font-semibold transition active:scale-[0.97]"
               style={{
-                borderColor: 'rgba(201, 168, 76, 0.35)',
-                color: '#D9C077',
+                background: 'linear-gradient(180deg, #C9A84C, #A88437)',
+                color: '#0F0E0C',
               }}
             >
-              Reiniciar
+              Rezar novamente
             </button>
+            <Link
+              href="/orar"
+              className="rounded-xl border px-5 py-2.5 text-sm transition"
+              style={{
+                borderColor: 'rgba(201, 168, 76, 0.3)',
+                color: '#D9C077',
+                textDecoration: 'none',
+              }}
+            >
+              Voltar
+            </Link>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
+      {/* ── Floating menu (bottom sheet) ── */}
+      <RosaryMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        mysterySetId={mysterySetId}
+        onMysteryChange={handleMysteryChange}
+        hapticSupported={haptic.supported}
+        hapticEnabled={haptic.enabled}
+        onHapticToggle={() => haptic.setEnabled(!haptic.enabled)}
+        ttsSupported={tts.supported}
+        ttsEnabled={tts.enabled}
+        ttsSpeaking={tts.speaking}
+        onTtsToggle={() => tts.setEnabled(!tts.enabled)}
+        intentionAvailable={intentionsState.available}
+        intentionLabel={activeIntention?.titulo ?? null}
+        onIntentionOpen={() => setPickerOpen(true)}
+        onRestart={() => {
+          reset()
+          setResumedFrom(null)
+        }}
+        onTutorial={onboarding.reopen}
+      />
+
+      {/* ── Overlays ── */}
       {showOnboarding && <OnboardingOverlay onDismiss={onboarding.dismiss} />}
-
       {intentionsState.available && (
         <IntentionPicker
           open={pickerOpen}
@@ -664,6 +581,14 @@ export function RosarySession() {
           onClose={() => setPickerOpen(false)}
         />
       )}
-    </main>
+
+      <style>{`
+        .safe-top { padding-top: env(safe-area-inset-top, 0px); }
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+        @media (prefers-reduced-motion: reduce) {
+          * { transition-duration: 0ms !important; animation-duration: 0ms !important; }
+        }
+      `}</style>
+    </div>
   )
 }
