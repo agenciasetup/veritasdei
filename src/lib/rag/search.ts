@@ -5,7 +5,7 @@ import { disambiguateQuery } from './disambiguation'
 import { understandQuery, searchKnowledgeBase, extractBibleRefsFromKnowledge } from './query-understanding'
 import { extractBibleRefsFromRows } from './extract-refs'
 import { isSensitiveTopic } from '../utils/sensitive-topics'
-import { sanitizeIlike, sanitizePostgrestFilter } from '../utils/sanitize'
+import { sanitizeIlike, sanitizePostgrestFilter, sanitizePostgrestEqValue } from '../utils/sanitize'
 import type { QueryResponse, SearchResult, AIInsight, ProtestantView, ObjectionBlock, MoralTag, HeresyTag, EtymologyHit } from '@/types'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
@@ -322,9 +322,10 @@ async function fetchMustIncludeVerses(
     }
 
     // Secondary path: escaped OR filter for deployments where .in() does not
-    // match because of reference formatting quirks.
+    // match because of reference formatting quirks. Usamos sanitizePostgrestEqValue
+    // porque `eq` compara literalmente — escapar `_`/`%` mudaria o valor procurado.
     const orFilter = normalizedRefs
-      .map(r => `reference.eq.${sanitizePostgrestFilter(r)}`)
+      .map(r => `reference.eq.${sanitizePostgrestEqValue(r)}`)
       .join(',')
 
     const { data: orData, error: orError } = await supabase

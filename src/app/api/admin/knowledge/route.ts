@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { sanitizePostgrestFilter } from '@/lib/utils/sanitize'
 
 async function checkAdmin() {
   try {
@@ -24,8 +25,10 @@ export async function GET(req: NextRequest) {
     if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
     const { searchParams } = new URL(req.url)
-    const search = searchParams.get('search') ?? ''
-    const category = searchParams.get('category') ?? ''
+    // Limita tamanho do search — evita queries pesadas e reduz superfície de
+    // manipulação do filtro PostgREST.
+    const rawSearch = (searchParams.get('search') ?? '').slice(0, 100).trim()
+    const rawCategory = (searchParams.get('category') ?? '').slice(0, 64).trim()
     const page = Math.max(1, parseInt(searchParams.get('page') ?? '1'))
     const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') ?? '20')))
     const offset = (page - 1) * limit
@@ -37,12 +40,15 @@ export async function GET(req: NextRequest) {
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
 
-    if (search) {
-      query = query.or(`topic.ilike.%${search}%,summary.ilike.%${search}%,core_teaching.ilike.%${search}%`)
+    if (rawSearch) {
+      // sanitizePostgrestFilter escapa vírgula, parênteses, % e _ para que o
+      // search não consiga injetar filtros extras no .or().
+      const safe = sanitizePostgrestFilter(rawSearch)
+      query = query.or(`topic.ilike.%${safe}%,summary.ilike.%${safe}%,core_teaching.ilike.%${safe}%`)
     }
 
-    if (category) {
-      query = query.eq('category', category)
+    if (rawCategory) {
+      query = query.eq('category', rawCategory)
     }
 
     const { data, error, count } = await query.range(offset, offset + limit - 1)
