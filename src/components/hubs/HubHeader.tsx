@@ -1,25 +1,16 @@
+import CollapsibleHeader from '@/components/mobile/CollapsibleHeader'
+
 interface HubHeaderProps {
   title: string
   subtitle?: string
 }
 
+/**
+ * Header padrão dos hubs (`/orar`, `/liturgia`, `/aprender`).
+ *
+ * Mobile: usa CollapsibleHeader com large title que colapsa ao scrollar.
+ * Desktop: cai no estilo Cormorant grande padrão (sem sticky bar).
+ */
 export default function HubHeader({ title, subtitle }: HubHeaderProps) {
-  return (
-    <header className="px-5 pt-8 pb-4">
-      <h1
-        className="text-3xl font-semibold"
-        style={{ fontFamily: 'Cormorant Garamond, serif', color: '#F2EDE4' }}
-      >
-        {title}
-      </h1>
-      {subtitle && (
-        <p
-          className="text-sm mt-2"
-          style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
-        >
-          {subtitle}
-        </p>
-      )}
-    </header>
-  )
+  return <CollapsibleHeader title={title} subtitle={subtitle} />
 }

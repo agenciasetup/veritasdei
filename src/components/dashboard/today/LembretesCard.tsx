@@ -114,10 +114,10 @@ export default function LembretesCard() {
   if (lembretes.length === 0) return null
 
   return (
-    <section className="px-4 mb-6">
+    <section className="px-4 mb-3">
       <h2
-        className="px-1 mb-3 text-sm uppercase tracking-[0.15em]"
-        style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+        className="px-1 mb-2 text-xs uppercase tracking-[0.18em]"
+        style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}
       >
         Lembretes
       </h2>

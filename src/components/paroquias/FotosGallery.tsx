@@ -108,27 +108,27 @@ export default function FotosGallery({ value, onChange, onError }: Props) {
                 <button
                   type="button"
                   onClick={() => remove(i)}
-                  className="absolute top-2 right-2 w-7 h-7 rounded-lg flex items-center justify-center"
+                  className="absolute top-2 right-2 w-10 h-10 rounded-lg flex items-center justify-center active:scale-95"
                   style={{ background: 'rgba(0,0,0,0.75)', color: '#D94F5C', border: 'none' }}
                   aria-label="Remover foto"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="w-4 h-4" />
                 </button>
                 <div className="absolute top-2 left-2 flex flex-col gap-1">
                   <button
                     type="button"
                     onClick={() => move(i, -1)}
                     disabled={i === 0}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center"
+                    className="w-10 h-10 rounded-lg flex items-center justify-center active:scale-95"
                     style={{
                       background: 'rgba(0,0,0,0.75)',
-                      color: i === 0 ? '#7A7368' : '#C9A84C',
+                      color: i === 0 ? '#8A8378' : '#C9A84C',
                       border: 'none',
                       opacity: i === 0 ? 0.4 : 1,
                     }}
                     aria-label="Mover para cima"
                   >
-                    <GripVertical className="w-3.5 h-3.5" />
+                    <GripVertical className="w-4 h-4" />
                   </button>
                 </div>
               </div>

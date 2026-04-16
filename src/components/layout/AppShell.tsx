@@ -9,9 +9,10 @@ import { PropositosProvider } from '@/contexts/PropositosContext'
 import { PropositoSheetProvider } from '@/components/propositos/PropositoSheet'
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext'
 import InstallPrompt from '@/components/pwa/InstallPrompt'
+import PageTransition from '@/components/mobile/PageTransition'
 
 const PUBLIC_PATHS = ['/login', '/auth', '/privacidade', '/termos', '/onboarding']
-const FULLSCREEN_PATHS = ['/verbum']
+const FULLSCREEN_PATHS = ['/verbum', '/rosario', '/liturgia/hoje']
 const FULLSCREEN_EXACT: string[] = []
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -37,7 +38,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           )}
           <div id="main-content" className={`${showChrome ? 'md:ml-16 pb-bottom-nav' : ''}`}>
-            {children}
+            {showChrome ? <PageTransition>{children}</PageTransition> : children}
           </div>
           {/* Bottom nav only on mobile */}
           {showChrome && <BottomNav />}

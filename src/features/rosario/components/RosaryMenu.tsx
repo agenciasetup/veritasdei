@@ -1,10 +1,14 @@
 'use client'
 
-import { useCallback, useEffect, useRef, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import Link from 'next/link'
 import { Heart, Vibrate, Volume2, HelpCircle, Clock, Users, RotateCcw } from 'lucide-react'
 import type { MysteryGroup, MysterySet } from '@/features/rosario/data/types'
 import { MYSTERY_GROUPS, getMysteryForToday } from '@/features/rosario/data/mysteries'
+import BottomSheet from '@/components/mobile/BottomSheet'
+
+// Mantemos o import de tipo para garantir que a fonte canonica não some.
+void ({} as MysteryGroup)
 
 interface RosaryMenuProps {
   open: boolean
@@ -46,183 +50,134 @@ export function RosaryMenu({
   onTutorial,
 }: RosaryMenuProps) {
   const todayId = getMysteryForToday().id
-  const panelRef = useRef<HTMLDivElement>(null)
-
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    },
-    [onClose],
-  )
-
-  useEffect(() => {
-    if (!open) return
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [open, handleKeyDown])
-
-  // Focus trap: focus the panel when opened
-  useEffect(() => {
-    if (open && panelRef.current) {
-      panelRef.current.focus()
-    }
-  }, [open])
-
-  if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-        aria-hidden
-      />
-
-      {/* Bottom sheet */}
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-label="Opções do terço"
-        tabIndex={-1}
-        className="relative z-10 w-full max-w-lg rounded-t-2xl px-5 pb-8 pt-3 outline-none animate-slide-up"
-        style={{
-          background: 'rgba(15, 14, 12, 0.97)',
-          border: '1px solid rgba(201, 168, 76, 0.15)',
-          borderBottom: 'none',
-          maxHeight: '80vh',
-          overflowY: 'auto',
-        }}
-      >
-        {/* Handle */}
-        <div className="flex justify-center mb-4">
-          <div
-            className="w-10 h-1 rounded-full"
-            style={{ background: 'rgba(201, 168, 76, 0.3)' }}
-          />
-        </div>
-
-        {/* Mystery selector */}
-        <section className="mb-5">
-          <h3
-            className="text-[10px] uppercase tracking-[0.2em] mb-3"
-            style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
-          >
-            Mistérios {mysteryLocked && <span style={{ color: '#5A5348' }}>(Rosário completo)</span>}
-          </h3>
-          <div
-            className="grid grid-cols-2 gap-2"
-            role="radiogroup"
-            aria-label="Escolha os mistérios"
-          >
-            {MYSTERY_GROUPS.map((g) => {
-              const active = g.id === mysterySetId
-              const isToday = g.id === todayId
-              return (
-                <button
-                  key={g.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  disabled={mysteryLocked}
-                  onClick={() => {
-                    if (!mysteryLocked) {
-                      onMysteryChange(g.id)
-                      onClose()
-                    }
-                  }}
-                  className="rounded-xl px-3 py-2.5 text-left transition active:scale-[0.97] disabled:opacity-50"
+    <BottomSheet
+      open={open}
+      onDismiss={onClose}
+      detents={[0.55, 0.88]}
+      initialDetent={0}
+      label="Opções do terço"
+    >
+      {/* Mystery selector */}
+      <section className="mb-4">
+        <h3
+          className="text-[11px] uppercase tracking-[0.2em] mb-3"
+          style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}
+        >
+          Mistérios{' '}
+          {mysteryLocked && <span style={{ color: '#5A5348' }}>(Rosário completo)</span>}
+        </h3>
+        <div
+          className="grid grid-cols-2 gap-2"
+          role="radiogroup"
+          aria-label="Escolha os mistérios"
+        >
+          {MYSTERY_GROUPS.map((g) => {
+            const active = g.id === mysterySetId
+            const isToday = g.id === todayId
+            return (
+              <button
+                key={g.id}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                disabled={mysteryLocked}
+                onClick={() => {
+                  if (!mysteryLocked) {
+                    onMysteryChange(g.id)
+                    onClose()
+                  }
+                }}
+                className="rounded-xl px-3 py-3 text-left transition active:scale-[0.97] disabled:opacity-50 touch-target"
+                style={{
+                  background: active
+                    ? 'rgba(201, 168, 76, 0.12)'
+                    : 'rgba(255, 255, 255, 0.03)',
+                  border: `1px solid ${active ? 'rgba(201, 168, 76, 0.3)' : 'rgba(201, 168, 76, 0.08)'}`,
+                }}
+              >
+                <span
+                  className="block text-sm font-medium"
                   style={{
-                    background: active
-                      ? 'rgba(201, 168, 76, 0.12)'
-                      : 'rgba(255, 255, 255, 0.03)',
-                    border: `1px solid ${active ? 'rgba(201, 168, 76, 0.3)' : 'rgba(201, 168, 76, 0.08)'}`,
+                    color: active ? 'var(--gold)' : 'var(--text-secondary)',
+                    fontFamily: 'var(--font-display)',
                   }}
                 >
-                  <span
-                    className="block text-sm font-medium"
-                    style={{
-                      color: active ? '#C9A84C' : '#B8AFA2',
-                      fontFamily: 'Cinzel, serif',
-                    }}
-                  >
-                    {g.name.replace('Mistérios ', '')}
-                  </span>
-                  <span
-                    className="block text-[10px] mt-0.5"
-                    style={{ color: isToday ? '#D9C077' : '#5A5348' }}
-                  >
-                    {isToday ? '● Hoje' : g.days}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </section>
+                  {g.name.replace('Mistérios ', '')}
+                </span>
+                <span
+                  className="block text-[11px] mt-0.5"
+                  style={{ color: isToday ? '#D9C077' : '#5A5348' }}
+                >
+                  {isToday ? '● Hoje' : g.days}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </section>
 
-        {/* Divider */}
-        <div className="h-px mb-4" style={{ background: 'rgba(201, 168, 76, 0.1)' }} />
+      <div className="h-px mb-4" style={{ background: 'rgba(201, 168, 76, 0.1)' }} />
 
-        {/* Toggle options */}
-        <section className="flex flex-col gap-1 mb-4">
-          {intentionAvailable && (
-            <MenuRow
-              label={intentionLabel ? `Rezando por: ${intentionLabel}` : 'Escolher intenção'}
-              icon={<Heart size={16} strokeWidth={1.5} />}
-              active={!!intentionLabel}
-              onClick={() => {
-                onIntentionOpen()
-                onClose()
-              }}
-            />
-          )}
-          {hapticSupported && (
-            <MenuToggle
-              label="Vibração"
-              icon={<Vibrate size={16} strokeWidth={1.5} />}
-              enabled={hapticEnabled}
-              onToggle={onHapticToggle}
-            />
-          )}
-          {ttsSupported && (
-            <MenuToggle
-              label={ttsEnabled && ttsSpeaking ? 'Voz (falando…)' : 'Voz guiada'}
-              icon={<Volume2 size={16} strokeWidth={1.5} />}
-              enabled={ttsEnabled}
-              onToggle={onTtsToggle}
-            />
-          )}
-        </section>
-
-        {/* Divider */}
-        <div className="h-px mb-4" style={{ background: 'rgba(201, 168, 76, 0.1)' }} />
-
-        {/* Navigation links */}
-        <section className="flex flex-col gap-1">
-          <MenuRow label="Tutorial" icon={<HelpCircle size={16} strokeWidth={1.5} />} onClick={onTutorial} />
-          <MenuLinkRow href="/rosario/historico" label="Histórico" icon={<Clock size={16} strokeWidth={1.5} />} />
-          <MenuLinkRow href="/rosario/juntos" label="Rezar em grupo" icon={<Users size={16} strokeWidth={1.5} />} />
+      <section className="flex flex-col gap-1 mb-4">
+        {intentionAvailable && (
           <MenuRow
-            label="Reiniciar terço"
-            icon={<RotateCcw size={16} strokeWidth={1.5} />}
+            label={intentionLabel ? `Rezando por: ${intentionLabel}` : 'Escolher intenção'}
+            icon={<Heart size={18} strokeWidth={1.5} />}
+            active={!!intentionLabel}
             onClick={() => {
-              onRestart()
+              onIntentionOpen()
               onClose()
             }}
           />
-        </section>
-      </div>
+        )}
+        {hapticSupported && (
+          <MenuToggle
+            label="Vibração"
+            icon={<Vibrate size={18} strokeWidth={1.5} />}
+            enabled={hapticEnabled}
+            onToggle={onHapticToggle}
+          />
+        )}
+        {ttsSupported && (
+          <MenuToggle
+            label={ttsEnabled && ttsSpeaking ? 'Voz (falando…)' : 'Voz guiada'}
+            icon={<Volume2 size={18} strokeWidth={1.5} />}
+            enabled={ttsEnabled}
+            onToggle={onTtsToggle}
+          />
+        )}
+      </section>
 
-      <style>{`
-        @keyframes slide-up {
-          from { transform: translateY(100%); opacity: 0.5; }
-          to   { transform: translateY(0);    opacity: 1; }
-        }
-        .animate-slide-up {
-          animation: slide-up 280ms ease-out;
-        }
-      `}</style>
-    </div>
+      <div className="h-px mb-4" style={{ background: 'rgba(201, 168, 76, 0.1)' }} />
+
+      <section className="flex flex-col gap-1">
+        <MenuRow
+          label="Tutorial"
+          icon={<HelpCircle size={18} strokeWidth={1.5} />}
+          onClick={onTutorial}
+        />
+        <MenuLinkRow
+          href="/rosario/historico"
+          label="Histórico"
+          icon={<Clock size={18} strokeWidth={1.5} />}
+        />
+        <MenuLinkRow
+          href="/rosario/juntos"
+          label="Rezar em grupo"
+          icon={<Users size={18} strokeWidth={1.5} />}
+        />
+        <MenuRow
+          label="Reiniciar terço"
+          icon={<RotateCcw size={18} strokeWidth={1.5} />}
+          onClick={() => {
+            onRestart()
+            onClose()
+          }}
+        />
+      </section>
+    </BottomSheet>
   )
 }
 
@@ -243,16 +198,16 @@ function MenuRow({
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-3 rounded-xl px-3 py-3 text-left transition active:scale-[0.98]"
+      className="flex items-center gap-3 rounded-xl px-3 py-3 text-left transition active:scale-[0.98] touch-target"
       style={{
         background: active ? 'rgba(201, 168, 76, 0.06)' : 'transparent',
-        color: active ? '#D9C077' : '#B8AFA2',
+        color: active ? '#D9C077' : 'var(--text-secondary)',
       }}
     >
-      <span className="w-5 flex items-center justify-center" style={{ color: '#7A7368' }}>
+      <span className="w-6 flex items-center justify-center" style={{ color: 'var(--text-muted)' }}>
         {icon}
       </span>
-      <span className="text-sm truncate" style={{ fontFamily: 'Poppins, sans-serif' }}>
+      <span className="text-sm truncate" style={{ fontFamily: 'var(--font-body)' }}>
         {label}
       </span>
     </button>
@@ -274,21 +229,21 @@ function MenuToggle({
     <button
       type="button"
       onClick={onToggle}
-      className="flex items-center gap-3 rounded-xl px-3 py-3 text-left transition active:scale-[0.98]"
-      style={{ color: enabled ? '#D9C077' : '#B8AFA2' }}
+      className="flex items-center gap-3 rounded-xl px-3 py-3 text-left transition active:scale-[0.98] touch-target"
+      style={{ color: enabled ? '#D9C077' : 'var(--text-secondary)' }}
       aria-pressed={enabled}
     >
-      <span className="w-5 flex items-center justify-center" style={{ color: '#7A7368' }}>
+      <span className="w-6 flex items-center justify-center" style={{ color: 'var(--text-muted)' }}>
         {icon}
       </span>
-      <span className="flex-1 text-sm" style={{ fontFamily: 'Poppins, sans-serif' }}>
+      <span className="flex-1 text-sm" style={{ fontFamily: 'var(--font-body)' }}>
         {label}
       </span>
       <span
-        className="w-10 h-6 rounded-full relative transition-colors"
+        className="w-11 h-6 rounded-full relative transition-colors"
         style={{
           background: enabled
-            ? 'rgba(201, 168, 76, 0.35)'
+            ? 'rgba(201, 168, 76, 0.4)'
             : 'rgba(122, 115, 104, 0.25)',
         }}
         aria-hidden
@@ -296,8 +251,8 @@ function MenuToggle({
         <span
           className="absolute top-1 h-4 w-4 rounded-full transition-all"
           style={{
-            left: enabled ? '22px' : '2px',
-            background: enabled ? '#C9A84C' : '#7A7368',
+            left: enabled ? '24px' : '4px',
+            background: enabled ? 'var(--gold)' : 'var(--text-muted)',
           }}
         />
       </span>
@@ -317,13 +272,13 @@ function MenuLinkRow({
   return (
     <Link
       href={href}
-      className="flex items-center gap-3 rounded-xl px-3 py-3 text-left transition active:scale-[0.98]"
-      style={{ color: '#B8AFA2', textDecoration: 'none' }}
+      className="flex items-center gap-3 rounded-xl px-3 py-3 text-left transition active:scale-[0.98] touch-target"
+      style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
     >
-      <span className="w-5 flex items-center justify-center" style={{ color: '#7A7368' }}>
+      <span className="w-6 flex items-center justify-center" style={{ color: 'var(--text-muted)' }}>
         {icon}
       </span>
-      <span className="text-sm" style={{ fontFamily: 'Poppins, sans-serif' }}>
+      <span className="text-sm" style={{ fontFamily: 'var(--font-body)' }}>
         {label}
       </span>
     </Link>

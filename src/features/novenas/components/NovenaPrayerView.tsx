@@ -1,10 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Cross } from 'lucide-react'
-import type { NovenaBuiltin, NovenaProgressRecord, NovenaDailyLogRecord } from '../data/types'
+import { AnimatePresence, motion, type PanInfo } from 'framer-motion'
+import type {
+  NovenaBuiltin,
+  NovenaProgressRecord,
+  NovenaDailyLogRecord,
+} from '../data/types'
+import { useHaptic } from '@/hooks/useHaptic'
 
 interface Props {
   novena: NovenaBuiltin
@@ -14,23 +20,54 @@ interface Props {
 
 export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
   const router = useRouter()
+  const haptic = useHaptic()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [completed, setCompleted] = useState(false)
 
   const currentDay = progress.current_day
-  const dayIndex = currentDay - 1
-  const dia = novena.dias[dayIndex]
-  const prayedDays = new Set(dailyLogs.map(l => l.day_number))
+  const prayedDays = new Set(dailyLogs.map((l) => l.day_number))
+
+  // Dia exibido no topo — começa no dia atual; o usuário pode revisitar
+  // dias passados via dot ou swipe (mas só pode REZAR no dia atual).
+  const [viewedDay, setViewedDay] = useState(currentDay)
+  // Quando o servidor avança o dia (após rezar), seguimos para ele.
+  const [prevCurrentDay, setPrevCurrentDay] = useState(currentDay)
+  if (prevCurrentDay !== currentDay) {
+    setViewedDay(currentDay)
+    setPrevCurrentDay(currentDay)
+  }
+
+  const dia = novena.dias[viewedDay - 1]
   const todayAlreadyPrayed = prayedDays.has(currentDay)
+  const viewingCurrent = viewedDay === currentDay
+  const viewingPast = viewedDay < currentDay
   const comTerco = progress.com_terco
 
   // Calcular dias perdidos (flexível: não zera, apenas avisa)
   const startDate = new Date(progress.started_at)
   const now = new Date()
-  const daysSinceStart = Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+  const daysSinceStart = Math.floor(
+    (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
+  )
   const expectedDay = Math.min(daysSinceStart + 1, 9)
   const skippedDays = expectedDay > currentDay ? expectedDay - currentDay : 0
+
+  function gotoDay(target: number, withHaptic = true) {
+    if (target < 1 || target > 9) return
+    if (target > currentDay) return // dias futuros bloqueados
+    if (target === viewedDay) return
+    if (withHaptic) haptic.pulse('selection')
+    setViewedDay(target)
+  }
+
+  function handleSwipe(_e: unknown, info: PanInfo) {
+    const dx = info.offset.x
+    const dy = info.offset.y
+    if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx)) return
+    if (dx < 0) gotoDay(viewedDay + 1)
+    else gotoDay(viewedDay - 1)
+  }
 
   async function handlePray() {
     setLoading(true)
@@ -56,8 +93,10 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
       const data = await res.json()
 
       if (data.completed) {
+        haptic.pulse('complete')
         setCompleted(true)
       } else {
+        haptic.pulse('medium')
         router.refresh()
       }
     } catch {
@@ -74,8 +113,18 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
         style={{ backgroundColor: '#0F0E0C', color: '#F2EDE4' }}
       >
         <div className="bg-glow" aria-hidden />
+        {/* Confetti dourado simples — partículas com Framer Motion */}
+        <ConfettiBurst />
         <div className="relative z-10 mx-auto max-w-xl text-center">
-          <div className="text-5xl mb-4" aria-hidden>&#10013;</div>
+          <motion.div
+            initial={{ scale: 0, rotate: -15 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', damping: 12, stiffness: 220 }}
+            className="text-5xl mb-4"
+            aria-hidden
+          >
+            ✦
+          </motion.div>
           <h1
             className="text-2xl md:text-3xl"
             style={{ color: '#D9C077', fontFamily: 'Cinzel, serif' }}
@@ -101,7 +150,10 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
               >
                 Oração Final
               </h3>
-              <p className="text-xs leading-relaxed whitespace-pre-line" style={{ color: '#B8AFA2' }}>
+              <p
+                className="text-xs leading-relaxed whitespace-pre-line"
+                style={{ color: '#B8AFA2' }}
+              >
                 {novena.oracaoFinal}
               </p>
             </div>
@@ -146,7 +198,7 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
           <Link
             href={`/novenas/${novena.slug}`}
             className="inline-block mb-3 text-xs transition"
-            style={{ color: '#7A7368' }}
+            style={{ color: '#8A8378' }}
           >
             &larr; {novena.titulo}
           </Link>
@@ -154,41 +206,75 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
             className="text-xl md:text-2xl"
             style={{ color: '#F2EDE4', fontFamily: 'Cinzel, serif' }}
           >
-            Dia {currentDay} de 9
+            Dia {viewedDay} de 9
+            {viewingPast && (
+              <span
+                className="ml-2 text-xs align-middle px-2 py-0.5 rounded-full"
+                style={{
+                  background: 'rgba(201,168,76,0.1)',
+                  color: '#C9A84C',
+                  fontFamily: 'Poppins, sans-serif',
+                }}
+              >
+                revisitando
+              </span>
+            )}
           </h1>
           <div className="ornament-divider max-w-xs mx-auto mt-3">
             <span>&#10022;</span>
           </div>
         </header>
 
-        {/* Progress dots */}
-        <nav aria-label={`Progresso da novena: dia ${currentDay} de 9`} className="flex justify-center gap-2 mb-6">
+        {/* Progress dots — tappable para dias passados */}
+        <nav
+          aria-label={`Progresso da novena: dia ${currentDay} de 9`}
+          className="flex justify-center items-center gap-2.5 mb-6"
+        >
           {Array.from({ length: 9 }, (_, i) => {
             const dayNum = i + 1
             const isPrayed = prayedDays.has(dayNum)
             const isCurrent = dayNum === currentDay
+            const isViewed = dayNum === viewedDay
+            const isFuture = dayNum > currentDay
+            const accessible = !isFuture
+            // Tamanhos: atual 12px, completos 8px, futuros 8px
+            const size = isCurrent ? 12 : 8
             return (
-              <div
+              <button
                 key={i}
-                role="img"
+                type="button"
+                onClick={() => gotoDay(dayNum)}
+                disabled={!accessible}
                 aria-label={`Dia ${dayNum}${isPrayed ? ', rezado' : isCurrent ? ', atual' : ', pendente'}`}
-                className="w-3 h-3 rounded-full transition-all"
+                aria-current={isViewed ? 'step' : undefined}
+                className="rounded-full transition-all touch-target flex items-center justify-center disabled:cursor-not-allowed"
                 style={{
-                  background: isPrayed
-                    ? '#C9A84C'
-                    : isCurrent
-                      ? 'rgba(201, 168, 76, 0.4)'
-                      : 'rgba(242, 237, 228, 0.1)',
-                  border: isCurrent ? '2px solid #C9A84C' : 'none',
-                  transform: isCurrent ? 'scale(1.3)' : 'scale(1)',
+                  background: 'transparent',
+                  padding: 8,
                 }}
-              />
+              >
+                <span
+                  className="block rounded-full transition-all"
+                  style={{
+                    width: size,
+                    height: size,
+                    background: isPrayed
+                      ? '#C9A84C'
+                      : isCurrent
+                        ? 'rgba(201, 168, 76, 0.5)'
+                        : 'rgba(242, 237, 228, 0.12)',
+                    border: isViewed ? '2px solid #C9A84C' : 'none',
+                    transform: isViewed ? 'scale(1.25)' : 'scale(1)',
+                    boxShadow: isViewed ? '0 0 12px rgba(201,168,76,0.45)' : 'none',
+                  }}
+                />
+              </button>
             )
           })}
         </nav>
 
         {/* Aviso de dias perdidos */}
-        {skippedDays > 0 && (
+        {skippedDays > 0 && viewingCurrent && (
           <div
             className="rounded-xl p-3 mb-4 text-center"
             style={{
@@ -205,7 +291,7 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
         )}
 
         {/* Terço do dia (quando com_terco ativo) */}
-        {comTerco && (
+        {comTerco && viewingCurrent && (
           <Link
             href="/rosario"
             className="flex items-center gap-4 rounded-xl p-4 mb-4 transition active:scale-[0.98]"
@@ -225,11 +311,13 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
               <p className="text-sm font-medium" style={{ color: '#F2EDE4' }}>
                 Terço do dia
               </p>
-              <p className="text-[11px] mt-0.5" style={{ color: '#7A7368' }}>
+              <p className="text-[11px] mt-0.5" style={{ color: '#8A8378' }}>
                 Reze o Santo Rosário antes da oração do dia
               </p>
             </div>
-            <span style={{ color: '#7A7368', fontSize: '14px' }} aria-hidden>→</span>
+            <span style={{ color: '#8A8378', fontSize: '14px' }} aria-hidden>
+              →
+            </span>
           </Link>
         )}
 
@@ -245,38 +333,50 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
           >
             <h3
               className="text-xs mb-2 uppercase tracking-wider"
-              style={{ color: '#7A7368', fontFamily: 'Cinzel, serif' }}
+              style={{ color: '#8A8378', fontFamily: 'Cinzel, serif' }}
             >
               Oração Inicial
             </h3>
-            <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: '#B8AFA2' }}>
+            <p
+              className="text-sm leading-relaxed whitespace-pre-line"
+              style={{ color: '#B8AFA2' }}
+            >
               {novena.oracaoInicial}
             </p>
           </section>
         )}
 
-        {/* Dia da novena */}
-        <article
-          aria-label={dia.titulo}
-          className="rounded-2xl p-6 mb-4"
-          style={{
-            background: 'rgba(20, 18, 14, 0.6)',
-            border: '1px solid rgba(201, 168, 76, 0.18)',
-          }}
-        >
-          <h2
-            className="text-lg mb-4"
-            style={{ color: '#D9C077', fontFamily: 'Cinzel, serif' }}
+        {/* Dia da novena — swipe horizontal entre dias */}
+        <AnimatePresence mode="wait">
+          <motion.article
+            key={viewedDay}
+            initial={{ opacity: 0, x: 24 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -24 }}
+            transition={{ duration: 0.18 }}
+            aria-label={dia.titulo}
+            className="rounded-2xl p-6 mb-4"
+            style={{
+              background: 'rgba(20, 18, 14, 0.6)',
+              border: '1px solid rgba(201, 168, 76, 0.18)',
+              touchAction: 'pan-y',
+            }}
+            onPanEnd={handleSwipe}
           >
-            {dia.titulo}
-          </h2>
-          <div
-            className="text-sm leading-relaxed whitespace-pre-line"
-            style={{ color: '#F2EDE4' }}
-          >
-            {dia.texto}
-          </div>
-        </article>
+            <h2
+              className="text-lg mb-4"
+              style={{ color: '#D9C077', fontFamily: 'Cinzel, serif' }}
+            >
+              {dia.titulo}
+            </h2>
+            <div
+              className="text-sm leading-relaxed whitespace-pre-line"
+              style={{ color: '#F2EDE4' }}
+            >
+              {dia.texto}
+            </div>
+          </motion.article>
+        </AnimatePresence>
 
         {/* Oração Final */}
         {novena.oracaoFinal && (
@@ -290,19 +390,35 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
           >
             <h3
               className="text-xs mb-2 uppercase tracking-wider"
-              style={{ color: '#7A7368', fontFamily: 'Cinzel, serif' }}
+              style={{ color: '#8A8378', fontFamily: 'Cinzel, serif' }}
             >
               Oração Final
             </h3>
-            <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: '#B8AFA2' }}>
+            <p
+              className="text-sm leading-relaxed whitespace-pre-line"
+              style={{ color: '#B8AFA2' }}
+            >
               {novena.oracaoFinal}
             </p>
           </section>
         )}
 
-        {/* Botão "Rezei hoje" */}
-        <div className="flex flex-col items-center gap-3 mt-6" role="status" aria-live="polite">
-          {todayAlreadyPrayed ? (
+        {/* Botão "Rezei hoje" — apenas no dia atual */}
+        <div
+          className="flex flex-col items-center gap-3 mt-6"
+          role="status"
+          aria-live="polite"
+        >
+          {!viewingCurrent ? (
+            <button
+              type="button"
+              onClick={() => gotoDay(currentDay)}
+              className="text-xs underline"
+              style={{ color: '#C9A84C' }}
+            >
+              Voltar ao dia atual ({currentDay})
+            </button>
+          ) : todayAlreadyPrayed ? (
             <div className="text-center">
               <p className="text-sm" style={{ color: '#C9A84C' }}>
                 Dia {currentDay} já registrado. Volte amanhã para o próximo dia.
@@ -313,7 +429,7 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
               onClick={handlePray}
               disabled={loading}
               aria-busy={loading}
-              className="rounded-lg px-8 py-3.5 text-sm font-semibold transition disabled:opacity-50 active:scale-[0.97]"
+              className="rounded-lg px-8 py-3.5 text-sm font-semibold transition disabled:opacity-50 active:scale-[0.97] touch-target-lg"
               style={{
                 background: 'linear-gradient(180deg, #C9A84C, #A88437)',
                 color: '#0F0E0C',
@@ -336,12 +452,63 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
           <Link
             href="/novenas/minhas"
             className="text-xs transition mt-2"
-            style={{ color: '#7A7368' }}
+            style={{ color: '#8A8378' }}
           >
             Minhas novenas em curso
           </Link>
         </div>
       </div>
     </main>
+  )
+}
+
+/* ── Confetti dourado para conclusão ── */
+
+function ConfettiBurst() {
+  // Posições determinísticas distribuídas uniformemente — sem Math.random
+  // (regra do React Compiler: render deve ser puro). O efeito visual ainda
+  // é vivo porque cada peça tem duração e atraso únicos.
+  const pieces = useMemo(() => {
+    const N = 18
+    return Array.from({ length: N }, (_, i) => {
+      const t = i / N
+      const startX = 8 + ((i * 53) % 84) // distribuído por mod-prime
+      const drift = ((i % 5) - 2) * 12
+      return {
+        i,
+        startX,
+        drift,
+        delay: t * 0.35,
+        dur: 1.6 + ((i * 31) % 70) / 50,
+      }
+    })
+  }, [])
+  return (
+    <div
+      className="pointer-events-none fixed inset-0 z-20 overflow-hidden"
+      aria-hidden="true"
+    >
+      {pieces.map(({ i, startX, drift, delay, dur }) => (
+        <motion.span
+          key={i}
+          initial={{ x: `${startX}vw`, y: '-10vh', opacity: 0, rotate: 0 }}
+          animate={{
+            x: `${startX + drift}vw`,
+            y: '110vh',
+            opacity: [0, 1, 1, 0],
+            rotate: 360,
+          }}
+          transition={{ duration: dur, delay, ease: 'easeOut' }}
+          className="absolute text-base"
+          style={{
+            color: i % 2 === 0 ? '#C9A84C' : '#D9C077',
+            top: 0,
+            left: 0,
+          }}
+        >
+          ✦
+        </motion.span>
+      ))}
+    </div>
   )
 }

@@ -75,8 +75,19 @@ export default function KnowledgeMap({ userId }: KnowledgeMapProps) {
 
   return (
     <div className="w-full max-w-2xl mx-auto">
-      {/* Radial map container */}
-      <div className="relative w-full" style={{ paddingBottom: '100%' }}>
+      {/* ─── Mobile: horizontal scroll strip ─── */}
+      <div className="md:hidden -mx-4 px-4 overflow-x-auto no-scrollbar" style={{ scrollSnapType: 'x mandatory' }}>
+        <ul className="flex gap-3 pb-2">
+          {positioned.map((node) => (
+            <li key={node.slug} style={{ scrollSnapAlign: 'start' }}>
+              <MapNodeStrip node={node} />
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* ─── Desktop: radial map ─── */}
+      <div className="hidden md:block relative w-full" style={{ paddingBottom: '100%' }}>
         <div className="absolute inset-0">
           {/* SVG connection lines */}
           <svg
@@ -114,8 +125,8 @@ export default function KnowledgeMap({ userId }: KnowledgeMapProps) {
               left: '50%',
               top: '50%',
               transform: 'translate(-50%, -50%)',
-              width: '80px',
-              height: '80px',
+              width: 'clamp(64px, 12vw, 96px)',
+              height: 'clamp(64px, 12vw, 96px)',
             }}
           >
             <div
@@ -143,8 +154,8 @@ export default function KnowledgeMap({ userId }: KnowledgeMapProps) {
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center justify-center gap-6 mt-4 mb-2">
+      {/* Legend (desktop only — irrelevante na strip mobile) */}
+      <div className="hidden md:flex items-center justify-center gap-6 mt-4 mb-2">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full" style={{ background: 'var(--gold)' }} />
           <span className="text-[11px]" style={{ color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
@@ -165,6 +176,60 @@ export default function KnowledgeMap({ userId }: KnowledgeMapProps) {
         </div>
       </div>
     </div>
+  )
+}
+
+/* ─── Mobile: card no strip ─── */
+
+function MapNodeStrip({ node }: { node: MapNode }) {
+  const Icon = CATEGORY_ICONS[node.slug] || BookOpen
+  const label = CATEGORY_LABELS[node.slug] || node.title
+  const pct = node.total > 0 ? Math.round((node.studied / node.total) * 100) : 0
+  const isComplete = pct === 100
+  const hasProgress = pct > 0
+  const accentColor = isComplete ? '#66BB6A' : hasProgress ? '#C9A84C' : 'rgba(242,237,228,0.3)'
+
+  return (
+    <Link
+      href={`/${node.slug}`}
+      className="flex flex-col items-center justify-center w-24 h-28 rounded-2xl active:scale-95 transition-transform"
+      style={{
+        background: 'rgba(20,18,14,0.6)',
+        border: `1px solid ${hasProgress ? accentColor + '40' : 'rgba(242,237,228,0.08)'}`,
+      }}
+    >
+      <div className="relative">
+        <svg width="44" height="44" viewBox="0 0 52 52" className="transform -rotate-90">
+          <circle cx="26" cy="26" r="23" fill="none" stroke="rgba(242,237,228,0.06)" strokeWidth="3" />
+          {hasProgress && (
+            <circle
+              cx="26"
+              cy="26"
+              r="23"
+              fill="none"
+              stroke={accentColor}
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeDasharray={`${(pct / 100) * 144.5} 144.5`}
+            />
+          )}
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Icon className="w-5 h-5" style={{ color: accentColor }} />
+        </div>
+      </div>
+      <span
+        className="text-[11px] mt-1.5 text-center leading-tight px-1"
+        style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-body)' }}
+      >
+        {label}
+      </span>
+      {hasProgress && (
+        <span className="text-[10px] mt-0.5 font-medium" style={{ color: accentColor }}>
+          {pct}%
+        </span>
+      )}
+    </Link>
   )
 }
 
