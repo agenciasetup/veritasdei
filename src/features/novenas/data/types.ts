@@ -1,51 +1,29 @@
 /**
- * Tipos do Marco 4 — Novenas.
+ * Tipos TypeScript para o Marco 4 — Novenas.
  *
- * Divididos em:
- *   - Tipos de CONTEÚDO (NovenaDay, NovenaBuiltin, NovenaCatalogEntry):
- *     descrevem a estrutura dos 9 dias de oração, válidos tanto para
- *     novenas builtin (hardcoded em `catalog.ts`) quanto para
- *     personalizadas (criadas pelo usuário em `novenas_custom`).
- *   - Tipos de PERSISTÊNCIA (NovenaCustomRecord, NovenaProgressRecord,
- *     NovenaDailyLogRecord): espelham as linhas no Supabase. Mantidos
- *     em sincronia manualmente com a migration
- *     `20260415223113_novenas_foundation.sql`.
+ * Espelha o schema de `supabase/migrations/20260415223113_novenas_foundation.sql`.
+ * Tipos manuais, sem codegen Supabase.
  */
 
-// ---------- Conteúdo ----------
+// ---------- Novena Builtin (hardcoded) ----------
 
-/**
- * Um único dia de uma novena. `titulo` é o sub-tema daquele dia (ex:
- * "Dia 3 — Pela nossa família"), `texto` é o corpo da oração em
- * Markdown leve (quebras de linha, ênfases simples).
- */
 export interface NovenaDay {
   titulo: string
   texto: string
 }
 
-/**
- * Uma novena do catálogo builtin. Hardcoded em TS, nunca toca o DB.
- * `slug` é o identificador estável usado em `novenas_progress.builtin_slug`
- * e em URLs — jamais mudar após o lançamento.
- */
 export interface NovenaBuiltin {
   slug: string
   titulo: string
-  /** Curta descrição para o catálogo (1–2 linhas). */
   subtitulo: string
-  /** Texto longo para a página de detalhe — história, devoção, quando rezar. */
   descricao: string
-  /** Período tradicional sugerido ("16 a 24 de dezembro", "antes de Pentecostes"...). */
-  periodoSugerido: string | null
-  /** Oração comum de abertura/encerramento — opcional. */
+  periodoSugerido: string
   oracaoInicial?: string
   oracaoFinal?: string
-  /** Os 9 dias. Ordem importa (índice = dia-1). */
-  dias: NovenaDay[]
+  dias: [NovenaDay, NovenaDay, NovenaDay, NovenaDay, NovenaDay, NovenaDay, NovenaDay, NovenaDay, NovenaDay]
 }
 
-// ---------- Persistência: novenas_custom ----------
+// ---------- novenas_custom ----------
 
 export interface NovenaCustomRecord {
   id: string
@@ -61,24 +39,22 @@ export interface NovenaCustomRecord {
 export interface NovenaCustomDraft {
   titulo: string
   descricao?: string | null
-  dias: NovenaDay[]
+  dias: [NovenaDay, NovenaDay, NovenaDay, NovenaDay, NovenaDay, NovenaDay, NovenaDay, NovenaDay, NovenaDay]
 }
 
 export interface NovenaCustomPatch {
   titulo?: string
   descricao?: string | null
-  dias?: NovenaDay[]
+  dias?: [NovenaDay, NovenaDay, NovenaDay, NovenaDay, NovenaDay, NovenaDay, NovenaDay, NovenaDay, NovenaDay]
   arquivada?: boolean
 }
 
-// ---------- Persistência: novenas_progress ----------
+// ---------- novenas_progress ----------
 
 export interface NovenaProgressRecord {
   id: string
   user_id: string
-  /** Slug do catálogo builtin. `null` se for uma custom. */
   builtin_slug: string | null
-  /** FK para novenas_custom. `null` se for builtin. */
   custom_novena_id: string | null
   intention_id: string | null
   current_day: number
@@ -90,13 +66,21 @@ export interface NovenaProgressRecord {
 }
 
 export interface NovenaProgressStartInput {
-  /** Exatamente um dos dois deve estar presente. */
   builtin_slug?: string
   custom_novena_id?: string
   intention_id?: string | null
 }
 
-// ---------- Persistência: novenas_daily_log ----------
+/** Progresso enriquecido com dados da fonte (builtin ou custom). */
+export interface NovenaProgressWithSource extends NovenaProgressRecord {
+  source: {
+    tipo: 'builtin' | 'custom'
+    titulo: string
+    subtitulo?: string
+  }
+}
+
+// ---------- novenas_daily_log ----------
 
 export interface NovenaDailyLogRecord {
   id: string
@@ -104,19 +88,4 @@ export interface NovenaDailyLogRecord {
   user_id: string
   day_number: number
   prayed_at: string
-}
-
-// ---------- Tipos enriquecidos (joins) ----------
-
-/**
- * Retorno de "dê-me minhas novenas em curso" — junta o progress com
- * os metadados da novena (título, descrição curta) resolvidos do
- * catálogo builtin OU da tabela custom, para evitar N+1 na UI.
- */
-export interface NovenaProgressWithSource {
-  progress: NovenaProgressRecord
-  source:
-    | { kind: 'builtin'; novena: NovenaBuiltin }
-    | { kind: 'custom'; novena: NovenaCustomRecord }
-  intention: { id: string; titulo: string } | null
 }
