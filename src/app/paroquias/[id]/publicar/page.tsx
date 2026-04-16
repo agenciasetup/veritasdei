@@ -299,7 +299,7 @@ function PublicarContent({ id }: { id: string }) {
               {imagemUrl ? (
                 <div className="relative rounded-xl overflow-hidden" style={{ maxHeight: 280 }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={imagemUrl} alt="" className="w-full h-auto object-cover" />
+                  <img src={imagemUrl} alt="" loading="lazy" decoding="async" className="w-full h-auto object-cover" />
                   <button
                     type="button"
                     onClick={() => setImagemUrl(null)}

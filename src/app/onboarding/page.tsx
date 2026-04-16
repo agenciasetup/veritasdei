@@ -430,7 +430,8 @@ export default function OnboardingPage() {
                 }}
               >
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatarUrl} alt="Avatar" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 ) : (
                   <User className="w-12 h-12" style={{ color: '#C9A84C', opacity: 0.5 }} />
                 )}

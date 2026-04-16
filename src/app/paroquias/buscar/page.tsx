@@ -561,7 +561,7 @@ function ParoquiaCard({ p }: { p: ResultadoComDistancia }) {
       {photo && (
         <div className="w-full h-40 rounded-xl overflow-hidden mb-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={photo} alt={p.nome} className="w-full h-full object-cover" />
+          <img src={photo} alt={p.nome} loading="lazy" decoding="async" className="w-full h-full object-cover" />
         </div>
       )}
 

@@ -10,6 +10,7 @@ import { PropositoSheetProvider } from '@/components/propositos/PropositoSheet'
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext'
 import InstallPrompt from '@/components/pwa/InstallPrompt'
 import PageTransition from '@/components/mobile/PageTransition'
+import OfflineBanner from '@/components/mobile/OfflineBanner'
 
 const PUBLIC_PATHS = ['/login', '/auth', '/privacidade', '/termos', '/onboarding']
 const FULLSCREEN_PATHS = ['/verbum', '/rosario', '/liturgia/hoje']
@@ -28,6 +29,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <SubscriptionProvider>
       <PropositosProvider>
         <PropositoSheetProvider>
+          {/* Offline indicator (mobile-friendly, fixed top) */}
+          {showChrome && <OfflineBanner />}
+
           {/* Liturgical bar at the very top */}
           {showChrome && !hideLiturgicalBar && <LiturgicalBar />}
 

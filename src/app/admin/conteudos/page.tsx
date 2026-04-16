@@ -278,7 +278,7 @@ export default function AdminConteudosPage() {
               {(item.cover_url || item.image_url) && (
                 <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0"
                   style={{ border: '1px solid rgba(201,168,76,0.1)' }}>
-                  <img src={(item.cover_url ?? item.image_url) as string} alt="" className="w-full h-full object-cover" />
+                  <img src={(item.cover_url ?? item.image_url) as string} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 </div>
               )}
 

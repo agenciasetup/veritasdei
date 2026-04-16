@@ -325,7 +325,7 @@ function BlockRow({
           {block.url ? (
             <div className="relative w-full h-48 rounded-lg overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={block.url} alt={block.caption ?? ''} className="w-full h-full object-cover" />
+              <img src={block.url} alt={block.caption ?? ''} loading="lazy" decoding="async" className="w-full h-full object-cover" />
               <button
                 type="button"
                 onClick={onPickImage}
