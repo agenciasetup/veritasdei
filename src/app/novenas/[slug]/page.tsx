@@ -33,7 +33,7 @@ export default async function NovenaSlugPage({ params }: Props) {
     >
       <div className="bg-glow" aria-hidden />
 
-      <div className="relative z-10 mx-auto max-w-xl">
+      <div className="relative z-10 mx-auto max-w-xl fade-in">
         <header className="mb-8 text-center">
           <Link
             href="/novenas"

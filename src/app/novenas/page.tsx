@@ -14,7 +14,7 @@ export default function NovenasPage() {
     >
       <div className="bg-glow" aria-hidden />
 
-      <div className="relative z-10 mx-auto max-w-2xl">
+      <div className="relative z-10 mx-auto max-w-2xl fade-in">
         <header className="mb-10 text-center">
           <h1
             className="text-3xl md:text-4xl tracking-wide"
@@ -30,7 +30,7 @@ export default function NovenasPage() {
           </div>
         </header>
 
-        <section aria-label="Catálogo de novenas" className="grid gap-4">
+        <section aria-label="Catálogo de novenas" className="grid gap-4 stagger-in">
           {NOVENAS_CATALOG.map((novena) => (
             <Link
               key={novena.slug}
