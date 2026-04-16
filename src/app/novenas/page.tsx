@@ -30,11 +30,12 @@ export default function NovenasPage() {
           </div>
         </header>
 
-        <div className="grid gap-4">
+        <section aria-label="Catálogo de novenas" className="grid gap-4">
           {NOVENAS_CATALOG.map((novena) => (
             <Link
               key={novena.slug}
               href={`/novenas/${novena.slug}`}
+              aria-label={`${novena.titulo} — ${novena.subtitulo}`}
               className="block rounded-2xl p-5 transition-all hover:scale-[1.01]"
               style={{
                 background: 'rgba(20, 18, 14, 0.6)',
@@ -58,9 +59,9 @@ export default function NovenasPage() {
               </p>
             </Link>
           ))}
-        </div>
+        </section>
 
-        <div className="mt-10 flex flex-wrap justify-center gap-3">
+        <nav aria-label="Navegação de novenas" className="mt-10 flex flex-wrap justify-center gap-3">
           <Link
             href="/novenas/minhas"
             className="rounded-lg border px-5 py-2.5 text-sm transition"
@@ -81,7 +82,7 @@ export default function NovenasPage() {
           >
             Criar novena personalizada
           </Link>
-        </div>
+        </nav>
       </div>
     </main>
   )

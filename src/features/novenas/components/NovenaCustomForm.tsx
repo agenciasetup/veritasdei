@@ -111,13 +111,14 @@ export function NovenaCustomForm({ existing }: Props) {
           </div>
         </header>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} aria-label={isEditing ? 'Editar novena personalizada' : 'Criar novena personalizada'}>
           {/* Título */}
           <div className="mb-4">
-            <label className="block text-xs mb-1.5 uppercase tracking-wider" style={{ color: '#7A7368' }}>
+            <label htmlFor="novena-titulo" className="block text-xs mb-1.5 uppercase tracking-wider" style={{ color: '#7A7368' }}>
               Título da novena
             </label>
             <input
+              id="novena-titulo"
               type="text"
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
@@ -135,10 +136,11 @@ export function NovenaCustomForm({ existing }: Props) {
 
           {/* Descrição */}
           <div className="mb-6">
-            <label className="block text-xs mb-1.5 uppercase tracking-wider" style={{ color: '#7A7368' }}>
+            <label htmlFor="novena-descricao" className="block text-xs mb-1.5 uppercase tracking-wider" style={{ color: '#7A7368' }}>
               Descrição (opcional)
             </label>
             <textarea
+              id="novena-descricao"
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
               maxLength={2000}
@@ -196,6 +198,7 @@ export function NovenaCustomForm({ existing }: Props) {
                         value={dia.titulo}
                         onChange={(e) => updateDay(i, 'titulo', e.target.value)}
                         maxLength={200}
+                        aria-label={`Título do dia ${i + 1}`}
                         className="w-full rounded-lg px-3 py-2 text-sm outline-none"
                         style={{
                           background: 'rgba(15, 14, 12, 0.6)',
@@ -226,7 +229,7 @@ export function NovenaCustomForm({ existing }: Props) {
 
           {/* Erro */}
           {error && (
-            <p className="text-xs text-center mb-4" style={{ color: '#E57373' }}>
+            <p className="text-xs text-center mb-4" role="alert" style={{ color: '#E57373' }}>
               {error}
             </p>
           )}

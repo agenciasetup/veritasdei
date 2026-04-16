@@ -160,7 +160,7 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
         </header>
 
         {/* Progress dots */}
-        <div className="flex justify-center gap-2 mb-6">
+        <nav aria-label={`Progresso da novena: dia ${currentDay} de 9`} className="flex justify-center gap-2 mb-6">
           {Array.from({ length: 9 }, (_, i) => {
             const dayNum = i + 1
             const isPrayed = prayedDays.has(dayNum)
@@ -168,6 +168,8 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
             return (
               <div
                 key={i}
+                role="img"
+                aria-label={`Dia ${dayNum}${isPrayed ? ', rezado' : isCurrent ? ', atual' : ', pendente'}`}
                 className="w-3 h-3 rounded-full transition-all"
                 style={{
                   background: isPrayed
@@ -178,11 +180,10 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
                   border: isCurrent ? '2px solid #C9A84C' : 'none',
                   transform: isCurrent ? 'scale(1.3)' : 'scale(1)',
                 }}
-                title={`Dia ${dayNum}${isPrayed ? ' (rezado)' : isCurrent ? ' (atual)' : ''}`}
               />
             )
           })}
-        </div>
+        </nav>
 
         {/* Aviso de dias perdidos */}
         {skippedDays > 0 && (
@@ -224,7 +225,8 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
         )}
 
         {/* Dia da novena */}
-        <section
+        <article
+          aria-label={dia.titulo}
           className="rounded-2xl p-6 mb-4"
           style={{
             background: 'rgba(20, 18, 14, 0.6)',
@@ -243,7 +245,7 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
           >
             {dia.texto}
           </div>
-        </section>
+        </article>
 
         {/* Oração Final */}
         {novena.oracaoFinal && (
@@ -268,7 +270,7 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
         )}
 
         {/* Botão "Rezei hoje" */}
-        <div className="flex flex-col items-center gap-3 mt-6">
+        <div className="flex flex-col items-center gap-3 mt-6" role="status" aria-live="polite">
           {todayAlreadyPrayed ? (
             <div className="text-center">
               <p className="text-sm" style={{ color: '#C9A84C' }}>
@@ -279,6 +281,7 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
             <button
               onClick={handlePray}
               disabled={loading}
+              aria-busy={loading}
               className="rounded-lg px-8 py-3.5 text-sm font-semibold transition disabled:opacity-50"
               style={{
                 background: 'linear-gradient(180deg, #C9A84C, #A88437)',
@@ -294,7 +297,7 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
           )}
 
           {error && (
-            <p className="text-xs" style={{ color: '#E57373' }}>
+            <p className="text-xs" role="alert" style={{ color: '#E57373' }}>
               {error}
             </p>
           )}
