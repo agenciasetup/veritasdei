@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
-import { sanitizeIlike, sanitizePostgrestFilter } from '@/lib/utils/sanitize'
+import { sanitizeIlike, sanitizePostgrestEqValue } from '@/lib/utils/sanitize'
 import type { VerbumFlow, VerbumFlowShare, VerbumFlowFavorite } from '../types/verbum.types'
 
 // Lazy-init: deferred from module import to prevent premature Supabase auth init.
@@ -325,11 +325,13 @@ export async function getSharedWithMe(userId: string, email: string): Promise<(V
   supabase ??= createClient()
   if (!supabase)return []
 
-  // Sanitiza userId e email — apesar de virem da sessão, PostgREST interpreta
-  // vírgulas e parênteses dentro do .or() como separadores de filtro, então
-  // qualquer caractere desses no valor precisa estar escapado.
-  const safeUserId = sanitizePostgrestFilter(userId)
-  const safeEmail = sanitizePostgrestFilter(email)
+  // Sanitiza userId e email — apesar de virem da sessão, vírgulas e
+  // parênteses dentro do .or() são separadores de filtro do PostgREST.
+  // Usamos sanitizePostgrestEqValue (e não sanitizePostgrestFilter) porque
+  // `eq` compara literalmente: escapar `_`/`%` quebraria matches em emails
+  // do tipo `user_name@example.com`.
+  const safeUserId = sanitizePostgrestEqValue(userId)
+  const safeEmail = sanitizePostgrestEqValue(email)
   const { data } = await supabase
     .from('verbum_flow_shares')
     .select('*, flow:verbum_flows(*)')
