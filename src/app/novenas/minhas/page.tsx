@@ -136,7 +136,7 @@ export default async function MinhasNovenasPage() {
               return (
                 <Link
                   key={progress.id}
-                  href={slug ? `/novenas/${slug}/progresso` : `/novenas/minhas`}
+                  href={slug ? `/novenas/${slug}/progresso` : `/novenas/custom/${progress.custom_novena_id}/progresso`}
                   className="block rounded-2xl p-5 transition-all hover:scale-[1.01]"
                   style={{
                     background: 'rgba(20, 18, 14, 0.6)',
@@ -209,6 +209,13 @@ export default async function MinhasNovenasPage() {
             style={{ borderColor: 'rgba(201, 168, 76, 0.35)', color: '#D9C077' }}
           >
             Catálogo de novenas
+          </Link>
+          <Link
+            href="/novenas/custom"
+            className="rounded-lg border px-5 py-2.5 text-sm transition"
+            style={{ borderColor: 'rgba(201, 168, 76, 0.25)', color: '#B8AFA2' }}
+          >
+            Personalizadas
           </Link>
           <Link
             href="/novenas/historico"

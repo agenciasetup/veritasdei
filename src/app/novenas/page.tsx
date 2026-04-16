@@ -60,16 +60,26 @@ export default function NovenasPage() {
           ))}
         </div>
 
-        <div className="mt-10 text-center">
+        <div className="mt-10 flex flex-wrap justify-center gap-3">
           <Link
             href="/novenas/minhas"
-            className="inline-block rounded-lg border px-5 py-2.5 text-sm transition"
+            className="rounded-lg border px-5 py-2.5 text-sm transition"
             style={{
               borderColor: 'rgba(201, 168, 76, 0.35)',
               color: '#D9C077',
             }}
           >
             Minhas novenas em curso
+          </Link>
+          <Link
+            href="/novenas/custom"
+            className="rounded-lg border px-5 py-2.5 text-sm transition"
+            style={{
+              borderColor: 'rgba(201, 168, 76, 0.15)',
+              color: '#7A7368',
+            }}
+          >
+            Criar novena personalizada
           </Link>
         </div>
       </div>
