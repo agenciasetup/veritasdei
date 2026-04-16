@@ -239,25 +239,25 @@ export default function AdminAprovacoesPage() {
           ) : (
             <div className="space-y-3">
               {verificacoes.map(v => (
-                <div key={v.id} className="rounded-2xl p-5"
+                <div key={v.id} className="rounded-2xl p-4 md:p-5"
                   style={{ background: 'rgba(16,16,16,0.7)', border: '1px solid rgba(201,168,76,0.1)' }}>
-                  <div className="flex items-start gap-4">
+                  <div className="flex items-start gap-3 md:gap-4">
                     <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
                       style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.15)' }}>
                       <VocacaoIcon vocacao={v.profiles?.vocacao ?? 'leigo'} size={20} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium" style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}>
+                      <p className="text-sm font-medium truncate" style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}>
                         {v.profiles?.name ?? '—'}
                       </p>
-                      <p className="text-xs" style={{ color: '#7A7368' }}>{v.profiles?.email}</p>
-                      <div className="flex items-center gap-3 mt-2 flex-wrap">
+                      <p className="text-xs truncate" style={{ color: '#8A8378' }}>{v.profiles?.email}</p>
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
                         <span className="text-xs px-2 py-0.5 rounded-full"
                           style={{ background: 'rgba(201,168,76,0.08)', color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}>
                           {v.tipo}
                         </span>
                         {v.profiles?.cidade && (
-                          <span className="flex items-center gap-1 text-xs" style={{ color: '#7A7368' }}>
+                          <span className="flex items-center gap-1 text-xs" style={{ color: '#8A8378' }}>
                             <MapPin className="w-3 h-3" />
                             {v.profiles.cidade}, {v.profiles.estado}
                           </span>
@@ -285,19 +285,23 @@ export default function AdminAprovacoesPage() {
                         </p>
                       )}
                     </div>
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <button onClick={() => handleVerificacao(v.id, 'aprovado')}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all"
-                        style={{ background: 'rgba(76,175,80,0.1)', border: '1px solid rgba(76,175,80,0.2)', color: '#4CAF50', fontFamily: 'Poppins, sans-serif' }}>
-                        <CheckCircle className="w-3.5 h-3.5" /> Aprovar
-                      </button>
-                      <button onClick={() => handleVerificacao(v.id, 'rejeitado')}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all"
-                        style={{ background: 'rgba(217,79,92,0.1)', border: '1px solid rgba(217,79,92,0.2)', color: '#D94F5C', fontFamily: 'Poppins, sans-serif' }}>
-                        <XCircle className="w-3.5 h-3.5" /> Rejeitar
-                      </button>
-                    </div>
+                  </div>
+                  {/* Actions — full-width no mobile, inline no desktop */}
+                  <div className="grid grid-cols-2 md:flex md:justify-end gap-2 mt-3">
+                    <button onClick={() => {
+                      if (confirm(`Rejeitar verificação de "${v.profiles?.name ?? 'usuário'}"?`)) {
+                        handleVerificacao(v.id, 'rejeitado')
+                      }
+                    }}
+                      className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium active:scale-[0.98] touch-target-lg"
+                      style={{ background: 'rgba(217,79,92,0.1)', border: '1px solid rgba(217,79,92,0.25)', color: '#D94F5C', fontFamily: 'Poppins, sans-serif' }}>
+                      <XCircle className="w-4 h-4" /> Rejeitar
+                    </button>
+                    <button onClick={() => handleVerificacao(v.id, 'aprovado')}
+                      className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium active:scale-[0.98] touch-target-lg"
+                      style={{ background: 'rgba(76,175,80,0.12)', border: '1px solid rgba(76,175,80,0.3)', color: '#4CAF50', fontFamily: 'Poppins, sans-serif' }}>
+                      <CheckCircle className="w-4 h-4" /> Aprovar
+                    </button>
                   </div>
                 </div>
               ))}
@@ -375,19 +379,20 @@ export default function AdminAprovacoesPage() {
                         </p>
                       )}
                     </div>
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <button onClick={() => handleIgrejaVerif(p.id, 'aprovar')}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all"
-                        style={{ background: 'rgba(76,175,80,0.1)', border: '1px solid rgba(76,175,80,0.2)', color: '#4CAF50', fontFamily: 'Poppins, sans-serif' }}>
-                        <CheckCircle className="w-3.5 h-3.5" /> Aprovar
-                      </button>
-                      <button onClick={() => handleIgrejaVerif(p.id, 'rejeitar')}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all"
-                        style={{ background: 'rgba(217,79,92,0.1)', border: '1px solid rgba(217,79,92,0.2)', color: '#D94F5C', fontFamily: 'Poppins, sans-serif' }}>
-                        <XCircle className="w-3.5 h-3.5" /> Rejeitar
-                      </button>
-                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 md:flex md:justify-end gap-2 mt-3">
+                    <button onClick={() => {
+                      if (confirm(`Rejeitar verificação de "${p.nome}"?`)) handleIgrejaVerif(p.id, 'rejeitar')
+                    }}
+                      className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium active:scale-[0.98] touch-target-lg"
+                      style={{ background: 'rgba(217,79,92,0.1)', border: '1px solid rgba(217,79,92,0.25)', color: '#D94F5C', fontFamily: 'Poppins, sans-serif' }}>
+                      <XCircle className="w-4 h-4" /> Rejeitar
+                    </button>
+                    <button onClick={() => handleIgrejaVerif(p.id, 'aprovar')}
+                      className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium active:scale-[0.98] touch-target-lg"
+                      style={{ background: 'rgba(76,175,80,0.12)', border: '1px solid rgba(76,175,80,0.3)', color: '#4CAF50', fontFamily: 'Poppins, sans-serif' }}>
+                      <CheckCircle className="w-4 h-4" /> Aprovar
+                    </button>
                   </div>
                 </div>
               ))}
@@ -433,19 +438,20 @@ export default function AdminAprovacoesPage() {
                         Enviada por {p.profiles?.name ?? 'desconhecido'} em {new Date(p.created_at).toLocaleDateString('pt-BR')}
                       </p>
                     </div>
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <button onClick={() => handleParoquia(p.id, 'aprovada')}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all"
-                        style={{ background: 'rgba(76,175,80,0.1)', border: '1px solid rgba(76,175,80,0.2)', color: '#4CAF50', fontFamily: 'Poppins, sans-serif' }}>
-                        <CheckCircle className="w-3.5 h-3.5" /> Aprovar
-                      </button>
-                      <button onClick={() => handleParoquia(p.id, 'rejeitada')}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all"
-                        style={{ background: 'rgba(217,79,92,0.1)', border: '1px solid rgba(217,79,92,0.2)', color: '#D94F5C', fontFamily: 'Poppins, sans-serif' }}>
-                        <XCircle className="w-3.5 h-3.5" /> Rejeitar
-                      </button>
-                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 md:flex md:justify-end gap-2 mt-3">
+                    <button onClick={() => {
+                      if (confirm(`Rejeitar paróquia "${p.nome}"?`)) handleParoquia(p.id, 'rejeitada')
+                    }}
+                      className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium active:scale-[0.98] touch-target-lg"
+                      style={{ background: 'rgba(217,79,92,0.1)', border: '1px solid rgba(217,79,92,0.25)', color: '#D94F5C', fontFamily: 'Poppins, sans-serif' }}>
+                      <XCircle className="w-4 h-4" /> Rejeitar
+                    </button>
+                    <button onClick={() => handleParoquia(p.id, 'aprovada')}
+                      className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium active:scale-[0.98] touch-target-lg"
+                      style={{ background: 'rgba(76,175,80,0.12)', border: '1px solid rgba(76,175,80,0.3)', color: '#4CAF50', fontFamily: 'Poppins, sans-serif' }}>
+                      <CheckCircle className="w-4 h-4" /> Aprovar
+                    </button>
                   </div>
                 </div>
               ))}

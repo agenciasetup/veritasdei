@@ -4,8 +4,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   FileText, ChevronRight, Plus, Pencil, Trash2, Eye, EyeOff,
-  ArrowLeft, Save, X, Image, GripVertical, Download,
+  ArrowLeft, Save, X, GripVertical, Download, MoreVertical,
 } from 'lucide-react'
+import BottomSheet from '@/components/mobile/BottomSheet'
+import { useHaptic } from '@/hooks/useHaptic'
 
 type Level = 'groups' | 'topics' | 'subtopics' | 'items'
 
@@ -31,6 +33,7 @@ const DESC_MAX = 500
 
 export default function AdminConteudosPage() {
   const supabase = createClient()
+  const haptic = useHaptic()
 
   // Navigation state
   const [level, setLevel] = useState<Level>('groups')
@@ -49,6 +52,10 @@ export default function AdminConteudosPage() {
   const [editing, setEditing] = useState<Record<string, string | number | boolean | null> | null>(null)
   const [editMode, setEditMode] = useState<'create' | 'edit'>('create')
   const [saving, setSaving] = useState(false)
+
+  // Mobile [⋮] actions menu
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [actionsFor, setActionsFor] = useState<any | null>(null)
 
   // Seed state
   const [seeding, setSeeding] = useState(false)
@@ -266,13 +273,14 @@ export default function AdminConteudosPage() {
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           {currentData.map((item: any) => (
             <div key={item.id as string}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group"
+              className="flex items-center gap-3 px-3 md:px-4 py-3 rounded-xl transition-all group"
               style={{
                 background: 'rgba(16,16,16,0.6)',
                 border: '1px solid rgba(201,168,76,0.08)',
                 opacity: (item.visible as boolean) ? 1 : 0.5,
+                minHeight: 56,
               }}>
-              <GripVertical className="w-4 h-4 flex-shrink-0 opacity-30" style={{ color: '#7A7368' }} />
+              <GripVertical className="hidden md:block w-4 h-4 flex-shrink-0 opacity-30" style={{ color: '#7A7368' }} />
 
               {/* Cover thumbnail */}
               {(item.cover_url || item.image_url) && (
@@ -302,17 +310,18 @@ export default function AdminConteudosPage() {
                 )}
               </div>
 
-              {/* Navigate arrow for non-items */}
+              {/* Navigate arrow for non-items — visible on mobile, hover-only desktop */}
               {level !== 'items' && (
                 <button onClick={() => navigate(item as ContentGroup)}
-                  className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                  style={{ color: '#C9A84C' }}>
+                  className="p-2 rounded-lg md:opacity-0 md:group-hover:opacity-100 transition-opacity touch-target"
+                  style={{ color: '#C9A84C' }}
+                  aria-label="Abrir">
                   <ChevronRight className="w-4 h-4" />
                 </button>
               )}
 
-              {/* Actions */}
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              {/* Desktop actions inline */}
+              <div className="hidden md:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button onClick={() => handleToggleVisible(item.id as string, item.visible as boolean)}
                   className="p-1.5 rounded-lg" style={{ color: '#7A7368' }}
                   title={(item.visible as boolean) ? 'Ocultar' : 'Mostrar'}>
@@ -325,6 +334,14 @@ export default function AdminConteudosPage() {
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
+
+              {/* Mobile: [⋮] opens BottomSheet */}
+              <button onClick={() => { haptic.pulse('tap'); setActionsFor(item) }}
+                className="md:hidden flex items-center justify-center rounded-lg active:scale-95 touch-target-lg"
+                style={{ color: '#8A8378', width: 40, height: 40 }}
+                aria-label="Mais ações">
+                <MoreVertical className="w-4 h-4" />
+              </button>
             </div>
           ))}
         </div>
@@ -448,7 +465,93 @@ export default function AdminConteudosPage() {
           </div>
         </div>
       )}
+
+      {/* Mobile actions BottomSheet — substitui o menu :hover no mobile */}
+      <BottomSheet
+        open={actionsFor !== null}
+        onDismiss={() => setActionsFor(null)}
+        detents={[0.4]}
+        initialDetent={0}
+        label="Ações"
+      >
+        {actionsFor && (
+          <div className="pt-2 pb-6">
+            <p className="text-[11px] uppercase tracking-[0.18em] mb-1"
+              style={{ color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}>
+              {levelLabel}
+            </p>
+            <h3 className="text-base font-semibold mb-3 truncate"
+              style={{ color: '#F2EDE4', fontFamily: 'Cinzel, serif' }}>
+              {(actionsFor.title ?? actionsFor.body ?? '—') as string}
+            </h3>
+
+            <div className="flex flex-col gap-1">
+              {level !== 'items' && (
+                <ActionRow
+                  icon={<ChevronRight className="w-4 h-4" style={{ color: '#C9A84C' }} />}
+                  label="Abrir"
+                  onClick={() => {
+                    const it = actionsFor
+                    setActionsFor(null)
+                    navigate(it as ContentGroup)
+                  }}
+                />
+              )}
+              <ActionRow
+                icon={<Pencil className="w-4 h-4" style={{ color: '#C9A84C' }} />}
+                label="Editar"
+                onClick={() => {
+                  const it = actionsFor
+                  setActionsFor(null)
+                  openEdit(it)
+                }}
+              />
+              <ActionRow
+                icon={(actionsFor.visible as boolean)
+                  ? <EyeOff className="w-4 h-4" style={{ color: '#8A8378' }} />
+                  : <Eye className="w-4 h-4" style={{ color: '#C9A84C' }} />}
+                label={(actionsFor.visible as boolean) ? 'Ocultar' : 'Mostrar'}
+                onClick={() => {
+                  handleToggleVisible(actionsFor.id as string, actionsFor.visible as boolean)
+                  setActionsFor(null)
+                }}
+              />
+              <ActionRow
+                icon={<Trash2 className="w-4 h-4" style={{ color: '#D94F5C' }} />}
+                label="Excluir"
+                danger
+                onClick={() => {
+                  const id = actionsFor.id as string
+                  setActionsFor(null)
+                  handleDelete(id)
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </BottomSheet>
     </div>
+  )
+}
+
+function ActionRow({ icon, label, onClick, danger }: {
+  icon: React.ReactNode
+  label: string
+  onClick: () => void
+  danger?: boolean
+}) {
+  return (
+    <button type="button" onClick={onClick}
+      className="flex items-center gap-3 px-3 py-3 rounded-xl text-left active:scale-[0.98] touch-target-lg"
+      style={{
+        background: danger ? 'rgba(217,79,92,0.06)' : 'rgba(255,255,255,0.02)',
+        border: `1px solid ${danger ? 'rgba(217,79,92,0.18)' : 'rgba(201,168,76,0.08)'}`,
+        color: danger ? '#D94F5C' : '#F2EDE4',
+        fontFamily: 'Poppins, sans-serif',
+      }}>
+      <span className="w-6 flex items-center justify-center">{icon}</span>
+      <span className="text-sm">{label}</span>
+    </button>
   )
 }
 

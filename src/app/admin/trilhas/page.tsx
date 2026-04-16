@@ -5,7 +5,9 @@ import { createClient } from '@/lib/supabase/client'
 import {
   GraduationCap, Plus, Pencil, Trash2, Eye, EyeOff,
   Save, X, ChevronDown, ChevronUp, GripVertical, Link2, FileText, Download,
+  MoreVertical,
 } from 'lucide-react'
+import BottomSheet from '@/components/mobile/BottomSheet'
 
 interface Trail {
   id: string
@@ -63,6 +65,10 @@ export default function AdminTrilhasPage() {
   const [contentTopics, setContentTopics] = useState<ContentTopic[]>([])
   const [contentSubtopics, setContentSubtopics] = useState<ContentSubtopic[]>([])
   const [selectedGroupId, setSelectedGroupId] = useState<string>('')
+
+  // Mobile action menus
+  const [trailActions, setTrailActions] = useState<Trail | null>(null)
+  const [stepActions, setStepActions] = useState<TrailStep | null>(null)
   const [selectedTopicId, setSelectedTopicId] = useState<string>('')
 
   // Seed state
@@ -340,10 +346,15 @@ CREATE POLICY "Admin manage trail_steps" ON trail_steps FOR ALL USING (
               </div>
               {trail.subtitle && <p className="text-xs" style={{ color: '#7A7368' }}>{trail.subtitle}</p>}
             </div>
-            <button onClick={() => toggleExpand(trail.id)} className="p-1.5" style={{ color: '#7A7368' }}>
+            <button onClick={() => toggleExpand(trail.id)}
+              className="p-2 rounded-lg touch-target active:scale-95"
+              style={{ color: '#8A8378' }}
+              aria-label={expandedTrailId === trail.id ? 'Recolher' : 'Expandir'}>
               {expandedTrailId === trail.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+
+            {/* Desktop actions */}
+            <div className="hidden md:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <button onClick={() => handleToggleTrailVisible(trail.id, trail.visible)} className="p-1.5 rounded-lg" style={{ color: '#7A7368' }}>
                 {trail.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
               </button>
@@ -354,6 +365,14 @@ CREATE POLICY "Admin manage trail_steps" ON trail_steps FOR ALL USING (
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
+
+            {/* Mobile [⋮] */}
+            <button onClick={() => setTrailActions(trail)}
+              className="md:hidden flex items-center justify-center rounded-lg active:scale-95 touch-target-lg"
+              style={{ color: '#8A8378', width: 40, height: 40 }}
+              aria-label="Mais ações">
+              <MoreVertical className="w-4 h-4" />
+            </button>
           </div>
 
           {/* Expanded Steps */}
@@ -387,12 +406,11 @@ CREATE POLICY "Admin manage trail_steps" ON trail_steps FOR ALL USING (
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="hidden md:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={() => {
                       setEditingStep(step)
                       setStepMode('edit')
                       if (step.content_subtopic_id) {
-                        // We'd need to reverse-lookup the group/topic, but for simplicity just set them empty
                         setSelectedGroupId('')
                         setSelectedTopicId('')
                       }
@@ -403,6 +421,13 @@ CREATE POLICY "Admin manage trail_steps" ON trail_steps FOR ALL USING (
                       <Trash2 className="w-3 h-3" />
                     </button>
                   </div>
+
+                  <button onClick={() => setStepActions(step)}
+                    className="md:hidden flex items-center justify-center rounded-lg active:scale-95 touch-target-lg"
+                    style={{ color: '#8A8378', width: 36, height: 36 }}
+                    aria-label="Ações da etapa">
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
                 </div>
               ))}
 
@@ -563,7 +588,118 @@ CREATE POLICY "Admin manage trail_steps" ON trail_steps FOR ALL USING (
           </div>
         </div>
       )}
+
+      {/* Mobile actions — trilha */}
+      <BottomSheet
+        open={trailActions !== null}
+        onDismiss={() => setTrailActions(null)}
+        detents={[0.42]}
+        initialDetent={0}
+        label="Ações da trilha"
+      >
+        {trailActions && (
+          <div className="pt-2 pb-6">
+            <h3 className="text-base font-semibold mb-3 truncate"
+              style={{ color: '#F2EDE4', fontFamily: 'Cinzel, serif' }}>
+              {trailActions.title}
+            </h3>
+            <div className="flex flex-col gap-1">
+              <TrailActionRow
+                icon={<Pencil className="w-4 h-4" style={{ color: '#C9A84C' }} />}
+                label="Editar trilha"
+                onClick={() => {
+                  setEditingTrail(trailActions)
+                  setTrailMode('edit')
+                  setTrailActions(null)
+                }}
+              />
+              <TrailActionRow
+                icon={trailActions.visible
+                  ? <EyeOff className="w-4 h-4" style={{ color: '#8A8378' }} />
+                  : <Eye className="w-4 h-4" style={{ color: '#C9A84C' }} />}
+                label={trailActions.visible ? 'Ocultar' : 'Mostrar'}
+                onClick={() => {
+                  handleToggleTrailVisible(trailActions.id, trailActions.visible)
+                  setTrailActions(null)
+                }}
+              />
+              <TrailActionRow
+                icon={<Trash2 className="w-4 h-4" style={{ color: '#D94F5C' }} />}
+                label="Excluir trilha"
+                danger
+                onClick={() => {
+                  const id = trailActions.id
+                  setTrailActions(null)
+                  handleDeleteTrail(id)
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </BottomSheet>
+
+      {/* Mobile actions — etapa */}
+      <BottomSheet
+        open={stepActions !== null}
+        onDismiss={() => setStepActions(null)}
+        detents={[0.32]}
+        initialDetent={0}
+        label="Ações da etapa"
+      >
+        {stepActions && (
+          <div className="pt-2 pb-6">
+            <h3 className="text-base font-semibold mb-3 truncate"
+              style={{ color: '#F2EDE4', fontFamily: 'Cinzel, serif' }}>
+              {stepActions.label}
+            </h3>
+            <div className="flex flex-col gap-1">
+              <TrailActionRow
+                icon={<Pencil className="w-4 h-4" style={{ color: '#C9A84C' }} />}
+                label="Editar etapa"
+                onClick={() => {
+                  setEditingStep(stepActions)
+                  setStepMode('edit')
+                  setSelectedGroupId('')
+                  setSelectedTopicId('')
+                  setStepActions(null)
+                }}
+              />
+              <TrailActionRow
+                icon={<Trash2 className="w-4 h-4" style={{ color: '#D94F5C' }} />}
+                label="Excluir etapa"
+                danger
+                onClick={() => {
+                  const id = stepActions.id
+                  setStepActions(null)
+                  handleDeleteStep(id)
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </BottomSheet>
     </div>
+  )
+}
+
+function TrailActionRow({ icon, label, onClick, danger }: {
+  icon: React.ReactNode
+  label: string
+  onClick: () => void
+  danger?: boolean
+}) {
+  return (
+    <button type="button" onClick={onClick}
+      className="flex items-center gap-3 px-3 py-3 rounded-xl text-left active:scale-[0.98] touch-target-lg"
+      style={{
+        background: danger ? 'rgba(217,79,92,0.06)' : 'rgba(255,255,255,0.02)',
+        border: `1px solid ${danger ? 'rgba(217,79,92,0.18)' : 'rgba(201,168,76,0.08)'}`,
+        color: danger ? '#D94F5C' : '#F2EDE4',
+        fontFamily: 'Poppins, sans-serif',
+      }}>
+      <span className="w-6 flex items-center justify-center">{icon}</span>
+      <span className="text-sm">{label}</span>
+    </button>
   )
 }
 

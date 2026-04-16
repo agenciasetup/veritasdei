@@ -443,10 +443,15 @@ function CatequistasContent() {
 
                   {!auth.usado && (
                     <button
-                      onClick={() => handleDelete(auth.id)}
-                      className="flex-shrink-0 p-2 rounded-lg transition-colors hover:opacity-80"
-                      style={{ color: '#D94F5C' }}
-                      title="Remover autorizacao"
+                      onClick={() => {
+                        if (confirm(`Remover autorização de ${auth.nome || auth.email}?`)) {
+                          handleDelete(auth.id)
+                        }
+                      }}
+                      className="flex-shrink-0 rounded-lg active:scale-95 touch-target-lg flex items-center justify-center"
+                      style={{ color: '#D94F5C', width: 44, height: 44 }}
+                      aria-label="Remover autorização"
+                      title="Remover autorização"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
