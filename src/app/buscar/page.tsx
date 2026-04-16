@@ -1,24 +1,29 @@
 'use client'
 
-import { useState, useEffect, useRef, Suspense } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import SearchBox from '@/components/ui/SearchBox'
 import SearchResults from '@/components/dashboard/SearchResults'
 import CatechismPopup from '@/components/ui/CatechismPopup'
 import AuthGuard from '@/components/auth/AuthGuard'
-import HubHeader from '@/components/hubs/HubHeader'
 import type { QueryResponse } from '@/types'
+import { getDailyIceBreakers } from '@/lib/icebreakers'
+import { useAuth } from '@/contexts/AuthContext'
+import { getDisplayName } from '@/lib/greetings'
 
-/**
- * Página dedicada de busca. Substitui o modo "busca inline na home".
- *
- * Aceita `?q=...` para abertura deep-link (IceBreakers linkam aqui).
- * Mantém o mesmo endpoint `/api/search` que já era usado.
- */
+function buildPastoralGreeting(name: string) {
+  const hour = new Date().getHours()
+  if (hour < 12) return `Bom dia, ${name}. Qual sua dúvida hoje?`
+  if (hour < 18) return `A paz de Cristo, ${name}. Vamos conversar?`
+  return `Boa noite, ${name}. Qual sua dúvida hoje?`
+}
+
 function BuscarInner() {
   const searchParams = useSearchParams()
-  const router = useRouter()
+  const { profile } = useAuth()
+
   const initialQuery = searchParams.get('q') ?? ''
+  const displayName = getDisplayName(profile?.vocacao, profile?.name ?? null) || 'irmão(ã)'
 
   const [response, setResponse] = useState<QueryResponse | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -30,7 +35,9 @@ function BuscarInner() {
   } | null>(null)
   const ranInitialRef = useRef(false)
 
-  async function handleSearch(query: string) {
+  const iceBreakers = useMemo(() => getDailyIceBreakers(6), [])
+
+  const handleSearch = useCallback(async (query: string) => {
     if (!query.trim()) return
     setIsLoading(true)
     setError(null)
@@ -42,7 +49,7 @@ function BuscarInner() {
         body: JSON.stringify({ query }),
       })
       if (!res.ok) {
-        const data = await res.json()
+        const data = (await res.json()) as { error?: string }
         throw new Error(data.error || 'Erro ao consultar as fontes.')
       }
       const data: QueryResponse = await res.json()
@@ -55,16 +62,15 @@ function BuscarInner() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
-  // Deep-link: busca automática se veio com ?q=
   useEffect(() => {
     if (ranInitialRef.current) return
     if (initialQuery) {
       ranInitialRef.current = true
       void handleSearch(initialQuery)
     }
-  }, [initialQuery])
+  }, [initialQuery, handleSearch])
 
   function handleRelatedClick(topic: string) {
     void handleSearch(topic)
@@ -74,6 +80,8 @@ function BuscarInner() {
   function handleCitationClick(reference: string, rect: DOMRect) {
     setCatechismPopup({ ref: reference, rect })
   }
+
+  const hasResponse = Boolean(response) || isLoading || Boolean(error)
 
   return (
     <main className="min-h-screen pb-24">
@@ -85,38 +93,91 @@ function BuscarInner() {
         />
       )}
 
-      <HubHeader title="Buscar" subtitle="Pergunte o que a Igreja ensina" />
-
-      <div className="px-4 max-w-2xl mx-auto">
-        <SearchBox onSearch={handleSearch} isLoading={isLoading} />
-      </div>
-
-      {error && (
-        <div className="px-4 max-w-2xl mx-auto mt-4">
-          <div
-            className="glass-card px-6 py-4 text-center"
-            style={{ borderColor: 'rgba(107, 29, 42, 0.3)' }}
-          >
+      {!hasResponse ? (
+        <section className="px-4 max-w-3xl mx-auto min-h-[68vh] flex flex-col justify-center">
+          <div className="text-center mb-8">
             <p
-              className="text-sm"
-              style={{ color: '#8B3145', fontFamily: 'Poppins, sans-serif' }}
+              className="text-2xl md:text-3xl leading-tight"
+              style={{ color: '#F2EDE4', fontFamily: 'Cormorant Garamond, serif' }}
             >
-              {error}
+              {buildPastoralGreeting(displayName)}
+            </p>
+            <p
+              className="text-sm mt-3"
+              style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+            >
+              Pergunte com liberdade. Eu respondo com base na fé católica e nas fontes.
             </p>
           </div>
-        </div>
-      )}
 
-      <div ref={resultsRef}>
-        {(response || isLoading) && (
-          <SearchResults
-            response={response}
+          <SearchBox
+            onSearch={handleSearch}
             isLoading={isLoading}
-            onRelatedClick={handleRelatedClick}
-            onCitationClick={handleCitationClick}
+            hideChips
+            placeholderText="Alguma dúvida?"
+            initialValue={initialQuery}
           />
-        )}
-      </div>
+
+          <div className="mt-8 flex flex-wrap gap-2 justify-center">
+            {iceBreakers.map((item) => (
+              <button
+                key={item.question}
+                type="button"
+                onClick={() => void handleSearch(item.question)}
+                className="theme-chip"
+                style={{ minHeight: 44 }}
+              >
+                {item.question}
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <>
+          <section className="px-4 pt-6 max-w-2xl mx-auto">
+            <p
+              className="text-sm mb-3"
+              style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+            >
+              {buildPastoralGreeting(displayName)}
+            </p>
+            <SearchBox
+              onSearch={handleSearch}
+              isLoading={isLoading}
+              hideChips
+              placeholderText="Alguma dúvida?"
+              initialValue={initialQuery}
+            />
+          </section>
+
+          {error && (
+            <div className="px-4 max-w-2xl mx-auto mt-4">
+              <div
+                className="glass-card px-6 py-4 text-center"
+                style={{ borderColor: 'rgba(107, 29, 42, 0.3)' }}
+              >
+                <p
+                  className="text-sm"
+                  style={{ color: '#8B3145', fontFamily: 'Poppins, sans-serif' }}
+                >
+                  {error}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div ref={resultsRef}>
+            {(response || isLoading) && (
+              <SearchResults
+                response={response}
+                isLoading={isLoading}
+                onRelatedClick={handleRelatedClick}
+                onCitationClick={handleCitationClick}
+              />
+            )}
+          </div>
+        </>
+      )}
     </main>
   )
 }

@@ -8,8 +8,6 @@ import { getDisplayName } from '@/lib/greetings'
 /**
  * Header da tela "Hoje" — estilo Instagram/WhatsApp:
  * avatar à esquerda, saudação, ícones de busca/sino à direita.
- *
- * O sino é placeholder — lógica de notificações reais chega em Fase 2.
  */
 
 function getGreeting(): string {
@@ -77,7 +75,7 @@ export default function HojeHeader() {
           <Search className="w-4.5 h-4.5" />
         </Link>
         <Link
-          href="/perfil?tab=notificacoes"
+          href="/notificacoes"
           aria-label="Notificações"
           className="w-10 h-10 rounded-full flex items-center justify-center transition-colors"
           style={{

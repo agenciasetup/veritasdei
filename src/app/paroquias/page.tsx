@@ -12,6 +12,7 @@ import {
   Clock,
   Phone,
   Plus,
+  Navigation,
   CheckCircle,
   XCircle,
   Hourglass,
@@ -90,10 +91,10 @@ export default function ParoquiasPage() {
               className="text-2xl md:text-3xl font-bold tracking-wider uppercase"
               style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
             >
-              Paróquias
+              Catálogo de Paróquias
             </h1>
             <p className="text-sm mt-1" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
-              Encontre e cadastre paróquias católicas
+              Catálogo completo (secundário). O fluxo principal fica em “Igrejas perto de mim”.
             </p>
           </div>
 
@@ -111,6 +112,38 @@ export default function ParoquiasPage() {
               Cadastrar Paróquia
             </Link>
           )}
+        </div>
+
+        <div
+          className="rounded-2xl p-4 mb-6 flex flex-wrap items-center gap-3"
+          style={{ background: 'rgba(16,16,16,0.7)', border: '1px solid rgba(201,168,76,0.1)' }}
+        >
+          <Link
+            href="/paroquias/buscar?mode=nearby"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs"
+            style={{
+              color: '#0A0A0A',
+              fontFamily: 'Poppins, sans-serif',
+              fontWeight: 600,
+              background: 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
+            }}
+          >
+            <Navigation className="w-3.5 h-3.5" />
+            Igrejas perto de mim
+          </Link>
+          <Link
+            href="/paroquias/buscar?mode=city"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs"
+            style={{
+              color: '#C9A84C',
+              fontFamily: 'Poppins, sans-serif',
+              background: 'rgba(201,168,76,0.08)',
+              border: '1px solid rgba(201,168,76,0.2)',
+            }}
+          >
+            <MapPin className="w-3.5 h-3.5" />
+            Buscar por cidade
+          </Link>
         </div>
 
         {/* Search */}

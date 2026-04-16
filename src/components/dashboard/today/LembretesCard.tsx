@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { HandHeart, Bell } from 'lucide-react'
 import { usePropositos } from '@/contexts/PropositosContext'
 import { diffDays, localDateString } from '@/lib/propositos'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 
 /**
  * Lembretes calculados 100% no cliente, sem push. Serve como ponte
@@ -30,6 +30,7 @@ interface Lembrete {
 
 export default function LembretesCard() {
   const { propositos, logs, today } = usePropositos()
+  const sentFingerprintRef = useRef<string>('')
 
   const lembretes = useMemo<Lembrete[]>(() => {
     const out: Lembrete[] = []
@@ -49,7 +50,7 @@ export default function LembretesCard() {
             ? `Faz ${dias} dias que você não se confessa`
             : 'Você ainda não confessou este mês',
           subtitulo: 'Encontre uma igreja com horário de confissão',
-          href: '/paroquias',
+          href: '/paroquias/buscar?mode=nearby',
           tom: 'alerta',
         })
       }
@@ -83,6 +84,32 @@ export default function LembretesCard() {
 
     return out
   }, [propositos, logs, today])
+
+  // Alimenta o feed persistente de notificações com dedupe diário.
+  useEffect(() => {
+    if (lembretes.length === 0) return
+    const dayKey = localDateString(new Date())
+    const fingerprint = `${dayKey}:${lembretes.map((l) => l.id).join(',')}`
+    if (sentFingerprintRef.current === fingerprint) return
+    sentFingerprintRef.current = fingerprint
+    void fetch('/api/notificacoes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(
+        lembretes.map((l) => ({
+          type: l.id,
+          title: l.titulo,
+          body: l.subtitulo,
+          target_url: l.href,
+          source: 'home_reminder',
+          dedupe_key: `home-reminder:${l.id}:${dayKey}`,
+          payload: { tone: l.tom },
+        })),
+      ),
+    }).catch(() => {
+      // Não bloqueia a experiência da home se falhar.
+    })
+  }, [lembretes])
 
   if (lembretes.length === 0) return null
 

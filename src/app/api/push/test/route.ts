@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 
 /**
@@ -10,7 +10,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
  *
  * Usada pelo botão "Enviar teste" na seção de notificações do perfil.
  */
-export async function POST(_req: NextRequest) {
+export async function POST() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
@@ -46,5 +46,28 @@ export async function POST(_req: NextRequest) {
       { status: 502 },
     )
   }
+
+  // Também registra no feed in-app com dedupe diário.
+  const dayKey = new Date().toISOString().slice(0, 10)
+  const { error: feedErr } = await supabase
+    .from('user_notificacoes_feed')
+    .upsert(
+      {
+        user_id: user.id,
+        type: 'push_test',
+        title: 'Notificação de teste enviada',
+        body: 'Seu teste de push foi enviado com sucesso.',
+        target_url: '/',
+        source: 'push_test',
+        payload: { provider: 'supabase_edge_function' },
+        dedupe_key: `push-test:${dayKey}`,
+      },
+      { onConflict: 'user_id,dedupe_key' },
+    )
+
+  if (feedErr) {
+    console.error('[push/test] notification feed error', feedErr)
+  }
+
   return NextResponse.json({ ok: true, result })
 }
