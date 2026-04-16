@@ -22,20 +22,15 @@ export function isPushSupported(): boolean {
   )
 }
 
+// Re-export via platform layer — único source of truth após Sprint 8.1.
+import { getPlatform, isIos as platformIsIos } from '@/lib/platform'
+
 export function isStandalone(): boolean {
-  if (typeof window === 'undefined') return false
-  const mq =
-    window.matchMedia?.('(display-mode: standalone)').matches ?? false
-  // iOS Safari usa navigator.standalone
-  const ios = (window.navigator as unknown as { standalone?: boolean })
-    .standalone === true
-  return mq || ios
+  return getPlatform() === 'pwa'
 }
 
 export function isIos(): boolean {
-  if (typeof window === 'undefined') return false
-  const ua = window.navigator.userAgent
-  return /iPad|iPhone|iPod/.test(ua)
+  return platformIsIos()
 }
 
 /** URL-safe base64 → Uint8Array backed by a real ArrayBuffer

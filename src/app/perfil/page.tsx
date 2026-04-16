@@ -385,7 +385,7 @@ function SettingsRow({
     <button
       type="button"
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-4 py-4 touch-target-lg active:bg-white/5 transition-colors"
+      className="tappable w-full flex items-center gap-3 px-4 py-4 touch-target-lg active:bg-white/5 transition-colors"
       style={{
         borderBottom: isLast ? 'none' : '1px solid rgba(201,168,76,0.08)',
       }}
@@ -432,7 +432,7 @@ function SettingsLinkRow({
   return (
     <Link
       href={href}
-      className="w-full flex items-center gap-3 px-4 py-4 touch-target-lg active:bg-white/5 transition-colors"
+      className="tappable w-full flex items-center gap-3 px-4 py-4 touch-target-lg active:bg-white/5 transition-colors"
       style={{
         borderBottom: isLast ? 'none' : '1px solid rgba(201,168,76,0.08)',
         textDecoration: 'none',

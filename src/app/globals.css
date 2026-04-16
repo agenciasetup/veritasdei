@@ -590,11 +590,56 @@ button, a, [role="button"], [role="tab"] {
   display: none;
 }
 
+/* Impede overscroll horizontal de disparar swipe-back do navegador/OS.
+   Aplicar em scroll rows horizontais (PropositosStrip, KnowledgeMap strip,
+   Carousel, admin tabs). */
+.no-overscroll-x {
+  overscroll-behavior-x: contain;
+}
+
+.no-overscroll-y {
+  overscroll-behavior-y: contain;
+}
+
+/* Edge dead-zones em rotas imersivas (terço, verbum, leituras).
+   Impede que toque na borda conflite com edge-swipe nativo. */
+.edge-protect::before,
+.edge-protect::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 20px;
+  z-index: 1000;
+  pointer-events: auto;
+  background: transparent;
+}
+
+.edge-protect::before { left: 0; }
+.edge-protect::after { right: 0; }
+
 /* Safe area helpers (mobile chrome) */
 .safe-top    { padding-top:    env(safe-area-inset-top, 0px); }
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
 .safe-left   { padding-left:   env(safe-area-inset-left, 0px); }
 .safe-right  { padding-right:  env(safe-area-inset-right, 0px); }
+
+/* Garantir safe-area no topo para elementos sticky/fixed apenas em PWA
+   standalone (onde não há barra de URL do browser). */
+@media (display-mode: standalone) {
+  .safe-top-standalone {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .safe-top-standalone-top {
+    top: env(safe-area-inset-top, 0px) !important;
+  }
+}
+
+/* Landscape: iPhone em paisagem tem notch lateral — respeitar. */
+body {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
 
 /* ═══════════════════════════════════════════════════════
    COMING SOON BADGE
@@ -643,6 +688,8 @@ section {
 .stagger-in > *:nth-child(4) { animation-delay: 0.2s; }
 .stagger-in > *:nth-child(5) { animation-delay: 0.25s; }
 .stagger-in > *:nth-child(6) { animation-delay: 0.3s; }
+.stagger-in > *:nth-child(7) { animation-delay: 0.35s; }
+.stagger-in > *:nth-child(8) { animation-delay: 0.4s; }
 
 /* ═══════════════════════════════════════════════════════
    REDUCED MOTION — Respect user preference
@@ -734,6 +781,37 @@ section {
 /* Theme chip press feedback */
 .theme-chip:active:not(:disabled) {
   transform: scale(0.95);
+}
+
+/* Press-state universal — aplicar em qualquer elemento interativo que
+   precise de feedback tátil mas não é button/card de classe específica. */
+.tappable {
+  transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tappable:active {
+  transform: scale(0.97);
+}
+
+/* Success bounce — para feedback de check-in/marcar feito. */
+@keyframes successBounce {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.08); }
+  60%  { transform: scale(0.96); }
+  100% { transform: scale(1); }
+}
+.animate-success-bounce {
+  animation: successBounce 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Subtle gold flash — para counter de streak, dezena completa, etc. */
+@keyframes goldFlash {
+  0%, 100% { background-color: transparent; }
+  50%      { background-color: rgba(201,168,76,0.2); }
+}
+.animate-gold-flash {
+  animation: goldFlash 600ms ease-in-out;
 }
 
 /* ═══════════════════════════════════════════════════════

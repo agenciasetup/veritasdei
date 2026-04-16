@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useSyncExternalStore } from 'react'
+import { isVibrationSupported, vibrate } from '@/lib/platform'
 
 /**
  * Vibração curta semântica — opt-out via localStorage.
@@ -19,10 +20,6 @@ const STORAGE_KEY = 'veritasdei:haptic'
 const LEGACY_STORAGE_KEY = 'veritasdei:rosario:haptic'
 
 type Preference = 'on' | 'off'
-
-interface VibrateNavigator {
-  vibrate?: (pattern: number | number[]) => boolean
-}
 
 /** Padrões de haptic. Mantém os antigos do rosário e adiciona globais. */
 export type HapticPattern =
@@ -52,15 +49,10 @@ const PATTERNS: Record<HapticPattern, number | number[]> = {
   complete: [24, 90, 24, 90, 40],
 }
 
-// ---------- detecção de suporte ----------
+// ---------- detecção de suporte (via platform layer) ----------
 
 function getSupportedClient(): boolean {
-  if (typeof navigator === 'undefined') return false
-  try {
-    return typeof (navigator as unknown as VibrateNavigator).vibrate === 'function'
-  } catch {
-    return false
-  }
+  return isVibrationSupported()
 }
 
 function getSupportedServer(): boolean {
@@ -146,14 +138,7 @@ export function useHaptic(): UseHapticReturn {
   const pulse = useCallback(
     (pattern: HapticPattern) => {
       if (!enabled) return
-      if (typeof navigator === 'undefined') return
-      const nav = navigator as unknown as VibrateNavigator
-      if (typeof nav.vibrate !== 'function') return
-      try {
-        nav.vibrate(PATTERNS[pattern])
-      } catch {
-        // alguns browsers exigem gesto do usuário recente; ignore
-      }
+      vibrate(PATTERNS[pattern])
     },
     [enabled],
   )

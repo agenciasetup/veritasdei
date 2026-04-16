@@ -121,7 +121,7 @@ export default function LembretesCard() {
       >
         Lembretes
       </h2>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 stagger-in">
         {lembretes.map(l => {
           const Icon = l.icon
           const accent = l.tom === 'alerta' ? '#D94F5C' : '#C9A84C'

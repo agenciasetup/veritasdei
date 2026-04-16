@@ -64,7 +64,7 @@ export function NovenaPrayerView({ novena, progress, dailyLogs }: Props) {
   function handleSwipe(_e: unknown, info: PanInfo) {
     const dx = info.offset.x
     const dy = info.offset.y
-    if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx)) return
+    if (Math.abs(dx) < 40 || Math.abs(dy) > Math.abs(dx)) return
     if (dx < 0) gotoDay(viewedDay + 1)
     else gotoDay(viewedDay - 1)
   }

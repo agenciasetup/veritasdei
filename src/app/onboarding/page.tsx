@@ -212,7 +212,7 @@ export default function OnboardingPage() {
   function handleSwipe(_e: unknown, info: PanInfo) {
     const dx = info.offset.x
     const dy = info.offset.y
-    if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx)) return
+    if (Math.abs(dx) < 40 || Math.abs(dy) > Math.abs(dx)) return
     if (dx < 0 && canGoNext && !nextDisabled) goNext()
     else if (dx > 0 && canGoBack) goBack()
   }
@@ -237,11 +237,15 @@ export default function OnboardingPage() {
     <div className="flex flex-col items-center justify-center min-h-screen px-4 py-10 relative">
       <div className="bg-glow" />
 
-      {/* Skip button */}
+      {/* Skip button — respeita safe area no iPhone notch em PWA */}
       <button
         onClick={handleSkipAll}
-        className="absolute top-6 right-6 text-xs transition-colors hover:opacity-80 z-10"
-        style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+        className="absolute right-6 text-xs transition-colors active:opacity-70 z-10 touch-target"
+        style={{
+          color: '#8A8378',
+          fontFamily: 'Poppins, sans-serif',
+          top: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)',
+        }}
       >
         Pular tudo
       </button>

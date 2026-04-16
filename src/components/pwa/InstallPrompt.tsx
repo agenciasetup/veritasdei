@@ -129,7 +129,9 @@ export default function InstallPrompt() {
     <>
       <div
         className="fixed left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-md"
-        style={{ bottom: 'calc(var(--bottom-nav-h, 72px) + 16px)' }}
+        style={{
+          bottom: 'calc(var(--bottom-nav-h, 72px) + 16px + env(safe-area-inset-bottom, 0px))',
+        }}
         role="dialog"
         aria-label="Instalar Veritas Dei"
       >

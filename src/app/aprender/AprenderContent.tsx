@@ -13,6 +13,7 @@ import IceBreakers from '@/components/dashboard/IceBreakers'
 import ProgressOverview from '@/components/dashboard/ProgressOverview'
 import { useRouter } from 'next/navigation'
 import { useRecentRoutes } from '@/hooks/useRecentRoutes'
+import PullToRefresh from '@/components/mobile/PullToRefresh'
 
 /**
  * Hub de aprendizado — agora organizado em 3 grupos colapsáveis:
@@ -38,6 +39,7 @@ export default function AprenderContent() {
         subtitle="Trilhas de estudo, dogmas e doutores da Igreja"
       />
 
+      <PullToRefresh onRefresh={() => router.refresh()}>
       <div className="max-w-2xl mx-auto">
         <IceBreakers onSelect={handleIceBreaker} />
       </div>
@@ -59,7 +61,7 @@ export default function AprenderContent() {
                 Recentemente acessado
               </h2>
             </div>
-            <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar no-overscroll-x -mx-4 px-4 pb-1">
               {recents.map((r) => (
                 <Link
                   key={r.href}
@@ -156,6 +158,7 @@ export default function AprenderContent() {
           />
         </HubGroup>
       </div>
+      </PullToRefresh>
     </main>
   )
 }

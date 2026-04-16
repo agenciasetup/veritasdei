@@ -11,6 +11,8 @@ import AtalhosRapidos from '@/components/dashboard/today/AtalhosRapidos'
 import LembretesCard from '@/components/dashboard/today/LembretesCard'
 import ContinueLearning from '@/components/dashboard/ContinueLearning'
 import PullToRefresh from '@/components/mobile/PullToRefresh'
+import FloatingActionButton from '@/components/mobile/FloatingActionButton'
+import { Cross, BookOpen, Heart } from 'lucide-react'
 import {
   SkeletonAvatar,
   SkeletonCard,
@@ -113,6 +115,27 @@ export default function Home() {
           Veritas Dei — Fiel ao Magistério
         </p>
       </footer>
+
+      <FloatingActionButton
+        label="Orar agora"
+        actions={[
+          {
+            icon: <Cross className="w-5 h-5" />,
+            label: 'Rosário',
+            onPress: () => router.push('/rosario'),
+          },
+          {
+            icon: <BookOpen className="w-5 h-5" />,
+            label: 'Leituras do dia',
+            onPress: () => router.push('/liturgia/hoje'),
+          },
+          {
+            icon: <Heart className="w-5 h-5" />,
+            label: 'Orações',
+            onPress: () => router.push('/oracoes'),
+          },
+        ]}
+      />
     </main>
   )
 }

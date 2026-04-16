@@ -123,11 +123,15 @@ function LoginPageInner() {
     <div className="flex flex-col items-center justify-center min-h-screen px-4 py-10 relative">
       <div className="bg-glow" />
 
-      {/* Back to home */}
+      {/* Back to home — respeita safe area no topo */}
       <Link
         href="/"
-        className="absolute top-6 left-6 flex items-center gap-2 text-sm transition-colors z-10"
-        style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+        className="absolute left-6 flex items-center gap-2 text-sm transition-colors z-10 touch-target active:opacity-70"
+        style={{
+          color: '#8A8378',
+          fontFamily: 'Poppins, sans-serif',
+          top: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)',
+        }}
       >
         <ArrowLeft className="w-4 h-4" />
         Voltar
