@@ -11,7 +11,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Veritas Dei — Fé Católica',
     short_name: 'Veritas Dei',
     description:
-      'Terço, liturgia do dia, orações, paróquias e aprendizado católico — tudo em um só lugar.',
+      'Terço, novenas, liturgia do dia, orações, paróquias e aprendizado católico — tudo em um só lugar.',
     start_url: '/',
     display: 'standalone',
     orientation: 'portrait',

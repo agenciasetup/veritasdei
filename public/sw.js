@@ -31,10 +31,11 @@
  * entries do cache antigo são limpas no `activate`.
  */
 
-const CACHE_VERSION = 'v1'
-const CACHE_NAME = `veritasdei-rosario-${CACHE_VERSION}`
+const CACHE_VERSION = 'v2'
+const CACHE_NAME = `veritasdei-app-${CACHE_VERSION}`
 
 const ROSARY_PATHS = new Set(['/rosario', '/rosario/'])
+const NOVENAS_PATHS_PREFIX = '/novenas'
 
 self.addEventListener('install', (event) => {
   // Ativa imediatamente sem esperar clientes antigos.
@@ -48,7 +49,7 @@ self.addEventListener('activate', (event) => {
       const keys = await caches.keys()
       await Promise.all(
         keys
-          .filter((k) => k.startsWith('veritasdei-rosario-') && k !== CACHE_NAME)
+          .filter((k) => (k.startsWith('veritasdei-rosario-') || k.startsWith('veritasdei-app-')) && k !== CACHE_NAME)
           .map((k) => caches.delete(k)),
       )
       await self.clients.claim()
@@ -121,6 +122,13 @@ self.addEventListener('fetch', (event) => {
 
   // /rosario (HTML) — network-first
   if (ROSARY_PATHS.has(path)) {
+    event.respondWith(networkFirst(request))
+    return
+  }
+
+  // /novenas/* (HTML) — network-first com fallback pro cache.
+  // Permite rezar a novena offline após primeira visita.
+  if (path.startsWith(NOVENAS_PATHS_PREFIX)) {
     event.respondWith(networkFirst(request))
     return
   }
