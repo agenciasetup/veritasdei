@@ -1,0 +1,271 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+
+type PrayerMode = 'individual' | 'grupo' | 'entrar'
+type PrayerType = 'terco' | 'rosario'
+
+interface Props {
+  onStartIndividual: (type: PrayerType) => void
+}
+
+export function RosaryDashboard({ onStartIndividual }: Props) {
+  const router = useRouter()
+  const [mode, setMode] = useState<PrayerMode>('individual')
+  const [type, setType] = useState<PrayerType>('terco')
+  const [roomCode, setRoomCode] = useState('')
+  const [joining, setJoining] = useState(false)
+  const [joinError, setJoinError] = useState<string | null>(null)
+
+  async function handleJoinRoom() {
+    const code = roomCode.trim().toUpperCase()
+    if (code.length < 4) return
+    setJoining(true)
+    setJoinError(null)
+
+    try {
+      const res = await fetch(`/api/rosario/rooms/${code}/join`, {
+        method: 'POST',
+      })
+      if (res.status === 401) {
+        router.push(`/login?redirectTo=/rosario/juntos/${code}`)
+        return
+      }
+      if (!res.ok) {
+        const data = await res.json()
+        setJoinError(data.error === 'room_not_found' ? 'Sala não encontrada' : data.error ?? 'Erro ao entrar')
+        return
+      }
+      router.push(`/rosario/juntos/${code}`)
+    } catch {
+      setJoinError('Erro de conexão')
+    } finally {
+      setJoining(false)
+    }
+  }
+
+  function handleStart() {
+    if (mode === 'individual') {
+      onStartIndividual(type)
+    } else if (mode === 'grupo') {
+      router.push(`/rosario/juntos?type=${type}`)
+    } else if (mode === 'entrar') {
+      handleJoinRoom()
+    }
+  }
+
+  return (
+    <div className="relative z-10 mx-auto max-w-xl px-4 py-10 md:py-14">
+      <div className="bg-glow" aria-hidden />
+
+      <header className="mb-8 text-center relative z-10">
+        <h1
+          className="text-3xl md:text-4xl"
+          style={{ color: '#F2EDE4', fontFamily: 'Cinzel, serif' }}
+        >
+          Santo Rosário
+        </h1>
+        <p className="mt-2 text-xs md:text-sm" style={{ color: '#7A7368' }}>
+          Medite os mistérios da vida de Cristo com Nossa Senhora
+        </p>
+        <div className="ornament-divider max-w-xs mx-auto mt-4">
+          <span>&#10022;</span>
+        </div>
+      </header>
+
+      <div className="relative z-10 flex flex-col gap-5">
+        {/* Step 1: Mode */}
+        <section>
+          <h2
+            className="text-[10px] uppercase tracking-[0.2em] mb-3"
+            style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+          >
+            1. Como deseja rezar?
+          </h2>
+          <div className="grid grid-cols-2 gap-2">
+            <ModeButton
+              label="Sozinho"
+              description="Oração individual"
+              icon="👤"
+              selected={mode === 'individual'}
+              onClick={() => setMode('individual')}
+            />
+            <ModeButton
+              label="Em grupo"
+              description="Crie uma sala"
+              icon="👥"
+              selected={mode === 'grupo'}
+              onClick={() => setMode('grupo')}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setMode('entrar')}
+            className="w-full mt-2 rounded-xl px-4 py-3 text-left transition active:scale-[0.98]"
+            style={{
+              background: mode === 'entrar'
+                ? 'rgba(201, 168, 76, 0.1)'
+                : 'rgba(255, 255, 255, 0.02)',
+              border: `1px solid ${mode === 'entrar' ? 'rgba(201, 168, 76, 0.3)' : 'rgba(201, 168, 76, 0.08)'}`,
+            }}
+          >
+            <span className="flex items-center gap-3">
+              <span className="text-lg">🔗</span>
+              <span>
+                <span
+                  className="block text-sm"
+                  style={{ color: mode === 'entrar' ? '#F2EDE4' : '#B8AFA2' }}
+                >
+                  Entrar numa sala
+                </span>
+                <span className="block text-[11px]" style={{ color: '#7A7368' }}>
+                  Use um código ou link de convite
+                </span>
+              </span>
+            </span>
+          </button>
+        </section>
+
+        {/* Step 2: Type (only for individual/grupo) */}
+        {mode !== 'entrar' && (
+          <section>
+            <h2
+              className="text-[10px] uppercase tracking-[0.2em] mb-3"
+              style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+            >
+              2. O que deseja rezar?
+            </h2>
+            <div className="grid grid-cols-2 gap-2">
+              <ModeButton
+                label="Terço"
+                description="5 dezenas · 1 mistério"
+                icon="📿"
+                selected={type === 'terco'}
+                onClick={() => setType('terco')}
+              />
+              <ModeButton
+                label="Rosário"
+                description="20 dezenas · 4 mistérios"
+                icon="✝"
+                selected={type === 'rosario'}
+                onClick={() => setType('rosario')}
+              />
+            </div>
+          </section>
+        )}
+
+        {/* Join room input (when mode is "entrar") */}
+        {mode === 'entrar' && (
+          <section>
+            <h2
+              className="text-[10px] uppercase tracking-[0.2em] mb-3"
+              style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+            >
+              Código da sala
+            </h2>
+            <input
+              type="text"
+              value={roomCode}
+              onChange={(e) => setRoomCode(e.target.value.toUpperCase().slice(0, 6))}
+              placeholder="ABC123"
+              maxLength={6}
+              className="w-full rounded-xl px-4 py-3 text-center text-xl font-mono tracking-[0.3em] uppercase outline-none transition"
+              style={{
+                background: 'rgba(20, 18, 14, 0.6)',
+                border: '1px solid rgba(201, 168, 76, 0.2)',
+                color: '#F2EDE4',
+              }}
+              aria-label="Código da sala"
+            />
+            <p className="mt-2 text-[11px] text-center" style={{ color: '#7A7368' }}>
+              Ou cole o link completo da sala
+            </p>
+            {joinError && (
+              <p className="mt-2 text-xs text-center" role="alert" style={{ color: '#E57373' }}>
+                {joinError}
+              </p>
+            )}
+          </section>
+        )}
+
+        {/* CTA */}
+        <button
+          type="button"
+          onClick={handleStart}
+          disabled={mode === 'entrar' && (roomCode.trim().length < 4 || joining)}
+          className="w-full rounded-xl py-4 text-base font-semibold transition active:scale-[0.97] disabled:opacity-40"
+          style={{
+            background: 'linear-gradient(180deg, #C9A84C, #A88437)',
+            color: '#0F0E0C',
+          }}
+        >
+          {mode === 'entrar'
+            ? joining ? 'Entrando...' : 'Entrar na sala'
+            : mode === 'grupo'
+              ? 'Criar sala'
+              : 'Começar a rezar'}
+        </button>
+
+        {/* Quick links */}
+        <div className="flex justify-center gap-4 mt-2">
+          <Link
+            href="/rosario/historico"
+            className="text-xs transition"
+            style={{ color: '#7A7368' }}
+          >
+            Histórico
+          </Link>
+          <span style={{ color: '#3A3632' }}>·</span>
+          <Link
+            href="/rosario/juntos"
+            className="text-xs transition"
+            style={{ color: '#7A7368' }}
+          >
+            Minhas salas
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ModeButton({
+  label,
+  description,
+  icon,
+  selected,
+  onClick,
+}: {
+  label: string
+  description: string
+  icon: string
+  selected: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-xl px-4 py-4 text-left transition active:scale-[0.97]"
+      style={{
+        background: selected
+          ? 'rgba(201, 168, 76, 0.1)'
+          : 'rgba(255, 255, 255, 0.02)',
+        border: `1px solid ${selected ? 'rgba(201, 168, 76, 0.3)' : 'rgba(201, 168, 76, 0.08)'}`,
+      }}
+    >
+      <span className="block text-xl mb-2">{icon}</span>
+      <span
+        className="block text-sm font-medium"
+        style={{ color: selected ? '#F2EDE4' : '#B8AFA2' }}
+      >
+        {label}
+      </span>
+      <span className="block text-[11px] mt-0.5" style={{ color: '#7A7368' }}>
+        {description}
+      </span>
+    </button>
+  )
+}

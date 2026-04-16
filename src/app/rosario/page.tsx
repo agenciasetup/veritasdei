@@ -1,4 +1,4 @@
-import { RosarySession } from '@/features/rosario/session/RosarySession'
+import { RosarioPageClient } from '@/features/rosario/components/RosarioPageClient'
 
 export const metadata = {
   title: 'Santo Rosário — Veritas Dei',
@@ -6,5 +6,5 @@ export const metadata = {
 }
 
 export default function RosarioPage() {
-  return <RosarySession />
+  return <RosarioPageClient />
 }

@@ -57,7 +57,12 @@ const STEP_LABELS: Record<string, string> = {
   final_prayer: 'Oração Final',
 }
 
-export function RosarySession() {
+interface RosarySessionProps {
+  fullRosary?: boolean
+  onExit?: () => void
+}
+
+export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps) {
   const [mysterySetId, setMysterySetId] = useState<MysterySet>(
     () => getMysteryForToday().id,
   )
@@ -242,15 +247,28 @@ export function RosarySession() {
           borderBottom: '1px solid rgba(201, 168, 76, 0.08)',
         }}
       >
-        <Link
-          href="/orar"
-          className="flex items-center gap-1.5 text-xs transition"
-          style={{ color: '#7A7368', textDecoration: 'none' }}
-          aria-label="Voltar para Orar"
-        >
-          <span aria-hidden>←</span>
-          <span className="hidden sm:inline">Orar</span>
-        </Link>
+        {onExit ? (
+          <button
+            type="button"
+            onClick={onExit}
+            className="flex items-center gap-1.5 text-xs transition"
+            style={{ color: '#7A7368', background: 'none', border: 'none' }}
+            aria-label="Voltar"
+          >
+            <span aria-hidden>←</span>
+            <span className="hidden sm:inline">Voltar</span>
+          </button>
+        ) : (
+          <Link
+            href="/orar"
+            className="flex items-center gap-1.5 text-xs transition"
+            style={{ color: '#7A7368', textDecoration: 'none' }}
+            aria-label="Voltar para Orar"
+          >
+            <span aria-hidden>←</span>
+            <span className="hidden sm:inline">Orar</span>
+          </Link>
+        )}
 
         <div className="text-center">
           <h1
@@ -524,17 +542,31 @@ export function RosarySession() {
             >
               Rezar novamente
             </button>
-            <Link
-              href="/orar"
-              className="rounded-xl border px-5 py-2.5 text-sm transition"
-              style={{
-                borderColor: 'rgba(201, 168, 76, 0.3)',
-                color: '#D9C077',
-                textDecoration: 'none',
-              }}
-            >
-              Voltar
-            </Link>
+            {onExit ? (
+              <button
+                type="button"
+                onClick={onExit}
+                className="rounded-xl border px-5 py-2.5 text-sm transition"
+                style={{
+                  borderColor: 'rgba(201, 168, 76, 0.3)',
+                  color: '#D9C077',
+                }}
+              >
+                Voltar
+              </button>
+            ) : (
+              <Link
+                href="/orar"
+                className="rounded-xl border px-5 py-2.5 text-sm transition"
+                style={{
+                  borderColor: 'rgba(201, 168, 76, 0.3)',
+                  color: '#D9C077',
+                  textDecoration: 'none',
+                }}
+              >
+                Voltar
+              </Link>
+            )}
           </div>
         </div>
       )}
