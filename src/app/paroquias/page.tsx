@@ -219,7 +219,7 @@ export default function ParoquiasPage() {
                     {p.foto_url && (
                       <div className="w-full h-40 rounded-xl overflow-hidden mb-4">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={p.foto_url} alt={p.nome} className="w-full h-full object-cover" />
+                        <img src={p.foto_url} alt={p.nome} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                       </div>
                     )}
 

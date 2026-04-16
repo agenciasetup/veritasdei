@@ -29,7 +29,7 @@ export default function PostCard({ post, paroquiaNome }: Props) {
       {post.imagem_url && (
         <div className="rounded-xl overflow-hidden mb-4" style={{ maxHeight: 360 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={post.imagem_url} alt="" className="w-full h-full object-cover" />
+          <img src={post.imagem_url} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
         </div>
       )}
       <div className="flex items-center gap-2 text-xs mb-2" style={{ color: '#7A7368' }}>

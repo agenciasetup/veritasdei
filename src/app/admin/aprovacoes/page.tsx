@@ -319,7 +319,7 @@ export default function AdminAprovacoesPage() {
                   <div className="flex items-start gap-4">
                     {p.foto_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.foto_url} alt={p.nome} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
+                      <img src={p.foto_url} alt={p.nome} loading="lazy" decoding="async" className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
                     ) : (
                       <div className="w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0"
                         style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.15)' }}>
@@ -409,7 +409,7 @@ export default function AdminAprovacoesPage() {
                   <div className="flex items-start gap-4">
                     {p.foto_url && (
                       <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0">
-                        <img src={p.foto_url} alt={p.nome} className="w-full h-full object-cover" />
+                        <img src={p.foto_url} alt={p.nome} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">

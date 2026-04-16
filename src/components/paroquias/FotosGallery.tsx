@@ -102,9 +102,22 @@ export default function FotosGallery({ value, onChange, onError }: Props) {
               className="rounded-xl overflow-hidden"
               style={{ background: 'rgba(10,10,10,0.6)', border: '1px solid rgba(201,168,76,0.1)' }}
             >
-              <div className="relative w-full h-40">
+              <div
+                className="relative w-full"
+                style={{
+                  aspectRatio: '4 / 3',
+                  background:
+                    'linear-gradient(135deg, rgba(201,168,76,0.05), rgba(107,29,42,0.05))',
+                }}
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={foto.url} alt={foto.label || 'Foto da paróquia'} className="w-full h-full object-cover" />
+                <img
+                  src={foto.url}
+                  alt={foto.label || 'Foto da paróquia'}
+                  loading={i < 4 ? 'eager' : 'lazy'}
+                  decoding="async"
+                  className="w-full h-full object-cover"
+                />
                 <button
                   type="button"
                   onClick={() => remove(i)}

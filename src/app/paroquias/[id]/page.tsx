@@ -217,7 +217,7 @@ export default function ParoquiaPublicPage({ params }: PageProps) {
             >
               {profileUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={profileUrl} alt={paroquia.nome} className="w-full h-full object-cover" />
+                <img src={profileUrl} alt={paroquia.nome} loading="lazy" decoding="async" className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
                   <Church className="w-10 h-10" style={{ color: '#C9A84C' }} />

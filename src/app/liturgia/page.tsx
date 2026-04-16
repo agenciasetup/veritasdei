@@ -68,7 +68,7 @@ export default function LiturgiaPage() {
           </div>
         </div>
 
-        <div className="px-4 flex flex-col gap-3 max-w-2xl mx-auto">
+        <div className="px-4 flex flex-col gap-3 max-w-2xl mx-auto stagger-in">
           <HubTile
             href="/calendario"
             icon={<Calendar className="w-6 h-6" />}

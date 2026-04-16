@@ -21,7 +21,7 @@ export default function OrarPage() {
           subtitle="Momentos de oração para fortalecer sua fé"
         />
 
-        <div className="px-4 flex flex-col gap-3 max-w-2xl mx-auto">
+        <div className="px-4 flex flex-col gap-3 max-w-2xl mx-auto stagger-in">
           <HubTile
             href="/rosario"
             icon={<Cross className="w-6 h-6" />}
@@ -51,7 +51,7 @@ export default function OrarPage() {
           {/* Placeholder — liturgia das horas chega na Fase 2/3 */}
           <div
             aria-disabled="true"
-            className="flex items-center gap-4 p-4 rounded-2xl opacity-50"
+            className="flex items-center gap-4 p-4 rounded-2xl opacity-60"
             style={{
               background: 'rgba(255,255,255,0.02)',
               border: '1px dashed rgba(201,168,76,0.15)',
@@ -59,12 +59,13 @@ export default function OrarPage() {
             }}
           >
             <div
-              className="flex items-center justify-center rounded-xl flex-shrink-0"
+              className="flex items-center justify-center rounded-xl flex-shrink-0 animate-pulse"
               style={{
                 width: '52px',
                 height: '52px',
                 background: 'rgba(201,168,76,0.04)',
-                color: '#7A7368',
+                color: 'var(--text-muted)',
+                animationDuration: '2.5s',
               }}
             >
               <Clock className="w-6 h-6" />
@@ -72,7 +73,7 @@ export default function OrarPage() {
             <div className="flex-1 min-w-0">
               <p
                 className="text-base font-medium"
-                style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+                style={{ color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}
               >
                 Liturgia das Horas
               </p>

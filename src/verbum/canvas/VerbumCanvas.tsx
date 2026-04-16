@@ -17,7 +17,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, HelpCircle, Save, Cloud, CloudOff, Share2, Sparkles, BookOpen, Download } from 'lucide-react'
+import { ArrowLeft, Plus, HelpCircle, Save, Cloud, CloudOff, Share2, Sparkles, BookOpen, Download, List as ListIcon } from 'lucide-react'
 
 import { nodeTypes } from '../nodes/nodeTypes'
 import { edgeTypes } from '../edges/edgeTypes'
@@ -36,6 +36,7 @@ import { VerbumCanvasProvider } from '../contexts/VerbumCanvasContext'
 import SelectionToolbar from './SelectionToolbar'
 import CanvasSearch from './CanvasSearch'
 import ConnectionFilter from './ConnectionFilter'
+import MobileNodeListView from './MobileNodeListView'
 const ProposalsPanel = lazy(() => import('../panels/ProposalsPanel'))
 const ShareModal = lazy(() => import('../panels/ShareModal'))
 const AISearchPanel = lazy(() => import('../panels/AISearchPanel'))
@@ -63,7 +64,8 @@ function VerbumCanvasInner() {
   } = useVerbumFlow()
 
   const router = useRouter()
-  const { screenToFlowPosition } = useReactFlow()
+  const { screenToFlowPosition, setCenter } = useReactFlow()
+  const [mobileListOpen, setMobileListOpen] = useState(false)
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; flowX: number; flowY: number } | null>(null)
@@ -1117,6 +1119,21 @@ function VerbumCanvasInner() {
             </div>
           )}
 
+          {/* Mobile list-view toggle */}
+          <button
+            onClick={() => setMobileListOpen(true)}
+            aria-label="Ver lista de nós"
+            title="Ver lista (mobile)"
+            className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg active:scale-95 touch-target"
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: `1px solid ${VERBUM_COLORS.ui_border}`,
+              color: VERBUM_COLORS.text_secondary,
+            }}
+          >
+            <ListIcon className="w-4 h-4" />
+          </button>
+
           {/* Share button */}
           {currentFlow && !isReadOnly && (
             <button
@@ -1367,6 +1384,22 @@ function VerbumCanvasInner() {
           {nodes.length} nós — performance pode ser afetada
         </div>
       )}
+
+      {/* Mobile alternate view: searchable node list */}
+      <MobileNodeListView
+        nodes={nodes}
+        open={mobileListOpen}
+        onClose={() => setMobileListOpen(false)}
+        onFocusNode={(id) => {
+          const target = nodes.find((n) => n.id === id)
+          if (!target) return
+          setCenter(target.position.x + 80, target.position.y + 40, {
+            zoom: 1.2,
+            duration: 600,
+          })
+          setFocusNodeId(id)
+        }}
+      />
     </div>
   )
 }

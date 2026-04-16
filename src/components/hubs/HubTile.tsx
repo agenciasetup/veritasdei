@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { ChevronRight } from 'lucide-react'
+import { useRecentRoutes } from '@/hooks/useRecentRoutes'
 
 /**
  * Card grande, arredondado, tocável — usado nas páginas de hub
@@ -19,10 +20,12 @@ interface HubTileProps {
 }
 
 export default function HubTile({ href, icon, title, subtitle, featured }: HubTileProps) {
+  const { track } = useRecentRoutes()
   return (
     <Link
       href={href}
-      className="flex items-center gap-4 p-4 rounded-2xl transition-all active:scale-[0.98]"
+      onClick={() => track(href, title)}
+      className="flex items-center gap-4 p-4 rounded-2xl transition-all active:scale-[0.98] touch-target-lg"
       style={{
         background: featured ? 'rgba(201,168,76,0.08)' : 'rgba(255,255,255,0.03)',
         border: `1px solid ${featured ? 'rgba(201,168,76,0.25)' : 'rgba(201,168,76,0.08)'}`,

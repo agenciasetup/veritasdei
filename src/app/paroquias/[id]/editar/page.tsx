@@ -844,7 +844,7 @@ function SingleImageUploader({
           style={{ aspectRatio: aspect, background: 'rgba(10,10,10,0.6)', border: '1px solid rgba(201,168,76,0.12)' }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={value} alt={label} className="w-full h-full object-cover" />
+          <img src={value} alt={label} loading="lazy" decoding="async" className="w-full h-full object-cover" />
           <div className="absolute bottom-2 right-2 flex gap-1.5">
             <button
               type="button"

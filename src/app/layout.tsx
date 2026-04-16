@@ -1,8 +1,42 @@
 import type { Metadata, Viewport } from "next"
+import { Cinzel, Cormorant_Garamond, Poppins } from "next/font/google"
 import "./globals.css"
 import AppShell from "@/components/layout/AppShell"
 import { AuthProvider } from "@/contexts/AuthContext"
 import PwaRegister from "@/components/layout/PwaRegister"
+
+// next/font/google: self-hosting + auto-subset + preload com display:swap.
+// Pesos reduzidos vs versão antiga (-400/-500 typical) para economia de bytes.
+const cinzel = Cinzel({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  display: 'swap',
+  variable: '--font-display-loaded',
+  fallback: ['Georgia', 'serif'],
+})
+
+const cormorant = Cormorant_Garamond({
+  subsets: ['latin'],
+  weight: ['400'],
+  style: ['normal', 'italic'],
+  display: 'swap',
+  variable: '--font-elegant-loaded',
+  fallback: ['Georgia', 'serif'],
+})
+
+const poppins = Poppins({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  display: 'swap',
+  variable: '--font-body-loaded',
+  fallback: [
+    '-apple-system',
+    'BlinkMacSystemFont',
+    'Segoe UI',
+    'Roboto',
+    'sans-serif',
+  ],
+})
 
 export const metadata: Metadata = {
   title: "Veritas Dei — Fé Católica",
@@ -38,15 +72,10 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="pt-BR" className="h-full antialiased">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Poppins:wght@300;400;500;600&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html
+      lang="pt-BR"
+      className={`h-full antialiased ${cinzel.variable} ${cormorant.variable} ${poppins.variable}`}
+    >
       <body className="min-h-full flex flex-col">
         <a href="#main-content" className="skip-link">
           Pular para o conteúdo
