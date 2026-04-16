@@ -57,9 +57,20 @@ const STEP_LABELS: Record<string, string> = {
   final_prayer: 'Oração Final',
 }
 
-export function RosarySession() {
+interface RosarySessionProps {
+  fullRosary?: boolean
+  onExit?: () => void
+}
+
+const ROSARY_SEQUENCE: MysterySet[] = ['gozosos', 'luminosos', 'dolorosos', 'gloriosos']
+
+export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps) {
+  // Rosário completo: track which of the 4 terços we're on (0–3)
+  const [rosarioIndex, setRosarioIndex] = useState(0)
+  const [showTransition, setShowTransition] = useState(false)
+
   const [mysterySetId, setMysterySetId] = useState<MysterySet>(
-    () => getMysteryForToday().id,
+    () => fullRosary ? ROSARY_SEQUENCE[0] : getMysteryForToday().id,
   )
   const mysteryGroup = useMemo(
     () => MYSTERY_GROUPS.find((g) => g.id === mysterySetId) ?? MYSTERY_GROUPS[0],
@@ -159,6 +170,29 @@ export function RosarySession() {
     })
   }, [hydrated, isCompleted, mysterySetId, activeIntentionId, recordSession])
 
+  // --- Rosário completo: intercept completion to show transition ---
+  const isLastRosarioSet = rosarioIndex >= ROSARY_SEQUENCE.length - 1
+  const rosarioFullyComplete = fullRosary && isCompleted && isLastRosarioSet
+
+  useEffect(() => {
+    if (!fullRosary || !isCompleted || isLastRosarioSet) return
+    setShowTransition(true)
+  }, [fullRosary, isCompleted, isLastRosarioSet])
+
+  function advanceToNextRosarioSet() {
+    const nextIndex = rosarioIndex + 1
+    setRosarioIndex(nextIndex)
+    setMysterySetId(ROSARY_SEQUENCE[nextIndex])
+    setShowTransition(false)
+    reset()
+    setResumedFrom(null)
+    sessionStartRef.current = Date.now()
+    recordedCompletionRef.current = false
+  }
+
+  // In full rosary mode, show effective completion only after all 4
+  const effectiveCompleted = fullRosary ? rosarioFullyComplete : isCompleted
+
   // --- TTS ---
   const { enabled: ttsEnabled, speak: ttsSpeak, stop: ttsStop } = tts
   useEffect(() => {
@@ -228,11 +262,18 @@ export function RosarySession() {
 
   // Mystery name for header
   const mysteryShortName = mysteryGroup.name.replace('Mistérios ', '')
+  const headerTitle = fullRosary
+    ? `${mysteryShortName} (${rosarioIndex + 1}/4)`
+    : mysteryShortName
 
   return (
     <div
-      className="fixed inset-0 flex flex-col"
-      style={{ backgroundColor: '#0F0E0C', color: '#F2EDE4' }}
+      className="fixed inset-0 flex flex-col md:static md:inset-auto md:mx-auto md:my-6 md:max-w-4xl md:min-h-[calc(100vh-7rem)] md:rounded-2xl md:border md:overflow-hidden"
+      style={{
+        backgroundColor: '#0F0E0C',
+        color: '#F2EDE4',
+        borderColor: 'rgba(201, 168, 76, 0.12)',
+      }}
     >
       {/* ── Top bar ── */}
       <header
@@ -242,22 +283,35 @@ export function RosarySession() {
           borderBottom: '1px solid rgba(201, 168, 76, 0.08)',
         }}
       >
-        <Link
-          href="/orar"
-          className="flex items-center gap-1.5 text-xs transition"
-          style={{ color: '#7A7368', textDecoration: 'none' }}
-          aria-label="Voltar para Orar"
-        >
-          <span aria-hidden>←</span>
-          <span className="hidden sm:inline">Orar</span>
-        </Link>
+        {onExit ? (
+          <button
+            type="button"
+            onClick={onExit}
+            className="flex items-center gap-1.5 text-xs transition"
+            style={{ color: '#7A7368', background: 'none', border: 'none' }}
+            aria-label="Voltar"
+          >
+            <span aria-hidden>←</span>
+            <span className="hidden sm:inline">Voltar</span>
+          </button>
+        ) : (
+          <Link
+            href="/orar"
+            className="flex items-center gap-1.5 text-xs transition"
+            style={{ color: '#7A7368', textDecoration: 'none' }}
+            aria-label="Voltar para Orar"
+          >
+            <span aria-hidden>←</span>
+            <span className="hidden sm:inline">Orar</span>
+          </Link>
+        )}
 
         <div className="text-center">
           <h1
             className="text-sm font-medium"
             style={{ color: '#F2EDE4', fontFamily: 'Cinzel, serif' }}
           >
-            {mysteryShortName}
+            {headerTitle}
           </h1>
           {!isOnline && (
             <span className="text-[9px]" style={{ color: '#D9C077' }}>
@@ -311,7 +365,7 @@ export function RosarySession() {
       )}
 
       {/* ── Main content area (flex-grow, scrollable) ── */}
-      <div className="flex-1 flex flex-col overflow-y-auto px-4 pt-2 pb-2">
+      <div className="flex-1 flex flex-col overflow-y-auto px-4 pt-2 pb-2 md:flex-row md:items-start md:gap-8 md:px-8 md:pt-6">
         {/* Intention pill (if set) */}
         {activeIntention && (
           <button
@@ -331,36 +385,39 @@ export function RosarySession() {
           </button>
         )}
 
-        {/* Rosary beads */}
-        <div className="flex-shrink-0 flex justify-center">
-          <RosaryBeads
-            currentBeadId={currentBeadId}
-            completedBeadIds={completedBeadIds}
-            onBeadSelect={goToBead}
-            className="w-full max-w-[280px] h-auto"
-            ariaDescription={`Terço — passo ${currentIndex + 1} de ${totalSteps}`}
-          />
-        </div>
-
-        {/* Compact progress */}
-        <div className="flex-shrink-0 mb-2" aria-hidden>
-          <div
-            className="h-0.5 w-full overflow-hidden rounded-full"
-            style={{ background: 'rgba(201, 168, 76, 0.08)' }}
-          >
-            <div
-              className="h-full transition-all duration-500 ease-out"
-              style={{
-                width: `${progressPct}%`,
-                background: 'linear-gradient(90deg, #C9A84C, #D9C077)',
-              }}
+        {/* Left column: beads + progress */}
+        <div className="flex-shrink-0 md:flex-1 md:flex md:flex-col md:items-center md:sticky md:top-4">
+          {/* Rosary beads */}
+          <div className="flex justify-center">
+            <RosaryBeads
+              currentBeadId={currentBeadId}
+              completedBeadIds={completedBeadIds}
+              onBeadSelect={goToBead}
+              className="w-full max-w-[280px] md:max-w-[360px] h-auto"
+              ariaDescription={`Terço — passo ${currentIndex + 1} de ${totalSteps}`}
             />
+          </div>
+
+          {/* Compact progress */}
+          <div className="mb-2 md:w-full md:max-w-[360px]" aria-hidden>
+            <div
+              className="h-0.5 w-full overflow-hidden rounded-full"
+              style={{ background: 'rgba(201, 168, 76, 0.08)' }}
+            >
+              <div
+                className="h-full transition-all duration-500 ease-out"
+                style={{
+                  width: `${progressPct}%`,
+                  background: 'linear-gradient(90deg, #C9A84C, #D9C077)',
+                }}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Prayer card */}
+        {/* Right column on desktop: prayer card */}
         <section
-          className="flex-shrink-0 rounded-xl p-4"
+          className="flex-shrink-0 rounded-xl p-4 md:flex-1 md:p-6"
           style={{
             background: 'rgba(20, 18, 14, 0.6)',
             border: '1px solid rgba(201, 168, 76, 0.12)',
@@ -442,10 +499,47 @@ export function RosarySession() {
         </section>
       </div>
 
-      {/* ── Fixed bottom bar ── */}
-      {!isCompleted ? (
+      {/* ── Rosário transition screen ── */}
+      {showTransition && (
         <div
-          className="flex-shrink-0 flex items-center gap-3 px-4 safe-bottom"
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: 'rgba(15, 14, 12, 0.97)' }}
+        >
+          <div className="text-center px-6 max-w-md">
+            <div className="text-4xl mb-4" aria-hidden>✦</div>
+            <h2
+              className="text-xl mb-2"
+              style={{ color: '#D9C077', fontFamily: 'Cinzel, serif' }}
+            >
+              Mistérios {mysteryShortName} concluídos
+            </h2>
+            <p className="text-sm mb-1" style={{ color: '#B8AFA2' }}>
+              Terço {rosarioIndex + 1} de 4
+            </p>
+            <p className="text-xs mb-6" style={{ color: '#7A7368' }}>
+              Próximo: Mistérios {ROSARY_SEQUENCE[rosarioIndex + 1]
+                ? MYSTERY_GROUPS.find(g => g.id === ROSARY_SEQUENCE[rosarioIndex + 1])?.name.replace('Mistérios ', '') ?? ''
+                : ''}
+            </p>
+            <button
+              type="button"
+              onClick={advanceToNextRosarioSet}
+              className="rounded-xl px-8 py-3 text-sm font-semibold transition active:scale-[0.97]"
+              style={{
+                background: 'linear-gradient(180deg, #C9A84C, #A88437)',
+                color: '#0F0E0C',
+              }}
+            >
+              Continuar o Rosário
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Fixed bottom bar ── */}
+      {!effectiveCompleted && !showTransition && !isCompleted ? (
+        <div
+          className="flex-shrink-0 flex items-center gap-3 px-4 safe-bottom md:px-8 md:rounded-b-2xl"
           style={{
             height: '72px',
             borderTop: '1px solid rgba(201, 168, 76, 0.1)',
@@ -490,7 +584,7 @@ export function RosarySession() {
             </span>
           </div>
         </div>
-      ) : (
+      ) : !showTransition ? (
         /* ── Completion screen ── */
         <div
           className="flex-shrink-0 px-4 py-6 text-center safe-bottom"
@@ -504,7 +598,7 @@ export function RosarySession() {
             className="text-xl mb-1"
             style={{ color: '#D9C077', fontFamily: 'Cinzel, serif' }}
           >
-            Terço completo
+            {rosarioFullyComplete ? 'Rosário completo' : 'Terço completo'}
           </h2>
           <p className="text-xs mb-4" style={{ color: '#7A7368' }}>
             Que Nossa Senhora interceda por você
@@ -524,20 +618,34 @@ export function RosarySession() {
             >
               Rezar novamente
             </button>
-            <Link
-              href="/orar"
-              className="rounded-xl border px-5 py-2.5 text-sm transition"
-              style={{
-                borderColor: 'rgba(201, 168, 76, 0.3)',
-                color: '#D9C077',
-                textDecoration: 'none',
-              }}
-            >
-              Voltar
-            </Link>
+            {onExit ? (
+              <button
+                type="button"
+                onClick={onExit}
+                className="rounded-xl border px-5 py-2.5 text-sm transition"
+                style={{
+                  borderColor: 'rgba(201, 168, 76, 0.3)',
+                  color: '#D9C077',
+                }}
+              >
+                Voltar
+              </button>
+            ) : (
+              <Link
+                href="/orar"
+                className="rounded-xl border px-5 py-2.5 text-sm transition"
+                style={{
+                  borderColor: 'rgba(201, 168, 76, 0.3)',
+                  color: '#D9C077',
+                  textDecoration: 'none',
+                }}
+              >
+                Voltar
+              </Link>
+            )}
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* ── Floating menu (bottom sheet) ── */}
       <RosaryMenu
@@ -545,6 +653,7 @@ export function RosarySession() {
         onClose={() => setMenuOpen(false)}
         mysterySetId={mysterySetId}
         onMysteryChange={handleMysteryChange}
+        mysteryLocked={fullRosary}
         hapticSupported={haptic.supported}
         hapticEnabled={haptic.enabled}
         onHapticToggle={() => haptic.setEnabled(!haptic.enabled)}

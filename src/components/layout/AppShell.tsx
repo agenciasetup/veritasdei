@@ -12,7 +12,7 @@ import InstallPrompt from '@/components/pwa/InstallPrompt'
 
 const PUBLIC_PATHS = ['/login', '/auth', '/privacidade', '/termos', '/onboarding']
 const FULLSCREEN_PATHS = ['/verbum']
-const FULLSCREEN_EXACT = ['/rosario']
+const FULLSCREEN_EXACT: string[] = []
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth()

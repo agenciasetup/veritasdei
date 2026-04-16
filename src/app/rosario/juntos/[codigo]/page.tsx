@@ -9,16 +9,6 @@ import type {
 
 export const dynamic = 'force-dynamic'
 
-/**
- * `/rosario/juntos/[codigo]` — sala compartilhada (lobby + sessão).
- *
- * Server component: faz o primeiro SELECT da sala + participantes e
- * passa o snapshot pro `<SharedRoomView />` client, que assina o
- * Realtime e gerencia a sessão em si (sprint 3.3+).
- *
- * Se o usuário não está logado, manda pro login com redirectTo.
- * Se a sala não existe ou o viewer não tem acesso, 404.
- */
 export default async function RoomPage({
   params,
 }: {
@@ -65,14 +55,35 @@ export default async function RoomPage({
     )
   }
 
-  const { data: roomRow } = await supabase
+  // Try to load the room. If RLS blocks (user not a participant), try auto-join.
+  let { data: roomRow } = await supabase
     .from('rosary_rooms')
     .select('*')
     .eq('codigo', upper)
     .maybeSingle()
 
   if (!roomRow) {
-    notFound()
+    // Attempt auto-join via SECURITY DEFINER function
+    const { error: joinError } = await supabase.rpc('join_rosary_room', {
+      p_codigo: upper,
+    })
+
+    if (joinError) {
+      notFound()
+    }
+
+    // Retry loading after join
+    const { data: retryRow } = await supabase
+      .from('rosary_rooms')
+      .select('*')
+      .eq('codigo', upper)
+      .maybeSingle()
+
+    if (!retryRow) {
+      notFound()
+    }
+
+    roomRow = retryRow
   }
 
   const { data: participantsRows } = await supabase
