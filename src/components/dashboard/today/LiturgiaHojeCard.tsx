@@ -31,6 +31,7 @@ const GRADE_LABELS: Record<string, string> = {
 export default function LiturgiaHojeCard() {
   const day = getLiturgicalDay(new Date())
   const style = COLOR_STYLES[day.color] ?? COLOR_STYLES.verde
+  const grade = GRADE_LABELS[day.grade] ?? 'Liturgia diária'
   const hoje = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long',
     day: 'numeric',
@@ -56,16 +57,29 @@ export default function LiturgiaHojeCard() {
           className="text-[10px] uppercase tracking-[0.18em]"
           style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
         >
-          Liturgia de hoje · {GRADE_LABELS[day.grade] ?? ''}
+          Liturgia de hoje
         </span>
       </div>
 
-      <p
-        className="text-2xl leading-tight mb-2"
-        style={{ color: '#F2EDE4', fontFamily: 'Cormorant Garamond, serif' }}
-      >
-        {day.title || day.name}
-      </p>
+      <div className="mb-2 flex items-start justify-between gap-3">
+        <p
+          className="text-2xl leading-tight"
+          style={{ color: '#F2EDE4', fontFamily: 'Cormorant Garamond, serif' }}
+        >
+          {day.title || day.name}
+        </p>
+        <span
+          className="text-[10px] uppercase tracking-[0.15em] px-2 py-1 rounded-full flex-shrink-0"
+          style={{
+            color: style.dot,
+            background: 'rgba(255,255,255,0.03)',
+            border: `1px solid ${style.border}`,
+            fontFamily: 'Poppins, sans-serif',
+          }}
+        >
+          {grade}
+        </span>
+      </div>
       <p
         className="text-sm capitalize"
         style={{ color: '#A8A096', fontFamily: 'Poppins, sans-serif' }}
@@ -73,7 +87,7 @@ export default function LiturgiaHojeCard() {
         {hoje}
       </p>
 
-      <div className="flex items-center justify-between mt-4">
+      <div className="mt-4 flex items-center justify-between gap-3">
         <span
           className="text-xs"
           style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
@@ -81,10 +95,15 @@ export default function LiturgiaHojeCard() {
           {day.season}
         </span>
         <span
-          className="inline-flex items-center gap-1 text-xs"
-          style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
+          className="inline-flex items-center gap-1 text-xs px-3 py-2 rounded-full"
+          style={{
+            color: '#0F0E0C',
+            fontFamily: 'Poppins, sans-serif',
+            fontWeight: 600,
+            background: 'linear-gradient(135deg, #C9A84C, #A88B3A)',
+          }}
         >
-          Ver liturgia <ArrowRight className="w-3 h-3" />
+          Ler liturgia do dia <ArrowRight className="w-3 h-3" />
         </span>
       </div>
     </Link>

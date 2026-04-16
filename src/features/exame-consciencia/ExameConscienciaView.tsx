@@ -17,8 +17,8 @@ interface StoredData {
 
 const STEPS: { id: ExamStep; label: string; icon: React.ElementType }[] = [
   { id: 'examinar', label: 'Examinar', icon: ClipboardCheck },
-  { id: 'revisar', label: 'Revisar', icon: ListChecks },
-  { id: 'confessar', label: 'Confessar', icon: MessageCircle },
+  { id: 'revisar', label: 'Resumo', icon: ListChecks },
+  { id: 'confessar', label: 'Preparar para Confissão', icon: MessageCircle },
 ]
 
 export default function ExameConscienciaView() {
@@ -35,12 +35,19 @@ export default function ExameConscienciaView() {
       const raw = localStorage.getItem(STORAGE_KEY)
       if (raw) {
         const data: StoredData = JSON.parse(raw)
-        setSelectedSins(new Set(data.selectedSins))
-        setCustomSins(data.customSins || [])
-        setLastConfession(data.lastConfession)
+        const nextSelected = new Set(data.selectedSins)
+        const nextCustom = data.customSins || []
+        const nextLastConfession = data.lastConfession
+        queueMicrotask(() => {
+          setSelectedSins(nextSelected)
+          setCustomSins(nextCustom)
+          setLastConfession(nextLastConfession)
+          setLoaded(true)
+        })
+        return
       }
     } catch {}
-    setLoaded(true)
+    queueMicrotask(() => setLoaded(true))
   }, [])
 
   // Save to localStorage
@@ -58,7 +65,8 @@ export default function ExameConscienciaView() {
   function toggleSin(id: number) {
     setSelectedSins(prev => {
       const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
       save(next, customSins, lastConfession)
       return next
     })
@@ -218,7 +226,7 @@ export default function ExameConscienciaView() {
                       fontSize: '0.85rem',
                     }}
                   >
-                    Ir para Confissão
+                    Preparar para Confissão
                   </button>
                 </div>
               )}

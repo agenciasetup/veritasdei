@@ -8,9 +8,9 @@ import { Cross, BookOpen, MapPin } from 'lucide-react'
  * 3 ações que 90% dos católicos fazem diariamente.
  */
 const ATALHOS = [
-  { href: '/rosario',   icon: Cross,    label: 'Terço' },
-  { href: '/oracoes',   icon: BookOpen, label: 'Orações' },
-  { href: '/paroquias', icon: MapPin,   label: 'Paróquia' },
+  { href: '/rosario', icon: Cross, label: 'Terço' },
+  { href: '/oracoes', icon: BookOpen, label: 'Orações' },
+  { href: '/paroquias/buscar', icon: MapPin, label: 'Igrejas perto' },
 ]
 
 export default function AtalhosRapidos() {

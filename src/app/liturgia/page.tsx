@@ -77,10 +77,10 @@ export default function LiturgiaPage() {
             featured
           />
           <HubTile
-            href="/paroquias"
+            href="/paroquias/buscar"
             icon={<MapPin className="w-6 h-6" />}
-            title="Paróquias Perto"
-            subtitle="Encontre igrejas, missas e confissões"
+            title="Igrejas perto de mim"
+            subtitle="Mostra igrejas próximas e horários de Missa/Confissão"
           />
           <HubTile
             href="/exame-consciencia"

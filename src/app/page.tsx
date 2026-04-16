@@ -10,7 +10,6 @@ import PropositosStrip from '@/components/dashboard/today/PropositosStrip'
 import AtalhosRapidos from '@/components/dashboard/today/AtalhosRapidos'
 import LembretesCard from '@/components/dashboard/today/LembretesCard'
 import ContinueLearning from '@/components/dashboard/ContinueLearning'
-import SantoDoDia from '@/components/ui/SantoDoDia'
 
 /**
  * Home "Hoje" — perfil pessoal diário do católico.
@@ -22,7 +21,6 @@ import SantoDoDia from '@/components/ui/SantoDoDia'
  *   4. Atalhos rápidos (Terço · Orações · Paróquia)
  *   5. Retomar (última trilha/estudo visto)
  *   6. Lembretes (confissão, sexta-feira, terço do dia)
- *   7. Santo do dia
  *
  * A antiga FeatureGrid com 15 botões foi removida — o conteúdo
  * foi distribuído nos hubs /orar, /liturgia, /aprender.
@@ -71,10 +69,6 @@ export default function Home() {
       <ContinueLearning userId={user?.id} />
 
       <LembretesCard />
-
-      <div className="px-4 mb-8">
-        <SantoDoDia />
-      </div>
 
       <footer className="relative z-10 py-8 text-center mt-auto">
         <div className="flex items-center justify-center gap-3 mb-3 max-w-[200px] mx-auto">

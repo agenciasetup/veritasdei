@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Search, Loader2 } from 'lucide-react'
 
 const THEME_CHIPS = [
@@ -28,10 +28,18 @@ interface SearchBoxProps {
   onSearch: (query: string) => void
   isLoading: boolean
   hideChips?: boolean
+  placeholderText?: string
+  initialValue?: string
 }
 
-export default function SearchBox({ onSearch, isLoading, hideChips }: SearchBoxProps) {
-  const [query, setQuery] = useState('')
+export default function SearchBox({
+  onSearch,
+  isLoading,
+  hideChips,
+  placeholderText,
+  initialValue,
+}: SearchBoxProps) {
+  const [query, setQuery] = useState(initialValue ?? '')
   const [placeholderIndex, setPlaceholderIndex] = useState(0)
 
   // Rotate placeholder every 4 seconds when not in compact mode
@@ -43,9 +51,9 @@ export default function SearchBox({ onSearch, isLoading, hideChips }: SearchBoxP
     return () => clearInterval(interval)
   }, [hideChips])
 
-  const placeholder = hideChips
+  const placeholder = placeholderText ?? (hideChips
     ? 'Pesquisar na fé católica...'
-    : PLACEHOLDERS[placeholderIndex]
+    : PLACEHOLDERS[placeholderIndex])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

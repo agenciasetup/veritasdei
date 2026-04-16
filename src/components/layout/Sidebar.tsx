@@ -50,7 +50,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Liturgia',
     items: [
       { href: '/calendario', icon: Calendar, label: 'Calendário Litúrgico' },
-      { href: '/paroquias', icon: MapPin, label: 'Paróquias' },
+      { href: '/paroquias/buscar', icon: MapPin, label: 'Igrejas perto de mim' },
       { href: '/comunidade', icon: Users, label: 'Comunidade' },
     ],
   },

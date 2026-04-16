@@ -1,8 +1,9 @@
 'use client'
 
-import { CONFESSION_STEPS } from '../data/confession-guide'
+import { BookHeart, ClipboardList } from 'lucide-react'
 import { SINS } from '../data/sins'
-import { User, Church } from 'lucide-react'
+import { COMMANDMENTS } from '../data/commandments'
+import { ACT_OF_CONTRITION } from '../data/confession-guide'
 
 interface ConfessionWalkthroughProps {
   selectedSins: Set<number>
@@ -15,131 +16,145 @@ export default function ConfessionWalkthrough({
   customSins,
   lastConfession,
 }: ConfessionWalkthroughProps) {
-  const selected = SINS.filter(s => selectedSins.has(s.id))
+  const selected = SINS.filter((s) => selectedSins.has(s.id))
 
-  function formatTimeSince(): string {
-    if (!lastConfession) return 'há algum tempo'
-    try {
-      const date = new Date(lastConfession)
-      const now = new Date()
-      const diffMs = now.getTime() - date.getTime()
-      const days = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-      if (days < 7) return `há ${days} dia${days !== 1 ? 's' : ''}`
-      if (days < 30) return `há ${Math.floor(days / 7)} semana${Math.floor(days / 7) !== 1 ? 's' : ''}`
-      if (days < 365) return `há ${Math.floor(days / 30)} ${Math.floor(days / 30) !== 1 ? 'meses' : 'mês'}`
-      return `há ${Math.floor(days / 365)} ano${Math.floor(days / 365) !== 1 ? 's' : ''}`
-    } catch {
-      return 'há algum tempo'
-    }
-  }
+  const grouped = COMMANDMENTS
+    .map((cmd) => ({
+      commandment: cmd,
+      sins: selected.filter((s) => s.commandmentId === cmd.id),
+    }))
+    .filter((g) => g.sins.length > 0)
 
-  function renderText(step: typeof CONFESSION_STEPS[0]): string {
-    let text = step.text
-    if (step.dynamic) {
-      text = text.replace('{lastConfession}', formatTimeSince())
-      if (text.includes('{sins}')) {
-        const sinTexts = [
-          ...selected.map(s => s.textPast),
-          ...customSins,
-        ]
-        text = sinTexts.length > 0
-          ? sinTexts.map((s, i) => `${i + 1}. ${s}`).join('\n')
-          : 'Acuso-me dos meus pecados...'
-      }
-    }
-    return text
-  }
+  const totalCount = selected.length + customSins.length
 
   return (
-    <div className="space-y-3 max-w-2xl mx-auto">
-      {/* Introduction */}
+    <div className="space-y-4 max-w-2xl mx-auto">
       <div
-        className="rounded-xl p-4 text-center mb-6"
+        className="rounded-xl p-4"
         style={{
-          background: 'rgba(201,168,76,0.05)',
-          border: '1px solid rgba(201,168,76,0.1)',
+          background: 'rgba(201,168,76,0.06)',
+          border: '1px solid rgba(201,168,76,0.15)',
+        }}
+      >
+        <div className="flex items-center gap-2 mb-2">
+          <ClipboardList className="w-4 h-4" style={{ color: '#C9A84C' }} />
+          <p
+            className="text-xs tracking-[0.15em] uppercase"
+            style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
+          >
+            Preparar para confissão
+          </p>
+        </div>
+        <p className="text-sm" style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}>
+          Leve esta lista como guia para confessar com objetividade e sinceridade.
+        </p>
+        {lastConfession && (
+          <p className="text-xs mt-2" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+            Última confissão registrada: {new Date(lastConfession).toLocaleString('pt-BR')}
+          </p>
+        )}
+      </div>
+
+      <div
+        className="rounded-xl p-4"
+        style={{
+          background: 'rgba(20,18,14,0.45)',
+          border: '1px solid rgba(201,168,76,0.08)',
         }}
       >
         <p
-          className="text-xs leading-relaxed"
-          style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}
+          className="text-[10px] tracking-[0.15em] uppercase mb-3"
+          style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
         >
-          Siga este guia passo a passo durante a confissão. Os textos em destaque são as suas falas.
+          Lista de pecados ({totalCount})
         </p>
+
+        {totalCount === 0 ? (
+          <p className="text-sm" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
+            Nenhum pecado selecionado. Volte para revisar antes de concluir.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {grouped.map(({ commandment, sins }) => (
+              <div key={commandment.id}>
+                <p
+                  className="text-[10px] tracking-[0.15em] uppercase mb-2"
+                  style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
+                >
+                  {commandment.title.split(':')[0]}
+                </p>
+                <ul className="space-y-1.5">
+                  {sins.map((sin) => (
+                    <li
+                      key={sin.id}
+                      className="text-sm px-3 py-2 rounded-lg"
+                      style={{
+                        color: '#F2EDE4',
+                        fontFamily: 'Poppins, sans-serif',
+                        background: 'rgba(255,255,255,0.03)',
+                        border: '1px solid rgba(201,168,76,0.08)',
+                      }}
+                    >
+                      {sin.textPast}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+
+            {customSins.length > 0 && (
+              <div>
+                <p
+                  className="text-[10px] tracking-[0.15em] uppercase mb-2"
+                  style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
+                >
+                  Outros pecados
+                </p>
+                <ul className="space-y-1.5">
+                  {customSins.map((sin, index) => (
+                    <li
+                      key={`${sin}-${index}`}
+                      className="text-sm px-3 py-2 rounded-lg"
+                      style={{
+                        color: '#F2EDE4',
+                        fontFamily: 'Poppins, sans-serif',
+                        background: 'rgba(255,255,255,0.03)',
+                        border: '1px solid rgba(201,168,76,0.08)',
+                      }}
+                    >
+                      {sin}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {CONFESSION_STEPS.map((step) => {
-        const text = renderText(step)
-
-        if (step.speaker === 'instruction') {
-          return (
-            <div key={step.id} className="px-2 py-3">
-              <p
-                className="text-xs leading-relaxed text-center italic"
-                style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
-              >
-                {text}
-              </p>
-            </div>
-          )
-        }
-
-        const isPenitent = step.speaker === 'penitent'
-
-        return (
-          <div
-            key={step.id}
-            className={`flex gap-3 ${isPenitent ? '' : 'flex-row-reverse'}`}
+      <div
+        className="rounded-xl p-4"
+        style={{
+          background: 'rgba(107,29,42,0.08)',
+          border: '1px solid rgba(201,168,76,0.15)',
+        }}
+      >
+        <div className="flex items-center gap-2 mb-2">
+          <BookHeart className="w-4 h-4" style={{ color: '#C9A84C' }} />
+          <p
+            className="text-xs tracking-[0.15em] uppercase"
+            style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
           >
-            {/* Avatar */}
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1"
-              style={{
-                background: isPenitent ? 'rgba(201,168,76,0.1)' : 'rgba(107,29,42,0.15)',
-                border: `1px solid ${isPenitent ? 'rgba(201,168,76,0.2)' : 'rgba(107,29,42,0.25)'}`,
-              }}
-            >
-              {isPenitent ? (
-                <User className="w-4 h-4" style={{ color: '#C9A84C' }} />
-              ) : (
-                <Church className="w-4 h-4" style={{ color: '#8B3145' }} />
-              )}
-            </div>
-
-            {/* Bubble */}
-            <div
-              className={`flex-1 rounded-2xl p-4 ${isPenitent ? 'rounded-tl-sm' : 'rounded-tr-sm'}`}
-              style={{
-                background: isPenitent ? 'rgba(201,168,76,0.06)' : 'rgba(107,29,42,0.08)',
-                border: `1px solid ${isPenitent ? 'rgba(201,168,76,0.12)' : 'rgba(107,29,42,0.15)'}`,
-              }}
-            >
-              <p
-                className="text-[10px] tracking-[0.15em] uppercase mb-2"
-                style={{
-                  color: isPenitent ? '#C9A84C' : '#8B3145',
-                  fontFamily: 'Poppins, sans-serif',
-                }}
-              >
-                {isPenitent ? 'Você' : 'Sacerdote'}
-              </p>
-              <p
-                className="text-sm leading-[1.9] whitespace-pre-line"
-                style={{
-                  color: '#F2EDE4',
-                  fontFamily: step.id === 'contrition' || step.id === 'absolution'
-                    ? 'Cormorant Garamond, serif'
-                    : 'Poppins, sans-serif',
-                  fontWeight: 300,
-                  fontStyle: step.id === 'absolution' ? 'italic' : 'normal',
-                }}
-              >
-                {text}
-              </p>
-            </div>
-          </div>
-        )
-      })}
+            Ato de contrição
+          </p>
+        </div>
+        <p
+          className="text-base leading-relaxed"
+          style={{ color: '#F2EDE4', fontFamily: 'Cormorant Garamond, serif' }}
+        >
+          {ACT_OF_CONTRITION}
+        </p>
+      </div>
     </div>
   )
 }
