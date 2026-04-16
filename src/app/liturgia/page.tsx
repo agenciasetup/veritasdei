@@ -1,9 +1,11 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { Calendar, MapPin, Users, HandHeart } from 'lucide-react'
 import HubHeader from '@/components/hubs/HubHeader'
 import HubTile from '@/components/hubs/HubTile'
 import AuthGuard from '@/components/auth/AuthGuard'
+import PullToRefresh from '@/components/mobile/PullToRefresh'
 import { getLiturgicalDay } from '@/lib/liturgical-calendar'
 
 const COLOR_DOTS: Record<string, string> = {
@@ -15,6 +17,7 @@ const COLOR_DOTS: Record<string, string> = {
 }
 
 export default function LiturgiaPage() {
+  const router = useRouter()
   const day = getLiturgicalDay(new Date())
   const dotColor = COLOR_DOTS[day.color] ?? '#66BB6A'
   const hoje = new Date().toLocaleDateString('pt-BR', {
@@ -31,6 +34,7 @@ export default function LiturgiaPage() {
           subtitle="Calendário, leituras e sacramentos"
         />
 
+        <PullToRefresh onRefresh={() => router.refresh()}>
         {/* Card destaque: dia litúrgico atual */}
         <div className="px-4 max-w-2xl mx-auto mb-3">
           <div
@@ -95,6 +99,7 @@ export default function LiturgiaPage() {
             subtitle="Grupos de oração e pastoral"
           />
         </div>
+        </PullToRefresh>
       </main>
     </AuthGuard>
   )

@@ -52,7 +52,7 @@ export default function LiturgicalBar() {
   const hoje = formatDate()
 
   return (
-    <div className="w-full relative z-40">
+    <div className="w-full relative z-40 safe-top-standalone">
       {/* ─── Compact bar (always visible) ─── */}
       <button
         onClick={() => setSheetOpen(true)}

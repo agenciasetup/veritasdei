@@ -4,6 +4,7 @@ import { Church, MapPin, Share2, User } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { VOCACOES, SACRAMENTOS } from '@/types/auth'
 import CrossIcon from '@/components/icons/CrossIcon'
+import { share } from '@/lib/platform'
 
 /**
  * Carteirinha Católica — cartão de identificação digital com selo dourado
@@ -23,20 +24,10 @@ export default function CarteirinhaSection() {
     : ''
 
   const handleShare = async () => {
-    const text = `Carteirinha Catolica - ${profile?.name ?? 'Membro'} | Veritas Dei`
-    if (typeof navigator === 'undefined') return
-    const nav = navigator as Navigator
-    if (typeof nav.share === 'function') {
-      try {
-        await nav.share({ title: 'Carteirinha Catolica', text })
-      } catch {
-        /* user cancelled */
-      }
-      return
-    }
-    try {
-      await nav.clipboard.writeText(text)
-    } catch {}
+    await share.text({
+      title: 'Carteirinha Católica',
+      text: `Carteirinha Catolica - ${profile?.name ?? 'Membro'} | Veritas Dei`,
+    })
   }
 
   return (

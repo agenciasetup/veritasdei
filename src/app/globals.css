@@ -590,11 +590,56 @@ button, a, [role="button"], [role="tab"] {
   display: none;
 }
 
+/* Impede overscroll horizontal de disparar swipe-back do navegador/OS.
+   Aplicar em scroll rows horizontais (PropositosStrip, KnowledgeMap strip,
+   Carousel, admin tabs). */
+.no-overscroll-x {
+  overscroll-behavior-x: contain;
+}
+
+.no-overscroll-y {
+  overscroll-behavior-y: contain;
+}
+
+/* Edge dead-zones em rotas imersivas (terço, verbum, leituras).
+   Impede que toque na borda conflite com edge-swipe nativo. */
+.edge-protect::before,
+.edge-protect::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 20px;
+  z-index: 1000;
+  pointer-events: auto;
+  background: transparent;
+}
+
+.edge-protect::before { left: 0; }
+.edge-protect::after { right: 0; }
+
 /* Safe area helpers (mobile chrome) */
 .safe-top    { padding-top:    env(safe-area-inset-top, 0px); }
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
 .safe-left   { padding-left:   env(safe-area-inset-left, 0px); }
 .safe-right  { padding-right:  env(safe-area-inset-right, 0px); }
+
+/* Garantir safe-area no topo para elementos sticky/fixed apenas em PWA
+   standalone (onde não há barra de URL do browser). */
+@media (display-mode: standalone) {
+  .safe-top-standalone {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .safe-top-standalone-top {
+    top: env(safe-area-inset-top, 0px) !important;
+  }
+}
+
+/* Landscape: iPhone em paisagem tem notch lateral — respeitar. */
+body {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
 
 /* ═══════════════════════════════════════════════════════
    COMING SOON BADGE

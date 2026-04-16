@@ -76,7 +76,7 @@ export default function KnowledgeMap({ userId }: KnowledgeMapProps) {
   return (
     <div className="w-full max-w-2xl mx-auto">
       {/* ─── Mobile: horizontal scroll strip ─── */}
-      <div className="md:hidden -mx-4 px-4 overflow-x-auto no-scrollbar" style={{ scrollSnapType: 'x mandatory' }}>
+      <div className="md:hidden -mx-4 px-4 overflow-x-auto no-scrollbar no-overscroll-x" style={{ scrollSnapType: 'x mandatory' }}>
         <ul className="flex gap-3 pb-2">
           {positioned.map((node) => (
             <li key={node.slug} style={{ scrollSnapAlign: 'start' }}>

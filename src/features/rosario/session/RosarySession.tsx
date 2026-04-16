@@ -429,7 +429,7 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
             const dx = info.offset.x
             const dy = info.offset.y
             // ignora pans verticais (scroll) e quase-zero
-            if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx)) return
+            if (Math.abs(dx) < 40 || Math.abs(dy) > Math.abs(dx)) return
             if (dx < 0) {
               haptic.pulse('medium')
               advanceWithHaptic()

@@ -70,7 +70,7 @@ export default function PropositosStrip() {
       </div>
 
       <div
-        className="px-4 flex gap-3 overflow-x-auto no-scrollbar"
+        className="px-4 flex gap-3 overflow-x-auto no-scrollbar no-overscroll-x"
         style={{ scrollSnapType: 'x mandatory' }}
       >
         {lista.map(p => {

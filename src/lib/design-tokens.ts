@@ -63,5 +63,15 @@ export const durations = {
   slow:   400,
 } as const
 
+export const gestures = {
+  /** Distância mínima em pixels para considerar um swipe horizontal. */
+  swipeThreshold: 40,
+  /** Distância para ativar pull-to-refresh. */
+  pullThreshold: 72,
+  /** Largura da zona morta (px) nas bordas laterais em páginas imersivas,
+   *  para não conflitar com edge-swipe do browser/OS. */
+  edgeDeadZone: 20,
+} as const
+
 export type Colors = typeof colors
 export type Fonts = typeof fonts
