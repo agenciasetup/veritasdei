@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
+  // Gate: só usuário autenticado. Endpoint faz chamada billable ao Google Maps.
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
+  }
+
+  // 30 sugestões/min por usuário cobre digitação normal sem abrir espaço para
+  // abuso serial da API billable do Google.
+  if (!rateLimit(`places-ac:${user.id}`, 30, 60_000)) {
+    return NextResponse.json({ error: 'Muitas requisições. Aguarde um momento.' }, { status: 429 })
+  }
+
   const apiKey = process.env.API_PLACES_NEW
   if (!apiKey) {
     return NextResponse.json({ error: 'API key não configurada.' }, { status: 500 })
@@ -9,6 +24,12 @@ export async function POST(req: NextRequest) {
   const { input, sessionToken } = await req.json()
   if (!input || typeof input !== 'string' || input.trim().length < 3) {
     return NextResponse.json({ suggestions: [] })
+  }
+  if (input.length > 200) {
+    return NextResponse.json({ error: 'Input muito longo.' }, { status: 400 })
+  }
+  if (typeof sessionToken !== 'undefined' && (typeof sessionToken !== 'string' || sessionToken.length > 128)) {
+    return NextResponse.json({ error: 'sessionToken inválido.' }, { status: 400 })
   }
 
   // Try Places API (New) first, fallback to legacy
@@ -45,20 +66,14 @@ export async function POST(req: NextRequest) {
     if (!res.ok) {
       const legacyErr = await res.text()
       console.error('[places/autocomplete] Legacy API error:', res.status, legacyErr)
-      return NextResponse.json(
-        { error: 'Erro na busca de endereço.', debug: { newApi: errText, legacyApi: legacyErr } },
-        { status: 502 },
-      )
+      return NextResponse.json({ error: 'Erro na busca de endereço.' }, { status: 502 })
     }
 
     // Legacy API response format is different
     const legacyData = await res.json()
     if (legacyData.status !== 'OK' && legacyData.status !== 'ZERO_RESULTS') {
       console.error('[places/autocomplete] Legacy API status:', legacyData.status, legacyData.error_message)
-      return NextResponse.json(
-        { error: legacyData.error_message ?? 'Erro na busca.', debug: { status: legacyData.status } },
-        { status: 502 },
-      )
+      return NextResponse.json({ error: 'Erro na busca.' }, { status: 502 })
     }
 
     const legacySuggestions = (legacyData.predictions ?? []).map(
