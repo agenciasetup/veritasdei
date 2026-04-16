@@ -268,8 +268,12 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
 
   return (
     <div
-      className="fixed inset-0 flex flex-col"
-      style={{ backgroundColor: '#0F0E0C', color: '#F2EDE4' }}
+      className="fixed inset-0 flex flex-col md:static md:inset-auto md:mx-auto md:my-6 md:max-w-4xl md:min-h-[calc(100vh-7rem)] md:rounded-2xl md:border md:overflow-hidden"
+      style={{
+        backgroundColor: '#0F0E0C',
+        color: '#F2EDE4',
+        borderColor: 'rgba(201, 168, 76, 0.12)',
+      }}
     >
       {/* ── Top bar ── */}
       <header
@@ -361,7 +365,7 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
       )}
 
       {/* ── Main content area (flex-grow, scrollable) ── */}
-      <div className="flex-1 flex flex-col overflow-y-auto px-4 pt-2 pb-2">
+      <div className="flex-1 flex flex-col overflow-y-auto px-4 pt-2 pb-2 md:flex-row md:items-start md:gap-8 md:px-8 md:pt-6">
         {/* Intention pill (if set) */}
         {activeIntention && (
           <button
@@ -381,36 +385,39 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
           </button>
         )}
 
-        {/* Rosary beads */}
-        <div className="flex-shrink-0 flex justify-center">
-          <RosaryBeads
-            currentBeadId={currentBeadId}
-            completedBeadIds={completedBeadIds}
-            onBeadSelect={goToBead}
-            className="w-full max-w-[280px] h-auto"
-            ariaDescription={`Terço — passo ${currentIndex + 1} de ${totalSteps}`}
-          />
-        </div>
-
-        {/* Compact progress */}
-        <div className="flex-shrink-0 mb-2" aria-hidden>
-          <div
-            className="h-0.5 w-full overflow-hidden rounded-full"
-            style={{ background: 'rgba(201, 168, 76, 0.08)' }}
-          >
-            <div
-              className="h-full transition-all duration-500 ease-out"
-              style={{
-                width: `${progressPct}%`,
-                background: 'linear-gradient(90deg, #C9A84C, #D9C077)',
-              }}
+        {/* Left column: beads + progress */}
+        <div className="flex-shrink-0 md:flex-1 md:flex md:flex-col md:items-center md:sticky md:top-4">
+          {/* Rosary beads */}
+          <div className="flex justify-center">
+            <RosaryBeads
+              currentBeadId={currentBeadId}
+              completedBeadIds={completedBeadIds}
+              onBeadSelect={goToBead}
+              className="w-full max-w-[280px] md:max-w-[360px] h-auto"
+              ariaDescription={`Terço — passo ${currentIndex + 1} de ${totalSteps}`}
             />
+          </div>
+
+          {/* Compact progress */}
+          <div className="mb-2 md:w-full md:max-w-[360px]" aria-hidden>
+            <div
+              className="h-0.5 w-full overflow-hidden rounded-full"
+              style={{ background: 'rgba(201, 168, 76, 0.08)' }}
+            >
+              <div
+                className="h-full transition-all duration-500 ease-out"
+                style={{
+                  width: `${progressPct}%`,
+                  background: 'linear-gradient(90deg, #C9A84C, #D9C077)',
+                }}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Prayer card */}
+        {/* Right column on desktop: prayer card */}
         <section
-          className="flex-shrink-0 rounded-xl p-4"
+          className="flex-shrink-0 rounded-xl p-4 md:flex-1 md:p-6"
           style={{
             background: 'rgba(20, 18, 14, 0.6)',
             border: '1px solid rgba(201, 168, 76, 0.12)',
@@ -532,7 +539,7 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
       {/* ── Fixed bottom bar ── */}
       {!effectiveCompleted && !showTransition && !isCompleted ? (
         <div
-          className="flex-shrink-0 flex items-center gap-3 px-4 safe-bottom"
+          className="flex-shrink-0 flex items-center gap-3 px-4 safe-bottom md:px-8 md:rounded-b-2xl"
           style={{
             height: '72px',
             borderTop: '1px solid rgba(201, 168, 76, 0.1)',
