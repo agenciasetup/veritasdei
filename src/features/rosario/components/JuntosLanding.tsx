@@ -1,30 +1,25 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useState } from 'react'
 import { MYSTERY_GROUPS, getMysteryForToday } from '@/features/rosario/data/mysteries'
 import type { MysterySet } from '@/features/rosario/data/types'
 import type { RosaryRoomSnapshot } from '@/features/rosario/data/historyTypes'
 
-/**
- * `<JuntosLanding />` — ponto de entrada do terço compartilhado.
- *
- * Dois caminhos lado a lado:
- *   - Criar uma sala: usuário vira host, escolhe mistérios, recebe
- *     um código de convite e é redirecionado pra sala.
- *   - Entrar em sala: cola o código de 6 chars e é redirecionado.
- *
- * Ambos os fluxos usam os route handlers do sprint 3.2. Erros da API
- * são exibidos inline; nada de redirect em cima de falha.
- */
 export function JuntosLanding() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+
   const [mysterySet, setMysterySet] = useState<MysterySet>(
     () => getMysteryForToday().id,
   )
   const [titulo, setTitulo] = useState('')
+  const [intencao, setIntencao] = useState('')
+  const [periodo, setPeriodo] = useState('')
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
+  const [createdRoom, setCreatedRoom] = useState<{ codigo: string } | null>(null)
+  const [linkCopied, setLinkCopied] = useState(false)
 
   const [joinCode, setJoinCode] = useState('')
   const [joining, setJoining] = useState(false)
@@ -47,18 +42,34 @@ export function JuntosLanding() {
         return
       }
       const data = (await res.json()) as RosaryRoomSnapshot
-      router.push(`/rosario/juntos/${data.room.codigo}`)
+      setCreatedRoom({ codigo: data.room.codigo })
     } catch {
       setCreateError('Erro de rede. Verifique sua conexão.')
     } finally {
       setCreating(false)
     }
-  }, [mysterySet, titulo, router])
+  }, [mysterySet, titulo])
+
+  const handleCopyLink = useCallback(async () => {
+    if (!createdRoom) return
+    const link = `${window.location.origin}/rosario/juntos/${createdRoom.codigo}`
+    try {
+      await navigator.clipboard.writeText(link)
+      setLinkCopied(true)
+      setTimeout(() => setLinkCopied(false), 2000)
+    } catch {
+      // fallback
+    }
+  }, [createdRoom])
+
+  const handleEnterRoom = useCallback(() => {
+    if (createdRoom) router.push(`/rosario/juntos/${createdRoom.codigo}`)
+  }, [createdRoom, router])
 
   const handleJoin = useCallback(async () => {
     const codigo = joinCode.trim().toUpperCase()
-    if (codigo.length !== 6) {
-      setJoinError('Digite o código de 6 caracteres.')
+    if (codigo.length < 4) {
+      setJoinError('Digite o código de 4-6 caracteres.')
       return
     }
     setJoining(true)
@@ -83,6 +94,90 @@ export function JuntosLanding() {
     }
   }, [joinCode, router])
 
+  // If room was just created, show the share screen
+  if (createdRoom) {
+    const shareLink = typeof window !== 'undefined'
+      ? `${window.location.origin}/rosario/juntos/${createdRoom.codigo}`
+      : `/rosario/juntos/${createdRoom.codigo}`
+
+    return (
+      <div className="flex flex-col gap-5">
+        <section
+          className="rounded-2xl border p-6 text-center"
+          style={{
+            borderColor: 'rgba(201, 168, 76, 0.22)',
+            backgroundColor: 'rgba(20, 18, 14, 0.6)',
+          }}
+        >
+          <div className="text-3xl mb-3" aria-hidden>👥</div>
+          <h2
+            className="text-lg mb-2"
+            style={{ color: '#D9C077', fontFamily: 'Cinzel, serif' }}
+          >
+            Sala criada!
+          </h2>
+
+          {/* Code */}
+          <div
+            className="inline-block rounded-xl px-6 py-3 font-mono text-2xl tracking-[0.4em] mb-4"
+            style={{
+              background: 'rgba(201, 168, 76, 0.08)',
+              border: '1px solid rgba(201, 168, 76, 0.2)',
+              color: '#F2EDE4',
+            }}
+          >
+            {createdRoom.codigo}
+          </div>
+
+          {/* Shareable link */}
+          <div className="mb-4">
+            <p className="text-[11px] mb-2" style={{ color: '#7A7368' }}>
+              Compartilhe o link — quem clicar entra direto:
+            </p>
+            <div
+              className="flex items-center gap-2 rounded-lg border px-3 py-2"
+              style={{
+                borderColor: 'rgba(201, 168, 76, 0.15)',
+                background: 'rgba(20, 18, 14, 0.8)',
+              }}
+            >
+              <span
+                className="flex-1 text-xs truncate font-mono"
+                style={{ color: '#B8AFA2' }}
+              >
+                {shareLink}
+              </span>
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="shrink-0 rounded-md px-3 py-1 text-[11px] font-semibold transition active:scale-95"
+                style={{
+                  background: linkCopied ? 'rgba(76, 175, 80, 0.2)' : 'rgba(201, 168, 76, 0.12)',
+                  color: linkCopied ? '#81C784' : '#D9C077',
+                  border: `1px solid ${linkCopied ? 'rgba(76, 175, 80, 0.3)' : 'rgba(201, 168, 76, 0.25)'}`,
+                }}
+              >
+                {linkCopied ? 'Copiado!' : 'Copiar'}
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleEnterRoom}
+            className="w-full rounded-xl py-3 text-sm font-semibold transition active:scale-[0.97]"
+            style={{
+              background: 'linear-gradient(180deg, #C9A84C, #A88437)',
+              color: '#0F0E0C',
+            }}
+          >
+            Entrar na sala
+          </button>
+        </section>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {/* Criar sala */}
@@ -102,7 +197,7 @@ export function JuntosLanding() {
           Criar uma sala
         </h2>
         <p className="mt-1 text-xs" style={{ color: '#7A7368' }}>
-          Você vira o host e pode convidar outros pelo código gerado.
+          Você vira o host e pode convidar outros pelo código ou link.
         </p>
 
         <label className="mt-4 block text-[10px] uppercase tracking-[0.2em]" style={{ color: '#7A7368' }}>
@@ -155,7 +250,41 @@ export function JuntosLanding() {
           onChange={(e) => setTitulo(e.target.value)}
           placeholder="Ex: Terço pelas famílias"
           maxLength={120}
-          className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+          className="mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none"
+          style={{
+            borderColor: 'rgba(201, 168, 76, 0.22)',
+            backgroundColor: 'rgba(20, 18, 14, 0.8)',
+            color: '#F2EDE4',
+          }}
+        />
+
+        <label className="mt-3 block text-[10px] uppercase tracking-[0.2em]" style={{ color: '#7A7368' }}>
+          Intenção (opcional)
+        </label>
+        <input
+          type="text"
+          value={intencao}
+          onChange={(e) => setIntencao(e.target.value)}
+          placeholder="Ex: Pela saúde da família"
+          maxLength={200}
+          className="mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none"
+          style={{
+            borderColor: 'rgba(201, 168, 76, 0.22)',
+            backgroundColor: 'rgba(20, 18, 14, 0.8)',
+            color: '#F2EDE4',
+          }}
+        />
+
+        <label className="mt-3 block text-[10px] uppercase tracking-[0.2em]" style={{ color: '#7A7368' }}>
+          Período (opcional)
+        </label>
+        <input
+          type="text"
+          value={periodo}
+          onChange={(e) => setPeriodo(e.target.value)}
+          placeholder="Ex: 16/04 a 24/04"
+          maxLength={60}
+          className="mt-1 w-full rounded-lg border px-3 py-2 text-sm outline-none"
           style={{
             borderColor: 'rgba(201, 168, 76, 0.22)',
             backgroundColor: 'rgba(20, 18, 14, 0.8)',
@@ -181,7 +310,7 @@ export function JuntosLanding() {
           type="button"
           onClick={handleCreate}
           disabled={creating}
-          className="mt-4 w-full rounded-lg px-5 py-2.5 text-sm font-semibold transition disabled:opacity-60"
+          className="mt-4 w-full rounded-lg px-5 py-2.5 text-sm font-semibold transition disabled:opacity-60 active:scale-[0.97]"
           style={{
             background: 'linear-gradient(180deg, #C9A84C, #A88437)',
             color: '#0F0E0C',
@@ -219,7 +348,7 @@ export function JuntosLanding() {
           maxLength={6}
           autoComplete="off"
           spellCheck={false}
-          className="mt-4 w-full rounded-lg border px-3 py-3 text-center font-mono text-xl tracking-[0.4em]"
+          className="mt-4 w-full rounded-lg border px-3 py-3 text-center font-mono text-xl tracking-[0.4em] outline-none"
           style={{
             borderColor: 'rgba(201, 168, 76, 0.22)',
             backgroundColor: 'rgba(20, 18, 14, 0.8)',
@@ -245,8 +374,8 @@ export function JuntosLanding() {
         <button
           type="button"
           onClick={handleJoin}
-          disabled={joining || joinCode.length !== 6}
-          className="mt-4 w-full rounded-lg border px-5 py-2.5 text-sm font-semibold transition disabled:opacity-40"
+          disabled={joining || joinCode.length < 4}
+          className="mt-4 w-full rounded-lg border px-5 py-2.5 text-sm font-semibold transition disabled:opacity-40 active:scale-[0.97]"
           style={{
             borderColor: 'rgba(201, 168, 76, 0.35)',
             color: '#D9C077',
