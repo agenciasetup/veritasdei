@@ -10,6 +10,7 @@ interface RosaryMenuProps {
   onClose: () => void
   mysterySetId: MysterySet
   onMysteryChange: (id: MysterySet) => void
+  mysteryLocked?: boolean
   hapticSupported: boolean
   hapticEnabled: boolean
   onHapticToggle: () => void
@@ -29,6 +30,7 @@ export function RosaryMenu({
   onClose,
   mysterySetId,
   onMysteryChange,
+  mysteryLocked = false,
   hapticSupported,
   hapticEnabled,
   onHapticToggle,
@@ -105,7 +107,7 @@ export function RosaryMenu({
             className="text-[10px] uppercase tracking-[0.2em] mb-3"
             style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
           >
-            Mistérios
+            Mistérios {mysteryLocked && <span style={{ color: '#5A5348' }}>(Rosário completo)</span>}
           </h3>
           <div
             className="grid grid-cols-2 gap-2"
@@ -121,11 +123,14 @@ export function RosaryMenu({
                   type="button"
                   role="radio"
                   aria-checked={active}
+                  disabled={mysteryLocked}
                   onClick={() => {
-                    onMysteryChange(g.id)
-                    onClose()
+                    if (!mysteryLocked) {
+                      onMysteryChange(g.id)
+                      onClose()
+                    }
                   }}
-                  className="rounded-xl px-3 py-2.5 text-left transition active:scale-[0.97]"
+                  className="rounded-xl px-3 py-2.5 text-left transition active:scale-[0.97] disabled:opacity-50"
                   style={{
                     background: active
                       ? 'rgba(201, 168, 76, 0.12)'

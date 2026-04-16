@@ -62,9 +62,15 @@ interface RosarySessionProps {
   onExit?: () => void
 }
 
+const ROSARY_SEQUENCE: MysterySet[] = ['gozosos', 'luminosos', 'dolorosos', 'gloriosos']
+
 export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps) {
+  // Rosário completo: track which of the 4 terços we're on (0–3)
+  const [rosarioIndex, setRosarioIndex] = useState(0)
+  const [showTransition, setShowTransition] = useState(false)
+
   const [mysterySetId, setMysterySetId] = useState<MysterySet>(
-    () => getMysteryForToday().id,
+    () => fullRosary ? ROSARY_SEQUENCE[0] : getMysteryForToday().id,
   )
   const mysteryGroup = useMemo(
     () => MYSTERY_GROUPS.find((g) => g.id === mysterySetId) ?? MYSTERY_GROUPS[0],
@@ -164,6 +170,29 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
     })
   }, [hydrated, isCompleted, mysterySetId, activeIntentionId, recordSession])
 
+  // --- Rosário completo: intercept completion to show transition ---
+  const isLastRosarioSet = rosarioIndex >= ROSARY_SEQUENCE.length - 1
+  const rosarioFullyComplete = fullRosary && isCompleted && isLastRosarioSet
+
+  useEffect(() => {
+    if (!fullRosary || !isCompleted || isLastRosarioSet) return
+    setShowTransition(true)
+  }, [fullRosary, isCompleted, isLastRosarioSet])
+
+  function advanceToNextRosarioSet() {
+    const nextIndex = rosarioIndex + 1
+    setRosarioIndex(nextIndex)
+    setMysterySetId(ROSARY_SEQUENCE[nextIndex])
+    setShowTransition(false)
+    reset()
+    setResumedFrom(null)
+    sessionStartRef.current = Date.now()
+    recordedCompletionRef.current = false
+  }
+
+  // In full rosary mode, show effective completion only after all 4
+  const effectiveCompleted = fullRosary ? rosarioFullyComplete : isCompleted
+
   // --- TTS ---
   const { enabled: ttsEnabled, speak: ttsSpeak, stop: ttsStop } = tts
   useEffect(() => {
@@ -233,6 +262,9 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
 
   // Mystery name for header
   const mysteryShortName = mysteryGroup.name.replace('Mistérios ', '')
+  const headerTitle = fullRosary
+    ? `${mysteryShortName} (${rosarioIndex + 1}/4)`
+    : mysteryShortName
 
   return (
     <div
@@ -275,7 +307,7 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
             className="text-sm font-medium"
             style={{ color: '#F2EDE4', fontFamily: 'Cinzel, serif' }}
           >
-            {mysteryShortName}
+            {headerTitle}
           </h1>
           {!isOnline && (
             <span className="text-[9px]" style={{ color: '#D9C077' }}>
@@ -460,8 +492,45 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
         </section>
       </div>
 
+      {/* ── Rosário transition screen ── */}
+      {showTransition && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: 'rgba(15, 14, 12, 0.97)' }}
+        >
+          <div className="text-center px-6 max-w-md">
+            <div className="text-4xl mb-4" aria-hidden>✦</div>
+            <h2
+              className="text-xl mb-2"
+              style={{ color: '#D9C077', fontFamily: 'Cinzel, serif' }}
+            >
+              Mistérios {mysteryShortName} concluídos
+            </h2>
+            <p className="text-sm mb-1" style={{ color: '#B8AFA2' }}>
+              Terço {rosarioIndex + 1} de 4
+            </p>
+            <p className="text-xs mb-6" style={{ color: '#7A7368' }}>
+              Próximo: Mistérios {ROSARY_SEQUENCE[rosarioIndex + 1]
+                ? MYSTERY_GROUPS.find(g => g.id === ROSARY_SEQUENCE[rosarioIndex + 1])?.name.replace('Mistérios ', '') ?? ''
+                : ''}
+            </p>
+            <button
+              type="button"
+              onClick={advanceToNextRosarioSet}
+              className="rounded-xl px-8 py-3 text-sm font-semibold transition active:scale-[0.97]"
+              style={{
+                background: 'linear-gradient(180deg, #C9A84C, #A88437)',
+                color: '#0F0E0C',
+              }}
+            >
+              Continuar o Rosário
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Fixed bottom bar ── */}
-      {!isCompleted ? (
+      {!effectiveCompleted && !showTransition && !isCompleted ? (
         <div
           className="flex-shrink-0 flex items-center gap-3 px-4 safe-bottom"
           style={{
@@ -508,7 +577,7 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
             </span>
           </div>
         </div>
-      ) : (
+      ) : !showTransition ? (
         /* ── Completion screen ── */
         <div
           className="flex-shrink-0 px-4 py-6 text-center safe-bottom"
@@ -522,7 +591,7 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
             className="text-xl mb-1"
             style={{ color: '#D9C077', fontFamily: 'Cinzel, serif' }}
           >
-            Terço completo
+            {rosarioFullyComplete ? 'Rosário completo' : 'Terço completo'}
           </h2>
           <p className="text-xs mb-4" style={{ color: '#7A7368' }}>
             Que Nossa Senhora interceda por você
@@ -569,7 +638,7 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
             )}
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* ── Floating menu (bottom sheet) ── */}
       <RosaryMenu
@@ -577,6 +646,7 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
         onClose={() => setMenuOpen(false)}
         mysterySetId={mysterySetId}
         onMysteryChange={handleMysteryChange}
+        mysteryLocked={fullRosary}
         hapticSupported={haptic.supported}
         hapticEnabled={haptic.enabled}
         onHapticToggle={() => haptic.setEnabled(!haptic.enabled)}
