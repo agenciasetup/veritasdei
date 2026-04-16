@@ -4,6 +4,7 @@ import { Check, Plus, Flame, Settings2 } from 'lucide-react'
 import { usePropositos } from '@/contexts/PropositosContext'
 import { cadenciaLabel, periodoAtualLabel } from '@/lib/propositos'
 import { usePropositoSheet } from '@/components/propositos/PropositoSheet'
+import { useHaptic } from '@/hooks/useHaptic'
 
 /**
  * Strip horizontal de propósitos ativos — a "steroid version"
@@ -19,6 +20,7 @@ import { usePropositoSheet } from '@/components/propositos/PropositoSheet'
 export default function PropositosStrip() {
   const { propositos, propositosAtivos, loading, checkIn } = usePropositos()
   const { openCreate, openEdit } = usePropositoSheet()
+  const haptic = useHaptic()
 
   if (loading && propositos.length === 0) {
     return (
@@ -48,8 +50,8 @@ export default function PropositosStrip() {
   const lista = propositosAtivos.length > 0 ? propositosAtivos : propositos.slice(0, 3)
 
   return (
-    <section className="mb-6">
-      <div className="px-5 mb-3 flex items-center justify-between">
+    <section className="mb-3">
+      <div className="px-5 mb-2 flex items-center justify-between">
         <h2
           className="text-sm uppercase tracking-[0.15em]"
           style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
@@ -100,10 +102,10 @@ export default function PropositosStrip() {
                 type="button"
                 onClick={() => openEdit(p)}
                 aria-label="Editar propósito"
-                className="absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center"
-                style={{ color: '#7A7368', background: 'rgba(255,255,255,0.04)' }}
+                className="absolute top-1 right-1 w-11 h-11 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+                style={{ color: '#8A8378' }}
               >
-                <Settings2 className="w-3 h-3" />
+                <Settings2 className="w-4 h-4" />
               </button>
               <p
                 className="text-sm font-medium mb-1 truncate pr-7"
@@ -152,7 +154,11 @@ export default function PropositosStrip() {
               ) : (
                 <button
                   type="button"
-                  onClick={() => !feitoHoje && checkIn(p.id)}
+                  onClick={() => {
+                    if (feitoHoje) return
+                    haptic.pulse('complete')
+                    checkIn(p.id)
+                  }}
                   disabled={feitoHoje}
                   className="w-full py-2 rounded-xl text-xs flex items-center justify-center gap-1 transition-all"
                   style={{

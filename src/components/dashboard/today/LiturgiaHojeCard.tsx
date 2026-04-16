@@ -41,14 +41,14 @@ export default function LiturgiaHojeCard() {
   return (
     <Link
       href="/liturgia/hoje"
-      className="block mx-4 mb-4 rounded-3xl p-5 transition-all active:scale-[0.99]"
+      className="block mx-4 mb-2 rounded-3xl p-4 transition-all active:scale-[0.99]"
       style={{
         background: style.bg,
         border: `1px solid ${style.border}`,
         boxShadow: `0 0 32px ${style.glow}`,
       }}
     >
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-2">
         <span
           className="inline-block w-2.5 h-2.5 rounded-full"
           style={{ background: style.dot, boxShadow: `0 0 8px ${style.dot}` }}
@@ -87,7 +87,7 @@ export default function LiturgiaHojeCard() {
         {hoje}
       </p>
 
-      <div className="mt-4 flex items-center justify-between gap-3">
+      <div className="mt-3 flex items-center justify-between gap-3">
         <span
           className="text-xs"
           style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}

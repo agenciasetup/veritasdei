@@ -4,8 +4,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { ClipboardCheck, ListChecks, MessageCircle, RotateCcw } from 'lucide-react'
 import type { ExamStep, LifeState } from './data/types'
 import ExamineList from './components/ExamineList'
+import ExamineStepper from './components/ExamineStepper'
 import ReviewList from './components/ReviewList'
 import ConfessionWalkthrough from './components/ConfessionWalkthrough'
+import { clearAllNotes } from './notesStorage'
 
 const STORAGE_KEY = 'veritasdei_exame'
 
@@ -99,6 +101,7 @@ export default function ExameConscienciaView() {
     setSelectedSins(new Set())
     setCustomSins([])
     save(new Set(), [], now)
+    clearAllNotes()
     setStep('examinar')
   }
 
@@ -196,11 +199,24 @@ export default function ExameConscienciaView() {
         <div className="max-w-3xl mx-auto px-4 md:px-8">
 
           {step === 'examinar' && (
-            <ExamineList
-              selectedSins={selectedSins}
-              onToggleSin={toggleSin}
-              lifeState={lifeState}
-            />
+            <>
+              {/* Mobile: stepper one-at-a-time */}
+              <div className="md:hidden">
+                <ExamineStepper
+                  selectedSins={selectedSins}
+                  onToggleSin={toggleSin}
+                  lifeState={lifeState}
+                />
+              </div>
+              {/* Desktop: accordion list */}
+              <div className="hidden md:block">
+                <ExamineList
+                  selectedSins={selectedSins}
+                  onToggleSin={toggleSin}
+                  lifeState={lifeState}
+                />
+              </div>
+            </>
           )}
 
           {step === 'revisar' && (

@@ -14,8 +14,8 @@
 
   /* ── Text ── */
   --text-primary:   #F2EDE4;
-  --text-secondary: #B8AFA2;
-  --text-muted:     #7A7368;
+  --text-secondary: #B8AFA7;
+  --text-muted:     #8A8378; /* bumped de #7A7368 para WCAG AA em texto pequeno */
 
   /* ── Accents ── */
   --gold:           #C9A84C;
@@ -36,6 +36,27 @@
   --accent-primary: #C9A84C;
   --accent-secondary: #6B1D2A;
   --border-color:   rgba(201, 168, 76, 0.12);
+
+  /* ── Semantic colors ── */
+  --color-success:  #66BB6A;
+  --color-danger:   #D94F5C;
+  --color-warning:  #E67E22;
+
+  /* ── Touch targets ── */
+  --touch-target:    44px;
+  --touch-target-lg: 48px;
+
+  /* ── Fonts (semantic) ── */
+  --font-display:    'Cinzel', serif;
+  --font-elegant:    'Cormorant Garamond', serif;
+  --font-body:       'Poppins', sans-serif;
+
+  /* ── Motion ── */
+  --duration-fast:   150ms;
+  --duration-base:   250ms;
+  --duration-slow:   400ms;
+  --ease-out:        cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out:     cubic-bezier(0.4, 0, 0.2, 1);
 
   /* ── Landing: Parchment / Paper ── */
   --paper:          #F4EEE4;
@@ -127,11 +148,18 @@ body::after {
   transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
 }
 
-.glass-card:hover {
-  border-color: rgba(201, 168, 76, 0.25);
-  box-shadow:
-    0 16px 56px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+@media (hover: hover) {
+  .glass-card:hover {
+    border-color: rgba(201, 168, 76, 0.25);
+    box-shadow:
+      0 16px 56px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+}
+
+.glass-card:active {
+  transform: scale(0.985);
+  border-color: rgba(201, 168, 76, 0.22);
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -337,10 +365,12 @@ body::after {
   transition: all 0.25s ease;
 }
 
-.theme-chip:hover {
-  border-color: var(--gold);
-  color: var(--gold);
-  background: rgba(201, 168, 76, 0.08);
+@media (hover: hover) {
+  .theme-chip:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+    background: rgba(201, 168, 76, 0.08);
+  }
 }
 
 .theme-chip:disabled {
@@ -483,11 +513,17 @@ body::after {
   cursor: pointer;
 }
 
-.feature-card:hover {
-  border-color: rgba(201, 168, 76, 0.3);
-  box-shadow: 0 16px 56px rgba(0, 0, 0, 0.5);
-  background: linear-gradient(135deg, rgba(107,29,42,0.06) 0%, rgba(201,168,76,0.04) 100%);
-  transform: translateY(-2px);
+@media (hover: hover) {
+  .feature-card:hover {
+    border-color: rgba(201, 168, 76, 0.3);
+    box-shadow: 0 16px 56px rgba(0, 0, 0, 0.5);
+    background: linear-gradient(135deg, rgba(107,29,42,0.06) 0%, rgba(201,168,76,0.04) 100%);
+    transform: translateY(-2px);
+  }
+}
+
+.feature-card:active {
+  transform: scale(0.985);
 }
 
 @media (min-width: 768px) {
@@ -517,11 +553,6 @@ body::after {
    ═══════════════════════════════════════════════════════ */
 
 @media (max-width: 767px) {
-  /* Ensure touch targets are at least 44px */
-  button, a, [role="button"] {
-    min-height: 44px;
-  }
-
   /* Prevent text size adjustment on rotation */
   html {
     -webkit-text-size-adjust: 100%;
@@ -533,6 +564,37 @@ body::after {
   }
 }
 
+/* Suppress webkit blue tap highlight everywhere — usamos active:scale */
+button, a, [role="button"], [role="tab"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Touch target utilities ── */
+.touch-target {
+  min-height: var(--touch-target);
+  min-width: var(--touch-target);
+}
+
+.touch-target-lg {
+  min-height: var(--touch-target-lg);
+  min-width: var(--touch-target-lg);
+}
+
+/* Hide scrollbars in a horizontal scroller (snap rows) */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Safe area helpers (mobile chrome) */
+.safe-top    { padding-top:    env(safe-area-inset-top, 0px); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.safe-left   { padding-left:   env(safe-area-inset-left, 0px); }
+.safe-right  { padding-right:  env(safe-area-inset-right, 0px); }
+
 /* ═══════════════════════════════════════════════════════
    COMING SOON BADGE
    ═══════════════════════════════════════════════════════ */
@@ -542,10 +604,10 @@ body::after {
   border: 1px solid rgba(201,168,76,0.2);
   color: #C9A84C;
   font-family: 'Poppins', sans-serif;
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  padding: 0.2rem 0.5rem;
+  padding: 0.25rem 0.6rem;
   border-radius: 999px;
 }
 
@@ -566,15 +628,8 @@ section {
   }
 }
 
-/* Smoother page transitions */
-main, [role="main"] {
-  animation: pageIn 0.4s ease-out;
-}
-
-@keyframes pageIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+/* Page transitions are handled per-route by <PageTransition /> (Framer Motion).
+   We deliberately do NOT animate main on every render to avoid conflicts. */
 
 /* Stagger animation for lists */
 .stagger-in > * {
@@ -700,9 +755,11 @@ main, [role="main"] {
   transition: all 0.2s;
 }
 
-.verbum-flow .react-flow__handle:hover {
-  background: #C9A84C;
-  transform: scale(1.3);
+@media (hover: hover) {
+  .verbum-flow .react-flow__handle:hover {
+    background: #C9A84C;
+    transform: scale(1.3);
+  }
 }
 
 .verbum-flow .react-flow__edge-path {
@@ -998,10 +1055,16 @@ main, [role="main"] {
   -webkit-backdrop-filter: blur(10px);
 }
 
-.church-chip:hover {
-  border-color: rgba(201,168,76,0.55);
-  background: rgba(28,22,15,0.95);
-  transform: translateY(-1px);
+@media (hover: hover) {
+  .church-chip:hover {
+    border-color: rgba(201,168,76,0.55);
+    background: rgba(28,22,15,0.95);
+    transform: translateY(-1px);
+  }
+}
+
+.church-chip:active {
+  transform: scale(0.97);
 }
 
 .church-chip-light {

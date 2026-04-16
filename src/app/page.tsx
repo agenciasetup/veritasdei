@@ -10,6 +10,12 @@ import PropositosStrip from '@/components/dashboard/today/PropositosStrip'
 import AtalhosRapidos from '@/components/dashboard/today/AtalhosRapidos'
 import LembretesCard from '@/components/dashboard/today/LembretesCard'
 import ContinueLearning from '@/components/dashboard/ContinueLearning'
+import PullToRefresh from '@/components/mobile/PullToRefresh'
+import {
+  SkeletonAvatar,
+  SkeletonCard,
+  SkeletonText,
+} from '@/components/mobile/Skeleton'
 
 /**
  * Home "Hoje" — perfil pessoal diário do católico.
@@ -41,44 +47,68 @@ export default function Home() {
 
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div
-          className="w-8 h-8 border-2 rounded-full animate-spin"
-          style={{ borderColor: 'rgba(201,168,76,0.2)', borderTopColor: '#C9A84C' }}
-        />
-      </div>
+      <main className="flex flex-col min-h-screen relative pb-24">
+        <header className="flex items-center justify-between px-5 pt-6 pb-4">
+          <div className="flex items-center gap-3">
+            <SkeletonAvatar size={44} />
+            <div>
+              <SkeletonText width={70} height={10} />
+              <div className="mt-2">
+                <SkeletonText width={120} height={16} />
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <SkeletonAvatar size={40} />
+            <SkeletonAvatar size={40} />
+          </div>
+        </header>
+        <div className="px-4 mb-3">
+          <SkeletonCard height={140} rounded={24} />
+        </div>
+        <div className="px-4 flex gap-3 overflow-hidden mb-4">
+          <SkeletonCard className="flex-shrink-0" height={170} rounded={20} style={{ width: 224 }} />
+          <SkeletonCard className="flex-shrink-0" height={170} rounded={20} style={{ width: 224 }} />
+        </div>
+        <div className="px-5 flex justify-around mb-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <SkeletonAvatar key={i} size={64} />
+          ))}
+        </div>
+      </main>
     )
   }
 
   return (
     <main
-      id="main-content"
       className="flex flex-col min-h-screen relative pb-24"
       role="main"
     >
       <div className="bg-glow" />
 
-      <HojeHeader />
+      <PullToRefresh onRefresh={() => router.refresh()}>
+        <HojeHeader />
 
-      <LiturgiaHojeCard />
+        <LiturgiaHojeCard />
 
-      <PropositosStrip />
+        <PropositosStrip />
 
-      <AtalhosRapidos />
+        <AtalhosRapidos />
 
-      <ContinueLearning userId={user?.id} />
+        <ContinueLearning userId={user?.id} />
 
-      <LembretesCard />
+        <LembretesCard />
+      </PullToRefresh>
 
-      <footer className="relative z-10 py-8 text-center mt-auto">
-        <div className="flex items-center justify-center gap-3 mb-3 max-w-[200px] mx-auto">
+      <footer className="relative z-10 py-4 text-center mt-auto">
+        <div className="flex items-center justify-center gap-3 mb-2 max-w-[180px] mx-auto">
           <span className="flex-1 h-px bg-gradient-to-r from-transparent to-[rgba(201,168,76,0.15)]" />
-          <span style={{ color: '#C9A84C', opacity: 0.4, fontSize: '0.6rem' }}>✦</span>
+          <span style={{ color: 'var(--gold)', opacity: 0.4, fontSize: '0.7rem' }}>✦</span>
           <span className="flex-1 h-px bg-gradient-to-l from-transparent to-[rgba(201,168,76,0.15)]" />
         </div>
         <p
-          className="text-xs tracking-wider"
-          style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif', letterSpacing: '0.1em' }}
+          className="text-[11px] tracking-[0.1em]"
+          style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}
         >
           Veritas Dei — Fiel ao Magistério
         </p>

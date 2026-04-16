@@ -232,7 +232,13 @@ function LoginPageInner() {
             <InputField label="E-mail" type="email" value={email} onChange={setEmail} placeholder="seu@email.com" required />
             <div className="relative">
               <InputField label="Senha" type={showPassword ? 'text' : 'password'} value={password} onChange={setPassword} placeholder="Sua senha" required />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-[38px] p-1" style={{ color: '#7A7368' }}>
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                className="absolute right-1 top-[30px] touch-target flex items-center justify-center rounded-lg active:scale-95"
+                style={{ color: '#8A8378' }}
+              >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
@@ -250,7 +256,13 @@ function LoginPageInner() {
             <InputField label="E-mail" type="email" value={email} onChange={setEmail} placeholder="seu@email.com" required />
             <div className="relative">
               <InputField label="Senha" type={showPassword ? 'text' : 'password'} value={password} onChange={setPassword} placeholder="Mínimo 8 caracteres" required minLength={8} />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-[38px] p-1" style={{ color: '#7A7368' }}>
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                className="absolute right-1 top-[30px] touch-target flex items-center justify-center rounded-lg active:scale-95"
+                style={{ color: '#8A8378' }}
+              >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>

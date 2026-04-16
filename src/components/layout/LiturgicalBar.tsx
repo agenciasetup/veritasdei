@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { getLiturgicalDay, type LiturgicalDay } from '@/lib/liturgical-calendar'
+import BottomSheet from '@/components/mobile/BottomSheet'
 
 /* ─── Color mapping for liturgical colors ─── */
 const LITURGICAL_COLORS: Record<string, { dot: string; bg: string; border: string }> = {
@@ -36,7 +37,7 @@ function formatDate(): string {
 
 export default function LiturgicalBar() {
   const [day, setDay] = useState<LiturgicalDay>(computeToday)
-  const [expanded, setExpanded] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)
 
   // Recompute at midnight
   useEffect(() => {
@@ -54,14 +55,14 @@ export default function LiturgicalBar() {
     <div className="w-full relative z-40">
       {/* ─── Compact bar (always visible) ─── */}
       <button
-        onClick={() => setExpanded(v => !v)}
-        className="w-full flex items-center justify-center gap-2 px-4 py-2 transition-colors duration-300 cursor-pointer"
+        onClick={() => setSheetOpen(true)}
+        className="w-full flex items-center justify-center gap-2 px-4 py-2 transition-colors duration-300 cursor-pointer active:opacity-80"
         style={{
           background: colors.bg,
           borderBottom: `1px solid ${colors.border}`,
         }}
-        aria-expanded={expanded}
-        aria-label="Expandir calendário litúrgico"
+        aria-haspopup="dialog"
+        aria-label="Abrir detalhes do dia litúrgico"
       >
         {/* Liturgical color dot */}
         <span
@@ -72,7 +73,7 @@ export default function LiturgicalBar() {
         {/* Main text */}
         <span
           className="text-xs tracking-wide truncate"
-          style={{ color: 'var(--text-secondary)', fontFamily: 'Poppins, sans-serif' }}
+          style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-body)' }}
         >
           <span className="font-medium" style={{ color: colors.dot }}>
             {day.season}
@@ -85,91 +86,82 @@ export default function LiturgicalBar() {
           </span>
         </span>
 
-        {/* Expand indicator */}
-        {expanded
-          ? <ChevronUp className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--text-muted)' }} />
-          : <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--text-muted)' }} />
-        }
+        <ChevronDown
+          className="w-3.5 h-3.5 flex-shrink-0"
+          style={{ color: 'var(--text-muted)' }}
+        />
       </button>
 
-      {/* ─── Expanded detail panel ─── */}
-      {expanded && (
-        <div
-          className="absolute top-full left-0 right-0 px-4 py-4 md:py-5 z-50 fade-in"
-          style={{
-            background: 'rgba(15,14,12,0.95)',
-            backdropFilter: 'blur(20px)',
-            borderBottom: `1px solid ${colors.border}`,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-          }}
-        >
-          <div className="max-w-lg mx-auto text-center space-y-2">
-            {/* Date */}
+      {/* ─── Expanded detail (BottomSheet) ─── */}
+      <BottomSheet
+        open={sheetOpen}
+        onDismiss={() => setSheetOpen(false)}
+        detents={[0.42, 0.7]}
+        initialDetent={0}
+        label="Detalhes do dia litúrgico"
+      >
+        <div className="text-center space-y-3 pt-2 pb-6">
+          <p
+            className="text-xs tracking-wider uppercase capitalize"
+            style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}
+          >
+            {hoje}
+          </p>
+
+          <h3
+            className="text-2xl font-bold"
+            style={{ fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}
+          >
+            {day.name}
+          </h3>
+
+          {day.title && (
             <p
-              className="text-xs tracking-wider uppercase capitalize"
-              style={{ color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}
+              className="text-base italic"
+              style={{ fontFamily: 'var(--font-elegant)', color: 'var(--text-secondary)' }}
             >
-              {hoje}
+              {day.title}
             </p>
+          )}
 
-            {/* Saint / Feast name */}
-            <h3
-              className="text-lg font-bold"
-              style={{ fontFamily: 'Cinzel, serif', color: 'var(--text-primary)' }}
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+            <span
+              className="text-xs px-3 py-1.5 rounded-full tracking-wider uppercase"
+              style={{
+                background: colors.bg,
+                border: `1px solid ${colors.border}`,
+                color: colors.dot,
+                fontFamily: 'var(--font-body)',
+              }}
             >
-              {day.name}
-            </h3>
-
-            {/* Title */}
-            {day.title && (
-              <p
-                className="text-sm italic"
-                style={{ fontFamily: 'Cormorant Garamond, serif', color: 'var(--text-secondary)' }}
-              >
-                {day.title}
-              </p>
-            )}
-
-            {/* Badges row */}
-            <div className="flex items-center justify-center gap-2 pt-1">
+              {GRADE_LABELS[day.grade] ?? day.grade}
+            </span>
+            <span
+              className="text-xs px-3 py-1.5 rounded-full tracking-wider uppercase"
+              style={{
+                background: colors.bg,
+                border: `1px solid ${colors.border}`,
+                color: 'var(--text-muted)',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              {day.season}
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full" style={{ background: colors.bg, border: `1px solid ${colors.border}` }}>
               <span
-                className="text-[10px] px-2.5 py-1 rounded-full tracking-wider uppercase"
-                style={{
-                  background: colors.bg,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.dot,
-                  fontFamily: 'Poppins, sans-serif',
-                }}
-              >
-                {GRADE_LABELS[day.grade] ?? day.grade}
-              </span>
+                className="w-3 h-3 rounded-full"
+                style={{ background: colors.dot }}
+              />
               <span
-                className="text-[10px] px-2.5 py-1 rounded-full tracking-wider uppercase"
-                style={{
-                  background: colors.bg,
-                  border: `1px solid ${colors.border}`,
-                  color: 'var(--text-muted)',
-                  fontFamily: 'Poppins, sans-serif',
-                }}
+                className="text-xs tracking-wider uppercase"
+                style={{ color: colors.dot, fontFamily: 'var(--font-body)' }}
               >
-                {day.season}
+                {day.color}
               </span>
-              <span className="flex items-center gap-1">
-                <span
-                  className="w-3 h-3 rounded-full"
-                  style={{ background: colors.dot }}
-                />
-                <span
-                  className="text-[10px] tracking-wider uppercase"
-                  style={{ color: colors.dot, fontFamily: 'Poppins, sans-serif' }}
-                >
-                  {day.color}
-                </span>
-              </span>
-            </div>
+            </span>
           </div>
         </div>
-      )}
+      </BottomSheet>
     </div>
   )
 }

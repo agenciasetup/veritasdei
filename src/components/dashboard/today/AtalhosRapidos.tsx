@@ -15,7 +15,7 @@ const ATALHOS = [
 
 export default function AtalhosRapidos() {
   return (
-    <section className="px-5 mb-6">
+    <section className="px-5 mb-3">
       <div className="flex items-center justify-around">
         {ATALHOS.map(a => {
           const Icon = a.icon

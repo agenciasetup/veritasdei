@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { motion, type PanInfo } from 'framer-motion'
 import { ROSARY_STEPS, type BeadId } from '@/features/rosario/data/beadSequence'
 import { RosaryBeads } from '@/features/rosario/components/RosaryBeads'
 import { useRosaryProgress } from '@/features/rosario/session/useRosaryProgress'
@@ -416,13 +417,27 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
         </div>
 
         {/* Right column on desktop: prayer card */}
-        <section
+        <motion.section
           className="flex-shrink-0 rounded-xl p-4 md:flex-1 md:p-6"
           style={{
             background: 'rgba(20, 18, 14, 0.6)',
             border: '1px solid rgba(201, 168, 76, 0.12)',
+            touchAction: 'pan-y',
           }}
           aria-live="polite"
+          onPanEnd={(_e, info: PanInfo) => {
+            const dx = info.offset.x
+            const dy = info.offset.y
+            // ignora pans verticais (scroll) e quase-zero
+            if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx)) return
+            if (dx < 0) {
+              haptic.pulse('medium')
+              advanceWithHaptic()
+            } else if (!isFirst) {
+              haptic.pulse('medium')
+              back()
+            }
+          }}
         >
           {/* Phase + counter */}
           <div className="flex items-center justify-between mb-2">
@@ -496,7 +511,7 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
               {STEP_LABELS[currentStep.type] ?? currentStep.type}
             </p>
           )}
-        </section>
+        </motion.section>
       </div>
 
       {/* ── Rosário transition screen ── */}
