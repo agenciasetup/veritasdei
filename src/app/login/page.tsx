@@ -8,14 +8,9 @@ import { VocacaoIcon } from '@/components/icons/VocacaoIcons'
 import { LogIn, UserPlus, Mail, Eye, EyeOff, ArrowLeft, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 import CrossIcon from '@/components/icons/CrossIcon'
+import { safeNext } from '@/lib/auth/safe-next'
 
 type Tab = 'login' | 'registro' | 'primeiro-acesso'
-
-function normalizeNextPath(nextPath: string | null): string {
-  if (!nextPath) return '/'
-  if (!nextPath.startsWith('/') || nextPath.startsWith('//')) return '/'
-  return nextPath
-}
 
 export default function LoginPage() {
   return (
@@ -32,7 +27,7 @@ export default function LoginPage() {
 function LoginPageInner() {
   const searchParams = useSearchParams()
   const initialTab = (searchParams.get('tab') as Tab) || 'login'
-  const nextPath = normalizeNextPath(searchParams.get('next'))
+  const nextPath = safeNext(searchParams.get('next'))
 
   const [tab, setTab] = useState<Tab>(initialTab)
   const [email, setEmail] = useState('')

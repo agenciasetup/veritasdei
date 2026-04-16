@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { safeNext } from '@/lib/auth/safe-next'
 
 function getOrigin(requestUrl: string): string {
   if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL
@@ -10,7 +11,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const origin = getOrigin(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/'
+  const next = safeNext(searchParams.get('next'))
 
   if (!code) {
     console.error('[Auth Callback] No code provided')
