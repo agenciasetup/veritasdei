@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { X, Trash2, Check } from 'lucide-react'
+import { X, Trash2, Check, Cross, HandHeart, Church, Wheat, BookOpen, Sparkles, Star } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePropositos } from '@/contexts/PropositosContext'
 import {
@@ -39,14 +39,14 @@ import type { Proposito, PropositoCadencia } from '@/types/propositos'
  *  - ativo (toggle)
  */
 
-const TIPOS: Array<{ value: string; label: string; icon: string }> = [
-  { value: 'rosario',  label: 'Santo Rosário',       icon: '📿' },
-  { value: 'confissao', label: 'Confissão',           icon: '🙏' },
-  { value: 'missa',     label: 'Santa Missa',         icon: '⛪' },
-  { value: 'jejum',     label: 'Jejum',               icon: '🍞' },
-  { value: 'leitura',   label: 'Leitura espiritual',  icon: '📖' },
-  { value: 'adoracao',  label: 'Adoração eucarística',icon: '✨' },
-  { value: 'custom',    label: 'Outro',               icon: '✝' },
+const TIPOS: Array<{ value: string; label: string; icon: ReactNode }> = [
+  { value: 'rosario',   label: 'Santo Rosário',        icon: <Cross size={18} strokeWidth={1.5} /> },
+  { value: 'confissao', label: 'Confissão',            icon: <HandHeart size={18} strokeWidth={1.5} /> },
+  { value: 'missa',     label: 'Santa Missa',          icon: <Church size={18} strokeWidth={1.5} /> },
+  { value: 'jejum',     label: 'Jejum',                icon: <Wheat size={18} strokeWidth={1.5} /> },
+  { value: 'leitura',   label: 'Leitura espiritual',   icon: <BookOpen size={18} strokeWidth={1.5} /> },
+  { value: 'adoracao',  label: 'Adoração eucarística',  icon: <Sparkles size={18} strokeWidth={1.5} /> },
+  { value: 'custom',    label: 'Outro',                icon: <Star size={18} strokeWidth={1.5} /> },
 ]
 
 const CADENCIAS: Array<{ value: PropositoCadencia; label: string }> = [
@@ -276,7 +276,7 @@ function PropositoSheet({ mode, onClose }: { mode: Mode; onClose: () => void }) 
                     fontFamily: 'Poppins, sans-serif',
                   }}
                 >
-                  <span className="text-lg">{t.icon}</span>
+                  <span className="flex-shrink-0" style={{ color: tipo === t.value ? '#C9A84C' : '#7A7368' }}>{t.icon}</span>
                   {t.label}
                 </button>
               ))}

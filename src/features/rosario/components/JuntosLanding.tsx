@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useState } from 'react'
+import { Users } from 'lucide-react'
 import { MYSTERY_GROUPS, getMysteryForToday } from '@/features/rosario/data/mysteries'
 import type { MysterySet } from '@/features/rosario/data/types'
 import type { RosaryRoomSnapshot } from '@/features/rosario/data/historyTypes'
@@ -109,7 +110,9 @@ export function JuntosLanding() {
             backgroundColor: 'rgba(20, 18, 14, 0.6)',
           }}
         >
-          <div className="text-3xl mb-3" aria-hidden>👥</div>
+          <div className="flex justify-center mb-3" aria-hidden>
+            <Users size={32} strokeWidth={1.5} style={{ color: '#C9A84C' }} />
+          </div>
           <h2
             className="text-lg mb-2"
             style={{ color: '#D9C077', fontFamily: 'Cinzel, serif' }}
