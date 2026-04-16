@@ -154,13 +154,21 @@ export default function PropositosStrip() {
               ) : (
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={(e) => {
                     if (feitoHoje) return
                     haptic.pulse('complete')
+                    // Flash verde sutil antes do re-render via checkIn
+                    const btn = e.currentTarget
+                    btn.classList.add('animate-success-bounce')
+                    btn.addEventListener(
+                      'animationend',
+                      () => btn.classList.remove('animate-success-bounce'),
+                      { once: true },
+                    )
                     checkIn(p.id)
                   }}
                   disabled={feitoHoje}
-                  className="w-full py-2 rounded-xl text-xs flex items-center justify-center gap-1 transition-all"
+                  className="w-full py-2 rounded-xl text-xs flex items-center justify-center gap-1 transition-all touch-target active:scale-[0.98]"
                   style={{
                     background: feitoHoje
                       ? 'rgba(102,187,106,0.12)'
