@@ -9,6 +9,7 @@ import {
   Search, ChevronLeft, ChevronRight, Users, Shield, Filter,
   CheckCircle, XCircle, Clock,
 } from 'lucide-react'
+import ResponsiveTable, { ResponsiveCard, type ResponsiveRow } from '@/components/mobile/ResponsiveTable'
 
 interface UserRow {
   id: string
@@ -168,106 +169,176 @@ export default function AdminUsuariosPage() {
         </div>
       )}
 
-      {/* Table */}
-      <div className="rounded-2xl overflow-hidden"
-        style={{ background: 'rgba(16,16,16,0.7)', border: '1px solid rgba(201,168,76,0.1)' }}>
-
-        {/* Table Header */}
-        <div className="hidden md:grid grid-cols-12 gap-2 px-5 py-3 text-[10px] tracking-wider uppercase"
-          style={{ borderBottom: '1px solid rgba(201,168,76,0.08)', color: '#7A7368', fontFamily: 'Cinzel, serif' }}>
-          <div className="col-span-3">Usuário</div>
-          <div className="col-span-2">Vocação</div>
-          <div className="col-span-2">Local</div>
-          <div className="col-span-1">Role</div>
-          <div className="col-span-1">Status</div>
-          <div className="col-span-1">Plano</div>
-          <div className="col-span-2">Cadastro</div>
+      {/* Loading */}
+      {loading && (
+        <div className="p-8 text-center">
+          <div className="w-6 h-6 border-2 rounded-full animate-spin mx-auto"
+            style={{ borderColor: 'rgba(201,168,76,0.2)', borderTopColor: '#C9A84C' }} />
         </div>
+      )}
 
-        {/* Loading */}
-        {loading && (
-          <div className="p-8 text-center">
-            <div className="w-6 h-6 border-2 rounded-full animate-spin mx-auto"
-              style={{ borderColor: 'rgba(201,168,76,0.2)', borderTopColor: '#C9A84C' }} />
-          </div>
-        )}
-
-        {/* Empty */}
-        {!loading && users.length === 0 && (
-          <div className="p-8 text-center">
-            <Users className="w-8 h-8 mx-auto mb-2" style={{ color: '#7A7368', opacity: 0.4 }} />
-            <p className="text-sm" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
-              Nenhum usuário encontrado
-            </p>
-          </div>
-        )}
-
-        {/* Rows */}
-        {!loading && users.map(u => (
-          <div key={u.id}
-            className="grid grid-cols-1 md:grid-cols-12 gap-2 px-5 py-3.5 items-center transition-colors hover:bg-[rgba(201,168,76,0.03)]"
-            style={{ borderBottom: '1px solid rgba(201,168,76,0.05)' }}>
-
-            {/* User */}
-            <div className="col-span-3 flex items-center gap-3 min-w-0">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.12)' }}>
-                <VocacaoIcon vocacao={u.vocacao ?? 'leigo'} size={14} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm truncate" style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}>
-                  {u.name ?? '—'}
-                </p>
-                <p className="text-[11px] truncate" style={{ color: '#7A7368' }}>{u.email}</p>
-              </div>
-            </div>
-
-            {/* Vocação */}
-            <div className="col-span-2">
-              <span className="text-xs" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
-                {VOCACOES.find(v => v.value === u.vocacao)?.label ?? 'Leigo'}
-              </span>
-              {u.verified && <Shield className="w-3 h-3 inline ml-1" style={{ color: '#4CAF50' }} />}
-            </div>
-
-            {/* Local */}
-            <div className="col-span-2">
-              <p className="text-xs truncate" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
-                {[u.cidade, u.estado].filter(Boolean).join(', ') || '—'}
-              </p>
-            </div>
-
-            {/* Role */}
-            <div className="col-span-1">
-              {u.role === 'admin' ? (
-                <span className="text-[10px] px-2 py-0.5 rounded-full"
-                  style={{ background: 'rgba(201,168,76,0.1)', color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}>
-                  Admin
-                </span>
-              ) : (
-                <span className="text-xs" style={{ color: '#7A7368' }}>user</span>
-              )}
-            </div>
-
-            {/* Status */}
-            <div className="col-span-1">{statusBadge(u.status)}</div>
-
-            {/* Plan */}
-            <div className="col-span-1">
-              <span className="text-xs uppercase" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
-                {u.plan ?? 'free'}
-              </span>
-            </div>
-
-            {/* Date */}
-            <div className="col-span-2">
-              <span className="text-xs" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
-                {new Date(u.created_at).toLocaleDateString('pt-BR')}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* Lista responsiva: tabela no desktop, cards no mobile */}
+      {!loading && (
+        <ResponsiveTable
+          tableClassName="rounded-2xl overflow-hidden"
+          emptyMessage="Nenhum usuário encontrado"
+          header={
+            <thead>
+              <tr
+                style={{
+                  background: 'rgba(16,16,16,0.7)',
+                  borderBottom: '1px solid rgba(201,168,76,0.08)',
+                }}
+              >
+                {(['Usuário', 'Vocação', 'Local', 'Role', 'Status', 'Plano', 'Cadastro'] as const).map((h) => (
+                  <th
+                    key={h}
+                    className="text-left px-4 py-3 text-[10px] tracking-wider uppercase"
+                    style={{ color: '#8A8378', fontFamily: 'Cinzel, serif' }}
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+          }
+          rows={users.map((u): ResponsiveRow => ({
+            key: u.id,
+            desktop: (
+              <>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{
+                        background: 'rgba(201,168,76,0.06)',
+                        border: '1px solid rgba(201,168,76,0.12)',
+                      }}
+                    >
+                      <VocacaoIcon vocacao={u.vocacao ?? 'leigo'} size={14} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm truncate" style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}>
+                        {u.name ?? '—'}
+                      </p>
+                      <p className="text-[11px] truncate" style={{ color: '#8A8378' }}>{u.email}</p>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-xs" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
+                  {VOCACOES.find(v => v.value === u.vocacao)?.label ?? 'Leigo'}
+                  {u.verified && <Shield className="w-3 h-3 inline ml-1" style={{ color: '#4CAF50' }} />}
+                </td>
+                <td className="px-4 py-3 text-xs truncate" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
+                  {[u.cidade, u.estado].filter(Boolean).join(', ') || '—'}
+                </td>
+                <td className="px-4 py-3 text-xs">
+                  {u.role === 'admin' ? (
+                    <span
+                      className="text-[10px] px-2 py-0.5 rounded-full"
+                      style={{
+                        background: 'rgba(201,168,76,0.1)',
+                        color: '#C9A84C',
+                        fontFamily: 'Poppins, sans-serif',
+                      }}
+                    >
+                      Admin
+                    </span>
+                  ) : (
+                    <span style={{ color: '#8A8378' }}>user</span>
+                  )}
+                </td>
+                <td className="px-4 py-3">{statusBadge(u.status)}</td>
+                <td className="px-4 py-3 text-xs uppercase" style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}>
+                  {u.plan ?? 'free'}
+                </td>
+                <td className="px-4 py-3 text-xs" style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}>
+                  {new Date(u.created_at).toLocaleDateString('pt-BR')}
+                </td>
+              </>
+            ),
+            mobile: (
+              <ResponsiveCard>
+                <div className="flex items-start gap-3">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{
+                      background: 'rgba(201,168,76,0.08)',
+                      border: '1px solid rgba(201,168,76,0.18)',
+                    }}
+                  >
+                    <VocacaoIcon vocacao={u.vocacao ?? 'leigo'} size={18} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className="text-sm font-medium truncate"
+                      style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}
+                    >
+                      {u.name ?? '—'}
+                    </p>
+                    <p className="text-[11px] truncate" style={{ color: '#8A8378' }}>
+                      {u.email}
+                    </p>
+                  </div>
+                  {statusBadge(u.status)}
+                </div>
+                <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                  <span
+                    className="text-[10px] px-2 py-0.5 rounded-full"
+                    style={{
+                      background: 'rgba(201,168,76,0.08)',
+                      color: '#C9A84C',
+                      fontFamily: 'Poppins, sans-serif',
+                    }}
+                  >
+                    {VOCACOES.find((v) => v.value === u.vocacao)?.label ?? 'Leigo'}
+                  </span>
+                  {u.verified && (
+                    <Shield className="w-3.5 h-3.5" style={{ color: '#66BB6A' }} />
+                  )}
+                  {u.role === 'admin' && (
+                    <span
+                      className="text-[10px] px-2 py-0.5 rounded-full"
+                      style={{
+                        background: 'rgba(201,168,76,0.12)',
+                        color: '#C9A84C',
+                        fontFamily: 'Poppins, sans-serif',
+                      }}
+                    >
+                      Admin
+                    </span>
+                  )}
+                  <span
+                    className="text-[10px] px-2 py-0.5 rounded-full uppercase"
+                    style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      color: '#8A8378',
+                      border: '1px solid rgba(201,168,76,0.1)',
+                      fontFamily: 'Poppins, sans-serif',
+                    }}
+                  >
+                    {u.plan ?? 'free'}
+                  </span>
+                  <span
+                    className="ml-auto text-[10px]"
+                    style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}
+                  >
+                    {new Date(u.created_at).toLocaleDateString('pt-BR')}
+                  </span>
+                </div>
+                {(u.cidade || u.estado) && (
+                  <p
+                    className="text-[11px] mt-1.5 truncate"
+                    style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}
+                  >
+                    {[u.cidade, u.estado].filter(Boolean).join(', ')}
+                  </p>
+                )}
+              </ResponsiveCard>
+            ),
+          }))}
+        />
+      )}
 
       {/* Pagination */}
       {totalPages > 1 && (
