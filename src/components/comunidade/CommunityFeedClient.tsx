@@ -25,6 +25,7 @@ import MentionAutocomplete from '@/components/comunidade/MentionAutocomplete'
 import FormattingToolbar from '@/components/comunidade/FormattingToolbar'
 import NotificationsBell from '@/components/comunidade/NotificationsBell'
 import PullToRefresh from '@/components/mobile/PullToRefresh'
+import { compressImage } from '@/lib/image/compress'
 
 const SCROLL_STORAGE_KEY = 'veritasdei:comunidade:feed:scroll'
 
@@ -82,7 +83,12 @@ async function uploadWithPresign(files: File[], items: PresignItem[]): Promise<v
   }))
 }
 
-export default function CommunityFeedClient() {
+interface CommunityFeedClientProps {
+  /** Feed "for_you" já resolvido no servidor — elimina o flash inicial. */
+  initialFeed?: FeedResponse | null
+}
+
+export default function CommunityFeedClient({ initialFeed = null }: CommunityFeedClientProps = {}) {
   const { user, profile } = useAuth()
   const isClergy = profile
     ? ['padre', 'diacono', 'bispo', 'religioso'].includes(profile.community_role)
@@ -93,8 +99,8 @@ export default function CommunityFeedClient() {
   const canPublishReflection = (isClergy && profile?.verified) || isAdmin
   const [variantReflection, setVariantReflection] = useState(false)
   const [tab, setTab] = useState<'for_you' | 'following'>('for_you')
-  const [items, setItems] = useState<VeritasPost[]>([])
-  const [cursor, setCursor] = useState<string | null>(null)
+  const [items, setItems] = useState<VeritasPost[]>(initialFeed?.items ?? [])
+  const [cursor, setCursor] = useState<string | null>(initialFeed?.cursor ?? null)
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -113,6 +119,9 @@ export default function CommunityFeedClient() {
   }, [composerBody, submittingPost])
 
   useEffect(() => {
+    // Se o servidor já entregou o feed, pula o fetch inicial — economiza
+    // um round-trip e elimina o flash de feed vazio pós-hidratação.
+    if (initialFeed && initialFeed.items.length > 0) return
     void loadFeed('for_you', false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -275,18 +284,30 @@ export default function CommunityFeedClient() {
     if (!fileList) return
     const incoming = Array.from(fileList)
 
-    const next: ComposerAttachment[] = []
-    for (const file of incoming) {
-      next.push({
-        file,
-        previewUrl: URL.createObjectURL(file),
+    // Insere já com preview do arquivo original (instantâneo), depois
+    // substitui pelo comprimido em background — UX não bloqueia.
+    const baseline: ComposerAttachment[] = incoming.map(file => ({
+      file,
+      previewUrl: URL.createObjectURL(file),
+    }))
+
+    setComposerAttachments(prev => [...prev, ...baseline].slice(0, 6))
+
+    // Comprime em paralelo. O resultado troca o File (preview continua,
+    // só o bytes no upload é menor).
+    for (const original of incoming) {
+      void compressImage(original).then(result => {
+        if (!result.compressed) return
+        setComposerAttachments(prev => prev.map(item => {
+          if (item.file !== original) return item
+          URL.revokeObjectURL(item.previewUrl)
+          return {
+            file: result.file,
+            previewUrl: URL.createObjectURL(result.file),
+          }
+        }))
       })
     }
-
-    setComposerAttachments(prev => {
-      const merged = [...prev, ...next]
-      return merged.slice(0, 6)
-    })
   }
 
   function removeAttachmentAt(index: number) {
