@@ -1,7 +1,7 @@
-/* eslint-disable @next/next/no-img-element */
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { Loader2, Lock } from 'lucide-react'
 import VeritasCard from '@/components/comunidade/VeritasCard'
@@ -191,22 +191,22 @@ export default function ProfileTabs({
 
       {/* Grade especial só pra aba Mídia */}
       {!showLikesLock && tab === 'media' && currentState.posts.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
           {currentState.posts.flatMap(post =>
             post.media.map((m, mIdx) => (
               <button
                 key={`${post.id}-${m.id}`}
                 type="button"
                 onClick={() => setLightbox({ items: post.media, index: mIdx })}
-                className="aspect-square rounded-xl overflow-hidden"
-                style={{ border: '1px solid rgba(201,168,76,0.14)' }}
+                className="relative aspect-square overflow-hidden"
+                aria-label="Abrir mídia"
               >
-                <img
+                <Image
                   src={m.variants.feed}
                   alt=""
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-cover hover:opacity-90 transition-opacity"
+                  fill
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 240px"
+                  className="object-cover hover:opacity-85 transition-opacity"
                 />
               </button>
             )),
@@ -214,9 +214,12 @@ export default function ProfileTabs({
         </div>
       )}
 
-      {/* Demais tabs: cards */}
+      {/* Demais tabs: lista hairline (sem gap entre posts). */}
       {!showLikesLock && tab !== 'media' && currentState.posts.length > 0 && (
-        <div className="space-y-4">
+        <div
+          className="-mx-4 md:-mx-8"
+          style={{ borderTop: '0.5px solid rgba(242,237,228,0.08)' }}
+        >
           {currentState.posts.map(post => (
             <VeritasCard
               key={post.id}
