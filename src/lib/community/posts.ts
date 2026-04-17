@@ -6,6 +6,7 @@ interface PostRow {
   id: string
   author_user_id: string
   kind: VeritasPost['kind']
+  variant: VeritasPost['variant']
   body: string
   parent_post_id: string | null
   created_at: string
@@ -70,7 +71,7 @@ export async function fetchPostsByIds(
 
   const { data: postsData, error: postsError } = await supabase
     .from('vd_posts')
-    .select('id, author_user_id, kind, body, parent_post_id, created_at')
+    .select('id, author_user_id, kind, variant, body, parent_post_id, created_at')
     .in('id', postIds)
     .is('deleted_at', null)
 
@@ -219,6 +220,7 @@ export async function fetchPostsByIds(
         id: post.id,
         author_user_id: post.author_user_id,
         kind: post.kind,
+        variant: post.variant ?? 'default',
         body: post.body,
         parent_post_id: post.parent_post_id,
         created_at: post.created_at,

@@ -9,6 +9,7 @@ import {
   PlusCircle,
   Search,
   UserCog,
+  BookOpenText,
 } from 'lucide-react'
 import { share as platformShare } from '@/lib/platform'
 import type { FeedResponse, VeritasPost } from '@/lib/community/types'
@@ -75,7 +76,11 @@ async function uploadWithPresign(files: File[], items: PresignItem[]): Promise<v
 }
 
 export default function CommunityFeedClient() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
+  const canPublishReflection = profile
+    ? ['padre', 'diacono', 'bispo', 'religioso', 'admin'].includes(profile.community_role)
+    : false
+  const [variantReflection, setVariantReflection] = useState(false)
   const [tab, setTab] = useState<'for_you' | 'following'>('for_you')
   const [items, setItems] = useState<VeritasPost[]>([])
   const [cursor, setCursor] = useState<string | null>(null)
@@ -151,6 +156,7 @@ export default function CommunityFeedClient() {
 
   async function createVeritas(payload: {
     kind: 'original' | 'reply' | 'quote'
+    variant?: 'default' | 'reflection'
     body: string
     parent_post_id?: string
     media?: Array<{
@@ -197,12 +203,14 @@ export default function CommunityFeedClient() {
 
       const post = await createVeritas({
         kind: 'original',
+        variant: variantReflection && canPublishReflection ? 'reflection' : 'default',
         body: composerBody.trim(),
         media: mediaPayload,
       })
 
       setItems(prev => [post, ...prev])
       setComposerBody('')
+      setVariantReflection(false)
       for (const attachment of composerAttachments) {
         URL.revokeObjectURL(attachment.previewUrl)
       }
@@ -609,6 +617,28 @@ export default function CommunityFeedClient() {
                 onChange={(e) => addComposerFiles(e.target.files)}
               />
             </label>
+
+            {canPublishReflection && (
+              <button
+                type="button"
+                onClick={() => setVariantReflection(v => !v)}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
+                style={{
+                  background: variantReflection
+                    ? 'rgba(233,196,106,0.18)'
+                    : 'rgba(16,16,16,0.6)',
+                  border: variantReflection
+                    ? '1px solid rgba(233,196,106,0.5)'
+                    : '1px solid rgba(201,168,76,0.15)',
+                  color: variantReflection ? '#E9C46A' : '#C9A84C',
+                  fontFamily: 'Cinzel, serif',
+                }}
+                title="Publicar como Reflexão (visível apenas para clero publicar)"
+              >
+                <BookOpenText className="w-4 h-4" />
+                {variantReflection ? 'Reflexão ativa' : 'Marcar como Reflexão'}
+              </button>
+            )}
 
             <span className="text-xs" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
               {composerBody.trim().length}/1000

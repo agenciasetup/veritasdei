@@ -8,10 +8,11 @@ import { getR2PublicBaseUrl, isR2Configured } from '@/lib/community/r2'
 import { fetchPostsByIds } from '@/lib/community/posts'
 import { pushCommunityNotification } from '@/lib/community/notifications'
 import { requireCommunityPremiumAccess } from '@/lib/community/server'
-import type { VeritasKind } from '@/lib/community/types'
+import type { VeritasKind, VeritasPostVariant } from '@/lib/community/types'
 
 interface CreateVeritasRequest {
   kind: VeritasKind
+  variant?: VeritasPostVariant
   body?: string
   parent_post_id?: string | null
   media?: Array<{
@@ -46,6 +47,13 @@ export async function POST(req: NextRequest) {
   const kind = payload.kind
   if (!VALID_KINDS.has(kind)) {
     return NextResponse.json({ error: 'invalid_kind' }, { status: 400 })
+  }
+
+  const variant: VeritasPostVariant = payload.variant === 'reflection' ? 'reflection' : 'default'
+
+  // Reflexão só faz sentido em post original.
+  if (variant === 'reflection' && kind !== 'original') {
+    return NextResponse.json({ error: 'reflection_only_original' }, { status: 400 })
   }
 
   if (!flags.communityReplies && kind === 'reply') {
@@ -124,6 +132,7 @@ export async function POST(req: NextRequest) {
       .insert({
         author_user_id: user.id,
         kind,
+        variant,
         body,
         parent_post_id: parentPostId,
       })

@@ -11,6 +11,7 @@ import {
   Quote,
   Bell,
   BellOff,
+  BookOpenText,
 } from 'lucide-react'
 import CrossIcon from '@/components/icons/CrossIcon'
 import type { VeritasPost } from '@/lib/community/types'
@@ -70,15 +71,35 @@ export default function VeritasCard({
       : '#'
 
   const isOwnPost = viewerUserId === post.author_user_id
+  const isReflection = post.variant === 'reflection'
 
   return (
     <article
-      className="rounded-2xl p-5 transition-colors hover:bg-[rgba(20,20,20,0.85)]"
+      className="rounded-2xl p-5 transition-colors hover:bg-[rgba(20,20,20,0.85)] relative"
       style={{
-        background: 'rgba(16,16,16,0.75)',
-        border: '1px solid rgba(201,168,76,0.14)',
+        background: isReflection
+          ? 'linear-gradient(180deg, rgba(201,168,76,0.06) 0%, rgba(16,16,16,0.78) 35%)'
+          : 'rgba(16,16,16,0.75)',
+        border: isReflection
+          ? '1px solid rgba(233,196,106,0.32)'
+          : '1px solid rgba(201,168,76,0.14)',
+        boxShadow: isReflection ? '0 0 0 1px rgba(201,168,76,0.08) inset' : undefined,
       }}
     >
+      {isReflection && (
+        <div
+          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] uppercase tracking-[0.12em] mb-3"
+          style={{
+            background: 'rgba(233,196,106,0.14)',
+            border: '1px solid rgba(233,196,106,0.5)',
+            color: '#E9C46A',
+            fontFamily: 'Cinzel, serif',
+          }}
+        >
+          <BookOpenText className="w-3 h-3" />
+          Reflexão
+        </div>
+      )}
       <div className="flex items-start gap-3 mb-3">
         <Link
           href={profileHref}
