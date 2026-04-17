@@ -534,7 +534,7 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
 
       <div className="max-w-3xl mx-auto relative z-10">
         <PullToRefresh onRefresh={async () => { await loadFeed(tab, false) }}>
-        <header className="mb-6 flex items-start justify-between gap-4">
+        <header className="mb-4 hidden md:flex items-start justify-between gap-4">
           <div>
             <h1
               className="text-2xl md:text-3xl mb-2"
@@ -549,20 +549,6 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
               Publicações católicas para formar, partilhar e fortalecer a fé.
             </p>
           </div>
-
-          <Link
-            href="/comunidade/perfil/editar"
-            className="flex-shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
-            style={{
-              background: 'rgba(16,16,16,0.65)',
-              border: '1px solid rgba(201,168,76,0.15)',
-              color: '#C9A84C',
-              fontFamily: 'Poppins, sans-serif',
-            }}
-          >
-            <UserCog className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Meu perfil</span>
-          </Link>
         </header>
 
         <div
@@ -637,11 +623,20 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
 
               <NotificationsBell />
 
+              <Link
+                href="/comunidade/perfil/editar"
+                aria-label="Meu perfil"
+                className="p-2 rounded-full"
+                style={{ color: '#8A8378' }}
+              >
+                <UserCog className="w-[18px] h-[18px]" strokeWidth={1.5} />
+              </Link>
+
               <button
                 type="button"
                 onClick={() => loadFeed(tab, false)}
                 aria-label="Atualizar feed"
-                className="p-2 rounded-full"
+                className="p-2 rounded-full hidden md:inline-flex"
                 style={{ color: '#8A8378' }}
               >
                 <RefreshCw className="w-[18px] h-[18px]" strokeWidth={1.5} />

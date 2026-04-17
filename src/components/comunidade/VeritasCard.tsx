@@ -27,6 +27,7 @@ import RoleBadge from '@/components/comunidade/RoleBadge'
 import VerifiedBadge from '@/components/comunidade/VerifiedBadge'
 import MediaLightbox from '@/components/comunidade/MediaLightbox'
 import FormattingToolbar from '@/components/comunidade/FormattingToolbar'
+import ShareImageModal from '@/components/comunidade/ShareImageModal'
 import { useHaptic } from '@/hooks/useHaptic'
 
 export interface VeritasCardCallbacks {
@@ -158,6 +159,7 @@ export default function VeritasCard({
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+  const [shareOpen, setShareOpen] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editBody, setEditBody] = useState(post.body)
   const [editSaving, setEditSaving] = useState(false)
@@ -679,6 +681,18 @@ export default function VeritasCard({
             />
           )}
 
+          <ShareImageModal
+            post={shareOpen ? post : null}
+            open={shareOpen}
+            onClose={() => setShareOpen(false)}
+            onAction={(target) => {
+              // Dispara a métrica existente de share-cross uma única vez.
+              if (!target.viewer.shared_cross && onShareCross) {
+                onShareCross(target)
+              }
+            }}
+          />
+
           {/* Barra de ações */}
           <div className="mt-3 flex items-center gap-6 -ml-1">
             {onReplySubmit && post.metrics.reply_count >= 0 && (
@@ -739,7 +753,7 @@ export default function VeritasCard({
 
             {onShareCross && (
               <ActionIcon
-                onClick={() => onShareCross(post)}
+                onClick={() => setShareOpen(true)}
                 active={post.viewer.shared_cross}
                 activeColor={GOLD}
                 count={post.metrics.share_cross_count}
