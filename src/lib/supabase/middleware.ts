@@ -14,7 +14,10 @@ export async function updateSession(request: NextRequest) {
   // Skip auth refresh for public API routes, auth routes, and public pages.
   // Keep refresh for /api/verbum/ and /api/admin/ to prevent stale tokens.
   const path = request.nextUrl.pathname
-  const isProtectedApi = path.startsWith('/api/verbum/') || path.startsWith('/api/admin/')
+  const isProtectedApi =
+    path.startsWith('/api/verbum/')
+    || path.startsWith('/api/admin/')
+    || path.startsWith('/api/comunidade/')
   if (
     (path.startsWith('/api/') && !isProtectedApi) ||
     path.startsWith('/auth/') ||

@@ -1,0 +1,94 @@
+import type { Profile } from '@/types/auth'
+
+export type VeritasKind = 'original' | 'reply' | 'repost' | 'quote'
+export type VeritasReactionType = 'like' | 'share_cross'
+export type VeritasMediaKind = 'image' | 'gif'
+
+export interface VeritasMediaVariantSet {
+  thumb: string
+  feed: string
+  detail: string
+}
+
+export interface VeritasMediaAsset {
+  id: string
+  kind: VeritasMediaKind
+  mime_type: string
+  object_key: string
+  width: number | null
+  height: number | null
+  variants: VeritasMediaVariantSet
+  position: number
+}
+
+export interface VeritasMetrics {
+  like_count: number
+  repost_count: number
+  quote_count: number
+  reply_count: number
+  share_cross_count: number
+  report_count: number
+  score: number
+}
+
+export interface VeritasAuthorSnapshot {
+  id: string
+  public_handle: string | null
+  user_number: number | null
+  name: string | null
+  vocacao: Profile['vocacao'] | null
+  verified: boolean
+  profile_image_url: string | null
+}
+
+export interface VeritasPost {
+  id: string
+  author_user_id: string
+  kind: VeritasKind
+  body: string
+  parent_post_id: string | null
+  created_at: string
+  author: VeritasAuthorSnapshot
+  metrics: VeritasMetrics
+  media: VeritasMediaAsset[]
+  viewer: {
+    liked: boolean
+    shared_cross: boolean
+    reposted: boolean
+    follows_author: boolean
+    blocked_author: boolean
+    muted_author: boolean
+  }
+}
+
+export interface PublicProfileSnapshot {
+  profile: {
+    id: string
+    public_handle: string | null
+    user_number: number | null
+    name: string | null
+    vocacao: Profile['vocacao'] | null
+    verified: boolean
+    profile_image_url: string | null
+    cidade: string | null
+    estado: string | null
+    paroquia: string | null
+    diocese: string | null
+    comunidade: string | null
+  } | null
+  veritas: Array<{
+    id: string
+    kind: VeritasKind
+    body: string
+    parent_post_id: string | null
+    created_at: string
+    metrics: Omit<VeritasMetrics, 'score'>
+    media: VeritasMediaAsset[]
+  }>
+}
+
+export interface FeedResponse {
+  tab: 'for_you' | 'following'
+  cursor: string | null
+  items: VeritasPost[]
+}

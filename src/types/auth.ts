@@ -47,6 +47,7 @@ export const SACRAMENTOS: { value: Sacramento; label: string }[] = [
 export interface Profile {
   id: string
   user_number: number | null
+  public_handle: string | null
   name: string | null
   email: string
   cpf: string | null
