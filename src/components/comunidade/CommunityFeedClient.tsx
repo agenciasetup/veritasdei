@@ -15,6 +15,7 @@ import type { FeedResponse, VeritasPost } from '@/lib/community/types'
 import { useAuth } from '@/contexts/AuthContext'
 import VeritasCard from '@/components/comunidade/VeritasCard'
 import QuoteModal from '@/components/comunidade/QuoteModal'
+import TrendingHashtags from '@/components/comunidade/TrendingHashtags'
 
 interface PresignItem {
   upload_url: string
@@ -505,6 +506,8 @@ export default function CommunityFeedClient() {
             <RefreshCw className="w-3.5 h-3.5" /> Atualizar
           </button>
         </div>
+
+        <TrendingHashtags />
 
         <form
           onSubmit={handleComposerSubmit}
