@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { openai } from '@/lib/openai/client'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/rate-limit'
+import { checkAndConsumeAiBudget } from '@/lib/ai/budget'
 import { VERBUM_SYSTEM_PROMPT } from '@/verbum/prompts/theologicalPrompts'
 
 export async function POST(request: NextRequest) {
@@ -16,6 +17,17 @@ export async function POST(request: NextRequest) {
     // Rate limit: 20 requests per minute per user
     if (!(await rateLimit(user.id, 20, 60_000))) {
       return NextResponse.json({ error: 'Muitas requisições. Aguarde um momento.' }, { status: 429 })
+    }
+
+    // Daily budget: cap diário de calls por feature. Impede que um user
+    // mantenha 20/min por 24h = 28.800 calls/dia (~R$2.880) burlando o
+    // rate limit por minuto. Consome +1 atomicamente.
+    const budget = await checkAndConsumeAiBudget(user.id, 'verbum_explain')
+    if (!budget.allowed) {
+      return NextResponse.json(
+        { error: `Limite diário atingido (${budget.capCalls} chamadas). Tente novamente amanhã.` },
+        { status: 429 },
+      )
     }
 
     const body = await request.json()

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { searchCorpus } from '@/lib/rag/search'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/rate-limit'
+import { checkAndConsumeAiBudget } from '@/lib/ai/budget'
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,6 +16,14 @@ export async function POST(req: NextRequest) {
     // Rate limit: 20 requests per minute per user
     if (!(await rateLimit(user.id, 20, 60_000))) {
       return NextResponse.json({ error: 'Muitas requisições. Aguarde um momento.' }, { status: 429 })
+    }
+
+    const budget = await checkAndConsumeAiBudget(user.id, 'search')
+    if (!budget.allowed) {
+      return NextResponse.json(
+        { error: `Limite diário de busca atingido (${budget.capCalls}). Tente novamente amanhã.` },
+        { status: 429 },
+      )
     }
 
     const { query } = await req.json()

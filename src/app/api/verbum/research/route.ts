@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { searchCorpus } from '@/lib/rag/search'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/rate-limit'
+import { checkAndConsumeAiBudget } from '@/lib/ai/budget'
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,6 +14,14 @@ export async function POST(req: NextRequest) {
 
     if (!(await rateLimit(user.id, 15, 60_000))) {
       return NextResponse.json({ error: 'Muitas requisições. Aguarde um momento.' }, { status: 429 })
+    }
+
+    const budget = await checkAndConsumeAiBudget(user.id, 'verbum_research')
+    if (!budget.allowed) {
+      return NextResponse.json(
+        { error: `Limite diário atingido (${budget.capCalls} chamadas). Tente novamente amanhã.` },
+        { status: 429 },
+      )
     }
 
     const { query } = await req.json()
