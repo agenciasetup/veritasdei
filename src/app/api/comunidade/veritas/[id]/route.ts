@@ -1,9 +1,13 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { fetchPostsByIds } from '@/lib/community/posts'
 import { requireCommunityPremiumAccess } from '@/lib/community/server'
+import { rateLimit } from '@/lib/rate-limit'
+
+const REPLIES_DEFAULT_LIMIT = 20
+const REPLIES_MAX_LIMIT = 40
 
 export async function GET(
-  _req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const access = await requireCommunityPremiumAccess()
@@ -12,29 +16,102 @@ export async function GET(
   const { id } = await params
   const { supabase, user } = access.context
 
+  const url = new URL(req.url)
+  const limitParam = Number(url.searchParams.get('limit') ?? REPLIES_DEFAULT_LIMIT)
+  const cursor = url.searchParams.get('cursor')
+  const limit = Math.min(
+    Math.max(Number.isFinite(limitParam) ? limitParam : REPLIES_DEFAULT_LIMIT, 1),
+    REPLIES_MAX_LIMIT,
+  )
+
   const [post] = await fetchPostsByIds(supabase, user.id, [id])
   if (!post) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 })
   }
 
-  const { data: replyRows, error } = await supabase
+  let repliesQuery = supabase
     .from('vd_posts')
-    .select('id')
+    .select('id, created_at')
     .eq('parent_post_id', id)
     .eq('kind', 'reply')
     .is('deleted_at', null)
     .order('created_at', { ascending: true })
-    .limit(100)
+    .order('id', { ascending: true })
+    .limit(limit + 1)
+
+  if (cursor) {
+    repliesQuery = repliesQuery.gt('created_at', cursor)
+  }
+
+  const { data: replyRows, error } = await repliesQuery
 
   if (error) {
     return NextResponse.json({ error: 'replies_failed', detail: error.message }, { status: 500 })
   }
 
+  const rows = (replyRows ?? []) as Array<{ id: string; created_at: string }>
+  const hasMore = rows.length > limit
+  const pageRows = hasMore ? rows.slice(0, limit) : rows
+  const nextCursor = hasMore ? pageRows[pageRows.length - 1]?.created_at ?? null : null
+
   const replies = await fetchPostsByIds(
     supabase,
     user.id,
-    ((replyRows ?? []) as Array<{ id: string }>).map(row => row.id),
+    pageRows.map(row => row.id),
   )
 
-  return NextResponse.json({ post, replies })
+  return NextResponse.json({
+    post,
+    replies,
+    pagination: { next_cursor: nextCursor, limit },
+  })
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const access = await requireCommunityPremiumAccess()
+  if (!access.ok) return access.response
+
+  const { id } = await params
+  const { supabase, user } = access.context
+
+  if (!rateLimit(`community:delete:${user.id}`, 20, 60_000)) {
+    return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
+  }
+
+  const { data: existing, error: fetchError } = await supabase
+    .from('vd_posts')
+    .select('id, author_user_id, deleted_at')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (fetchError) {
+    return NextResponse.json({ error: 'fetch_failed', detail: fetchError.message }, { status: 500 })
+  }
+
+  if (!existing) {
+    return NextResponse.json({ error: 'not_found' }, { status: 404 })
+  }
+
+  if (existing.author_user_id !== user.id) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  }
+
+  if (existing.deleted_at) {
+    return NextResponse.json({ ok: true, already_deleted: true })
+  }
+
+  const { error: updateError } = await supabase
+    .from('vd_posts')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('author_user_id', user.id)
+
+  if (updateError) {
+    return NextResponse.json({ error: 'delete_failed', detail: updateError.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ ok: true })
 }

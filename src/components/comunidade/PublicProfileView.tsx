@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import type { PublicProfileSnapshot } from '@/lib/community/types'
 import CrossIcon from '@/components/icons/CrossIcon'
+import { renderVeritasBody } from '@/lib/community/body-renderer'
 
 interface Props {
   snapshot: PublicProfileSnapshot
@@ -151,7 +152,7 @@ export default function PublicProfileView({ snapshot }: Props) {
                 className="text-sm whitespace-pre-line leading-relaxed"
                 style={{ color: '#E7DED1', fontFamily: 'Poppins, sans-serif' }}
               >
-                {post.body}
+                {renderVeritasBody(post.body)}
               </p>
 
               {post.media.length > 0 && (
