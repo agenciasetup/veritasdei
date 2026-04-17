@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
   RefreshCw,
@@ -17,6 +17,7 @@ import VeritasCard from '@/components/comunidade/VeritasCard'
 import QuoteModal from '@/components/comunidade/QuoteModal'
 import TrendingHashtags from '@/components/comunidade/TrendingHashtags'
 import InfiniteScrollSentinel from '@/components/comunidade/InfiniteScrollSentinel'
+import MentionAutocomplete from '@/components/comunidade/MentionAutocomplete'
 
 interface PresignItem {
   upload_url: string
@@ -86,6 +87,7 @@ export default function CommunityFeedClient() {
   const [submittingPost, setSubmittingPost] = useState(false)
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({})
   const [quoteTarget, setQuoteTarget] = useState<VeritasPost | null>(null)
+  const composerRef = useRef<HTMLTextAreaElement | null>(null)
 
   const canSubmitComposer = useMemo(() => {
     return composerBody.trim().length > 0 && !submittingPost
@@ -530,19 +532,27 @@ export default function CommunityFeedClient() {
             border: '1px solid rgba(201,168,76,0.16)',
           }}
         >
-          <textarea
-            value={composerBody}
-            onChange={(e) => setComposerBody(e.target.value.slice(0, 1000))}
-            placeholder="Escreva seu Veritas..."
-            className="w-full min-h-28 resize-y rounded-xl p-3 text-sm"
-            style={{
-              background: 'rgba(10,10,10,0.65)',
-              border: '1px solid rgba(201,168,76,0.15)',
-              color: '#F2EDE4',
-              fontFamily: 'Poppins, sans-serif',
-              outline: 'none',
-            }}
-          />
+          <div className="relative">
+            <textarea
+              ref={composerRef}
+              value={composerBody}
+              onChange={(e) => setComposerBody(e.target.value.slice(0, 1000))}
+              placeholder="Escreva seu Veritas... Use #hashtag e @menção."
+              className="w-full min-h-28 resize-y rounded-xl p-3 text-sm"
+              style={{
+                background: 'rgba(10,10,10,0.65)',
+                border: '1px solid rgba(201,168,76,0.15)',
+                color: '#F2EDE4',
+                fontFamily: 'Poppins, sans-serif',
+                outline: 'none',
+              }}
+            />
+            <MentionAutocomplete
+              inputRef={composerRef}
+              value={composerBody}
+              onInsert={(next) => setComposerBody(next.slice(0, 1000))}
+            />
+          </div>
 
           {composerAttachments.length > 0 && (
             <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
