@@ -1,0 +1,78 @@
+import type { Metadata } from 'next'
+import { notFound, redirect } from 'next/navigation'
+import PublicProfileView from '@/components/comunidade/PublicProfileView'
+import { getCommunityFlags } from '@/lib/community/config'
+import { getPublicProfileSnapshot } from '@/lib/community/public-profile'
+
+interface PageProps {
+  params: Promise<{ identifier: string }>
+}
+
+function toAbsoluteUrl(path: string): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '')
+  if (!appUrl) return path
+  return `${appUrl}${path}`
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { identifier } = await params
+  if (!identifier.startsWith('@')) {
+    return {
+      title: 'Perfil da Comunidade — Veritas Dei',
+    }
+  }
+
+  const snapshot = await getPublicProfileSnapshot(identifier)
+  if (!snapshot?.profile) {
+    return {
+      title: 'Perfil não encontrado — Veritas Dei',
+    }
+  }
+
+  const title = `${snapshot.profile.name ?? 'Membro'} (@${snapshot.profile.public_handle ?? 'perfil'}) — Comunidade Veritas`
+  const description = `Últimos Veritas públicos de ${snapshot.profile.name ?? 'membro da comunidade'}.`
+  const canonicalPath = snapshot.profile.public_handle
+    ? `/comunidade/@${snapshot.profile.public_handle}`
+    : snapshot.profile.user_number
+      ? `/comunidade/p/${snapshot.profile.user_number}`
+      : `/comunidade/${identifier}`
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: canonicalPath,
+    },
+    openGraph: {
+      title,
+      description,
+      type: 'profile',
+      url: toAbsoluteUrl(canonicalPath),
+      images: snapshot.profile.profile_image_url
+        ? [{ url: snapshot.profile.profile_image_url }]
+        : undefined,
+    },
+  }
+}
+
+export default async function CommunityPublicHandlePage({ params }: PageProps) {
+  const flags = getCommunityFlags()
+  if (!flags.communityPublicProfiles) notFound()
+
+  const { identifier } = await params
+  if (!identifier.startsWith('@')) {
+    notFound()
+  }
+
+  const snapshot = await getPublicProfileSnapshot(identifier)
+  if (!snapshot?.profile) {
+    notFound()
+  }
+
+  const canonicalHandle = snapshot.profile.public_handle
+  if (canonicalHandle && identifier !== `@${canonicalHandle}`) {
+    redirect(`/comunidade/@${canonicalHandle}`)
+  }
+
+  return <PublicProfileView snapshot={snapshot} />
+}

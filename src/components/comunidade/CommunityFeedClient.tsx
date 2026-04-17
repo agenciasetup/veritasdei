@@ -1,0 +1,859 @@
+/* eslint-disable @next/next/no-img-element */
+'use client'
+
+import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import {
+  Heart,
+  Repeat2,
+  MessageSquare,
+  RefreshCw,
+  Loader2,
+  PlusCircle,
+  UserPlus,
+  UserMinus,
+  Quote,
+  Bell,
+  BellOff,
+} from 'lucide-react'
+import CrossIcon from '@/components/icons/CrossIcon'
+import { share as platformShare } from '@/lib/platform'
+import type { FeedResponse, VeritasPost } from '@/lib/community/types'
+import { useAuth } from '@/contexts/AuthContext'
+
+interface PresignItem {
+  upload_url: string
+  object_key: string
+  mime_type: string
+  bytes: number
+}
+
+interface ComposerAttachment {
+  file: File
+  previewUrl: string
+}
+
+function formatRelative(dateIso: string): string {
+  const now = Date.now()
+  const ts = new Date(dateIso).getTime()
+  const diffMin = Math.max(1, Math.floor((now - ts) / 60000))
+
+  if (diffMin < 60) return `${diffMin}m`
+  const diffHour = Math.floor(diffMin / 60)
+  if (diffHour < 24) return `${diffHour}h`
+  const diffDay = Math.floor(diffHour / 24)
+  return `${diffDay}d`
+}
+
+async function requestPresigns(files: File[]): Promise<PresignItem[]> {
+  const res = await fetch('/api/comunidade/media/presign', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      files: files.map(file => ({
+        filename: file.name,
+        mime_type: file.type,
+        bytes: file.size,
+      })),
+    }),
+  })
+
+  if (!res.ok) {
+    throw new Error('Não foi possível preparar o upload de mídia.')
+  }
+
+  const data = await res.json() as { items: PresignItem[] }
+  return data.items
+}
+
+async function uploadWithPresign(files: File[], items: PresignItem[]): Promise<void> {
+  if (files.length !== items.length) {
+    throw new Error('Falha no mapeamento dos uploads.')
+  }
+
+  await Promise.all(items.map(async (item, index) => {
+    const file = files[index]
+    const response = await fetch(item.upload_url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': file.type,
+      },
+      body: file,
+    })
+
+    if (!response.ok) {
+      throw new Error(`Falha no upload de ${file.name}.`)
+    }
+  }))
+}
+
+export default function CommunityFeedClient() {
+  const { user } = useAuth()
+  const [tab, setTab] = useState<'for_you' | 'following'>('for_you')
+  const [items, setItems] = useState<VeritasPost[]>([])
+  const [cursor, setCursor] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const [composerBody, setComposerBody] = useState('')
+  const [composerAttachments, setComposerAttachments] = useState<ComposerAttachment[]>([])
+  const [submittingPost, setSubmittingPost] = useState(false)
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({})
+
+  const canSubmitComposer = useMemo(() => {
+    return composerBody.trim().length > 0 && !submittingPost
+  }, [composerBody, submittingPost])
+
+  useEffect(() => {
+    void loadFeed('for_you', false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function loadFeed(nextTab: 'for_you' | 'following', append = false) {
+    if (append && !cursor) return
+
+    if (append) {
+      setLoadingMore(true)
+    } else {
+      setLoading(true)
+    }
+    setError(null)
+
+    try {
+      const query = new URLSearchParams({
+        tab: nextTab,
+        limit: '20',
+      })
+      if (append && cursor) query.set('cursor', cursor)
+
+      const res = await fetch(`/api/comunidade/feed?${query.toString()}`, {
+        cache: 'no-store',
+      })
+
+      if (!res.ok) {
+        throw new Error('Não foi possível carregar o feed.')
+      }
+
+      const data = await res.json() as FeedResponse
+      setCursor(data.cursor)
+      setItems((prev) => {
+        if (!append) return data.items
+        const seen = new Set(prev.map(item => item.id))
+        const fresh = data.items.filter(item => !seen.has(item.id))
+        return [...prev, ...fresh]
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar feed.')
+    } finally {
+      if (append) {
+        setLoadingMore(false)
+      } else {
+        setLoading(false)
+      }
+    }
+  }
+
+  async function ensureFeedLoaded(nextTab: 'for_you' | 'following') {
+    setTab(nextTab)
+    setCursor(null)
+    await loadFeed(nextTab, false)
+  }
+
+  async function createVeritas(payload: {
+    kind: 'original' | 'reply' | 'quote'
+    body: string
+    parent_post_id?: string
+    media?: Array<{
+      object_key: string
+      mime_type: string
+      bytes: number
+    }>
+  }) {
+    const res = await fetch('/api/comunidade/veritas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => null) as { detail?: string } | null
+      throw new Error(data?.detail ?? 'Falha ao publicar Veritas.')
+    }
+
+    const data = await res.json() as { post: VeritasPost }
+    return data.post
+  }
+
+  async function handleComposerSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!canSubmitComposer) return
+
+    setSubmittingPost(true)
+    setError(null)
+
+    try {
+      let mediaPayload: Array<{ object_key: string; mime_type: string; bytes: number }> = []
+
+      if (composerAttachments.length > 0) {
+        const files = composerAttachments.map(item => item.file)
+        const presigns = await requestPresigns(files)
+        await uploadWithPresign(files, presigns)
+        mediaPayload = presigns.map(item => ({
+          object_key: item.object_key,
+          mime_type: item.mime_type,
+          bytes: item.bytes,
+        }))
+      }
+
+      const post = await createVeritas({
+        kind: 'original',
+        body: composerBody.trim(),
+        media: mediaPayload,
+      })
+
+      setItems(prev => [post, ...prev])
+      setComposerBody('')
+      for (const attachment of composerAttachments) {
+        URL.revokeObjectURL(attachment.previewUrl)
+      }
+      setComposerAttachments([])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha ao publicar Veritas.')
+    } finally {
+      setSubmittingPost(false)
+    }
+  }
+
+  function addComposerFiles(fileList: FileList | null) {
+    if (!fileList) return
+    const incoming = Array.from(fileList)
+
+    const next: ComposerAttachment[] = []
+    for (const file of incoming) {
+      next.push({
+        file,
+        previewUrl: URL.createObjectURL(file),
+      })
+    }
+
+    setComposerAttachments(prev => {
+      const merged = [...prev, ...next]
+      return merged.slice(0, 6)
+    })
+  }
+
+  function removeAttachmentAt(index: number) {
+    setComposerAttachments(prev => {
+      const target = prev[index]
+      if (target) URL.revokeObjectURL(target.previewUrl)
+      return prev.filter((_, i) => i !== index)
+    })
+  }
+
+  async function toggleLike(post: VeritasPost) {
+    const method = post.viewer.liked ? 'DELETE' : 'POST'
+    const res = await fetch(`/api/comunidade/veritas/${post.id}/like`, { method })
+    if (!res.ok) return
+
+    setItems(prev => prev.map(item => {
+      if (item.id !== post.id) return item
+      const liked = !item.viewer.liked
+      return {
+        ...item,
+        viewer: { ...item.viewer, liked },
+        metrics: {
+          ...item.metrics,
+          like_count: Math.max(0, item.metrics.like_count + (liked ? 1 : -1)),
+        },
+      }
+    }))
+  }
+
+  async function toggleRepost(post: VeritasPost) {
+    const method = post.viewer.reposted ? 'DELETE' : 'POST'
+    const res = await fetch(`/api/comunidade/veritas/${post.id}/repost`, { method })
+    if (!res.ok) return
+
+    setItems(prev => prev.map(item => {
+      if (item.id !== post.id) return item
+      const reposted = !item.viewer.reposted
+      return {
+        ...item,
+        viewer: { ...item.viewer, reposted },
+        metrics: {
+          ...item.metrics,
+          repost_count: Math.max(0, item.metrics.repost_count + (reposted ? 1 : -1)),
+        },
+      }
+    }))
+  }
+
+  async function handleShareCross(post: VeritasPost) {
+    const res = await fetch(`/api/comunidade/veritas/${post.id}/share-cross`, { method: 'POST' })
+    if (!res.ok) return
+
+    const data = await res.json() as {
+      share: { title: string; text: string; url: string }
+    }
+
+    const absoluteUrl = new URL(data.share.url, window.location.origin).toString()
+    await platformShare.text({
+      title: data.share.title,
+      text: data.share.text,
+      url: absoluteUrl,
+    })
+
+    setItems(prev => prev.map(item => {
+      if (item.id !== post.id) return item
+      if (item.viewer.shared_cross) return item
+      return {
+        ...item,
+        viewer: { ...item.viewer, shared_cross: true },
+        metrics: {
+          ...item.metrics,
+          share_cross_count: item.metrics.share_cross_count + 1,
+        },
+      }
+    }))
+  }
+
+  async function toggleFollow(authorId: string, followsNow: boolean) {
+    const method = followsNow ? 'DELETE' : 'POST'
+    const res = await fetch(`/api/comunidade/follows/${authorId}`, { method })
+    if (!res.ok) return
+
+    setItems(prev => prev.map(item => (
+      item.author_user_id === authorId
+        ? {
+            ...item,
+            viewer: {
+              ...item.viewer,
+              follows_author: !followsNow,
+            },
+          }
+        : item
+    )))
+  }
+
+  async function toggleMute(authorId: string, mutedNow: boolean) {
+    const method = mutedNow ? 'DELETE' : 'POST'
+    const res = await fetch(`/api/comunidade/mutes/${authorId}`, { method })
+    if (!res.ok) return
+
+    setItems(prev => prev.map(item => (
+      item.author_user_id === authorId
+        ? {
+            ...item,
+            viewer: {
+              ...item.viewer,
+              muted_author: !mutedNow,
+            },
+          }
+        : item
+    )))
+  }
+
+  async function submitReply(post: VeritasPost) {
+    const replyBody = (replyDrafts[post.id] ?? '').trim()
+    if (!replyBody) return
+
+    const res = await fetch('/api/comunidade/veritas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kind: 'reply',
+        body: replyBody,
+        parent_post_id: post.id,
+      }),
+    })
+
+    if (!res.ok) return
+
+    setReplyDrafts(prev => ({ ...prev, [post.id]: '' }))
+    setItems(prev => prev.map(item => (
+      item.id === post.id
+        ? {
+            ...item,
+            metrics: {
+              ...item.metrics,
+              reply_count: item.metrics.reply_count + 1,
+            },
+          }
+        : item
+    )))
+  }
+
+  async function createQuote(post: VeritasPost) {
+    const text = window.prompt('Escreva seu comentário para citar este Veritas:')?.trim()
+    if (!text) return
+
+    try {
+      const quote = await createVeritas({
+        kind: 'quote',
+        body: text,
+        parent_post_id: post.id,
+      })
+
+      setItems(prev => [quote, ...prev])
+      setItems(prev => prev.map(item => (
+        item.id === post.id
+          ? {
+              ...item,
+              metrics: {
+                ...item.metrics,
+                quote_count: item.metrics.quote_count + 1,
+              },
+            }
+          : item
+      )))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Falha ao citar Veritas.')
+    }
+  }
+
+  const onInit = items.length === 0 && !loading
+
+  return (
+    <div className="min-h-screen px-4 md:px-8 py-8 relative">
+      <div className="bg-glow" />
+
+      <div className="max-w-3xl mx-auto relative z-10">
+        <header className="mb-6">
+          <h1
+            className="text-2xl md:text-3xl mb-2"
+            style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
+          >
+            Comunidade Veritas
+          </h1>
+          <p
+            className="text-sm"
+            style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}
+          >
+            Publicações católicas para formar, partilhar e fortalecer a fé.
+          </p>
+        </header>
+
+        <div className="flex items-center gap-2 mb-4">
+          <button
+            type="button"
+            onClick={() => ensureFeedLoaded('for_you')}
+            className="px-4 py-2 rounded-xl text-xs uppercase tracking-[0.12em]"
+            style={{
+              background: tab === 'for_you' ? 'rgba(201,168,76,0.14)' : 'rgba(16,16,16,0.65)',
+              border: tab === 'for_you' ? '1px solid rgba(201,168,76,0.35)' : '1px solid rgba(201,168,76,0.12)',
+              color: tab === 'for_you' ? '#C9A84C' : '#8A8378',
+              fontFamily: 'Poppins, sans-serif',
+            }}
+          >
+            Para você
+          </button>
+          <button
+            type="button"
+            onClick={() => ensureFeedLoaded('following')}
+            className="px-4 py-2 rounded-xl text-xs uppercase tracking-[0.12em]"
+            style={{
+              background: tab === 'following' ? 'rgba(201,168,76,0.14)' : 'rgba(16,16,16,0.65)',
+              border: tab === 'following' ? '1px solid rgba(201,168,76,0.35)' : '1px solid rgba(201,168,76,0.12)',
+              color: tab === 'following' ? '#C9A84C' : '#8A8378',
+              fontFamily: 'Poppins, sans-serif',
+            }}
+          >
+            Seguindo
+          </button>
+
+          <button
+            type="button"
+            onClick={() => loadFeed(tab, false)}
+            className="ml-auto inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
+            style={{
+              background: 'rgba(16,16,16,0.65)',
+              border: '1px solid rgba(201,168,76,0.12)',
+              color: '#8A8378',
+              fontFamily: 'Poppins, sans-serif',
+            }}
+          >
+            <RefreshCw className="w-3.5 h-3.5" /> Atualizar
+          </button>
+        </div>
+
+        <form
+          onSubmit={handleComposerSubmit}
+          className="rounded-2xl p-4 md:p-5 mb-6"
+          style={{
+            background: 'rgba(16,16,16,0.78)',
+            border: '1px solid rgba(201,168,76,0.16)',
+          }}
+        >
+          <textarea
+            value={composerBody}
+            onChange={(e) => setComposerBody(e.target.value.slice(0, 1000))}
+            placeholder="Escreva seu Veritas..."
+            className="w-full min-h-28 resize-y rounded-xl p-3 text-sm"
+            style={{
+              background: 'rgba(10,10,10,0.65)',
+              border: '1px solid rgba(201,168,76,0.15)',
+              color: '#F2EDE4',
+              fontFamily: 'Poppins, sans-serif',
+              outline: 'none',
+            }}
+          />
+
+          {composerAttachments.length > 0 && (
+            <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {composerAttachments.map((attachment, index) => (
+                <div key={`${attachment.file.name}-${index}`} className="relative rounded-xl overflow-hidden">
+                  <img
+                    src={attachment.previewUrl}
+                    alt={attachment.file.name}
+                    className="w-full h-28 object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeAttachmentAt(index)}
+                    className="absolute top-1 right-1 rounded-lg px-1.5 py-0.5 text-[10px]"
+                    style={{
+                      background: 'rgba(0,0,0,0.75)',
+                      color: '#F2EDE4',
+                      fontFamily: 'Poppins, sans-serif',
+                    }}
+                  >
+                    remover
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <label
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs cursor-pointer"
+              style={{
+                background: 'rgba(16,16,16,0.6)',
+                border: '1px solid rgba(201,168,76,0.15)',
+                color: '#C9A84C',
+                fontFamily: 'Poppins, sans-serif',
+              }}
+            >
+              <PlusCircle className="w-4 h-4" />
+              Adicionar mídia
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,image/gif"
+                multiple
+                className="hidden"
+                onChange={(e) => addComposerFiles(e.target.files)}
+              />
+            </label>
+
+            <span className="text-xs" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+              {composerBody.trim().length}/1000
+            </span>
+
+            <button
+              type="submit"
+              disabled={!canSubmitComposer}
+              className="ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs uppercase tracking-[0.12em] disabled:opacity-50"
+              style={{
+                background: 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
+                color: '#0A0A0A',
+                fontFamily: 'Cinzel, serif',
+              }}
+            >
+              {submittingPost ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+              Publicar Veritas
+            </button>
+          </div>
+        </form>
+
+        {error && (
+          <div
+            className="mb-4 rounded-xl p-3 text-sm"
+            style={{
+              background: 'rgba(107,29,42,0.12)',
+              border: '1px solid rgba(217,79,92,0.35)',
+              color: '#D94F5C',
+              fontFamily: 'Poppins, sans-serif',
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        {onInit && (
+          <div className="mb-4">
+            <button
+              type="button"
+              onClick={() => loadFeed(tab, false)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs"
+              style={{
+                background: 'rgba(16,16,16,0.65)',
+                border: '1px solid rgba(201,168,76,0.15)',
+                color: '#C9A84C',
+                fontFamily: 'Poppins, sans-serif',
+              }}
+            >
+              Carregar feed
+            </button>
+          </div>
+        )}
+
+        {loading && (
+          <div className="py-10 flex justify-center">
+            <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#C9A84C' }} />
+          </div>
+        )}
+
+        {!loading && (
+          <div className="space-y-4">
+            {items.map((post) => {
+              const profileHref = post.author.public_handle
+                ? `/comunidade/@${post.author.public_handle}`
+                : post.author.user_number
+                  ? `/comunidade/p/${post.author.user_number}`
+                  : '#'
+
+              return (
+                <article
+                  key={post.id}
+                  className="rounded-2xl p-5"
+                  style={{
+                    background: 'rgba(16,16,16,0.75)',
+                    border: '1px solid rgba(201,168,76,0.14)',
+                  }}
+                >
+                  <div className="flex items-start gap-3 mb-3">
+                    <div
+                      className="w-11 h-11 rounded-xl overflow-hidden flex items-center justify-center"
+                      style={{
+                        background: post.author.profile_image_url
+                          ? 'transparent'
+                          : 'rgba(201,168,76,0.1)',
+                        border: '1px solid rgba(201,168,76,0.2)',
+                      }}
+                    >
+                      {post.author.profile_image_url ? (
+                        <img
+                          src={post.author.profile_image_url}
+                          alt={post.author.name ?? 'Perfil'}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <CrossIcon size="sm" />
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      {profileHref !== '#' ? (
+                        <Link
+                          href={profileHref}
+                          className="text-sm font-medium hover:underline"
+                          style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}
+                        >
+                          {post.author.name ?? 'Membro Veritas'}
+                        </Link>
+                      ) : (
+                        <span className="text-sm font-medium" style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}>
+                          {post.author.name ?? 'Membro Veritas'}
+                        </span>
+                      )}
+                      <p className="text-xs" style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}>
+                        {post.author.public_handle ? `@${post.author.public_handle}` : '#sem-handle'} · {formatRelative(post.created_at)}
+                      </p>
+                    </div>
+
+                    {post.author_user_id !== user?.id && (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => toggleFollow(post.author_user_id, post.viewer.follows_author)}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px]"
+                          style={{
+                            background: 'rgba(16,16,16,0.6)',
+                            border: '1px solid rgba(201,168,76,0.15)',
+                            color: post.viewer.follows_author ? '#8A8378' : '#C9A84C',
+                            fontFamily: 'Poppins, sans-serif',
+                          }}
+                        >
+                          {post.viewer.follows_author ? <UserMinus className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
+                          {post.viewer.follows_author ? 'Seguindo' : 'Seguir'}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => toggleMute(post.author_user_id, post.viewer.muted_author)}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px]"
+                          style={{
+                            background: post.viewer.muted_author ? 'rgba(107,114,128,0.2)' : 'rgba(16,16,16,0.6)',
+                            border: '1px solid rgba(201,168,76,0.15)',
+                            color: post.viewer.muted_author ? '#B6B9C4' : '#8A8378',
+                            fontFamily: 'Poppins, sans-serif',
+                          }}
+                        >
+                          {post.viewer.muted_author ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
+                          {post.viewer.muted_author ? 'Silenciado' : 'Silenciar'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <p
+                    className="text-sm whitespace-pre-line leading-relaxed"
+                    style={{ color: '#E7DED1', fontFamily: 'Poppins, sans-serif' }}
+                  >
+                    {post.body}
+                  </p>
+
+                  {post.media.length > 0 && (
+                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {post.media.map((media) => (
+                        <div
+                          key={media.id}
+                          className="rounded-xl overflow-hidden"
+                          style={{ border: '1px solid rgba(201,168,76,0.15)' }}
+                        >
+                          <img
+                            src={media.variants.feed}
+                            alt="Mídia do Veritas"
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-56 object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleLike(post)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs"
+                      style={{
+                        background: post.viewer.liked ? 'rgba(217,79,92,0.14)' : 'rgba(16,16,16,0.6)',
+                        border: '1px solid rgba(201,168,76,0.15)',
+                        color: post.viewer.liked ? '#D94F5C' : '#8A8378',
+                        fontFamily: 'Poppins, sans-serif',
+                      }}
+                    >
+                      <Heart className="w-3.5 h-3.5" /> {post.metrics.like_count}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => toggleRepost(post)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs"
+                      style={{
+                        background: post.viewer.reposted ? 'rgba(102,187,106,0.14)' : 'rgba(16,16,16,0.6)',
+                        border: '1px solid rgba(201,168,76,0.15)',
+                        color: post.viewer.reposted ? '#66BB6A' : '#8A8378',
+                        fontFamily: 'Poppins, sans-serif',
+                      }}
+                    >
+                      <Repeat2 className="w-3.5 h-3.5" /> {post.metrics.repost_count}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => createQuote(post)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs"
+                      style={{
+                        background: 'rgba(16,16,16,0.6)',
+                        border: '1px solid rgba(201,168,76,0.15)',
+                        color: '#8A8378',
+                        fontFamily: 'Poppins, sans-serif',
+                      }}
+                    >
+                      <Quote className="w-3.5 h-3.5" /> {post.metrics.quote_count}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleShareCross(post)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs"
+                      style={{
+                        background: post.viewer.shared_cross ? 'rgba(201,168,76,0.14)' : 'rgba(16,16,16,0.6)',
+                        border: '1px solid rgba(201,168,76,0.2)',
+                        color: '#C9A84C',
+                        fontFamily: 'Poppins, sans-serif',
+                      }}
+                    >
+                      <CrossIcon size="xs" /> {post.metrics.share_cross_count}
+                    </button>
+                  </div>
+
+                  <div className="mt-3">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4" style={{ color: '#8A8378' }} />
+                      <input
+                        type="text"
+                        value={replyDrafts[post.id] ?? ''}
+                        onChange={(e) => setReplyDrafts(prev => ({ ...prev, [post.id]: e.target.value }))}
+                        placeholder={`Responder (${post.metrics.reply_count})`}
+                        className="flex-1 px-3 py-2 rounded-lg text-xs"
+                        style={{
+                          background: 'rgba(10,10,10,0.65)',
+                          border: '1px solid rgba(201,168,76,0.12)',
+                          color: '#F2EDE4',
+                          fontFamily: 'Poppins, sans-serif',
+                          outline: 'none',
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => submitReply(post)}
+                        className="px-3 py-2 rounded-lg text-xs"
+                        style={{
+                          background: 'rgba(201,168,76,0.14)',
+                          border: '1px solid rgba(201,168,76,0.25)',
+                          color: '#C9A84C',
+                          fontFamily: 'Poppins, sans-serif',
+                        }}
+                      >
+                        Responder
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              )
+            })}
+
+            {!loading && items.length === 0 && (
+              <div
+                className="rounded-2xl p-8 text-center"
+                style={{
+                  background: 'rgba(16,16,16,0.65)',
+                  border: '1px solid rgba(201,168,76,0.1)',
+                }}
+              >
+                <p style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}>
+                  Ainda não há Veritas neste feed.
+                </p>
+              </div>
+            )}
+
+            {cursor && (
+              <div className="flex justify-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => loadFeed(tab, true)}
+                  disabled={loadingMore}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs"
+                  style={{
+                    background: 'rgba(16,16,16,0.65)',
+                    border: '1px solid rgba(201,168,76,0.15)',
+                    color: '#C9A84C',
+                    fontFamily: 'Poppins, sans-serif',
+                  }}
+                >
+                  {loadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  Carregar mais
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

@@ -156,7 +156,7 @@ export default function EditarPerfilSection() {
       !!(form.name && (form.cpf || cpfDisplay) && form.vocacao && form.data_nascimento),
     endereco: !!(form.cidade && form.estado),
     fe: !!(form.paroquia && (form.sacramentos as string[] | undefined)?.length),
-    social: !!(form.instagram || form.whatsapp),
+    social: !!(form.instagram || form.whatsapp || form.public_handle),
   }
 
   const avatarUrl = profile?.profile_image_url
@@ -444,6 +444,13 @@ export default function EditarPerfilSection() {
       <div className="space-y-5">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormInput
+            label="Handle Público (Comunidade)"
+            value={(form.public_handle as string) ?? ''}
+            onChange={(v) => updateField('public_handle', v.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+            placeholder="ex: joao_paulo"
+            icon={<AtSign className="w-4 h-4" />}
+          />
+          <FormInput
             label="Instagram"
             value={(form.instagram as string) ?? ''}
             onChange={(v) => updateField('instagram', v)}
@@ -688,6 +695,7 @@ function initFormFromProfile(
     vocacao: profile.vocacao,
     genero: profile.genero,
     data_nascimento: profile.data_nascimento,
+    public_handle: profile.public_handle ?? '',
     instagram: profile.instagram ?? '',
     whatsapp: profile.whatsapp ?? '',
     endereco: profile.endereco ?? '',
