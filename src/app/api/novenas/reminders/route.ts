@@ -21,8 +21,15 @@ export async function POST(req: NextRequest) {
   const authHeader = req.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
 
-  // Se CRON_SECRET definido, valida. Senão, aceita service-role key.
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  // CRON_SECRET é obrigatório. Antes o check era opcional ("se definido,
+  // valida") — em ambiente sem a env setada, qualquer POST disparava o
+  // job. Logs no Vercel mostrariam o erro; em produção isso é
+  // misconfig perigoso.
+  if (!cronSecret) {
+    console.error('[novenas/reminders] CRON_SECRET não configurado — rejeitando')
+    return NextResponse.json({ error: 'server_misconfigured' }, { status: 500 })
+  }
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
