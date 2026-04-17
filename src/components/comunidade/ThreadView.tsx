@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Loader2, MessageSquare } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import VeritasCard from '@/components/comunidade/VeritasCard'
 import QuoteModal from '@/components/comunidade/QuoteModal'
+import MentionAutocomplete from '@/components/comunidade/MentionAutocomplete'
 import type { VeritasPost } from '@/lib/community/types'
 import { VERITAS_MAX_BODY } from '@/lib/community/constants'
 import { share as platformShare } from '@/lib/platform'
@@ -26,6 +27,7 @@ export default function ThreadView({ postId }: { postId: string }) {
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [replyBody, setReplyBody] = useState('')
+  const replyInputRef = useRef<HTMLTextAreaElement | null>(null)
   const [submittingReply, setSubmittingReply] = useState(false)
   const [quoteTarget, setQuoteTarget] = useState<VeritasPost | null>(null)
 
@@ -291,19 +293,27 @@ export default function ThreadView({ postId }: { postId: string }) {
                   Responder
                 </span>
               </div>
-              <textarea
-                value={replyBody}
-                onChange={e => setReplyBody(e.target.value.slice(0, VERITAS_MAX_BODY + 50))}
-                placeholder="Escreva sua resposta..."
-                className="w-full min-h-20 resize-y rounded-xl p-3 text-sm"
-                style={{
-                  background: 'rgba(10,10,10,0.65)',
-                  border: '1px solid rgba(201,168,76,0.15)',
-                  color: '#F2EDE4',
-                  fontFamily: 'Poppins, sans-serif',
-                  outline: 'none',
-                }}
-              />
+              <div className="relative">
+                <textarea
+                  ref={replyInputRef}
+                  value={replyBody}
+                  onChange={e => setReplyBody(e.target.value.slice(0, VERITAS_MAX_BODY + 50))}
+                  placeholder="Escreva sua resposta... Use @menção para citar alguém."
+                  className="w-full min-h-20 resize-y rounded-xl p-3 text-sm"
+                  style={{
+                    background: 'rgba(10,10,10,0.65)',
+                    border: '1px solid rgba(201,168,76,0.15)',
+                    color: '#F2EDE4',
+                    fontFamily: 'Poppins, sans-serif',
+                    outline: 'none',
+                  }}
+                />
+                <MentionAutocomplete
+                  inputRef={replyInputRef}
+                  value={replyBody}
+                  onInsert={(next) => setReplyBody(next.slice(0, VERITAS_MAX_BODY + 50))}
+                />
+              </div>
               <div className="mt-2 flex items-center justify-between">
                 <span
                   className="text-xs"

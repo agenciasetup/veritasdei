@@ -1,12 +1,13 @@
 /* eslint-disable @next/next/no-img-element */
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { X, Loader2 } from 'lucide-react'
 import CrossIcon from '@/components/icons/CrossIcon'
 import type { VeritasPost } from '@/lib/community/types'
 import { renderVeritasBody } from '@/lib/community/body-renderer'
 import { VERITAS_MAX_BODY } from '@/lib/community/constants'
+import MentionAutocomplete from '@/components/comunidade/MentionAutocomplete'
 
 interface Props {
   post: VeritasPost | null
@@ -19,6 +20,7 @@ export default function QuoteModal({ post, open, onClose, onSubmit }: Props) {
   const [body, setBody] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const inputRef = useRef<HTMLTextAreaElement | null>(null)
 
   useEffect(() => {
     if (!open) {
@@ -88,20 +90,28 @@ export default function QuoteModal({ post, open, onClose, onSubmit }: Props) {
           </button>
         </div>
 
-        <textarea
-          value={body}
-          onChange={e => setBody(e.target.value.slice(0, VERITAS_MAX_BODY + 50))}
-          placeholder="Escreva seu comentário..."
-          autoFocus
-          className="w-full min-h-24 resize-y rounded-xl p-3 text-sm"
-          style={{
-            background: 'rgba(10,10,10,0.65)',
-            border: '1px solid rgba(201,168,76,0.15)',
-            color: '#F2EDE4',
-            fontFamily: 'Poppins, sans-serif',
-            outline: 'none',
-          }}
-        />
+        <div className="relative">
+          <textarea
+            ref={inputRef}
+            value={body}
+            onChange={e => setBody(e.target.value.slice(0, VERITAS_MAX_BODY + 50))}
+            placeholder="Escreva seu comentário... Use @menção."
+            autoFocus
+            className="w-full min-h-24 resize-y rounded-xl p-3 text-sm"
+            style={{
+              background: 'rgba(10,10,10,0.65)',
+              border: '1px solid rgba(201,168,76,0.15)',
+              color: '#F2EDE4',
+              fontFamily: 'Poppins, sans-serif',
+              outline: 'none',
+            }}
+          />
+          <MentionAutocomplete
+            inputRef={inputRef}
+            value={body}
+            onInsert={(next) => setBody(next.slice(0, VERITAS_MAX_BODY + 50))}
+          />
+        </div>
 
         <div
           className="mt-3 rounded-xl p-3"
