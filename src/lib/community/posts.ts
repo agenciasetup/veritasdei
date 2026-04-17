@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { FeedResponse, VeritasMediaAsset, VeritasMetrics, VeritasPost } from './types'
+import type { FeedResponse, VeritasAuthorSnapshot, VeritasMediaAsset, VeritasMetrics, VeritasPost } from './types'
 import { VERITAS_DEFAULT_PAGE_SIZE, VERITAS_MAX_PAGE_SIZE } from './constants'
 
 interface PostRow {
@@ -83,7 +83,7 @@ export async function fetchPostsByIds(
   const [{ data: authorsData }, { data: metricsData }, { data: postMediaData }, { data: reactionsData }, { data: repostedData }, { data: followsData }, { data: blocksData }, { data: mutesData }] = await Promise.all([
     supabase
       .from('profiles')
-      .select('id, public_handle, user_number, name, vocacao, verified, profile_image_url')
+      .select('id, public_handle, user_number, name, vocacao, community_role, verified, profile_image_url')
       .in('id', authorIds),
     supabase
       .from('vd_post_metrics')
@@ -227,6 +227,7 @@ export async function fetchPostsByIds(
           user_number: author?.user_number ?? null,
           name: author?.name ?? null,
           vocacao: author?.vocacao ?? null,
+          community_role: (author?.community_role as VeritasAuthorSnapshot['community_role']) ?? 'leigo',
           verified: Boolean(author?.verified),
           profile_image_url: author?.profile_image_url ?? null,
         },

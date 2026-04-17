@@ -31,12 +31,23 @@ export interface VeritasMetrics {
   score: number
 }
 
+export type CommunityRole =
+  | 'leigo'
+  | 'diacono'
+  | 'padre'
+  | 'bispo'
+  | 'religioso'
+  | 'artista'
+  | 'moderator'
+  | 'admin'
+
 export interface VeritasAuthorSnapshot {
   id: string
   public_handle: string | null
   user_number: number | null
   name: string | null
   vocacao: Profile['vocacao'] | null
+  community_role: CommunityRole
   verified: boolean
   profile_image_url: string | null
 }
@@ -60,16 +71,6 @@ export interface VeritasPost {
     muted_author: boolean
   }
 }
-
-export type CommunityRole =
-  | 'leigo'
-  | 'diacono'
-  | 'padre'
-  | 'bispo'
-  | 'religioso'
-  | 'artista'
-  | 'moderator'
-  | 'admin'
 
 export interface PublicProfileSnapshot {
   profile: {
