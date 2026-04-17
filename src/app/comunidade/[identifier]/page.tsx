@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { notFound, redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import PublicProfileView from '@/components/comunidade/PublicProfileView'
 import { getCommunityFlags } from '@/lib/community/config'
 import { getPublicProfileSnapshot } from '@/lib/community/public-profile'
@@ -17,17 +17,14 @@ function toAbsoluteUrl(path: string): string {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { identifier } = await params
-  if (!identifier.startsWith('@')) {
-    return {
-      title: 'Perfil da Comunidade — Veritas Dei',
-    }
+  const handle = normalizeHandleFromParam(identifier)
+  if (!handle) {
+    return { title: 'Perfil da Comunidade — Veritas Dei' }
   }
 
-  const snapshot = await getPublicProfileSnapshot(identifier)
+  const snapshot = await getPublicProfileSnapshot(`@${handle}`)
   if (!snapshot?.profile) {
-    return {
-      title: 'Perfil não encontrado — Veritas Dei',
-    }
+    return { title: 'Perfil não encontrado — Veritas Dei' }
   }
 
   const title = `${snapshot.profile.name ?? 'Membro'} (@${snapshot.profile.public_handle ?? 'perfil'}) — Comunidade Veritas`
@@ -56,23 +53,37 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
+// Aceita identifier em qualquer forma: "@handle", "%40handle", "handle".
+// Retorna o handle normalizado (lowercased) sem o @.
+function normalizeHandleFromParam(raw: string): string | null {
+  let v = raw
+  // Next.js pode ou não decodificar dynamic params — fazemos manualmente
+  // pra cobrir ambos os casos.
+  try {
+    v = decodeURIComponent(v)
+  } catch {
+    // Param mal formado — deixa como veio.
+  }
+  v = v.trim()
+  if (v.startsWith('@')) v = v.slice(1)
+  v = v.toLowerCase()
+  if (!/^[a-z0-9_]{3,20}$/.test(v)) return null
+  return v
+}
+
 export default async function CommunityPublicHandlePage({ params }: PageProps) {
   const flags = getCommunityFlags()
   if (!flags.communityPublicProfiles) notFound()
 
   const { identifier } = await params
-  if (!identifier.startsWith('@')) {
+  const handle = normalizeHandleFromParam(identifier)
+  if (!handle) {
     notFound()
   }
 
-  const snapshot = await getPublicProfileSnapshot(identifier)
+  const snapshot = await getPublicProfileSnapshot(`@${handle}`)
   if (!snapshot?.profile) {
     notFound()
-  }
-
-  const canonicalHandle = snapshot.profile.public_handle
-  if (canonicalHandle && identifier !== `@${canonicalHandle}`) {
-    redirect(`/comunidade/@${canonicalHandle}`)
   }
 
   const supabase = await createServerSupabaseClient()

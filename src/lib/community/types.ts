@@ -1,8 +1,9 @@
 import type { Profile } from '@/types/auth'
 
 export type VeritasKind = 'original' | 'reply' | 'repost' | 'quote'
+export type VeritasPostVariant = 'default' | 'reflection'
 export type VeritasReactionType = 'like' | 'share_cross'
-export type VeritasMediaKind = 'image' | 'gif'
+export type VeritasMediaKind = 'image' | 'gif' | 'audio'
 
 export interface VeritasMediaVariantSet {
   thumb: string
@@ -56,6 +57,7 @@ export interface VeritasPost {
   id: string
   author_user_id: string
   kind: VeritasKind
+  variant: VeritasPostVariant
   body: string
   parent_post_id: string | null
   created_at: string

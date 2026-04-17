@@ -196,16 +196,26 @@ export default function PublicProfileView({ snapshot, viewerUserId }: Props) {
               className="flex items-center gap-5 mb-6 text-sm"
               style={{ fontFamily: 'Poppins, sans-serif' }}
             >
-              <span>
+              <Link
+                href={profile.public_handle
+                  ? `/comunidade/@${profile.public_handle}/seguindo`
+                  : `/comunidade/p/${profile.user_number ?? ''}/seguindo`}
+                className="hover:underline"
+              >
                 <strong style={{ color: '#F2EDE4' }}>{profile.following_count}</strong>
                 <span style={{ color: '#8A8378' }}> seguindo</span>
-              </span>
-              <span>
+              </Link>
+              <Link
+                href={profile.public_handle
+                  ? `/comunidade/@${profile.public_handle}/seguidores`
+                  : `/comunidade/p/${profile.user_number ?? ''}/seguidores`}
+                className="hover:underline"
+              >
                 <strong style={{ color: '#F2EDE4' }}>{profile.follower_count}</strong>
                 <span style={{ color: '#8A8378' }}>
                   {' '}{profile.follower_count === 1 ? 'seguidor' : 'seguidores'}
                 </span>
-              </span>
+              </Link>
               <span>
                 <strong style={{ color: '#F2EDE4' }}>{profile.veritas_count}</strong>
                 <span style={{ color: '#8A8378' }}>

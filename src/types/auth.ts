@@ -55,6 +55,7 @@ export interface Profile {
   status: AccountStatus
   plan: PlanKey
   vocacao: Vocacao
+  community_role: 'leigo' | 'diacono' | 'padre' | 'bispo' | 'religioso' | 'artista' | 'moderator' | 'admin'
   verified: boolean
   has_password_set: boolean
   onboarding_completed: boolean
