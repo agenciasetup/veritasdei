@@ -19,10 +19,10 @@ import { useAuth } from '@/contexts/AuthContext'
 import VeritasCard from '@/components/comunidade/VeritasCard'
 import { VeritasFeedSkeleton } from '@/components/comunidade/VeritasCardSkeleton'
 import QuoteModal from '@/components/comunidade/QuoteModal'
-import EditPostModal from '@/components/comunidade/EditPostModal'
 import TrendingHashtags from '@/components/comunidade/TrendingHashtags'
 import InfiniteScrollSentinel from '@/components/comunidade/InfiniteScrollSentinel'
 import MentionAutocomplete from '@/components/comunidade/MentionAutocomplete'
+import FormattingToolbar from '@/components/comunidade/FormattingToolbar'
 import NotificationsBell from '@/components/comunidade/NotificationsBell'
 import PullToRefresh from '@/components/mobile/PullToRefresh'
 
@@ -105,7 +105,6 @@ export default function CommunityFeedClient() {
   const [submittingPost, setSubmittingPost] = useState(false)
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({})
   const [quoteTarget, setQuoteTarget] = useState<VeritasPost | null>(null)
-  const [editTarget, setEditTarget] = useState<VeritasPost | null>(null)
   const composerRef = useRef<HTMLTextAreaElement | null>(null)
   const didRestoreScrollRef = useRef(false)
 
@@ -451,19 +450,16 @@ export default function CommunityFeedClient() {
     setQuoteTarget(post)
   }
 
-  function openEditModal(post: VeritasPost) {
-    setEditTarget(post)
-  }
-
-  async function handleEditSubmit(body: string) {
-    const target = editTarget
-    if (!target) return
+  async function handleEditSubmit(target: VeritasPost, body: string) {
     const res = await fetch(`/api/comunidade/veritas/${target.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ body }),
     })
-    if (!res.ok) throw new Error('Falha ao editar')
+    if (!res.ok) {
+      const detail = await res.json().catch(() => null) as { detail?: string } | null
+      throw new Error(detail?.detail ?? 'Falha ao editar.')
+    }
     const data = await res.json() as { post: VeritasPost }
     setItems(prev => prev.map(i => i.id === target.id ? data.post : i))
   }
@@ -703,7 +699,7 @@ export default function CommunityFeedClient() {
               ref={composerRef}
               value={composerBody}
               onChange={(e) => setComposerBody(e.target.value.slice(0, 1000))}
-              placeholder="Escreva seu Veritas... Use #hashtag e @menção."
+              placeholder="Escreva seu Veritas... Use #hashtag, @menção, **negrito**, *itálico*."
               className="w-full min-h-28 resize-y rounded-xl p-3 text-sm"
               style={{
                 background: 'rgba(10,10,10,0.65)',
@@ -717,6 +713,15 @@ export default function CommunityFeedClient() {
               inputRef={composerRef}
               value={composerBody}
               onInsert={(next) => setComposerBody(next.slice(0, 1000))}
+            />
+          </div>
+
+          <div className="mt-2">
+            <FormattingToolbar
+              inputRef={composerRef}
+              value={composerBody}
+              onChange={(next) => setComposerBody(next.slice(0, 1000))}
+              maxLength={1000}
             />
           </div>
 
@@ -883,7 +888,7 @@ export default function CommunityFeedClient() {
                 onToggleFollow={toggleFollow}
                 onToggleMute={toggleMute}
                 onReplySubmit={submitReply}
-                onEdit={openEditModal}
+                onEditSubmit={handleEditSubmit}
                 onDelete={handleDelete}
               />
             ))}
@@ -914,12 +919,6 @@ export default function CommunityFeedClient() {
         onSubmit={handleQuoteSubmit}
       />
 
-      <EditPostModal
-        post={editTarget}
-        open={editTarget !== null}
-        onClose={() => setEditTarget(null)}
-        onSubmit={handleEditSubmit}
-      />
     </div>
   )
 }

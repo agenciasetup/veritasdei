@@ -22,9 +22,11 @@ import {
 import CrossIcon from '@/components/icons/CrossIcon'
 import type { VeritasPost } from '@/lib/community/types'
 import { renderVeritasBody } from '@/lib/community/body-renderer'
+import { VERITAS_MAX_BODY } from '@/lib/community/constants'
 import RoleBadge from '@/components/comunidade/RoleBadge'
 import VerifiedBadge from '@/components/comunidade/VerifiedBadge'
 import MediaLightbox from '@/components/comunidade/MediaLightbox'
+import FormattingToolbar from '@/components/comunidade/FormattingToolbar'
 import { useHaptic } from '@/hooks/useHaptic'
 
 export interface VeritasCardCallbacks {
@@ -36,7 +38,10 @@ export interface VeritasCardCallbacks {
   onToggleMute?: (authorId: string, muted: boolean) => void
   onReplySubmit?: (post: VeritasPost, body: string) => Promise<void> | void
   onDelete?: (post: VeritasPost) => Promise<void> | void
-  onEdit?: (post: VeritasPost) => void
+  /** Edita o post — promise resolve após API ok, rejeita com mensagem de erro. */
+  onEditSubmit?: (post: VeritasPost, body: string) => Promise<void>
+  /** Callback para quando o usuário pede pra ver as respostas desta reply. */
+  onExpandReplies?: (post: VeritasPost) => void
 }
 
 interface Props extends VeritasCardCallbacks {
@@ -47,6 +52,18 @@ interface Props extends VeritasCardCallbacks {
   // Quando true, esconde a barra inline de resposta (útil na página da thread
   // onde a resposta fica num composer dedicado acima).
   hideInlineReply?: boolean
+  /**
+   * Nível de indentação (0 = raiz no feed/thread, 1+ = resposta aninhada).
+   * Usado pelo ThreadView pra desenhar a linha conectora à esquerda.
+   */
+  depth?: number
+  /**
+   * Label opcional embaixo da barra de ações (ex: "Ver 3 respostas"). Renderizado
+   * apenas quando `onExpandReplies` está presente e depth < 2.
+   */
+  expandRepliesLabel?: string | null
+  /** Estado controlado da expansão das sub-respostas. */
+  repliesExpanded?: boolean
 }
 
 const TEXT_PRIMARY = '#F2EDE4'
@@ -132,13 +149,58 @@ export default function VeritasCard({
   onToggleMute,
   onReplySubmit,
   onDelete,
-  onEdit,
+  onEditSubmit,
+  onExpandReplies,
   hideInlineReply = false,
+  depth = 0,
+  expandRepliesLabel = null,
+  repliesExpanded = false,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [editBody, setEditBody] = useState(post.body)
+  const [editSaving, setEditSaving] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
+  const editInputRef = useRef<HTMLTextAreaElement | null>(null)
   const { pulse } = useHaptic()
+
+  useEffect(() => {
+    if (editing) {
+      setEditBody(post.body)
+      setEditError(null)
+      // Foco no textarea quando entra em modo edição.
+      requestAnimationFrame(() => {
+        const el = editInputRef.current
+        if (!el) return
+        el.focus()
+        el.setSelectionRange(el.value.length, el.value.length)
+      })
+    }
+  }, [editing, post.body])
+
+  async function handleSaveEdit() {
+    if (!onEditSubmit) return
+    const trimmed = editBody.trim()
+    if (!trimmed || trimmed === post.body.trim() || trimmed.length > VERITAS_MAX_BODY) return
+    setEditSaving(true)
+    setEditError(null)
+    try {
+      await onEditSubmit(post, trimmed)
+      setEditing(false)
+    } catch (e) {
+      setEditError(e instanceof Error ? e.message : 'Falha ao salvar.')
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
+  function cancelEdit() {
+    setEditing(false)
+    setEditBody(post.body)
+    setEditError(null)
+  }
 
   useEffect(() => {
     if (!menuOpen) return
@@ -164,14 +226,19 @@ export default function VeritasCard({
     : '#sem-handle'
 
   const hasMenu =
-    (isOwnPost && (onEdit || onDelete)) ||
+    (isOwnPost && (onEditSubmit || onDelete)) ||
     (!isOwnPost && (onToggleFollow || onToggleMute))
+
+  // Indentação visual para sub-respostas: empurra o conteúdo e desenha
+  // uma linha conectora dourada à esquerda, alinhada com o avatar do pai.
+  const indentPx = depth > 0 ? Math.min(depth, 2) * 32 : 0
 
   return (
     <article
       className="relative veritas-item"
       style={{
         padding: '16px 20px',
+        paddingLeft: `${20 + indentPx}px`,
         borderBottom: `0.5px solid ${HAIRLINE}`,
         background: isReflection
           ? 'linear-gradient(180deg, rgba(201,168,76,0.05) 0%, rgba(15,14,12,0) 55%)'
@@ -181,6 +248,44 @@ export default function VeritasCard({
         containIntrinsicSize: '260px',
       }}
     >
+      {/* Linha conectora (thread) para sub-respostas — discreta, dourada. */}
+      {depth > 0 && (
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            left: `${20 + (depth - 1) * 32 + 18}px`,
+            top: 0,
+            bottom: 0,
+            width: 1,
+            background: 'linear-gradient(180deg, rgba(201,168,76,0.25) 0%, rgba(201,168,76,0.08) 100%)',
+          }}
+        />
+      )}
+
+      {/* Marca d'água sutil de cruz no Reflexão — reforça identidade sem ruído. */}
+      {isReflection && (
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          style={{
+            position: 'absolute',
+            right: 18,
+            top: 14,
+            width: 56,
+            height: 56,
+            opacity: 0.05,
+            color: '#C9A84C',
+            pointerEvents: 'none',
+          }}
+        >
+          <path
+            d="M10 2h4v7h7v4h-7v9h-4v-9H3v-4h7V2z"
+            fill="currentColor"
+          />
+        </svg>
+      )}
+
       {isReflection && (
         <div
           className="inline-flex items-center gap-1.5 mb-2 text-[10px] uppercase tracking-[0.14em]"
@@ -315,10 +420,10 @@ export default function VeritasCard({
                         {post.viewer.muted_author ? 'Reativar notificações' : 'Silenciar'}
                       </button>
                     )}
-                    {isOwnPost && onEdit && (
+                    {isOwnPost && onEditSubmit && (
                       <button
                         type="button"
-                        onClick={() => { setMenuOpen(false); onEdit(post) }}
+                        onClick={() => { setMenuOpen(false); setEditing(true) }}
                         className="flex items-center gap-2 w-full px-3 py-2.5 text-[13px] text-left hover:bg-[rgba(201,168,76,0.08)]"
                         style={{ color: TEXT_PRIMARY, fontFamily: 'Poppins, sans-serif' }}
                       >
@@ -338,7 +443,7 @@ export default function VeritasCard({
                         style={{
                           color: LIKE_COLOR,
                           fontFamily: 'Poppins, sans-serif',
-                          borderTop: onEdit ? '1px solid rgba(201,168,76,0.08)' : undefined,
+                          borderTop: onEditSubmit ? '1px solid rgba(201,168,76,0.08)' : undefined,
                         }}
                       >
                         <Trash2 className="w-4 h-4" strokeWidth={1.5} /> Apagar
@@ -358,25 +463,107 @@ export default function VeritasCard({
             {handleLabel}
           </p>
 
-          {/* Corpo */}
-          <Link
-            href={`/comunidade/veritas/${post.id}`}
-            className="block mt-1.5"
-            style={{ color: TEXT_PRIMARY, fontFamily: 'Poppins, sans-serif' }}
-          >
-            <p className="text-[15px] leading-[22px] whitespace-pre-line">
-              {renderVeritasBody(post.body)}
-            </p>
-            {post.edited_at && (
-              <span
-                className="inline-block mt-1 text-[11px]"
-                style={{ color: TEXT_SUBTLE }}
-                title={new Date(post.edited_at).toLocaleString('pt-BR')}
-              >
-                editado {formatRelative(post.edited_at)}
-              </span>
-            )}
-          </Link>
+          {/* Corpo — modo visualização ou edição inline */}
+          {editing ? (
+            <div className="mt-2">
+              <textarea
+                ref={editInputRef}
+                value={editBody}
+                onChange={(e) => setEditBody(e.target.value.slice(0, VERITAS_MAX_BODY + 50))}
+                className="w-full min-h-24 resize-y rounded-xl p-3 text-[15px] leading-[22px]"
+                style={{
+                  background: 'rgba(10,10,10,0.6)',
+                  border: '1px solid rgba(201,168,76,0.25)',
+                  color: TEXT_PRIMARY,
+                  fontFamily: 'Poppins, sans-serif',
+                  outline: 'none',
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') { e.preventDefault(); cancelEdit() }
+                  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                    e.preventDefault()
+                    void handleSaveEdit()
+                  }
+                }}
+              />
+              <div className="mt-2 flex items-center justify-between">
+                <FormattingToolbar
+                  inputRef={editInputRef}
+                  value={editBody}
+                  onChange={setEditBody}
+                  maxLength={VERITAS_MAX_BODY + 50}
+                />
+                <div className="flex items-center gap-2">
+                  <span
+                    className="text-[11px] tabular-nums"
+                    style={{
+                      color: editBody.trim().length > VERITAS_MAX_BODY ? LIKE_COLOR : TEXT_SUBTLE,
+                      fontFamily: 'Poppins, sans-serif',
+                    }}
+                  >
+                    {editBody.trim().length}/{VERITAS_MAX_BODY}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={cancelEdit}
+                    className="px-3 py-1.5 rounded-lg text-xs"
+                    style={{
+                      color: TEXT_MUTED,
+                      background: 'transparent',
+                      fontFamily: 'Poppins, sans-serif',
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveEdit}
+                    disabled={
+                      editSaving ||
+                      editBody.trim().length === 0 ||
+                      editBody.trim() === post.body.trim() ||
+                      editBody.trim().length > VERITAS_MAX_BODY
+                    }
+                    className="px-3 py-1.5 rounded-lg text-xs uppercase tracking-[0.12em] disabled:opacity-50"
+                    style={{
+                      background: 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
+                      color: '#0A0A0A',
+                      fontFamily: 'Cinzel, serif',
+                    }}
+                  >
+                    {editSaving ? 'Salvando…' : 'Salvar'}
+                  </button>
+                </div>
+              </div>
+              {editError && (
+                <p
+                  className="mt-2 text-[12px]"
+                  style={{ color: LIKE_COLOR, fontFamily: 'Poppins, sans-serif' }}
+                >
+                  {editError}
+                </p>
+              )}
+            </div>
+          ) : (
+            <Link
+              href={`/comunidade/veritas/${post.id}`}
+              className="block mt-1.5"
+              style={{ color: TEXT_PRIMARY, fontFamily: 'Poppins, sans-serif' }}
+            >
+              <p className="text-[15px] leading-[22px] whitespace-pre-line">
+                {renderVeritasBody(post.body)}
+              </p>
+              {post.edited_at && (
+                <span
+                  className="inline-block mt-1 text-[11px]"
+                  style={{ color: TEXT_SUBTLE }}
+                  title={new Date(post.edited_at).toLocaleString('pt-BR')}
+                >
+                  editado {formatRelative(post.edited_at)}
+                </span>
+              )}
+            </Link>
+          )}
 
           {/* Quoted/reposted parent — nested compacto */}
           {post.parent && (post.kind === 'quote' || post.kind === 'repost') && (
@@ -562,6 +749,33 @@ export default function VeritasCard({
               </ActionIcon>
             )}
           </div>
+
+          {/* Toggle "Ver N respostas" — renderizado só pelo ThreadView. */}
+          {onExpandReplies && expandRepliesLabel && (
+            <button
+              type="button"
+              onClick={() => onExpandReplies(post)}
+              className="mt-2 inline-flex items-center gap-1.5 text-[13px]"
+              style={{
+                color: GOLD,
+                fontFamily: 'Poppins, sans-serif',
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
+              }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  display: 'inline-block',
+                  width: 24,
+                  height: 1,
+                  background: 'rgba(201,168,76,0.35)',
+                }}
+              />
+              {repliesExpanded ? 'Ocultar respostas' : expandRepliesLabel}
+            </button>
+          )}
 
           {/* Resposta inline (feed apenas) */}
           {!hideInlineReply && onReplySubmit && onReplyDraftChange && (
