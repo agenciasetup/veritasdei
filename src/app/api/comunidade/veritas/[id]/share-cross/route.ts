@@ -27,6 +27,7 @@ export async function POST(
         type: 'share_cross',
       }, {
         onConflict: 'user_id,post_id,type',
+        ignoreDuplicates: true,
       }),
     supabase
       .from('vd_posts')

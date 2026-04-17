@@ -34,10 +34,16 @@ export async function POST(
 
   const { error } = await supabase
     .from('vd_follows')
-    .upsert({
-      follower_user_id: user.id,
-      followed_user_id: userId,
-    })
+    .upsert(
+      {
+        follower_user_id: user.id,
+        followed_user_id: userId,
+      },
+      {
+        onConflict: 'follower_user_id,followed_user_id',
+        ignoreDuplicates: true,
+      },
+    )
 
   if (error) {
     return NextResponse.json({ error: 'follow_failed', detail: error.message }, { status: 500 })

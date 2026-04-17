@@ -10,6 +10,7 @@ import {
   Search,
   UserCog,
   BookOpenText,
+  Shield,
 } from 'lucide-react'
 import { share as platformShare } from '@/lib/platform'
 import type { FeedResponse, VeritasPost } from '@/lib/community/types'
@@ -77,9 +78,13 @@ async function uploadWithPresign(files: File[], items: PresignItem[]): Promise<v
 
 export default function CommunityFeedClient() {
   const { user, profile } = useAuth()
-  const canPublishReflection = profile
-    ? ['padre', 'diacono', 'bispo', 'religioso', 'admin'].includes(profile.community_role)
+  const isClergy = profile
+    ? ['padre', 'diacono', 'bispo', 'religioso'].includes(profile.community_role)
     : false
+  const isAdmin = profile?.community_role === 'admin'
+  const isModerator = profile?.community_role === 'moderator' || isAdmin
+  // Regra: clero precisa estar verificado; admin pode sempre.
+  const canPublishReflection = (isClergy && profile?.verified) || isAdmin
   const [variantReflection, setVariantReflection] = useState(false)
   const [tab, setTab] = useState<'for_you' | 'following'>('for_you')
   const [items, setItems] = useState<VeritasPost[]>([])
@@ -504,6 +509,24 @@ export default function CommunityFeedClient() {
           </button>
 
           <div className="ml-auto flex items-center gap-2">
+            {isModerator && (
+              <Link
+                href="/comunidade/admin/moderacao"
+                aria-label="Moderação"
+                title="Moderação"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
+                style={{
+                  background: 'rgba(217,79,92,0.10)',
+                  border: '1px solid rgba(217,79,92,0.28)',
+                  color: '#D94F5C',
+                  fontFamily: 'Poppins, sans-serif',
+                }}
+              >
+                <Shield className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Moderar</span>
+              </Link>
+            )}
+
             <Link
               href="/comunidade/buscar"
               aria-label="Buscar"

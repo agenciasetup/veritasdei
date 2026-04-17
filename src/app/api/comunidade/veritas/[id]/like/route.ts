@@ -23,6 +23,7 @@ export async function POST(
       .from('vd_reactions')
       .upsert({ user_id: user.id, post_id: id, type: 'like' }, {
         onConflict: 'user_id,post_id,type',
+        ignoreDuplicates: true,
       }),
     supabase
       .from('vd_posts')
