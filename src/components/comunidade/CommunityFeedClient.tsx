@@ -2,6 +2,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import {
   RefreshCw,
@@ -16,12 +17,16 @@ import { share as platformShare } from '@/lib/platform'
 import type { FeedResponse, VeritasPost } from '@/lib/community/types'
 import { useAuth } from '@/contexts/AuthContext'
 import VeritasCard from '@/components/comunidade/VeritasCard'
+import { VeritasFeedSkeleton } from '@/components/comunidade/VeritasCardSkeleton'
 import QuoteModal from '@/components/comunidade/QuoteModal'
 import EditPostModal from '@/components/comunidade/EditPostModal'
 import TrendingHashtags from '@/components/comunidade/TrendingHashtags'
 import InfiniteScrollSentinel from '@/components/comunidade/InfiniteScrollSentinel'
 import MentionAutocomplete from '@/components/comunidade/MentionAutocomplete'
 import NotificationsBell from '@/components/comunidade/NotificationsBell'
+import PullToRefresh from '@/components/mobile/PullToRefresh'
+
+const SCROLL_STORAGE_KEY = 'veritasdei:comunidade:feed:scroll'
 
 interface PresignItem {
   upload_url: string
@@ -94,6 +99,7 @@ export default function CommunityFeedClient() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const [composerOpen, setComposerOpen] = useState(false)
   const [composerBody, setComposerBody] = useState('')
   const [composerAttachments, setComposerAttachments] = useState<ComposerAttachment[]>([])
   const [submittingPost, setSubmittingPost] = useState(false)
@@ -101,6 +107,7 @@ export default function CommunityFeedClient() {
   const [quoteTarget, setQuoteTarget] = useState<VeritasPost | null>(null)
   const [editTarget, setEditTarget] = useState<VeritasPost | null>(null)
   const composerRef = useRef<HTMLTextAreaElement | null>(null)
+  const didRestoreScrollRef = useRef(false)
 
   const canSubmitComposer = useMemo(() => {
     return composerBody.trim().length > 0 && !submittingPost
@@ -110,6 +117,41 @@ export default function CommunityFeedClient() {
     void loadFeed('for_you', false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Scroll restoration: salva posição antes de sair, restaura após primeiro
+  // render do feed. Chave única pra rota — evita colidir com outras páginas.
+  useEffect(() => {
+    function save() {
+      try {
+        sessionStorage.setItem(SCROLL_STORAGE_KEY, String(window.scrollY))
+      } catch {
+        // Silencioso.
+      }
+    }
+    window.addEventListener('pagehide', save)
+    window.addEventListener('beforeunload', save)
+    return () => {
+      save()
+      window.removeEventListener('pagehide', save)
+      window.removeEventListener('beforeunload', save)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (didRestoreScrollRef.current) return
+    if (loading || items.length === 0) return
+    didRestoreScrollRef.current = true
+    try {
+      const raw = sessionStorage.getItem(SCROLL_STORAGE_KEY)
+      if (!raw) return
+      const y = Number(raw)
+      if (!Number.isFinite(y) || y <= 0) return
+      // Next tick pra garantir layout pós-paint.
+      requestAnimationFrame(() => window.scrollTo(0, y))
+    } catch {
+      // Silencioso.
+    }
+  }, [loading, items.length])
 
   async function loadFeed(nextTab: 'for_you' | 'following', append = false) {
     if (append && !cursor) return
@@ -222,6 +264,7 @@ export default function CommunityFeedClient() {
         URL.revokeObjectURL(attachment.previewUrl)
       }
       setComposerAttachments([])
+      setComposerOpen(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao publicar Veritas.')
     } finally {
@@ -473,6 +516,7 @@ export default function CommunityFeedClient() {
       <div className="bg-glow" />
 
       <div className="max-w-3xl mx-auto relative z-10">
+        <PullToRefresh onRefresh={async () => { await loadFeed(tab, false) }}>
         <header className="mb-6 flex items-start justify-between gap-4">
           <div>
             <h1
@@ -505,95 +549,147 @@ export default function CommunityFeedClient() {
         </header>
 
         <div
-          className="flex items-center gap-2 mb-4 sticky top-0 z-20 py-2 -mx-4 px-4 md:-mx-8 md:px-8"
+          className="sticky top-0 z-20 -mx-4 md:-mx-8 mb-3"
           style={{
-            background: 'linear-gradient(180deg, rgba(10,10,10,0.95) 0%, rgba(10,10,10,0.88) 100%)',
-            backdropFilter: 'blur(8px)',
+            background: 'rgba(15,14,12,0.88)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
           }}
         >
-          <button
-            type="button"
-            onClick={() => ensureFeedLoaded('for_you')}
-            className="px-4 py-2 rounded-xl text-xs uppercase tracking-[0.12em]"
-            style={{
-              background: tab === 'for_you' ? 'rgba(201,168,76,0.14)' : 'rgba(16,16,16,0.65)',
-              border: tab === 'for_you' ? '1px solid rgba(201,168,76,0.35)' : '1px solid rgba(201,168,76,0.12)',
-              color: tab === 'for_you' ? '#C9A84C' : '#8A8378',
-              fontFamily: 'Poppins, sans-serif',
-            }}
-          >
-            Para você
-          </button>
-          <button
-            type="button"
-            onClick={() => ensureFeedLoaded('following')}
-            className="px-4 py-2 rounded-xl text-xs uppercase tracking-[0.12em]"
-            style={{
-              background: tab === 'following' ? 'rgba(201,168,76,0.14)' : 'rgba(16,16,16,0.65)',
-              border: tab === 'following' ? '1px solid rgba(201,168,76,0.35)' : '1px solid rgba(201,168,76,0.12)',
-              color: tab === 'following' ? '#C9A84C' : '#8A8378',
-              fontFamily: 'Poppins, sans-serif',
-            }}
-          >
-            Seguindo
-          </button>
-
-          <div className="ml-auto flex items-center gap-2">
-            {isModerator && (
-              <Link
-                href="/comunidade/admin/moderacao"
-                aria-label="Moderação"
-                title="Moderação"
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
-                style={{
-                  background: 'rgba(217,79,92,0.10)',
-                  border: '1px solid rgba(217,79,92,0.28)',
-                  color: '#D94F5C',
-                  fontFamily: 'Poppins, sans-serif',
-                }}
-              >
-                <Shield className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Moderar</span>
-              </Link>
-            )}
-
-            <Link
-              href="/comunidade/buscar"
-              aria-label="Buscar"
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
-              style={{
-                background: 'rgba(16,16,16,0.65)',
-                border: '1px solid rgba(201,168,76,0.12)',
-                color: '#8A8378',
-                fontFamily: 'Poppins, sans-serif',
-              }}
-            >
-              <Search className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Buscar</span>
-            </Link>
-
-            <NotificationsBell />
-
+          <div className="flex items-center gap-1 px-2 md:px-4">
             <button
               type="button"
-              onClick={() => loadFeed(tab, false)}
-              aria-label="Atualizar feed"
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
+              onClick={() => ensureFeedLoaded('for_you')}
+              className="relative px-4 py-3 text-[13px] uppercase tracking-[0.14em]"
               style={{
-                background: 'rgba(16,16,16,0.65)',
-                border: '1px solid rgba(201,168,76,0.12)',
-                color: '#8A8378',
+                color: tab === 'for_you' ? '#F2EDE4' : '#8A8378',
                 fontFamily: 'Poppins, sans-serif',
+                background: 'transparent',
+                border: 'none',
               }}
             >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Atualizar</span>
+              Para você
+              {tab === 'for_you' && (
+                <span
+                  className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full"
+                  style={{ background: '#C9A84C' }}
+                />
+              )}
             </button>
+            <button
+              type="button"
+              onClick={() => ensureFeedLoaded('following')}
+              className="relative px-4 py-3 text-[13px] uppercase tracking-[0.14em]"
+              style={{
+                color: tab === 'following' ? '#F2EDE4' : '#8A8378',
+                fontFamily: 'Poppins, sans-serif',
+                background: 'transparent',
+                border: 'none',
+              }}
+            >
+              Seguindo
+              {tab === 'following' && (
+                <span
+                  className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full"
+                  style={{ background: '#C9A84C' }}
+                />
+              )}
+            </button>
+
+            <div className="ml-auto flex items-center gap-1 pr-2">
+              {isModerator && (
+                <Link
+                  href="/comunidade/admin/moderacao"
+                  aria-label="Moderação"
+                  title="Moderação"
+                  className="p-2 rounded-full"
+                  style={{ color: '#D94F5C' }}
+                >
+                  <Shield className="w-[18px] h-[18px]" strokeWidth={1.5} />
+                </Link>
+              )}
+
+              <Link
+                href="/comunidade/buscar"
+                aria-label="Buscar"
+                className="p-2 rounded-full"
+                style={{ color: '#8A8378' }}
+              >
+                <Search className="w-[18px] h-[18px]" strokeWidth={1.5} />
+              </Link>
+
+              <NotificationsBell />
+
+              <button
+                type="button"
+                onClick={() => loadFeed(tab, false)}
+                aria-label="Atualizar feed"
+                className="p-2 rounded-full"
+                style={{ color: '#8A8378' }}
+              >
+                <RefreshCw className="w-[18px] h-[18px]" strokeWidth={1.5} />
+              </button>
+            </div>
           </div>
+          <div style={{ height: '0.5px', background: 'rgba(242,237,228,0.08)' }} />
         </div>
 
         <TrendingHashtags />
 
+        {!composerOpen && (
+          <button
+            type="button"
+            onClick={() => {
+              setComposerOpen(true)
+              setTimeout(() => composerRef.current?.focus(), 50)
+            }}
+            className="w-full flex items-center gap-3 mb-4 py-3 text-left transition-colors"
+            style={{
+              borderTop: '0.5px solid rgba(242,237,228,0.08)',
+              borderBottom: '0.5px solid rgba(242,237,228,0.08)',
+            }}
+          >
+            <span
+              className="flex-shrink-0 rounded-full overflow-hidden flex items-center justify-center"
+              style={{
+                width: 36,
+                height: 36,
+                background: profile?.profile_image_url ? 'transparent' : 'rgba(201,168,76,0.10)',
+              }}
+            >
+              {profile?.profile_image_url ? (
+                <Image
+                  src={profile.profile_image_url}
+                  alt={profile?.name ?? 'Perfil'}
+                  width={36}
+                  height={36}
+                  sizes="36px"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-xs" style={{ color: '#C9A84C' }}>†</span>
+              )}
+            </span>
+            <span
+              className="flex-1 text-[15px]"
+              style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}
+            >
+              Quais são as novidades?
+            </span>
+            <span
+              className="text-xs uppercase tracking-[0.12em] px-3 py-1.5 rounded-full"
+              style={{
+                color: '#C9A84C',
+                fontFamily: 'Cinzel, serif',
+                border: '1px solid rgba(201,168,76,0.35)',
+              }}
+            >
+              Publicar
+            </span>
+          </button>
+        )}
+
+        {composerOpen && (
         <form
           onSubmit={handleComposerSubmit}
           className="rounded-2xl p-4 md:p-5 mb-6"
@@ -698,9 +794,22 @@ export default function CommunityFeedClient() {
             </span>
 
             <button
+              type="button"
+              onClick={() => setComposerOpen(false)}
+              className="ml-auto inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
+              style={{
+                background: 'transparent',
+                color: '#8A8378',
+                fontFamily: 'Poppins, sans-serif',
+              }}
+            >
+              Cancelar
+            </button>
+
+            <button
               type="submit"
               disabled={!canSubmitComposer}
-              className="ml-auto inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs uppercase tracking-[0.12em] disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs uppercase tracking-[0.12em] disabled:opacity-50"
               style={{
                 background: 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
                 color: '#0A0A0A',
@@ -712,6 +821,7 @@ export default function CommunityFeedClient() {
             </button>
           </div>
         </form>
+        )}
 
         {error && (
           <div
@@ -745,14 +855,20 @@ export default function CommunityFeedClient() {
           </div>
         )}
 
-        {loading && (
-          <div className="py-10 flex justify-center">
-            <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#C9A84C' }} />
+        {loading && items.length === 0 && (
+          <div
+            className="-mx-4 md:-mx-8 rounded-none overflow-hidden"
+            style={{ borderTop: '0.5px solid rgba(242,237,228,0.08)' }}
+          >
+            <VeritasFeedSkeleton count={4} />
           </div>
         )}
 
         {!loading && (
-          <div className="space-y-4">
+          <div
+            className="-mx-4 md:-mx-8"
+            style={{ borderTop: items.length > 0 ? '0.5px solid rgba(242,237,228,0.08)' : undefined }}
+          >
             {items.map((post) => (
               <VeritasCard
                 key={post.id}
@@ -774,15 +890,10 @@ export default function CommunityFeedClient() {
 
             {!loading && items.length === 0 && (
               <div
-                className="rounded-2xl p-8 text-center"
-                style={{
-                  background: 'rgba(16,16,16,0.65)',
-                  border: '1px solid rgba(201,168,76,0.1)',
-                }}
+                className="py-16 text-center"
+                style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}
               >
-                <p style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}>
-                  Ainda não há Veritas neste feed.
-                </p>
+                Ainda não há Veritas neste feed.
               </div>
             )}
 
@@ -793,6 +904,7 @@ export default function CommunityFeedClient() {
             />
           </div>
         )}
+        </PullToRefresh>
       </div>
 
       <QuoteModal

@@ -1,12 +1,13 @@
-/* eslint-disable @next/next/no-img-element */
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRef, useState, useEffect } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import {
   Heart,
   Repeat2,
-  MessageSquare,
+  MessageCircle,
   UserPlus,
   UserMinus,
   Quote,
@@ -16,6 +17,7 @@ import {
   MoreHorizontal,
   Trash2,
   Pencil,
+  Send,
 } from 'lucide-react'
 import CrossIcon from '@/components/icons/CrossIcon'
 import type { VeritasPost } from '@/lib/community/types'
@@ -23,6 +25,7 @@ import { renderVeritasBody } from '@/lib/community/body-renderer'
 import RoleBadge from '@/components/comunidade/RoleBadge'
 import VerifiedBadge from '@/components/comunidade/VerifiedBadge'
 import MediaLightbox from '@/components/comunidade/MediaLightbox'
+import { useHaptic } from '@/hooks/useHaptic'
 
 export interface VeritasCardCallbacks {
   onLike?: (post: VeritasPost) => void
@@ -46,6 +49,14 @@ interface Props extends VeritasCardCallbacks {
   hideInlineReply?: boolean
 }
 
+const TEXT_PRIMARY = '#F2EDE4'
+const TEXT_MUTED = '#8A8378'
+const TEXT_SUBTLE = '#7A7368'
+const GOLD = '#C9A84C'
+const HAIRLINE = 'rgba(242,237,228,0.08)'
+const LIKE_COLOR = '#D94F5C'
+const REPOST_COLOR = '#66BB6A'
+
 function formatRelative(dateIso: string): string {
   const now = Date.now()
   const ts = new Date(dateIso).getTime()
@@ -55,6 +66,57 @@ function formatRelative(dateIso: string): string {
   if (diffHour < 24) return `${diffHour}h`
   const diffDay = Math.floor(diffHour / 24)
   return `${diffDay}d`
+}
+
+interface ActionIconProps {
+  onClick: () => void
+  active?: boolean
+  activeColor?: string
+  count: number
+  label: string
+  fillWhenActive?: boolean
+  children: React.ReactNode
+}
+
+function ActionIcon({
+  onClick,
+  active,
+  activeColor = TEXT_MUTED,
+  count,
+  label,
+  fillWhenActive = false,
+  children,
+}: ActionIconProps) {
+  const reduce = useReducedMotion()
+  return (
+    <motion.button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
+      aria-label={label}
+      whileTap={reduce ? undefined : { scale: 0.88 }}
+      transition={{ duration: 0.12 }}
+      className="inline-flex items-center gap-1.5 px-1 py-1 -mx-1 rounded-md"
+      style={{
+        color: active ? activeColor : TEXT_MUTED,
+        background: 'transparent',
+        border: 'none',
+        fontFamily: 'Poppins, sans-serif',
+        minHeight: 44,
+      }}
+      data-active={active ? 'true' : 'false'}
+      data-fill={active && fillWhenActive ? 'true' : 'false'}
+    >
+      {children}
+      {count > 0 && (
+        <span className="text-[13px] tabular-nums" style={{ color: active ? activeColor : TEXT_MUTED }}>
+          {count}
+        </span>
+      )}
+    </motion.button>
+  )
 }
 
 export default function VeritasCard({
@@ -76,6 +138,7 @@ export default function VeritasCard({
   const [menuOpen, setMenuOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
+  const { pulse } = useHaptic()
 
   useEffect(() => {
     if (!menuOpen) return
@@ -87,6 +150,7 @@ export default function VeritasCard({
     document.addEventListener('mousedown', onClick)
     return () => document.removeEventListener('mousedown', onClick)
   }, [menuOpen])
+
   const profileHref = post.author.public_handle
     ? `/comunidade/@${post.author.public_handle}`
     : post.author.user_number
@@ -95,423 +159,447 @@ export default function VeritasCard({
 
   const isOwnPost = viewerUserId === post.author_user_id
   const isReflection = post.variant === 'reflection'
+  const handleLabel = post.author.public_handle
+    ? `@${post.author.public_handle}`
+    : '#sem-handle'
+
+  const hasMenu =
+    (isOwnPost && (onEdit || onDelete)) ||
+    (!isOwnPost && (onToggleFollow || onToggleMute))
 
   return (
     <article
-      className="rounded-2xl p-5 transition-colors hover:bg-[rgba(20,20,20,0.85)] relative"
+      className="relative veritas-item"
       style={{
+        padding: '16px 20px',
+        borderBottom: `0.5px solid ${HAIRLINE}`,
         background: isReflection
-          ? 'linear-gradient(180deg, rgba(201,168,76,0.06) 0%, rgba(16,16,16,0.78) 35%)'
-          : 'rgba(16,16,16,0.75)',
-        border: isReflection
-          ? '1px solid rgba(233,196,106,0.32)'
-          : '1px solid rgba(201,168,76,0.14)',
-        boxShadow: isReflection ? '0 0 0 1px rgba(201,168,76,0.08) inset' : undefined,
+          ? 'linear-gradient(180deg, rgba(201,168,76,0.05) 0%, rgba(15,14,12,0) 55%)'
+          : 'transparent',
+        borderLeft: isReflection ? `2px solid ${GOLD}` : undefined,
+        contentVisibility: 'auto',
+        containIntrinsicSize: '260px',
       }}
     >
       {isReflection && (
         <div
-          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] uppercase tracking-[0.12em] mb-3"
+          className="inline-flex items-center gap-1.5 mb-2 text-[10px] uppercase tracking-[0.14em]"
           style={{
-            background: 'rgba(233,196,106,0.14)',
-            border: '1px solid rgba(233,196,106,0.5)',
             color: '#E9C46A',
             fontFamily: 'Cinzel, serif',
           }}
         >
-          <BookOpenText className="w-3 h-3" />
+          <BookOpenText className="w-3 h-3" strokeWidth={1.5} />
           Reflexão
         </div>
       )}
-      <div className="flex items-start gap-3 mb-3">
+
+      <div className="flex items-start gap-3">
+        {/* Avatar */}
         <Link
           href={profileHref}
-          className="w-11 h-11 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0"
+          className="flex-shrink-0 relative rounded-full overflow-hidden"
           style={{
-            background: post.author.profile_image_url
-              ? 'transparent'
-              : 'rgba(201,168,76,0.1)',
-            border: '1px solid rgba(201,168,76,0.2)',
-            boxShadow: post.author.verified
-              ? '0 0 0 1.5px rgba(233,196,106,0.5)'
-              : undefined,
+            width: 36,
+            height: 36,
+            background: post.author.profile_image_url ? 'transparent' : 'rgba(201,168,76,0.10)',
+            boxShadow: post.author.verified ? `0 0 0 1.5px rgba(233,196,106,0.55)` : undefined,
           }}
         >
           {post.author.profile_image_url ? (
-            <img
+            <Image
               src={post.author.profile_image_url}
               alt={post.author.name ?? 'Perfil'}
+              width={36}
+              height={36}
+              sizes="36px"
               className="w-full h-full object-cover"
             />
           ) : (
-            <CrossIcon size="sm" />
+            <span className="flex items-center justify-center w-full h-full">
+              <CrossIcon size="sm" />
+            </span>
           )}
         </Link>
 
+        {/* Conteúdo */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Header linha 1: nome, badges, timestamp, menu */}
+          <div className="flex items-center gap-1.5 min-w-0">
             {profileHref !== '#' ? (
               <Link
                 href={profileHref}
-                className="text-sm font-medium hover:underline"
-                style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}
+                className="text-[15px] font-medium hover:underline truncate"
+                style={{ color: TEXT_PRIMARY, fontFamily: 'Poppins, sans-serif' }}
               >
                 {post.author.name ?? 'Membro Veritas'}
               </Link>
             ) : (
-              <span className="text-sm font-medium" style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}>
+              <span
+                className="text-[15px] font-medium truncate"
+                style={{ color: TEXT_PRIMARY, fontFamily: 'Poppins, sans-serif' }}
+              >
                 {post.author.name ?? 'Membro Veritas'}
               </span>
             )}
             {post.author.verified && <VerifiedBadge size={14} />}
             <RoleBadge role={post.author.community_role} size="sm" />
-          </div>
-          <p className="text-xs" style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}>
-            {post.author.public_handle ? `@${post.author.public_handle}` : '#sem-handle'} · {formatRelative(post.created_at)}
-          </p>
-        </div>
-
-        {!isOwnPost && (onToggleFollow || onToggleMute) && (
-          <div className="flex items-center gap-1.5">
-            {onToggleFollow && (
-              <button
-                type="button"
-                onClick={() => onToggleFollow(post.author_user_id, post.viewer.follows_author)}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px]"
-                style={{
-                  background: 'rgba(16,16,16,0.6)',
-                  border: '1px solid rgba(201,168,76,0.15)',
-                  color: post.viewer.follows_author ? '#8A8378' : '#C9A84C',
-                  fontFamily: 'Poppins, sans-serif',
-                }}
-              >
-                {post.viewer.follows_author ? <UserMinus className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
-                {post.viewer.follows_author ? 'Seguindo' : 'Seguir'}
-              </button>
-            )}
-
-            {onToggleMute && (
-              <button
-                type="button"
-                onClick={() => onToggleMute(post.author_user_id, post.viewer.muted_author)}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px]"
-                style={{
-                  background: post.viewer.muted_author ? 'rgba(107,114,128,0.2)' : 'rgba(16,16,16,0.6)',
-                  border: '1px solid rgba(201,168,76,0.15)',
-                  color: post.viewer.muted_author ? '#B6B9C4' : '#8A8378',
-                  fontFamily: 'Poppins, sans-serif',
-                }}
-              >
-                {post.viewer.muted_author ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
-                {post.viewer.muted_author ? 'Silenciado' : 'Silenciar'}
-              </button>
-            )}
-          </div>
-        )}
-
-        {isOwnPost && (onEdit || onDelete) && (
-          <div ref={menuRef} className="relative">
-            <button
-              type="button"
-              onClick={() => setMenuOpen(o => !o)}
-              aria-label="Mais opções"
-              className="p-1.5 rounded-lg"
-              style={{
-                color: '#8A8378',
-                background: menuOpen ? 'rgba(201,168,76,0.10)' : 'transparent',
-              }}
+            <span
+              className="text-[13px] flex-shrink-0"
+              style={{ color: TEXT_SUBTLE, fontFamily: 'Poppins, sans-serif' }}
             >
-              <MoreHorizontal className="w-4 h-4" />
-            </button>
-            {menuOpen && (
-              <div
-                className="absolute right-0 mt-1 w-44 rounded-xl overflow-hidden z-20"
-                style={{
-                  background: 'rgba(16,16,16,0.96)',
-                  border: '1px solid rgba(201,168,76,0.25)',
-                  boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
-                }}
-              >
-                {onEdit && (
-                  <button
-                    type="button"
-                    onClick={() => { setMenuOpen(false); onEdit(post) }}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-xs text-left"
-                    style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}
-                  >
-                    <Pencil className="w-3.5 h-3.5" /> Editar
-                  </button>
-                )}
-                {onDelete && (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setMenuOpen(false)
-                      if (confirm('Apagar este Veritas? Essa ação não pode ser desfeita.')) {
-                        await onDelete(post)
-                      }
-                    }}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-xs text-left"
+              · {formatRelative(post.created_at)}
+            </span>
+
+            {hasMenu && (
+              <div ref={menuRef} className="relative ml-auto">
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen(o => !o)}
+                  aria-label="Mais opções"
+                  className="p-1.5 rounded-full"
+                  style={{
+                    color: TEXT_MUTED,
+                    background: menuOpen ? 'rgba(201,168,76,0.08)' : 'transparent',
+                  }}
+                >
+                  <MoreHorizontal className="w-[18px] h-[18px]" strokeWidth={1.5} />
+                </button>
+                {menuOpen && (
+                  <div
+                    className="absolute right-0 mt-1 w-48 rounded-xl overflow-hidden z-20"
                     style={{
-                      color: '#D94F5C',
-                      fontFamily: 'Poppins, sans-serif',
-                      borderTop: onEdit ? '1px solid rgba(201,168,76,0.08)' : undefined,
+                      background: 'rgba(20,18,14,0.98)',
+                      border: '1px solid rgba(201,168,76,0.22)',
+                      boxShadow: '0 16px 48px rgba(0,0,0,0.55)',
                     }}
                   >
-                    <Trash2 className="w-3.5 h-3.5" /> Apagar
-                  </button>
+                    {!isOwnPost && onToggleFollow && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenuOpen(false)
+                          onToggleFollow(post.author_user_id, post.viewer.follows_author)
+                        }}
+                        className="flex items-center gap-2 w-full px-3 py-2.5 text-[13px] text-left hover:bg-[rgba(201,168,76,0.08)]"
+                        style={{
+                          color: post.viewer.follows_author ? TEXT_MUTED : GOLD,
+                          fontFamily: 'Poppins, sans-serif',
+                        }}
+                      >
+                        {post.viewer.follows_author
+                          ? <UserMinus className="w-4 h-4" strokeWidth={1.5} />
+                          : <UserPlus className="w-4 h-4" strokeWidth={1.5} />
+                        }
+                        {post.viewer.follows_author ? 'Deixar de seguir' : 'Seguir'}
+                      </button>
+                    )}
+                    {!isOwnPost && onToggleMute && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenuOpen(false)
+                          onToggleMute(post.author_user_id, post.viewer.muted_author)
+                        }}
+                        className="flex items-center gap-2 w-full px-3 py-2.5 text-[13px] text-left hover:bg-[rgba(201,168,76,0.08)]"
+                        style={{
+                          color: post.viewer.muted_author ? '#B6B9C4' : TEXT_MUTED,
+                          fontFamily: 'Poppins, sans-serif',
+                          borderTop: onToggleFollow ? '1px solid rgba(201,168,76,0.08)' : undefined,
+                        }}
+                      >
+                        {post.viewer.muted_author
+                          ? <Bell className="w-4 h-4" strokeWidth={1.5} />
+                          : <BellOff className="w-4 h-4" strokeWidth={1.5} />
+                        }
+                        {post.viewer.muted_author ? 'Reativar notificações' : 'Silenciar'}
+                      </button>
+                    )}
+                    {isOwnPost && onEdit && (
+                      <button
+                        type="button"
+                        onClick={() => { setMenuOpen(false); onEdit(post) }}
+                        className="flex items-center gap-2 w-full px-3 py-2.5 text-[13px] text-left hover:bg-[rgba(201,168,76,0.08)]"
+                        style={{ color: TEXT_PRIMARY, fontFamily: 'Poppins, sans-serif' }}
+                      >
+                        <Pencil className="w-4 h-4" strokeWidth={1.5} /> Editar
+                      </button>
+                    )}
+                    {isOwnPost && onDelete && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setMenuOpen(false)
+                          if (confirm('Apagar este Veritas? Essa ação não pode ser desfeita.')) {
+                            await onDelete(post)
+                          }
+                        }}
+                        className="flex items-center gap-2 w-full px-3 py-2.5 text-[13px] text-left hover:bg-[rgba(217,79,92,0.08)]"
+                        style={{
+                          color: LIKE_COLOR,
+                          fontFamily: 'Poppins, sans-serif',
+                          borderTop: onEdit ? '1px solid rgba(201,168,76,0.08)' : undefined,
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" strokeWidth={1.5} /> Apagar
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
           </div>
-        )}
-      </div>
 
-      <Link
-        href={`/comunidade/veritas/${post.id}`}
-        className="block"
-        style={{ color: '#E7DED1', fontFamily: 'Poppins, sans-serif' }}
-      >
-        <p className="text-sm whitespace-pre-line leading-relaxed">
-          {renderVeritasBody(post.body)}
-        </p>
-        {post.edited_at && (
-          <span
-            className="inline-block mt-1 text-[10px]"
-            style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
-            title={new Date(post.edited_at).toLocaleString('pt-BR')}
+          {/* Handle secundário */}
+          <p
+            className="text-[13px] truncate -mt-0.5"
+            style={{ color: TEXT_SUBTLE, fontFamily: 'Poppins, sans-serif' }}
           >
-            editado {formatRelative(post.edited_at)}
-          </span>
-        )}
-      </Link>
+            {handleLabel}
+          </p>
 
-      {post.parent && (post.kind === 'quote' || post.kind === 'repost') && (
-        <Link
-          href={`/comunidade/veritas/${post.parent.id}`}
-          className="block mt-3 rounded-xl p-3 transition-colors hover:bg-[rgba(10,10,10,0.8)]"
-          style={{
-            background: 'rgba(10,10,10,0.55)',
-            border: '1px solid rgba(201,168,76,0.14)',
-          }}
-        >
-          <div
-            className="flex items-center gap-2 mb-1.5 text-xs"
-            style={{ fontFamily: 'Poppins, sans-serif' }}
+          {/* Corpo */}
+          <Link
+            href={`/comunidade/veritas/${post.id}`}
+            className="block mt-1.5"
+            style={{ color: TEXT_PRIMARY, fontFamily: 'Poppins, sans-serif' }}
           >
-            <div
-              className="w-6 h-6 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0"
+            <p className="text-[15px] leading-[22px] whitespace-pre-line">
+              {renderVeritasBody(post.body)}
+            </p>
+            {post.edited_at && (
+              <span
+                className="inline-block mt-1 text-[11px]"
+                style={{ color: TEXT_SUBTLE }}
+                title={new Date(post.edited_at).toLocaleString('pt-BR')}
+              >
+                editado {formatRelative(post.edited_at)}
+              </span>
+            )}
+          </Link>
+
+          {/* Quoted/reposted parent — nested compacto */}
+          {post.parent && (post.kind === 'quote' || post.kind === 'repost') && (
+            <Link
+              href={`/comunidade/veritas/${post.parent.id}`}
+              className="block mt-3 rounded-xl p-3 transition-colors hover:bg-[rgba(255,255,255,0.02)]"
               style={{
-                background: post.parent.author.profile_image_url
-                  ? 'transparent'
-                  : 'rgba(201,168,76,0.1)',
-                border: '1px solid rgba(201,168,76,0.2)',
+                border: '1px solid rgba(242,237,228,0.10)',
               }}
             >
-              {post.parent.author.profile_image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={post.parent.author.profile_image_url}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <CrossIcon size="xs" />
-              )}
-            </div>
-            <span style={{ color: '#F2EDE4', fontWeight: 500 }}>
-              {post.parent.author.name ?? 'Membro'}
-            </span>
-            {post.parent.author.verified && <VerifiedBadge size={12} />}
-            <span style={{ color: '#7A7368' }}>
-              {post.parent.author.public_handle
-                ? `@${post.parent.author.public_handle}`
-                : '#sem-handle'}
-              {' · '}{formatRelative(post.parent.created_at)}
-            </span>
-          </div>
-          <p
-            className="text-sm whitespace-pre-line leading-relaxed line-clamp-6"
-            style={{ color: '#B8B0A2', fontFamily: 'Poppins, sans-serif' }}
-          >
-            {renderVeritasBody(post.parent.body)}
-          </p>
-          {post.parent.media.length > 0 && (
-            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {post.parent.media.slice(0, 2).map(media => (
+              <div
+                className="flex items-center gap-2 mb-1 text-[13px]"
+                style={{ fontFamily: 'Poppins, sans-serif' }}
+              >
                 <div
-                  key={media.id}
-                  className="rounded-lg overflow-hidden"
-                  style={{ border: '1px solid rgba(201,168,76,0.12)' }}
+                  className="rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
+                  style={{
+                    width: 20,
+                    height: 20,
+                    background: post.parent.author.profile_image_url
+                      ? 'transparent'
+                      : 'rgba(201,168,76,0.10)',
+                  }}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={media.variants.feed}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                    className="w-full h-32 object-cover"
-                  />
+                  {post.parent.author.profile_image_url ? (
+                    <Image
+                      src={post.parent.author.profile_image_url}
+                      alt=""
+                      width={20}
+                      height={20}
+                      sizes="20px"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <CrossIcon size="xs" />
+                  )}
                 </div>
+                <span style={{ color: TEXT_PRIMARY, fontWeight: 500 }}>
+                  {post.parent.author.name ?? 'Membro'}
+                </span>
+                {post.parent.author.verified && <VerifiedBadge size={12} />}
+                <span style={{ color: TEXT_SUBTLE }}>
+                  {post.parent.author.public_handle ? `@${post.parent.author.public_handle}` : '#sem-handle'}
+                  {' · '}{formatRelative(post.parent.created_at)}
+                </span>
+              </div>
+              <p
+                className="text-[14px] leading-[20px] whitespace-pre-line line-clamp-6"
+                style={{ color: '#B8B0A2', fontFamily: 'Poppins, sans-serif' }}
+              >
+                {renderVeritasBody(post.parent.body)}
+              </p>
+              {post.parent.media.length > 0 && (
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {post.parent.media.slice(0, 2).map(media => (
+                    <div
+                      key={media.id}
+                      className="rounded-lg overflow-hidden"
+                      style={{ aspectRatio: '16 / 10', position: 'relative' }}
+                    >
+                      <Image
+                        src={media.variants.thumb}
+                        alt=""
+                        fill
+                        sizes="(max-width: 768px) 40vw, 220px"
+                        className="object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Link>
+          )}
+
+          {/* Mídia principal */}
+          {post.media.length > 0 && (
+            <div
+              className={`mt-3 grid gap-2 ${post.media.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}
+            >
+              {post.media.map((media, idx) => (
+                <button
+                  key={media.id}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setLightboxIndex(idx)
+                  }}
+                  className="rounded-xl overflow-hidden block relative"
+                  style={{
+                    aspectRatio: post.media.length === 1 ? '4 / 3' : '1 / 1',
+                    border: '1px solid rgba(242,237,228,0.06)',
+                  }}
+                  aria-label="Abrir mídia"
+                >
+                  <Image
+                    src={media.variants.feed}
+                    alt="Mídia do Veritas"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 480px"
+                    className="object-cover hover:opacity-90 transition-opacity cursor-zoom-in"
+                  />
+                </button>
               ))}
             </div>
           )}
-        </Link>
-      )}
 
-      {post.media.length > 0 && (
-        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {post.media.map((media, idx) => (
-            <button
-              key={media.id}
-              type="button"
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                setLightboxIndex(idx)
-              }}
-              className="rounded-xl overflow-hidden block"
-              style={{ border: '1px solid rgba(201,168,76,0.15)' }}
-            >
-              <img
-                src={media.variants.feed}
-                alt="Mídia do Veritas"
-                loading="lazy"
-                decoding="async"
-                className="w-full h-56 object-cover hover:opacity-90 transition-opacity cursor-zoom-in"
-              />
-            </button>
-          ))}
-        </div>
-      )}
-
-      {lightboxIndex !== null && (
-        <MediaLightbox
-          items={post.media}
-          startIndex={lightboxIndex}
-          onClose={() => setLightboxIndex(null)}
-        />
-      )}
-
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        {onLike && (
-          <button
-            type="button"
-            onClick={() => onLike(post)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-transform active:scale-95"
-            style={{
-              background: post.viewer.liked ? 'rgba(217,79,92,0.14)' : 'rgba(16,16,16,0.6)',
-              border: '1px solid rgba(201,168,76,0.15)',
-              color: post.viewer.liked ? '#D94F5C' : '#8A8378',
-              fontFamily: 'Poppins, sans-serif',
-            }}
-          >
-            <Heart className="w-3.5 h-3.5" fill={post.viewer.liked ? '#D94F5C' : 'none'} /> {post.metrics.like_count}
-          </button>
-        )}
-
-        {onRepost && (
-          <button
-            type="button"
-            onClick={() => onRepost(post)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-transform active:scale-95"
-            style={{
-              background: post.viewer.reposted ? 'rgba(102,187,106,0.14)' : 'rgba(16,16,16,0.6)',
-              border: '1px solid rgba(201,168,76,0.15)',
-              color: post.viewer.reposted ? '#66BB6A' : '#8A8378',
-              fontFamily: 'Poppins, sans-serif',
-            }}
-          >
-            <Repeat2 className="w-3.5 h-3.5" /> {post.metrics.repost_count}
-          </button>
-        )}
-
-        {onQuote && (
-          <button
-            type="button"
-            onClick={() => onQuote(post)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs"
-            style={{
-              background: 'rgba(16,16,16,0.6)',
-              border: '1px solid rgba(201,168,76,0.15)',
-              color: '#8A8378',
-              fontFamily: 'Poppins, sans-serif',
-            }}
-          >
-            <Quote className="w-3.5 h-3.5" /> {post.metrics.quote_count}
-          </button>
-        )}
-
-        {onShareCross && (
-          <button
-            type="button"
-            onClick={() => onShareCross(post)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs"
-            style={{
-              background: post.viewer.shared_cross ? 'rgba(201,168,76,0.14)' : 'rgba(16,16,16,0.6)',
-              border: '1px solid rgba(201,168,76,0.2)',
-              color: '#C9A84C',
-              fontFamily: 'Poppins, sans-serif',
-            }}
-          >
-            <CrossIcon size="xs" /> {post.metrics.share_cross_count}
-          </button>
-        )}
-      </div>
-
-      {post.metrics.reply_count > 0 && (
-        <div className="mt-3">
-          <Link
-            href={`/comunidade/veritas/${post.id}`}
-            className="inline-flex items-center gap-1.5 text-xs hover:underline"
-            style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-            Ver {post.metrics.reply_count} {post.metrics.reply_count === 1 ? 'resposta' : 'respostas'}
-          </Link>
-        </div>
-      )}
-
-      {!hideInlineReply && onReplySubmit && onReplyDraftChange && (
-        <div className="mt-3">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4" style={{ color: '#8A8378' }} />
-            <input
-              type="text"
-              value={replyDraft}
-              onChange={(e) => onReplyDraftChange(e.target.value)}
-              placeholder="Responder..."
-              className="flex-1 px-3 py-2 rounded-lg text-xs"
-              style={{
-                background: 'rgba(10,10,10,0.65)',
-                border: '1px solid rgba(201,168,76,0.12)',
-                color: '#F2EDE4',
-                fontFamily: 'Poppins, sans-serif',
-                outline: 'none',
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey && replyDraft.trim()) {
-                  e.preventDefault()
-                  void onReplySubmit(post, replyDraft.trim())
-                }
-              }}
+          {lightboxIndex !== null && (
+            <MediaLightbox
+              items={post.media}
+              startIndex={lightboxIndex}
+              onClose={() => setLightboxIndex(null)}
             />
-            <button
-              type="button"
-              onClick={() => replyDraft.trim() && onReplySubmit(post, replyDraft.trim())}
-              className="px-3 py-2 rounded-lg text-xs"
-              style={{
-                background: 'rgba(201,168,76,0.14)',
-                border: '1px solid rgba(201,168,76,0.25)',
-                color: '#C9A84C',
-                fontFamily: 'Poppins, sans-serif',
-              }}
-            >
-              Responder
-            </button>
+          )}
+
+          {/* Barra de ações */}
+          <div className="mt-3 flex items-center gap-6 -ml-1">
+            {onReplySubmit && post.metrics.reply_count >= 0 && (
+              <Link
+                href={`/comunidade/veritas/${post.id}`}
+                className="inline-flex items-center gap-1.5 text-[13px]"
+                style={{ color: TEXT_MUTED, fontFamily: 'Poppins, sans-serif', minHeight: 44 }}
+                aria-label="Responder"
+              >
+                <MessageCircle className="w-5 h-5" strokeWidth={1.5} />
+                {post.metrics.reply_count > 0 && (
+                  <span className="tabular-nums">{post.metrics.reply_count}</span>
+                )}
+              </Link>
+            )}
+
+            {onRepost && (
+              <ActionIcon
+                onClick={() => { pulse('light'); onRepost(post) }}
+                active={post.viewer.reposted}
+                activeColor={REPOST_COLOR}
+                count={post.metrics.repost_count}
+                label="Repostar"
+              >
+                <Repeat2
+                  className="w-5 h-5"
+                  strokeWidth={post.viewer.reposted ? 2 : 1.5}
+                />
+              </ActionIcon>
+            )}
+
+            {onLike && (
+              <ActionIcon
+                onClick={() => { pulse('light'); onLike(post) }}
+                active={post.viewer.liked}
+                activeColor={LIKE_COLOR}
+                count={post.metrics.like_count}
+                label="Curtir"
+                fillWhenActive
+              >
+                <Heart
+                  className="w-5 h-5"
+                  strokeWidth={1.5}
+                  fill={post.viewer.liked ? LIKE_COLOR : 'none'}
+                />
+              </ActionIcon>
+            )}
+
+            {onQuote && (
+              <ActionIcon
+                onClick={() => onQuote(post)}
+                count={post.metrics.quote_count}
+                label="Citar"
+              >
+                <Quote className="w-5 h-5" strokeWidth={1.5} />
+              </ActionIcon>
+            )}
+
+            {onShareCross && (
+              <ActionIcon
+                onClick={() => onShareCross(post)}
+                active={post.viewer.shared_cross}
+                activeColor={GOLD}
+                count={post.metrics.share_cross_count}
+                label="Compartilhar"
+              >
+                <Send className="w-5 h-5" strokeWidth={1.5} />
+              </ActionIcon>
+            )}
           </div>
+
+          {/* Resposta inline (feed apenas) */}
+          {!hideInlineReply && onReplySubmit && onReplyDraftChange && (
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                type="text"
+                value={replyDraft}
+                onChange={(e) => onReplyDraftChange(e.target.value)}
+                placeholder="Responder..."
+                className="flex-1 bg-transparent text-[14px] py-2"
+                style={{
+                  color: TEXT_PRIMARY,
+                  fontFamily: 'Poppins, sans-serif',
+                  outline: 'none',
+                  borderBottom: `1px solid ${HAIRLINE}`,
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey && replyDraft.trim()) {
+                    e.preventDefault()
+                    void onReplySubmit(post, replyDraft.trim())
+                  }
+                }}
+              />
+              {replyDraft.trim() && (
+                <button
+                  type="button"
+                  onClick={() => onReplySubmit(post, replyDraft.trim())}
+                  className="p-2 rounded-full"
+                  aria-label="Enviar resposta"
+                  style={{ color: GOLD }}
+                >
+                  <Send className="w-[18px] h-[18px]" strokeWidth={1.5} />
+                </button>
+              )}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </article>
   )
 }

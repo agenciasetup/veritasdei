@@ -91,6 +91,18 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  images: {
+    // R2 já serve variantes prontas (thumb/feed/detail); usamos loader
+    // custom pass-through pra evitar double-processing do otimizador.
+    loader: 'custom',
+    loaderFile: './src/lib/image-loader.ts',
+    remotePatterns: [
+      { protocol: 'https', hostname: 'media.veritasdei.com.br' },
+      { protocol: 'https', hostname: '*.r2.cloudflarestorage.com' },
+      // Supabase Storage (avatar/cover do profile_image_url).
+      { protocol: 'https', hostname: '*.supabase.co' },
+    ],
+  },
   experimental: {
     // Tree-shaking agressivo dos imports nomeados destas libs
     // (reduz bytes quando só usamos um subset).
