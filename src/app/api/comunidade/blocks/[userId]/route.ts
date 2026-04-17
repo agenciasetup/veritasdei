@@ -22,10 +22,16 @@ export async function POST(
 
   const { error } = await supabase
     .from('vd_blocks')
-    .upsert({
-      blocker_user_id: user.id,
-      blocked_user_id: userId,
-    })
+    .upsert(
+      {
+        blocker_user_id: user.id,
+        blocked_user_id: userId,
+      },
+      {
+        onConflict: 'blocker_user_id,blocked_user_id',
+        ignoreDuplicates: true,
+      },
+    )
 
   if (error) {
     return NextResponse.json({ error: 'block_failed', detail: error.message }, { status: 500 })

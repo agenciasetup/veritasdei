@@ -22,10 +22,16 @@ export async function POST(
 
   const { error } = await supabase
     .from('vd_mutes')
-    .upsert({
-      muter_user_id: user.id,
-      muted_user_id: userId,
-    })
+    .upsert(
+      {
+        muter_user_id: user.id,
+        muted_user_id: userId,
+      },
+      {
+        onConflict: 'muter_user_id,muted_user_id',
+        ignoreDuplicates: true,
+      },
+    )
 
   if (error) {
     return NextResponse.json({ error: 'mute_failed', detail: error.message }, { status: 500 })
