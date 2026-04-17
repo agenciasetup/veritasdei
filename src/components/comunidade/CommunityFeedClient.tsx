@@ -11,6 +11,7 @@ import { share as platformShare } from '@/lib/platform'
 import type { FeedResponse, VeritasPost } from '@/lib/community/types'
 import { useAuth } from '@/contexts/AuthContext'
 import VeritasCard from '@/components/comunidade/VeritasCard'
+import QuoteModal from '@/components/comunidade/QuoteModal'
 
 interface PresignItem {
   upload_url: string
@@ -79,6 +80,7 @@ export default function CommunityFeedClient() {
   const [composerAttachments, setComposerAttachments] = useState<ComposerAttachment[]>([])
   const [submittingPost, setSubmittingPost] = useState(false)
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({})
+  const [quoteTarget, setQuoteTarget] = useState<VeritasPost | null>(null)
 
   const canSubmitComposer = useMemo(() => {
     return composerBody.trim().length > 0 && !submittingPost
@@ -231,41 +233,54 @@ export default function CommunityFeedClient() {
   }
 
   async function toggleLike(post: VeritasPost) {
-    const method = post.viewer.liked ? 'DELETE' : 'POST'
-    const res = await fetch(`/api/comunidade/veritas/${post.id}/like`, { method })
-    if (!res.ok) return
+    // Optimistic: atualiza estado primeiro, chama API, reverte em erro.
+    const willLike = !post.viewer.liked
+    setItems(prev => prev.map(item => (
+      item.id === post.id
+        ? {
+            ...item,
+            viewer: { ...item.viewer, liked: willLike },
+            metrics: {
+              ...item.metrics,
+              like_count: Math.max(0, item.metrics.like_count + (willLike ? 1 : -1)),
+            },
+          }
+        : item
+    )))
 
-    setItems(prev => prev.map(item => {
-      if (item.id !== post.id) return item
-      const liked = !item.viewer.liked
-      return {
-        ...item,
-        viewer: { ...item.viewer, liked },
-        metrics: {
-          ...item.metrics,
-          like_count: Math.max(0, item.metrics.like_count + (liked ? 1 : -1)),
-        },
-      }
-    }))
+    const res = await fetch(`/api/comunidade/veritas/${post.id}/like`, {
+      method: willLike ? 'POST' : 'DELETE',
+    })
+
+    if (!res.ok) {
+      setItems(prev => prev.map(item => item.id === post.id ? post : item))
+      setError('Falha ao curtir. Tente novamente.')
+    }
   }
 
   async function toggleRepost(post: VeritasPost) {
-    const method = post.viewer.reposted ? 'DELETE' : 'POST'
-    const res = await fetch(`/api/comunidade/veritas/${post.id}/repost`, { method })
-    if (!res.ok) return
+    const willRepost = !post.viewer.reposted
+    setItems(prev => prev.map(item => (
+      item.id === post.id
+        ? {
+            ...item,
+            viewer: { ...item.viewer, reposted: willRepost },
+            metrics: {
+              ...item.metrics,
+              repost_count: Math.max(0, item.metrics.repost_count + (willRepost ? 1 : -1)),
+            },
+          }
+        : item
+    )))
 
-    setItems(prev => prev.map(item => {
-      if (item.id !== post.id) return item
-      const reposted = !item.viewer.reposted
-      return {
-        ...item,
-        viewer: { ...item.viewer, reposted },
-        metrics: {
-          ...item.metrics,
-          repost_count: Math.max(0, item.metrics.repost_count + (reposted ? 1 : -1)),
-        },
-      }
-    }))
+    const res = await fetch(`/api/comunidade/veritas/${post.id}/repost`, {
+      method: willRepost ? 'POST' : 'DELETE',
+    })
+
+    if (!res.ok) {
+      setItems(prev => prev.map(item => item.id === post.id ? post : item))
+      setError('Falha ao republicar. Tente novamente.')
+    }
   }
 
   async function handleShareCross(post: VeritasPost) {
@@ -366,32 +381,32 @@ export default function CommunityFeedClient() {
     )))
   }
 
-  async function createQuote(post: VeritasPost) {
-    const text = window.prompt('Escreva seu comentário para citar este Veritas:')?.trim()
-    if (!text) return
+  function openQuoteModal(post: VeritasPost) {
+    setQuoteTarget(post)
+  }
 
-    try {
-      const quote = await createVeritas({
-        kind: 'quote',
-        body: text,
-        parent_post_id: post.id,
-      })
+  async function handleQuoteSubmit(body: string) {
+    const target = quoteTarget
+    if (!target) return
 
-      setItems(prev => [quote, ...prev])
-      setItems(prev => prev.map(item => (
-        item.id === post.id
-          ? {
-              ...item,
-              metrics: {
-                ...item.metrics,
-                quote_count: item.metrics.quote_count + 1,
-              },
-            }
-          : item
-      )))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao citar Veritas.')
-    }
+    const quote = await createVeritas({
+      kind: 'quote',
+      body,
+      parent_post_id: target.id,
+    })
+
+    setItems(prev => [quote, ...prev])
+    setItems(prev => prev.map(item => (
+      item.id === target.id
+        ? {
+            ...item,
+            metrics: {
+              ...item.metrics,
+              quote_count: item.metrics.quote_count + 1,
+            },
+          }
+        : item
+    )))
   }
 
   const onInit = items.length === 0 && !loading
@@ -597,7 +612,7 @@ export default function CommunityFeedClient() {
                 onReplyDraftChange={(value) => setReplyDrafts(prev => ({ ...prev, [post.id]: value }))}
                 onLike={toggleLike}
                 onRepost={toggleRepost}
-                onQuote={createQuote}
+                onQuote={openQuoteModal}
                 onShareCross={handleShareCross}
                 onToggleFollow={toggleFollow}
                 onToggleMute={toggleMute}
@@ -641,6 +656,13 @@ export default function CommunityFeedClient() {
           </div>
         )}
       </div>
+
+      <QuoteModal
+        post={quoteTarget}
+        open={quoteTarget !== null}
+        onClose={() => setQuoteTarget(null)}
+        onSubmit={handleQuoteSubmit}
+      />
     </div>
   )
 }
