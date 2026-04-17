@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import PublicProfileView from '@/components/comunidade/PublicProfileView'
 import { getCommunityFlags } from '@/lib/community/config'
 import { getPublicProfileSnapshot } from '@/lib/community/public-profile'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 
 interface PageProps {
   params: Promise<{ user_number: string }>
@@ -66,5 +67,8 @@ export default async function CommunityPublicNumberPage({ params }: PageProps) {
     redirect(`/comunidade/@${snapshot.profile.public_handle}`)
   }
 
-  return <PublicProfileView snapshot={snapshot} />
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  return <PublicProfileView snapshot={snapshot} viewerUserId={user?.id ?? null} />
 }

@@ -61,6 +61,16 @@ export interface VeritasPost {
   }
 }
 
+export type CommunityRole =
+  | 'leigo'
+  | 'diacono'
+  | 'padre'
+  | 'bispo'
+  | 'religioso'
+  | 'artista'
+  | 'moderator'
+  | 'admin'
+
 export interface PublicProfileSnapshot {
   profile: {
     id: string
@@ -68,13 +78,22 @@ export interface PublicProfileSnapshot {
     user_number: number | null
     name: string | null
     vocacao: Profile['vocacao'] | null
+    community_role: CommunityRole
     verified: boolean
+    verified_at: string | null
     profile_image_url: string | null
+    cover_image_url: string | null
+    bio_short: string | null
+    external_links: Array<{ label: string; url: string }>
     cidade: string | null
     estado: string | null
     paroquia: string | null
     diocese: string | null
     comunidade: string | null
+    follower_count: number
+    following_count: number
+    veritas_count: number
+    created_at: string
   } | null
   veritas: Array<{
     id: string
