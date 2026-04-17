@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/rate-limit'
 import { WIPE_CONFIRM_HEADER, WIPE_CONFIRM_VALUE } from '@/lib/api/seed-wipe'
+import { logAdminAction, getRequestMeta } from '@/lib/api/audit'
 
 // Import all hardcoded data
 import { DOGMA_CATEGORIES } from '@/features/dogmas/data'
@@ -64,12 +65,21 @@ export async function POST(request: NextRequest) {
       const confirmErr = checkWipeConfirmation(request)
       if (confirmErr) return NextResponse.json({ error: confirmErr }, { status: 428 })
 
-      // Audit log: registra quem disparou o wipe. Sem tabela de auditoria
-      // ainda (TODO sprint futuro), então console.warn aparece nos logs
-      // do Vercel, pesquisável.
+      // Audit log persistente (Sprint 14) — admin_audit_log na Supabase,
+      // queryable por SQL. Também mantemos o console.warn para
+      // visibilidade imediata nos logs do Vercel.
+      const meta = getRequestMeta(request)
       console.warn(
         `[admin-seed] DESTRUCTIVE WIPE of content_groups/* initiated by user_id=${user.id} email=${user.email ?? '?'}`
       )
+      await logAdminAction({
+        actorId: user.id,
+        actorEmail: user.email ?? null,
+        action: 'seed.wipe_content',
+        target: 'content_groups,content_topics,content_subtopics,content_items',
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+      })
 
       // Delete all content in reverse order (items → subtopics → topics → groups)
       await supabase.from('content_items').delete().neq('id', '00000000-0000-0000-0000-000000000000')
@@ -333,6 +343,15 @@ CREATE POLICY "Admin manage trail_steps" ON trail_steps FOR ALL USING (
     console.warn(
       `[admin-seed] DESTRUCTIVE WIPE of trails/trail_steps initiated by user_id=${userId} email=${userEmail ?? '?'}`
     )
+    const meta = getRequestMeta(request)
+    await logAdminAction({
+      actorId: userId,
+      actorEmail: userEmail,
+      action: 'seed.wipe_trails',
+      target: 'trails,trail_steps',
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+    })
     // Delete existing
     await supabase.from('trail_steps').delete().neq('id', '00000000-0000-0000-0000-000000000000')
     await supabase.from('trails').delete().neq('id', '00000000-0000-0000-0000-000000000000')
