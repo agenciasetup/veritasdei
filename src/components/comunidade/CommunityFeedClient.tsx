@@ -18,6 +18,7 @@ import QuoteModal from '@/components/comunidade/QuoteModal'
 import TrendingHashtags from '@/components/comunidade/TrendingHashtags'
 import InfiniteScrollSentinel from '@/components/comunidade/InfiniteScrollSentinel'
 import MentionAutocomplete from '@/components/comunidade/MentionAutocomplete'
+import NotificationsBell from '@/components/comunidade/NotificationsBell'
 
 interface PresignItem {
   upload_url: string
@@ -494,32 +495,40 @@ export default function CommunityFeedClient() {
             Seguindo
           </button>
 
-          <Link
-            href="/comunidade/buscar"
-            className="ml-auto inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
-            style={{
-              background: 'rgba(16,16,16,0.65)',
-              border: '1px solid rgba(201,168,76,0.12)',
-              color: '#8A8378',
-              fontFamily: 'Poppins, sans-serif',
-            }}
-          >
-            <Search className="w-3.5 h-3.5" /> Buscar
-          </Link>
+          <div className="ml-auto flex items-center gap-2">
+            <Link
+              href="/comunidade/buscar"
+              aria-label="Buscar"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
+              style={{
+                background: 'rgba(16,16,16,0.65)',
+                border: '1px solid rgba(201,168,76,0.12)',
+                color: '#8A8378',
+                fontFamily: 'Poppins, sans-serif',
+              }}
+            >
+              <Search className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Buscar</span>
+            </Link>
 
-          <button
-            type="button"
-            onClick={() => loadFeed(tab, false)}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
-            style={{
-              background: 'rgba(16,16,16,0.65)',
-              border: '1px solid rgba(201,168,76,0.12)',
-              color: '#8A8378',
-              fontFamily: 'Poppins, sans-serif',
-            }}
-          >
-            <RefreshCw className="w-3.5 h-3.5" /> Atualizar
-          </button>
+            <NotificationsBell />
+
+            <button
+              type="button"
+              onClick={() => loadFeed(tab, false)}
+              aria-label="Atualizar feed"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
+              style={{
+                background: 'rgba(16,16,16,0.65)',
+                border: '1px solid rgba(201,168,76,0.12)',
+                color: '#8A8378',
+                fontFamily: 'Poppins, sans-serif',
+              }}
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Atualizar</span>
+            </button>
+          </div>
         </div>
 
         <TrendingHashtags />
