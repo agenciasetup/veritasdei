@@ -81,11 +81,18 @@ export default async function CommunityPublicNumberPage({ params }: PageProps) {
     viewerFollows = Boolean(follow)
   }
 
+  const { data: privacy } = await supabase
+    .from('profiles')
+    .select('show_likes_public')
+    .eq('id', snapshot.profile.id)
+    .maybeSingle()
+
   return (
     <PublicProfileView
       snapshot={snapshot}
       viewerUserId={user?.id ?? null}
       viewerFollows={viewerFollows}
+      showLikesPublic={Boolean(privacy?.show_likes_public)}
     />
   )
 }

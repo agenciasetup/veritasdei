@@ -109,6 +109,7 @@ export interface PublicProfileSnapshot {
     following_count: number
     veritas_count: number
     created_at: string
+    show_likes_public?: boolean
   } | null
   veritas: Array<{
     id: string
