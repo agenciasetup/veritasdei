@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import VeritasCard from '@/components/comunidade/VeritasCard'
 import QuoteModal from '@/components/comunidade/QuoteModal'
 import TrendingHashtags from '@/components/comunidade/TrendingHashtags'
+import InfiniteScrollSentinel from '@/components/comunidade/InfiniteScrollSentinel'
 
 interface PresignItem {
   upload_url: string
@@ -416,7 +417,13 @@ export default function CommunityFeedClient() {
   const onInit = items.length === 0 && !loading
 
   return (
-    <div className="min-h-screen px-4 md:px-8 py-8 relative">
+    <div
+      className="min-h-screen px-4 md:px-8 py-8 relative"
+      style={{
+        paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))',
+        paddingTop: 'calc(2rem + env(safe-area-inset-top, 0px))',
+      }}
+    >
       <div className="bg-glow" />
 
       <div className="max-w-3xl mx-auto relative z-10">
@@ -451,7 +458,13 @@ export default function CommunityFeedClient() {
           </Link>
         </header>
 
-        <div className="flex items-center gap-2 mb-4">
+        <div
+          className="flex items-center gap-2 mb-4 sticky top-0 z-20 py-2 -mx-4 px-4 md:-mx-8 md:px-8"
+          style={{
+            background: 'linear-gradient(180deg, rgba(10,10,10,0.95) 0%, rgba(10,10,10,0.88) 100%)',
+            backdropFilter: 'blur(8px)',
+          }}
+        >
           <button
             type="button"
             onClick={() => ensureFeedLoaded('for_you')}
@@ -669,25 +682,11 @@ export default function CommunityFeedClient() {
               </div>
             )}
 
-            {cursor && (
-              <div className="flex justify-center pt-2">
-                <button
-                  type="button"
-                  onClick={() => loadFeed(tab, true)}
-                  disabled={loadingMore}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs"
-                  style={{
-                    background: 'rgba(16,16,16,0.65)',
-                    border: '1px solid rgba(201,168,76,0.15)',
-                    color: '#C9A84C',
-                    fontFamily: 'Poppins, sans-serif',
-                  }}
-                >
-                  {loadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                  Carregar mais
-                </button>
-              </div>
-            )}
+            <InfiniteScrollSentinel
+              onVisible={() => loadFeed(tab, true)}
+              loading={loadingMore}
+              hasMore={Boolean(cursor)}
+            />
           </div>
         )}
       </div>
