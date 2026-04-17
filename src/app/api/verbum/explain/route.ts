@@ -3,6 +3,11 @@ import { openai } from '@/lib/openai/client'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/rate-limit'
 import { checkAndConsumeAiBudget } from '@/lib/ai/budget'
+import {
+  wrapUserInput,
+  detectPromptInjection,
+  SYSTEM_INJECTION_GUARD,
+} from '@/lib/ai/prompt-defense'
 import { VERBUM_SYSTEM_PROMPT } from '@/verbum/prompts/theologicalPrompts'
 
 export async function POST(request: NextRequest) {
@@ -41,11 +46,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Prompt muito longo. Máximo 5000 caracteres.' }, { status: 400 })
     }
 
+    // Heurística pré-modelo: se o prompt tem padrão óbvio de jailbreak,
+    // loga e rejeita antes de gastar token.
+    const injectionCheck = detectPromptInjection(prompt)
+    if (injectionCheck.suspicious) {
+      console.warn(
+        `[verbum/explain] Suspicious prompt rejected — user=${user.id} pattern=${injectionCheck.matchedPattern}`
+      )
+      return NextResponse.json(
+        { error: 'Pergunta não reconhecida. Faça uma pergunta sobre teologia ou espiritualidade católica.' },
+        { status: 400 },
+      )
+    }
+
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
-        { role: 'system', content: VERBUM_SYSTEM_PROMPT },
-        { role: 'user', content: prompt },
+        // System = guard primeiro (prioridade máxima no contexto), depois
+        // o prompt teológico. Input do usuário isolado em tags raras.
+        { role: 'system', content: `${SYSTEM_INJECTION_GUARD}\n\n${VERBUM_SYSTEM_PROMPT}` },
+        { role: 'user', content: wrapUserInput(prompt) },
       ],
       temperature: 0.3,
       max_tokens: 1500,

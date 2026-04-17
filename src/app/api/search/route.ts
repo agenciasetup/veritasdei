@@ -3,6 +3,7 @@ import { searchCorpus } from '@/lib/rag/search'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/rate-limit'
 import { checkAndConsumeAiBudget } from '@/lib/ai/budget'
+import { detectPromptInjection } from '@/lib/ai/prompt-defense'
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,6 +40,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: 'Pergunta muito longa. Máximo 500 caracteres.' },
         { status: 400 }
+      )
+    }
+
+    const injectionCheck = detectPromptInjection(query)
+    if (injectionCheck.suspicious) {
+      console.warn(
+        `[search] Suspicious query rejected — user=${user.id} pattern=${injectionCheck.matchedPattern}`
+      )
+      return NextResponse.json(
+        { error: 'Pergunta não reconhecida. Faça uma pergunta sobre teologia ou espiritualidade católica.' },
+        { status: 400 },
       )
     }
 
