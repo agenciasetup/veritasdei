@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
   // 3 seeds por hora por admin — nenhum fluxo legítimo precisa de mais.
   // Protege contra scripts em loop que possam ter sido injetados.
-  if (!rateLimit(`admin-seed:${user.id}`, 3, 60 * 60_000)) {
+  if (!(await rateLimit(`admin-seed:${user.id}`, 3, 60 * 60_000))) {
     return NextResponse.json({ error: 'Muitas requisições de seed. Aguarde uma hora.' }, { status: 429 })
   }
 

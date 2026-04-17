@@ -334,7 +334,7 @@ async function handleReflection(req: NextRequest, payload?: ReflectionPayload) {
     }
 
     const requesterIp = getRequesterIp(req)
-    if (!rateLimit(`liturgia-reflexao:${requesterIp}`, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS)) {
+    if (!(await rateLimit(`liturgia-reflexao:${requesterIp}`, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS))) {
       return NextResponse.json({ error: 'Muitas requisições. Tente novamente em instantes.' }, { status: 429 })
     }
 

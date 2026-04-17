@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Rate limit: 20 requests per minute per user
-    if (!rateLimit(user.id, 20, 60_000)) {
+    if (!(await rateLimit(user.id, 20, 60_000))) {
       return NextResponse.json({ error: 'Muitas requisições. Aguarde um momento.' }, { status: 429 })
     }
 

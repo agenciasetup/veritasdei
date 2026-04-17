@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
 
   // 30 sugestões/min por usuário cobre digitação normal sem abrir espaço para
   // abuso serial da API billable do Google.
-  if (!rateLimit(`places-ac:${user.id}`, 30, 60_000)) {
+  if (!(await rateLimit(`places-ac:${user.id}`, 30, 60_000))) {
     return NextResponse.json({ error: 'Muitas requisições. Aguarde um momento.' }, { status: 429 })
   }
 

@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Não autenticado.' }, { status: 401 })
   }
 
-  if (!rateLimit(`places-rev:${user.id}`, 20, 60_000)) {
+  if (!(await rateLimit(`places-rev:${user.id}`, 20, 60_000))) {
     return NextResponse.json({ error: 'Muitas requisições. Aguarde um momento.' }, { status: 429 })
   }
 
