@@ -2,10 +2,12 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import {
   RefreshCw,
   Loader2,
   PlusCircle,
+  Search,
 } from 'lucide-react'
 import { share as platformShare } from '@/lib/platform'
 import type { FeedResponse, VeritasPost } from '@/lib/community/types'
@@ -459,10 +461,23 @@ export default function CommunityFeedClient() {
             Seguindo
           </button>
 
+          <Link
+            href="/comunidade/buscar"
+            className="ml-auto inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
+            style={{
+              background: 'rgba(16,16,16,0.65)',
+              border: '1px solid rgba(201,168,76,0.12)',
+              color: '#8A8378',
+              fontFamily: 'Poppins, sans-serif',
+            }}
+          >
+            <Search className="w-3.5 h-3.5" /> Buscar
+          </Link>
+
           <button
             type="button"
             onClick={() => loadFeed(tab, false)}
-            className="ml-auto inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
             style={{
               background: 'rgba(16,16,16,0.65)',
               border: '1px solid rgba(201,168,76,0.12)',
