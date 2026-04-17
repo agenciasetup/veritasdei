@@ -76,7 +76,7 @@ export function PageTransition({ children }: { children: ReactNode }) {
         animate={variants.animate}
         exit={variants.exit}
         transition={{
-          duration: direction === 'fade' ? 0.15 : 0.22,
+          duration: direction === 'fade' ? 0.10 : 0.16,
           ease: [0.22, 1, 0.36, 1],
         }}
         style={{ willChange: 'transform, opacity' }}

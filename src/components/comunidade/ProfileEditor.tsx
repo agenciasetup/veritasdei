@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Loader2, Save, ImageIcon, Link as LinkIcon, Plus, X } from 'lucide-react'
+import { compressImage } from '@/lib/image/compress'
 
 interface ProfileData {
   id: string
@@ -34,7 +35,10 @@ interface PresignItem {
   variants?: { thumb?: string; feed?: string; detail?: string }
 }
 
-async function uploadSingleImage(file: File): Promise<string> {
+async function uploadSingleImage(raw: File): Promise<string> {
+  // Comprime antes do presign — evita mandar 3-5MB ao R2.
+  const { file } = await compressImage(raw)
+
   const res = await fetch('/api/comunidade/media/presign', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
