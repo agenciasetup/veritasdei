@@ -262,6 +262,19 @@ export default function VeritasCard({
         )}
       </div>
 
+      {post.metrics.reply_count > 0 && (
+        <div className="mt-3">
+          <Link
+            href={`/comunidade/veritas/${post.id}`}
+            className="inline-flex items-center gap-1.5 text-xs hover:underline"
+            style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            Ver {post.metrics.reply_count} {post.metrics.reply_count === 1 ? 'resposta' : 'respostas'}
+          </Link>
+        </div>
+      )}
+
       {!hideInlineReply && onReplySubmit && onReplyDraftChange && (
         <div className="mt-3">
           <div className="flex items-center gap-2">
@@ -270,7 +283,7 @@ export default function VeritasCard({
               type="text"
               value={replyDraft}
               onChange={(e) => onReplyDraftChange(e.target.value)}
-              placeholder={`Responder (${post.metrics.reply_count})`}
+              placeholder="Responder..."
               className="flex-1 px-3 py-2 rounded-lg text-xs"
               style={{
                 background: 'rgba(10,10,10,0.65)',
