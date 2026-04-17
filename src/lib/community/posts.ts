@@ -17,6 +17,7 @@ interface AuthorRow {
   user_number: number | null
   name: string | null
   vocacao: VeritasPost['author']['vocacao']
+  community_role: VeritasAuthorSnapshot['community_role'] | null
   verified: boolean | null
   profile_image_url: string | null
 }
