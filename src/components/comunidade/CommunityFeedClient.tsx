@@ -77,9 +77,12 @@ async function uploadWithPresign(files: File[], items: PresignItem[]): Promise<v
 
 export default function CommunityFeedClient() {
   const { user, profile } = useAuth()
-  const canPublishReflection = profile
-    ? ['padre', 'diacono', 'bispo', 'religioso', 'admin'].includes(profile.community_role)
+  const isClergy = profile
+    ? ['padre', 'diacono', 'bispo', 'religioso'].includes(profile.community_role)
     : false
+  const isAdmin = profile?.community_role === 'admin'
+  // Regra: clero precisa estar verificado; admin pode sempre.
+  const canPublishReflection = (isClergy && profile?.verified) || isAdmin
   const [variantReflection, setVariantReflection] = useState(false)
   const [tab, setTab] = useState<'for_you' | 'following'>('for_you')
   const [items, setItems] = useState<VeritasPost[]>([])
