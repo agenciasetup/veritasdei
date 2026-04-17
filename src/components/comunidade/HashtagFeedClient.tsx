@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Loader2, ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import VeritasCard from '@/components/comunidade/VeritasCard'
+import InfiniteScrollSentinel from '@/components/comunidade/InfiniteScrollSentinel'
 import type { VeritasPost } from '@/lib/community/types'
 import { share as platformShare } from '@/lib/platform'
 
@@ -213,25 +214,11 @@ export default function HashtagFeedClient({ slug }: { slug: string }) {
               </div>
             )}
 
-            {cursor && (
-              <div className="flex justify-center pt-2">
-                <button
-                  type="button"
-                  onClick={() => load(true)}
-                  disabled={loadingMore}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs"
-                  style={{
-                    background: 'rgba(16,16,16,0.65)',
-                    border: '1px solid rgba(201,168,76,0.15)',
-                    color: '#C9A84C',
-                    fontFamily: 'Poppins, sans-serif',
-                  }}
-                >
-                  {loadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                  Carregar mais
-                </button>
-              </div>
-            )}
+            <InfiniteScrollSentinel
+              onVisible={() => load(true)}
+              loading={loadingMore}
+              hasMore={Boolean(cursor)}
+            />
           </div>
         )}
       </div>

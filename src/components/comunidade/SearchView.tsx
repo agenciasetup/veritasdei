@@ -7,8 +7,10 @@ import Link from 'next/link'
 import { ArrowLeft, Search, Loader2 } from 'lucide-react'
 import CrossIcon from '@/components/icons/CrossIcon'
 import VeritasCard from '@/components/comunidade/VeritasCard'
+import RoleBadge from '@/components/comunidade/RoleBadge'
+import VerifiedBadge from '@/components/comunidade/VerifiedBadge'
 import { useAuth } from '@/contexts/AuthContext'
-import type { VeritasPost } from '@/lib/community/types'
+import type { VeritasPost, CommunityRole } from '@/lib/community/types'
 
 interface PersonResult {
   id: string
@@ -18,7 +20,7 @@ interface PersonResult {
   profile_image_url: string | null
   cover_image_url: string | null
   bio_short: string | null
-  community_role: string
+  community_role: CommunityRole
   verified: boolean
   rank: number
 }
@@ -287,26 +289,21 @@ export default function SearchView() {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p
-                            className="text-sm font-medium"
+                          <div
+                            className="flex items-center gap-1.5 flex-wrap"
                             style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}
                           >
-                            {p.name ?? 'Membro Veritas'}
-                            {p.verified && (
-                              <span
-                                className="ml-2 text-xs"
-                                style={{ color: '#C9A84C' }}
-                              >
-                                ✓
-                              </span>
-                            )}
-                          </p>
+                            <span className="text-sm font-medium">
+                              {p.name ?? 'Membro Veritas'}
+                            </span>
+                            {p.verified && <VerifiedBadge size={14} />}
+                            <RoleBadge role={p.community_role} size="sm" />
+                          </div>
                           <p
                             className="text-xs"
                             style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}
                           >
                             {p.public_handle ? `@${p.public_handle}` : `#${p.user_number ?? 'sem-número'}`}
-                            {p.community_role && p.community_role !== 'leigo' && ` · ${p.community_role}`}
                           </p>
                           {p.bio_short && (
                             <p

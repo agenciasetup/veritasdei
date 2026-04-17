@@ -15,6 +15,8 @@ import {
 import CrossIcon from '@/components/icons/CrossIcon'
 import type { VeritasPost } from '@/lib/community/types'
 import { renderVeritasBody } from '@/lib/community/body-renderer'
+import RoleBadge from '@/components/comunidade/RoleBadge'
+import VerifiedBadge from '@/components/comunidade/VerifiedBadge'
 
 export interface VeritasCardCallbacks {
   onLike?: (post: VeritasPost) => void
@@ -71,20 +73,24 @@ export default function VeritasCard({
 
   return (
     <article
-      className="rounded-2xl p-5"
+      className="rounded-2xl p-5 transition-colors hover:bg-[rgba(20,20,20,0.85)]"
       style={{
         background: 'rgba(16,16,16,0.75)',
         border: '1px solid rgba(201,168,76,0.14)',
       }}
     >
       <div className="flex items-start gap-3 mb-3">
-        <div
-          className="w-11 h-11 rounded-xl overflow-hidden flex items-center justify-center"
+        <Link
+          href={profileHref}
+          className="w-11 h-11 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0"
           style={{
             background: post.author.profile_image_url
               ? 'transparent'
               : 'rgba(201,168,76,0.1)',
             border: '1px solid rgba(201,168,76,0.2)',
+            boxShadow: post.author.verified
+              ? '0 0 0 1.5px rgba(233,196,106,0.5)'
+              : undefined,
           }}
         >
           {post.author.profile_image_url ? (
@@ -96,22 +102,26 @@ export default function VeritasCard({
           ) : (
             <CrossIcon size="sm" />
           )}
-        </div>
+        </Link>
 
         <div className="flex-1 min-w-0">
-          {profileHref !== '#' ? (
-            <Link
-              href={profileHref}
-              className="text-sm font-medium hover:underline"
-              style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}
-            >
-              {post.author.name ?? 'Membro Veritas'}
-            </Link>
-          ) : (
-            <span className="text-sm font-medium" style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}>
-              {post.author.name ?? 'Membro Veritas'}
-            </span>
-          )}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {profileHref !== '#' ? (
+              <Link
+                href={profileHref}
+                className="text-sm font-medium hover:underline"
+                style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}
+              >
+                {post.author.name ?? 'Membro Veritas'}
+              </Link>
+            ) : (
+              <span className="text-sm font-medium" style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}>
+                {post.author.name ?? 'Membro Veritas'}
+              </span>
+            )}
+            {post.author.verified && <VerifiedBadge size={14} />}
+            <RoleBadge role={post.author.community_role} size="sm" />
+          </div>
           <p className="text-xs" style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}>
             {post.author.public_handle ? `@${post.author.public_handle}` : '#sem-handle'} · {formatRelative(post.created_at)}
           </p>
