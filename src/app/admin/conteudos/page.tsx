@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import BottomSheet from '@/components/mobile/BottomSheet'
 import { useHaptic } from '@/hooks/useHaptic'
+import { WIPE_CONFIRM_HEADER, WIPE_CONFIRM_VALUE } from '@/lib/api/seed-wipe'
 
 type Level = 'groups' | 'topics' | 'subtopics' | 'items'
 
@@ -66,11 +67,25 @@ export default function AdminConteudosPage() {
       ? 'ATENÇÃO: Isso vai DELETAR TODO o conteúdo existente e reimportar do zero. Continuar?'
       : 'Importar todo o conteúdo padrão?'
     if (!confirm(msg)) return
+    // Segunda confirmação textual para wipe destrutivo — reduz clique acidental.
+    if (force) {
+      const typed = prompt('Para confirmar o apagamento total, digite APAGAR:')
+      if (typed !== 'APAGAR') {
+        setSeedMessage('Operação cancelada.')
+        return
+      }
+    }
     setSeeding(true)
     setSeedMessage(null)
     try {
       const url = force ? '/api/admin/seed?force=true' : '/api/admin/seed'
-      const res = await fetch(url, { method: 'POST' })
+      // Header de confirmação é exigido pelo servidor quando force=true (ou
+      // quando já existe conteúdo que seria apagado). Em fluxo não-destrutivo
+      // o header é ignorado, então mandar sempre é inofensivo.
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { [WIPE_CONFIRM_HEADER]: WIPE_CONFIRM_VALUE },
+      })
       const data = await res.json()
       setSeedMessage(data.message || (data.error ?? 'Erro desconhecido'))
       if (data.success) fetchData()

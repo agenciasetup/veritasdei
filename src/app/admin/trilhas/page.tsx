@@ -8,6 +8,7 @@ import {
   MoreVertical,
 } from 'lucide-react'
 import BottomSheet from '@/components/mobile/BottomSheet'
+import { WIPE_CONFIRM_HEADER, WIPE_CONFIRM_VALUE } from '@/lib/api/seed-wipe'
 
 interface Trail {
   id: string
@@ -174,11 +175,22 @@ export default function AdminTrilhasPage() {
   }
 
   const handleSeedTrails = async () => {
-    if (!confirm('Importar as trilhas padrão? (substitui existentes)')) return
+    if (!confirm('Importar as trilhas padrão? Isso SUBSTITUI todas as trilhas existentes (apaga + reimporta).')) return
+    // Segunda confirmação textual — reduz clique acidental em operação destrutiva.
+    const typed = prompt('Para confirmar, digite APAGAR:')
+    if (typed !== 'APAGAR') {
+      setSeedMsg('Operação cancelada.')
+      return
+    }
     setSeedingTrails(true)
     setSeedMsg(null)
     try {
-      const res = await fetch('/api/admin/seed?trails=true', { method: 'POST' })
+      // Header de confirmação é exigido pelo servidor quando já existem
+      // trails (DELETE implícito antes do re-insert).
+      const res = await fetch('/api/admin/seed?trails=true', {
+        method: 'POST',
+        headers: { [WIPE_CONFIRM_HEADER]: WIPE_CONFIRM_VALUE },
+      })
       const data = await res.json()
       setSeedMsg(data.message || data.error || 'Erro desconhecido')
       if (data.success) fetchTrails()

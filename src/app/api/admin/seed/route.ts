@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/rate-limit'
+import { WIPE_CONFIRM_HEADER, WIPE_CONFIRM_VALUE } from '@/lib/api/seed-wipe'
 
 // Import all hardcoded data
 import { DOGMA_CATEGORIES } from '@/features/dogmas/data'
@@ -22,8 +23,8 @@ import { TRAILS_6 } from '@/features/trilhas/trails6'
 // Confirmação explícita para operações destrutivas. O valor é conhecido
 // e precisa ser enviado em header — protege contra CSRF em UIs admin
 // comprometidas (ex.: XSS no dashboard) e contra cliques acidentais.
-const WIPE_CONFIRM_HEADER = 'x-confirm-wipe'
-const WIPE_CONFIRM_VALUE = 'destructive-wipe-yes-i-know'
+// Constantes compartilhadas com os callers no admin UI via
+// @/lib/api/seed-wipe.
 
 function checkWipeConfirmation(req: NextRequest): string | null {
   const value = req.headers.get(WIPE_CONFIRM_HEADER)
