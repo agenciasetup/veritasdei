@@ -248,7 +248,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Rate limit: 3 requests per minute per admin (each call can take minutes)
-    if (!rateLimit(`embeddings-backfill:${user.id}`, 3, 60_000)) {
+    if (!(await rateLimit(`embeddings-backfill:${user.id}`, 3, 60_000))) {
       return NextResponse.json(
         { error: 'Muitas requisições. Aguarde um momento.' },
         { status: 429 },

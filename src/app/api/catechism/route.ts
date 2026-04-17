@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Rate limit: 30 requests per minute per user
-  if (!rateLimit(`catechism:${user.id}`, 30, 60_000)) {
+  if (!(await rateLimit(`catechism:${user.id}`, 30, 60_000))) {
     return NextResponse.json({ error: 'Muitas requisições. Aguarde um momento.' }, { status: 429 })
   }
 

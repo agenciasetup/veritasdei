@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { z } from 'zod'
+import { requireUser } from '@/lib/api/guard'
+import { parseJson } from '@/lib/api/validate'
 
 /**
  * Intenções pessoais do terço — CRUD do usuário autenticado.
@@ -20,32 +22,20 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
  *      o fluxo, já que o request sai do servidor do Next.
  */
 
-interface IntentionDraftBody {
-  titulo?: unknown
-  descricao?: unknown
-}
-
-function sanitizeDraft(body: IntentionDraftBody) {
-  if (typeof body.titulo !== 'string') return null
-  const titulo = body.titulo.trim()
-  if (titulo.length === 0 || titulo.length > 120) return null
-  let descricao: string | null = null
-  if (typeof body.descricao === 'string') {
-    const trimmed = body.descricao.trim()
-    if (trimmed.length > 1000) return null
-    descricao = trimmed.length > 0 ? trimmed : null
-  }
-  return { titulo, descricao }
-}
+const draftSchema = z.object({
+  titulo: z.string().trim().min(1).max(120),
+  descricao: z
+    .string()
+    .trim()
+    .max(1000)
+    .nullish()
+    .transform(v => (v && v.length > 0 ? v : null)),
+})
 
 export async function GET() {
-  const supabase = await createServerSupabaseClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
-  }
+  const guard = await requireUser()
+  if (guard instanceof NextResponse) return guard
+  const { user, supabase } = guard
 
   const { data, error } = await supabase
     .from('rosary_intentions')
@@ -56,32 +46,19 @@ export async function GET() {
 
   if (error) {
     console.error('[rosary_intentions] select error', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'db_error' }, { status: 500 })
   }
 
   return NextResponse.json({ intentions: data ?? [] })
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createServerSupabaseClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
-  }
+  const guard = await requireUser()
+  if (guard instanceof NextResponse) return guard
+  const { user, supabase } = guard
 
-  let body: IntentionDraftBody
-  try {
-    body = (await req.json()) as IntentionDraftBody
-  } catch {
-    return NextResponse.json({ error: 'invalid_json' }, { status: 400 })
-  }
-
-  const draft = sanitizeDraft(body)
-  if (!draft) {
-    return NextResponse.json({ error: 'invalid_fields' }, { status: 400 })
-  }
+  const draft = await parseJson(req, draftSchema)
+  if (draft instanceof NextResponse) return draft
 
   const { data, error } = await supabase
     .from('rosary_intentions')
@@ -95,7 +72,7 @@ export async function POST(req: NextRequest) {
 
   if (error) {
     console.error('[rosary_intentions] insert error', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'db_error' }, { status: 500 })
   }
 
   return NextResponse.json({ intention: data })

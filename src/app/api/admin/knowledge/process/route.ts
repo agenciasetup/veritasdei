@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     if (profile?.role !== 'admin') return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
     // Rate limit: 10 requests per minute per user (AI processing is expensive)
-    if (!rateLimit(`knowledge-process:${user.id}`, 10, 60_000)) {
+    if (!(await rateLimit(`knowledge-process:${user.id}`, 10, 60_000))) {
       return NextResponse.json({ error: 'Muitas requisições. Aguarde um momento.' }, { status: 429 })
     }
 

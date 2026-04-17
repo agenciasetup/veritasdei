@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
 
   // Place Details é 1 chamada por seleção (finaliza sessão de autocomplete).
   // 20/min é folgado para UX, curto para abuso.
-  if (!rateLimit(`places-det:${user.id}`, 20, 60_000)) {
+  if (!(await rateLimit(`places-det:${user.id}`, 20, 60_000))) {
     return NextResponse.json({ error: 'Muitas requisições. Aguarde um momento.' }, { status: 429 })
   }
 
