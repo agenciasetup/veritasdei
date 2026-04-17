@@ -3,21 +3,16 @@ import Link from 'next/link'
 import { ArrowLeft, MapPin, Calendar, Link as LinkIcon } from 'lucide-react'
 import type { PublicProfileSnapshot } from '@/lib/community/types'
 import CrossIcon from '@/components/icons/CrossIcon'
-import { renderVeritasBody } from '@/lib/community/body-renderer'
 import RoleBadge from '@/components/comunidade/RoleBadge'
 import VerifiedBadge from '@/components/comunidade/VerifiedBadge'
+import ProfileFollowButton from '@/components/comunidade/ProfileFollowButton'
+import ProfileTabs from '@/components/comunidade/ProfileTabs'
 
 interface Props {
   snapshot: PublicProfileSnapshot
   viewerUserId?: string | null
-}
-
-function formatDate(value: string): string {
-  return new Date(value).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
+  viewerFollows?: boolean
+  showLikesPublic?: boolean
 }
 
 function formatJoined(value: string): string {
@@ -35,13 +30,23 @@ function safeLinkHost(raw: string): string {
   }
 }
 
-export default function PublicProfileView({ snapshot, viewerUserId }: Props) {
+export default function PublicProfileView({
+  snapshot,
+  viewerUserId,
+  viewerFollows = false,
+  showLikesPublic = false,
+}: Props) {
   const profile = snapshot.profile
   if (!profile) return null
 
   const location = [profile.cidade, profile.estado].filter(Boolean).join(', ')
   const hasCover = Boolean(profile.cover_image_url)
   const isOwnProfile = viewerUserId === profile.id
+  const isAuthenticated = Boolean(viewerUserId)
+  const likesVisible = showLikesPublic || isOwnProfile
+  const tabIdentifier = profile.public_handle
+    ? `@${profile.public_handle}`
+    : String(profile.user_number ?? '')
 
   return (
     <main className="min-h-screen relative">
@@ -110,7 +115,7 @@ export default function PublicProfileView({ snapshot, viewerUserId }: Props) {
                 )}
               </div>
 
-              {isOwnProfile && (
+              {isOwnProfile ? (
                 <div className="flex items-center gap-2">
                   <Link
                     href="/comunidade/perfil/editar"
@@ -125,7 +130,12 @@ export default function PublicProfileView({ snapshot, viewerUserId }: Props) {
                     Editar perfil
                   </Link>
                 </div>
-              )}
+              ) : isAuthenticated ? (
+                <ProfileFollowButton
+                  profileId={profile.id}
+                  initialFollowing={viewerFollows}
+                />
+              ) : null}
             </div>
 
             <div className="mb-4">
@@ -224,124 +234,13 @@ export default function PublicProfileView({ snapshot, viewerUserId }: Props) {
               </span>
             </div>
 
-            <div
-              className="flex items-center gap-1 mb-4 border-b"
-              style={{ borderColor: 'rgba(201,168,76,0.15)' }}
-            >
-              <button
-                type="button"
-                className="px-4 py-3 text-xs uppercase tracking-[0.12em]"
-                style={{
-                  color: '#C9A84C',
-                  fontFamily: 'Poppins, sans-serif',
-                  borderBottom: '2px solid #C9A84C',
-                  marginBottom: '-1px',
-                }}
-              >
-                Veritas
-              </button>
-              <button
-                type="button"
-                disabled
-                className="px-4 py-3 text-xs uppercase tracking-[0.12em] opacity-40 cursor-not-allowed"
-                style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}
-                title="Em breve"
-              >
-                Respostas
-              </button>
-              <button
-                type="button"
-                disabled
-                className="px-4 py-3 text-xs uppercase tracking-[0.12em] opacity-40 cursor-not-allowed"
-                style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}
-                title="Em breve"
-              >
-                Mídia
-              </button>
-              <button
-                type="button"
-                disabled
-                className="px-4 py-3 text-xs uppercase tracking-[0.12em] opacity-40 cursor-not-allowed"
-                style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}
-                title="Em breve"
-              >
-                Curtidos
-              </button>
-            </div>
-
-            <div className="space-y-4 pb-12">
-              {snapshot.veritas.map((post) => (
-                <Link
-                  key={post.id}
-                  href={`/comunidade/veritas/${post.id}`}
-                  className="block rounded-2xl p-5 transition-colors"
-                  style={{
-                    background: 'rgba(16,16,16,0.72)',
-                    border: '1px solid rgba(201,168,76,0.14)',
-                  }}
-                >
-                  <p
-                    className="text-xs mb-2"
-                    style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
-                  >
-                    {formatDate(post.created_at)}
-                  </p>
-
-                  <p
-                    className="text-sm whitespace-pre-line leading-relaxed"
-                    style={{ color: '#E7DED1', fontFamily: 'Poppins, sans-serif' }}
-                  >
-                    {renderVeritasBody(post.body)}
-                  </p>
-
-                  {post.media.length > 0 && (
-                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {post.media.slice(0, 6).map((media) => (
-                        <div
-                          key={media.id}
-                          className="rounded-xl overflow-hidden"
-                          style={{
-                            border: '1px solid rgba(201,168,76,0.15)',
-                            background: 'rgba(0,0,0,0.3)',
-                          }}
-                        >
-                          <img
-                            src={media.variants.feed}
-                            alt=""
-                            loading="lazy"
-                            decoding="async"
-                            className="w-full h-56 object-cover"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <div
-                    className="mt-4 flex items-center gap-4 text-xs"
-                    style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}
-                  >
-                    <span>{post.metrics.like_count} curtidas</span>
-                    <span>{post.metrics.reply_count} respostas</span>
-                    <span>{post.metrics.repost_count} reveritas</span>
-                    <span>{post.metrics.share_cross_count} CRUZ</span>
-                  </div>
-                </Link>
-              ))}
-
-              {snapshot.veritas.length === 0 && (
-                <div
-                  className="rounded-2xl p-8 text-center"
-                  style={{
-                    background: 'rgba(16,16,16,0.6)',
-                    border: '1px solid rgba(201,168,76,0.1)',
-                  }}
-                >
-                  <p style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}>
-                    Ainda não há Veritas públicos neste perfil.
-                  </p>
-                </div>
-              )}
+            <div className="pb-12">
+              <ProfileTabs
+                identifier={tabIdentifier}
+                viewerUserId={viewerUserId ?? null}
+                likesVisible={likesVisible}
+                isOwnProfile={isOwnProfile}
+              />
             </div>
           </div>
         </div>

@@ -9,6 +9,7 @@ interface UpdateProfilePayload {
   cover_image_url?: string | null
   profile_image_url?: string | null
   external_links?: Array<{ label: string; url: string }>
+  show_likes_public?: boolean
 }
 
 function sanitizeExternalLinks(input: unknown): Array<{ label: string; url: string }> | null {
@@ -44,7 +45,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, name, public_handle, user_number, bio_short, cover_image_url, profile_image_url, external_links, community_role, verified, verified_at, cidade, estado, diocese, paroquia, comunidade, vocacao')
+    .select('id, name, public_handle, user_number, bio_short, cover_image_url, profile_image_url, external_links, community_role, verified, verified_at, show_likes_public, cidade, estado, diocese, paroquia, comunidade, vocacao')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -152,6 +153,10 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'invalid_external_links' }, { status: 400 })
     }
     patch.external_links = links
+  }
+
+  if (payload.show_likes_public !== undefined) {
+    patch.show_likes_public = Boolean(payload.show_likes_public)
   }
 
   if (Object.keys(patch).length === 0) {

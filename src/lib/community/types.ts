@@ -53,6 +53,15 @@ export interface VeritasAuthorSnapshot {
   profile_image_url: string | null
 }
 
+export interface VeritasParentSnapshot {
+  id: string
+  kind: VeritasKind
+  body: string
+  created_at: string
+  author: VeritasAuthorSnapshot
+  media: VeritasMediaAsset[]
+}
+
 export interface VeritasPost {
   id: string
   author_user_id: string
@@ -60,7 +69,10 @@ export interface VeritasPost {
   variant: VeritasPostVariant
   body: string
   parent_post_id: string | null
+  /** Populado só quando kind='quote' ou 'repost' — post citado/reposted. */
+  parent?: VeritasParentSnapshot | null
   created_at: string
+  edited_at: string | null
   author: VeritasAuthorSnapshot
   metrics: VeritasMetrics
   media: VeritasMediaAsset[]
@@ -97,6 +109,7 @@ export interface PublicProfileSnapshot {
     following_count: number
     veritas_count: number
     created_at: string
+    show_likes_public?: boolean
   } | null
   veritas: Array<{
     id: string

@@ -89,5 +89,29 @@ export default async function CommunityPublicHandlePage({ params }: PageProps) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  return <PublicProfileView snapshot={snapshot} viewerUserId={user?.id ?? null} />
+  let viewerFollows = false
+  if (user && user.id !== snapshot.profile.id) {
+    const { data: follow } = await supabase
+      .from('vd_follows')
+      .select('follower_user_id')
+      .eq('follower_user_id', user.id)
+      .eq('followed_user_id', snapshot.profile.id)
+      .maybeSingle()
+    viewerFollows = Boolean(follow)
+  }
+
+  const { data: privacy } = await supabase
+    .from('profiles')
+    .select('show_likes_public')
+    .eq('id', snapshot.profile.id)
+    .maybeSingle()
+
+  return (
+    <PublicProfileView
+      snapshot={snapshot}
+      viewerUserId={user?.id ?? null}
+      viewerFollows={viewerFollows}
+      showLikesPublic={Boolean(privacy?.show_likes_public)}
+    />
+  )
 }

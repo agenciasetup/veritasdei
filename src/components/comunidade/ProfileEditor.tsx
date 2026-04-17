@@ -18,6 +18,7 @@ interface ProfileData {
   community_role: string
   verified: boolean
   verified_at: string | null
+  show_likes_public: boolean
   cidade: string | null
   estado: string | null
   diocese: string | null
@@ -73,6 +74,7 @@ export default function ProfileEditor() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [coverUrl, setCoverUrl] = useState<string | null>(null)
   const [links, setLinks] = useState<Array<{ label: string; url: string }>>([])
+  const [showLikesPublic, setShowLikesPublic] = useState(false)
 
   useEffect(() => {
     void load()
@@ -90,6 +92,7 @@ export default function ProfileEditor() {
       setAvatarUrl(data.profile.profile_image_url)
       setCoverUrl(data.profile.cover_image_url)
       setLinks(data.profile.external_links ?? [])
+      setShowLikesPublic(Boolean(data.profile.show_likes_public))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erro ao carregar')
     } finally {
@@ -136,6 +139,7 @@ export default function ProfileEditor() {
       cover_image_url: coverUrl,
       profile_image_url: avatarUrl,
       external_links: links.filter(l => l.label.trim() && l.url.trim()),
+      show_likes_public: showLikesPublic,
     }
 
     try {
@@ -398,6 +402,40 @@ export default function ProfileEditor() {
                 </button>
               )}
             </div>
+          </Field>
+
+          <Field label="Privacidade" hint="Controla quem vê o que você curte.">
+            <label
+              className="flex items-center gap-3 rounded-xl p-3 cursor-pointer"
+              style={{
+                background: 'rgba(10,10,10,0.65)',
+                border: '1px solid rgba(201,168,76,0.15)',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={showLikesPublic}
+                onChange={e => setShowLikesPublic(e.target.checked)}
+                className="w-4 h-4"
+                style={{ accentColor: '#C9A84C' }}
+              />
+              <div className="flex-1">
+                <p
+                  className="text-sm"
+                  style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}
+                >
+                  Mostrar aba &quot;Curtidos&quot; publicamente
+                </p>
+                <p
+                  className="text-xs mt-0.5"
+                  style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}
+                >
+                  {showLikesPublic
+                    ? 'Qualquer pessoa verá os Veritas que você curtiu.'
+                    : 'Apenas você vê seus curtidos.'}
+                </p>
+              </div>
+            </label>
           </Field>
 
           {profile.community_role && profile.community_role !== 'leigo' && (

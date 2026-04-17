@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { fetchPostsByIds } from '@/lib/community/posts'
 import { requireCommunityPremiumAccess } from '@/lib/community/server'
 import { rateLimit } from '@/lib/rate-limit'
+import { VERITAS_MAX_BODY } from '@/lib/community/constants'
 
 const REPLIES_DEFAULT_LIMIT = 20
 const REPLIES_MAX_LIMIT = 40
@@ -65,6 +66,66 @@ export async function GET(
     replies,
     pagination: { next_cursor: nextCursor, limit },
   })
+}
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const access = await requireCommunityPremiumAccess()
+  if (!access.ok) return access.response
+
+  const { id } = await params
+  const { supabase, user } = access.context
+
+  if (!rateLimit(`community:edit:${user.id}`, 20, 60_000)) {
+    return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
+  }
+
+  let payload: { body?: string }
+  try {
+    payload = await req.json() as { body?: string }
+  } catch {
+    return NextResponse.json({ error: 'invalid_json' }, { status: 400 })
+  }
+
+  const body = (payload.body ?? '').trim()
+  if (!body || body.length > VERITAS_MAX_BODY) {
+    return NextResponse.json({ error: 'invalid_body' }, { status: 400 })
+  }
+
+  // Valida: author, não deletado, não é repost (repost não tem body próprio).
+  const { data: existing } = await supabase
+    .from('vd_posts')
+    .select('id, author_user_id, deleted_at, kind')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (!existing) {
+    return NextResponse.json({ error: 'not_found' }, { status: 404 })
+  }
+  if (existing.author_user_id !== user.id) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  }
+  if (existing.deleted_at) {
+    return NextResponse.json({ error: 'deleted' }, { status: 410 })
+  }
+  if (existing.kind === 'repost') {
+    return NextResponse.json({ error: 'repost_not_editable' }, { status: 400 })
+  }
+
+  const { error: updateError } = await supabase
+    .from('vd_posts')
+    .update({ body })
+    .eq('id', id)
+    .eq('author_user_id', user.id)
+
+  if (updateError) {
+    return NextResponse.json({ error: 'edit_failed', detail: updateError.message }, { status: 500 })
+  }
+
+  const [updated] = await fetchPostsByIds(supabase, user.id, [id])
+  return NextResponse.json({ post: updated })
 }
 
 export async function DELETE(
