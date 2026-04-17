@@ -2,6 +2,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRef, useState, useEffect } from 'react'
 import {
   Heart,
   Repeat2,
@@ -12,12 +13,16 @@ import {
   Bell,
   BellOff,
   BookOpenText,
+  MoreHorizontal,
+  Trash2,
+  Pencil,
 } from 'lucide-react'
 import CrossIcon from '@/components/icons/CrossIcon'
 import type { VeritasPost } from '@/lib/community/types'
 import { renderVeritasBody } from '@/lib/community/body-renderer'
 import RoleBadge from '@/components/comunidade/RoleBadge'
 import VerifiedBadge from '@/components/comunidade/VerifiedBadge'
+import MediaLightbox from '@/components/comunidade/MediaLightbox'
 
 export interface VeritasCardCallbacks {
   onLike?: (post: VeritasPost) => void
@@ -27,6 +32,8 @@ export interface VeritasCardCallbacks {
   onToggleFollow?: (authorId: string, follows: boolean) => void
   onToggleMute?: (authorId: string, muted: boolean) => void
   onReplySubmit?: (post: VeritasPost, body: string) => Promise<void> | void
+  onDelete?: (post: VeritasPost) => Promise<void> | void
+  onEdit?: (post: VeritasPost) => void
 }
 
 interface Props extends VeritasCardCallbacks {
@@ -62,8 +69,24 @@ export default function VeritasCard({
   onToggleFollow,
   onToggleMute,
   onReplySubmit,
+  onDelete,
+  onEdit,
   hideInlineReply = false,
 }: Props) {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+  const menuRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    function onClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [menuOpen])
   const profileHref = post.author.public_handle
     ? `/comunidade/@${post.author.public_handle}`
     : post.author.user_number
@@ -185,6 +208,63 @@ export default function VeritasCard({
             )}
           </div>
         )}
+
+        {isOwnPost && (onEdit || onDelete) && (
+          <div ref={menuRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setMenuOpen(o => !o)}
+              aria-label="Mais opções"
+              className="p-1.5 rounded-lg"
+              style={{
+                color: '#8A8378',
+                background: menuOpen ? 'rgba(201,168,76,0.10)' : 'transparent',
+              }}
+            >
+              <MoreHorizontal className="w-4 h-4" />
+            </button>
+            {menuOpen && (
+              <div
+                className="absolute right-0 mt-1 w-44 rounded-xl overflow-hidden z-20"
+                style={{
+                  background: 'rgba(16,16,16,0.96)',
+                  border: '1px solid rgba(201,168,76,0.25)',
+                  boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+                }}
+              >
+                {onEdit && (
+                  <button
+                    type="button"
+                    onClick={() => { setMenuOpen(false); onEdit(post) }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs text-left"
+                    style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}
+                  >
+                    <Pencil className="w-3.5 h-3.5" /> Editar
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setMenuOpen(false)
+                      if (confirm('Apagar este Veritas? Essa ação não pode ser desfeita.')) {
+                        await onDelete(post)
+                      }
+                    }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs text-left"
+                    style={{
+                      color: '#D94F5C',
+                      fontFamily: 'Poppins, sans-serif',
+                      borderTop: onEdit ? '1px solid rgba(201,168,76,0.08)' : undefined,
+                    }}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Apagar
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <Link
@@ -195,14 +275,102 @@ export default function VeritasCard({
         <p className="text-sm whitespace-pre-line leading-relaxed">
           {renderVeritasBody(post.body)}
         </p>
+        {post.edited_at && (
+          <span
+            className="inline-block mt-1 text-[10px]"
+            style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+            title={new Date(post.edited_at).toLocaleString('pt-BR')}
+          >
+            editado {formatRelative(post.edited_at)}
+          </span>
+        )}
       </Link>
+
+      {post.parent && (post.kind === 'quote' || post.kind === 'repost') && (
+        <Link
+          href={`/comunidade/veritas/${post.parent.id}`}
+          className="block mt-3 rounded-xl p-3 transition-colors hover:bg-[rgba(10,10,10,0.8)]"
+          style={{
+            background: 'rgba(10,10,10,0.55)',
+            border: '1px solid rgba(201,168,76,0.14)',
+          }}
+        >
+          <div
+            className="flex items-center gap-2 mb-1.5 text-xs"
+            style={{ fontFamily: 'Poppins, sans-serif' }}
+          >
+            <div
+              className="w-6 h-6 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0"
+              style={{
+                background: post.parent.author.profile_image_url
+                  ? 'transparent'
+                  : 'rgba(201,168,76,0.1)',
+                border: '1px solid rgba(201,168,76,0.2)',
+              }}
+            >
+              {post.parent.author.profile_image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={post.parent.author.profile_image_url}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <CrossIcon size="xs" />
+              )}
+            </div>
+            <span style={{ color: '#F2EDE4', fontWeight: 500 }}>
+              {post.parent.author.name ?? 'Membro'}
+            </span>
+            {post.parent.author.verified && <VerifiedBadge size={12} />}
+            <span style={{ color: '#7A7368' }}>
+              {post.parent.author.public_handle
+                ? `@${post.parent.author.public_handle}`
+                : '#sem-handle'}
+              {' · '}{formatRelative(post.parent.created_at)}
+            </span>
+          </div>
+          <p
+            className="text-sm whitespace-pre-line leading-relaxed line-clamp-6"
+            style={{ color: '#B8B0A2', fontFamily: 'Poppins, sans-serif' }}
+          >
+            {renderVeritasBody(post.parent.body)}
+          </p>
+          {post.parent.media.length > 0 && (
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {post.parent.media.slice(0, 2).map(media => (
+                <div
+                  key={media.id}
+                  className="rounded-lg overflow-hidden"
+                  style={{ border: '1px solid rgba(201,168,76,0.12)' }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={media.variants.feed}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-32 object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </Link>
+      )}
 
       {post.media.length > 0 && (
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {post.media.map((media) => (
-            <div
+          {post.media.map((media, idx) => (
+            <button
               key={media.id}
-              className="rounded-xl overflow-hidden"
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setLightboxIndex(idx)
+              }}
+              className="rounded-xl overflow-hidden block"
               style={{ border: '1px solid rgba(201,168,76,0.15)' }}
             >
               <img
@@ -210,11 +378,19 @@ export default function VeritasCard({
                 alt="Mídia do Veritas"
                 loading="lazy"
                 decoding="async"
-                className="w-full h-56 object-cover"
+                className="w-full h-56 object-cover hover:opacity-90 transition-opacity cursor-zoom-in"
               />
-            </div>
+            </button>
           ))}
         </div>
+      )}
+
+      {lightboxIndex !== null && (
+        <MediaLightbox
+          items={post.media}
+          startIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
       )}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">

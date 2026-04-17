@@ -10,6 +10,7 @@ interface PostRow {
   body: string
   parent_post_id: string | null
   created_at: string
+  edited_at: string | null
 }
 
 interface AuthorRow {
@@ -71,7 +72,7 @@ export async function fetchPostsByIds(
 
   const { data: postsData, error: postsError } = await supabase
     .from('vd_posts')
-    .select('id, author_user_id, kind, variant, body, parent_post_id, created_at')
+    .select('id, author_user_id, kind, variant, body, parent_post_id, created_at, edited_at')
     .in('id', postIds)
     .is('deleted_at', null)
 
@@ -200,6 +201,21 @@ export async function fetchPostsByIds(
 
   const byId = new Map(posts.map(post => [post.id, post]))
 
+  // Busca parents de quote/repost para embedar.
+  const parentIdsToFetch = Array.from(new Set(
+    posts
+      .filter(p => (p.kind === 'quote' || p.kind === 'repost') && p.parent_post_id)
+      .map(p => p.parent_post_id!),
+  )).filter(id => !byId.has(id)) // evita recursão se o parent já foi carregado
+
+  const parentMap = new Map<string, VeritasPost>()
+  if (parentIdsToFetch.length > 0) {
+    const parents = await fetchPostsByIds(supabase, viewerUserId, parentIdsToFetch)
+    for (const p of parents) {
+      parentMap.set(p.id, p)
+    }
+  }
+
   return postIds
     .map(id => byId.get(id))
     .filter((post): post is PostRow => Boolean(post))
@@ -216,6 +232,20 @@ export async function fetchPostsByIds(
         score: metric?.score ?? 0,
       }
 
+      const parentFull = post.parent_post_id
+        ? parentMap.get(post.parent_post_id)
+        : null
+      const parentSnapshot = parentFull
+        ? {
+            id: parentFull.id,
+            kind: parentFull.kind,
+            body: parentFull.body,
+            created_at: parentFull.created_at,
+            author: parentFull.author,
+            media: parentFull.media,
+          }
+        : null
+
       return {
         id: post.id,
         author_user_id: post.author_user_id,
@@ -223,7 +253,9 @@ export async function fetchPostsByIds(
         variant: post.variant ?? 'default',
         body: post.body,
         parent_post_id: post.parent_post_id,
+        parent: parentSnapshot,
         created_at: post.created_at,
+        edited_at: post.edited_at ?? null,
         author: {
           id: author?.id ?? post.author_user_id,
           public_handle: author?.public_handle ?? null,

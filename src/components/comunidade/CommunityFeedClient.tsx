@@ -17,6 +17,7 @@ import type { FeedResponse, VeritasPost } from '@/lib/community/types'
 import { useAuth } from '@/contexts/AuthContext'
 import VeritasCard from '@/components/comunidade/VeritasCard'
 import QuoteModal from '@/components/comunidade/QuoteModal'
+import EditPostModal from '@/components/comunidade/EditPostModal'
 import TrendingHashtags from '@/components/comunidade/TrendingHashtags'
 import InfiniteScrollSentinel from '@/components/comunidade/InfiniteScrollSentinel'
 import MentionAutocomplete from '@/components/comunidade/MentionAutocomplete'
@@ -98,6 +99,7 @@ export default function CommunityFeedClient() {
   const [submittingPost, setSubmittingPost] = useState(false)
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({})
   const [quoteTarget, setQuoteTarget] = useState<VeritasPost | null>(null)
+  const [editTarget, setEditTarget] = useState<VeritasPost | null>(null)
   const composerRef = useRef<HTMLTextAreaElement | null>(null)
 
   const canSubmitComposer = useMemo(() => {
@@ -404,6 +406,34 @@ export default function CommunityFeedClient() {
 
   function openQuoteModal(post: VeritasPost) {
     setQuoteTarget(post)
+  }
+
+  function openEditModal(post: VeritasPost) {
+    setEditTarget(post)
+  }
+
+  async function handleEditSubmit(body: string) {
+    const target = editTarget
+    if (!target) return
+    const res = await fetch(`/api/comunidade/veritas/${target.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body }),
+    })
+    if (!res.ok) throw new Error('Falha ao editar')
+    const data = await res.json() as { post: VeritasPost }
+    setItems(prev => prev.map(i => i.id === target.id ? data.post : i))
+  }
+
+  async function handleDelete(post: VeritasPost) {
+    // Remove otimista
+    const previous = items
+    setItems(prev => prev.filter(i => i.id !== post.id))
+    const res = await fetch(`/api/comunidade/veritas/${post.id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      setItems(previous)
+      setError('Falha ao apagar.')
+    }
   }
 
   async function handleQuoteSubmit(body: string) {
@@ -737,6 +767,8 @@ export default function CommunityFeedClient() {
                 onToggleFollow={toggleFollow}
                 onToggleMute={toggleMute}
                 onReplySubmit={submitReply}
+                onEdit={openEditModal}
+                onDelete={handleDelete}
               />
             ))}
 
@@ -768,6 +800,13 @@ export default function CommunityFeedClient() {
         open={quoteTarget !== null}
         onClose={() => setQuoteTarget(null)}
         onSubmit={handleQuoteSubmit}
+      />
+
+      <EditPostModal
+        post={editTarget}
+        open={editTarget !== null}
+        onClose={() => setEditTarget(null)}
+        onSubmit={handleEditSubmit}
       />
     </div>
   )

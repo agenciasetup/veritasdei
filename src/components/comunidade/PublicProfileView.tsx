@@ -6,10 +6,12 @@ import CrossIcon from '@/components/icons/CrossIcon'
 import { renderVeritasBody } from '@/lib/community/body-renderer'
 import RoleBadge from '@/components/comunidade/RoleBadge'
 import VerifiedBadge from '@/components/comunidade/VerifiedBadge'
+import ProfileFollowButton from '@/components/comunidade/ProfileFollowButton'
 
 interface Props {
   snapshot: PublicProfileSnapshot
   viewerUserId?: string | null
+  viewerFollows?: boolean
 }
 
 function formatDate(value: string): string {
@@ -35,13 +37,18 @@ function safeLinkHost(raw: string): string {
   }
 }
 
-export default function PublicProfileView({ snapshot, viewerUserId }: Props) {
+export default function PublicProfileView({
+  snapshot,
+  viewerUserId,
+  viewerFollows = false,
+}: Props) {
   const profile = snapshot.profile
   if (!profile) return null
 
   const location = [profile.cidade, profile.estado].filter(Boolean).join(', ')
   const hasCover = Boolean(profile.cover_image_url)
   const isOwnProfile = viewerUserId === profile.id
+  const isAuthenticated = Boolean(viewerUserId)
 
   return (
     <main className="min-h-screen relative">
@@ -110,7 +117,7 @@ export default function PublicProfileView({ snapshot, viewerUserId }: Props) {
                 )}
               </div>
 
-              {isOwnProfile && (
+              {isOwnProfile ? (
                 <div className="flex items-center gap-2">
                   <Link
                     href="/comunidade/perfil/editar"
@@ -125,7 +132,12 @@ export default function PublicProfileView({ snapshot, viewerUserId }: Props) {
                     Editar perfil
                   </Link>
                 </div>
-              )}
+              ) : isAuthenticated ? (
+                <ProfileFollowButton
+                  profileId={profile.id}
+                  initialFollowing={viewerFollows}
+                />
+              ) : null}
             </div>
 
             <div className="mb-4">
