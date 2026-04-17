@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { safeNext } from '@/lib/auth/safe-next'
+import { finalizeAuthSession } from '@/lib/auth/finalize-session'
 
 function getOrigin(requestUrl: string): string {
   if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL
@@ -10,20 +11,19 @@ function getOrigin(requestUrl: string): string {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const origin = getOrigin(request.url)
-  const code = searchParams.get('code')
   const next = safeNext(searchParams.get('next'))
-
-  if (!code) {
-    console.error('[Auth Callback] No code provided')
-    return NextResponse.redirect(`${origin}/login?error=auth`)
-  }
 
   try {
     const supabase = await createServerSupabaseClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
 
-    if (error) {
-      console.error('[Auth Callback] Code exchange failed:', error.message)
+    // Aceita tanto `code` (PKCE / OAuth) quanto `token_hash` + `type`
+    // (magic link / recovery / invite). Isso protege contra mismatch de
+    // template Supabase vs. URL configurada no dashboard — comum quando
+    // o template de magic link aponta pra /auth/callback mas o SDK
+    // espera /auth/confirm.
+    const result = await finalizeAuthSession(supabase, searchParams)
+    if (!result.ok) {
+      console.error('[Auth Callback]', result.reason)
       return NextResponse.redirect(`${origin}/login?error=auth`)
     }
 

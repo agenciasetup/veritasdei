@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { safeNext } from '@/lib/auth/safe-next'
 import type { Profile, UserRole } from '@/types/auth'
 import type { User, Session } from '@supabase/supabase-js'
 
@@ -82,16 +83,10 @@ function getBaseUrl(): string {
   return ''
 }
 
-function normalizeNextPath(nextPath?: string): string {
-  if (!nextPath) return '/'
-  if (!nextPath.startsWith('/') || nextPath.startsWith('//')) return '/'
-  return nextPath
-}
-
 function getAuthCallbackUrl(baseUrl: string, nextPath?: string): string {
-  const safeNext = normalizeNextPath(nextPath)
-  if (safeNext === '/') return `${baseUrl}/auth/callback`
-  return `${baseUrl}/auth/callback?next=${encodeURIComponent(safeNext)}`
+  const next = safeNext(nextPath)
+  if (next === '/') return `${baseUrl}/auth/callback`
+  return `${baseUrl}/auth/callback?next=${encodeURIComponent(next)}`
 }
 
 function AuthProviderInner({
