@@ -28,10 +28,17 @@ export default function HojeHeader() {
   const displayName = getDisplayName(profile?.vocacao, profile?.name ?? null) || 'Irmão(ã)'
   const avatarUrl = profile?.profile_image_url
 
+  const iconBtnStyle: React.CSSProperties = {
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.06)',
+    color: 'var(--text-primary)',
+    boxShadow: '0 1px 0 rgba(255,255,255,0.04) inset',
+  }
+
   return (
     <>
-      <header className="flex items-center justify-between px-5 pt-5 pb-3">
-        <Link href="/perfil" className="flex items-center gap-3 min-w-0 flex-1 active:scale-[0.99]">
+      <header className="flex items-center justify-between px-5 pt-5 pb-4">
+        <Link href="/perfil" className="flex items-center gap-3 min-w-0 flex-1 active:scale-[0.99] transition-transform">
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -39,16 +46,21 @@ export default function HojeHeader() {
               alt="Avatar"
               loading="lazy"
               className="w-11 h-11 rounded-full object-cover flex-shrink-0"
-              style={{ border: '1.5px solid rgba(201,168,76,0.4)' }}
+              style={{
+                border: '1px solid rgba(255,255,255,0.08)',
+                boxShadow: '0 1px 0 rgba(255,255,255,0.08) inset, 0 4px 12px rgba(0,0,0,0.3)',
+              }}
             />
           ) : (
             <div
-              className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 text-base font-medium"
+              className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 text-[15px]"
               style={{
-                background: 'linear-gradient(135deg, rgba(201,168,76,0.25), rgba(201,168,76,0.08))',
-                border: '1.5px solid rgba(201,168,76,0.35)',
-                color: 'var(--gold)',
+                background: 'linear-gradient(180deg, rgba(201,168,76,0.28) 0%, rgba(201,168,76,0.1) 100%)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                boxShadow: '0 1px 0 rgba(255,255,255,0.12) inset, 0 4px 12px rgba(0,0,0,0.3)',
+                color: 'var(--gold-light)',
                 fontFamily: 'var(--font-display)',
+                fontWeight: 600,
               }}
             >
               {(profile?.name?.[0] || '✝').toUpperCase()}
@@ -56,14 +68,24 @@ export default function HojeHeader() {
           )}
           <div className="min-w-0">
             <p
-              className="text-[11px] uppercase tracking-[0.12em]"
-              style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}
+              className="text-[11px]"
+              style={{
+                color: 'var(--text-muted)',
+                fontFamily: 'var(--font-body)',
+                letterSpacing: '0.04em',
+                fontWeight: 500,
+              }}
             >
               {getGreeting()}
             </p>
             <p
-              className="text-base font-medium truncate"
-              style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-body)' }}
+              className="text-[17px] truncate -mt-0.5"
+              style={{
+                color: 'var(--text-primary)',
+                fontFamily: 'var(--font-body)',
+                fontWeight: 600,
+                letterSpacing: '-0.01em',
+              }}
             >
               {displayName}
             </p>
@@ -76,38 +98,26 @@ export default function HojeHeader() {
             type="button"
             onClick={() => setSearchOpen(true)}
             aria-label="Buscar"
-            className="md:hidden w-11 h-11 rounded-full flex items-center justify-center active:scale-95 transition-transform"
-            style={{
-              background: 'rgba(201,168,76,0.06)',
-              border: '1px solid rgba(201,168,76,0.12)',
-              color: 'var(--gold)',
-            }}
+            className="md:hidden w-10 h-10 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+            style={iconBtnStyle}
           >
-            <Search className="w-[18px] h-[18px]" />
+            <Search className="w-[17px] h-[17px]" strokeWidth={2} />
           </button>
           <Link
             href="/buscar"
             aria-label="Buscar"
-            className="hidden md:flex w-11 h-11 rounded-full items-center justify-center"
-            style={{
-              background: 'rgba(201,168,76,0.06)',
-              border: '1px solid rgba(201,168,76,0.12)',
-              color: 'var(--gold)',
-            }}
+            className="hidden md:flex w-10 h-10 rounded-full items-center justify-center"
+            style={iconBtnStyle}
           >
-            <Search className="w-[18px] h-[18px]" />
+            <Search className="w-[17px] h-[17px]" strokeWidth={2} />
           </Link>
           <Link
             href="/notificacoes"
             aria-label="Notificações"
-            className="w-11 h-11 rounded-full flex items-center justify-center active:scale-95 transition-transform"
-            style={{
-              background: 'rgba(201,168,76,0.06)',
-              border: '1px solid rgba(201,168,76,0.12)',
-              color: 'var(--gold)',
-            }}
+            className="w-10 h-10 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+            style={iconBtnStyle}
           >
-            <Bell className="w-[18px] h-[18px]" />
+            <Bell className="w-[17px] h-[17px]" strokeWidth={2} />
           </Link>
         </div>
       </header>

@@ -4,12 +4,12 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { getLiturgicalDay } from '@/lib/liturgical-calendar'
 
-const COLOR_STYLES: Record<string, { bg: string; border: string; dot: string; glow: string }> = {
-  branco:   { bg: 'rgba(242,237,228,0.04)', border: 'rgba(242,237,228,0.2)',  dot: '#F2EDE4', glow: 'rgba(242,237,228,0.15)' },
-  vermelho: { bg: 'rgba(217,79,92,0.05)',    border: 'rgba(217,79,92,0.25)',   dot: '#D94F5C', glow: 'rgba(217,79,92,0.2)'   },
-  verde:    { bg: 'rgba(76,175,80,0.04)',    border: 'rgba(102,187,106,0.22)', dot: '#66BB6A', glow: 'rgba(102,187,106,0.15)'},
-  roxo:     { bg: 'rgba(156,39,176,0.05)',   border: 'rgba(186,104,200,0.25)', dot: '#BA68C8', glow: 'rgba(186,104,200,0.18)'},
-  rosa:     { bg: 'rgba(244,143,177,0.05)',  border: 'rgba(244,143,177,0.25)', dot: '#F48FB1', glow: 'rgba(244,143,177,0.18)'},
+const COLOR_DOT: Record<string, string> = {
+  branco:   '#F2EDE4',
+  vermelho: '#D94F5C',
+  verde:    '#66BB6A',
+  roxo:     '#BA68C8',
+  rosa:     '#F48FB1',
 }
 
 const GRADE_LABELS: Record<string, string> = {
@@ -30,7 +30,7 @@ const GRADE_LABELS: Record<string, string> = {
  */
 export default function LiturgiaHojeCard() {
   const day = getLiturgicalDay(new Date())
-  const style = COLOR_STYLES[day.color] ?? COLOR_STYLES.verde
+  const dot = COLOR_DOT[day.color] ?? COLOR_DOT.verde
   const grade = GRADE_LABELS[day.grade] ?? 'Liturgia diária'
   const hoje = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long',
@@ -41,69 +41,92 @@ export default function LiturgiaHojeCard() {
   return (
     <Link
       href="/liturgia/hoje"
-      className="block mx-4 mb-2 rounded-3xl p-4 transition-all active:scale-[0.99]"
-      style={{
-        background: style.bg,
-        border: `1px solid ${style.border}`,
-        boxShadow: `0 0 32px ${style.glow}`,
-      }}
+      className="ios-surface-hero block mx-4 mb-4 p-5 overflow-hidden transition-transform active:scale-[0.985]"
+      style={{ isolation: 'isolate' }}
     >
-      <div className="flex items-center gap-2 mb-2">
-        <span
-          className="inline-block w-2.5 h-2.5 rounded-full"
-          style={{ background: style.dot, boxShadow: `0 0 8px ${style.dot}` }}
-        />
-        <span
-          className="text-[10px] uppercase tracking-[0.18em]"
-          style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
-        >
-          Liturgia de hoje
-        </span>
-      </div>
+      {/* Camada de tint litúrgico: MUITO sutil, só um hint de cor no topo */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-[26px] opacity-[0.35]"
+        style={{
+          background: `radial-gradient(120% 80% at 0% 0%, ${dot}22 0%, transparent 55%)`,
+          mixBlendMode: 'screen',
+          zIndex: -1,
+        }}
+      />
 
-      <div className="mb-2 flex items-start justify-between gap-3">
-        <p
-          className="text-2xl leading-tight"
-          style={{ color: '#F2EDE4', fontFamily: 'Cormorant Garamond, serif' }}
-        >
-          {day.title || day.name}
-        </p>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <span
+            className="inline-block w-1.5 h-1.5 rounded-full"
+            style={{ background: dot }}
+          />
+          <span
+            className="text-[11px] uppercase"
+            style={{
+              color: 'var(--text-muted)',
+              fontFamily: 'var(--font-body)',
+              letterSpacing: '0.14em',
+              fontWeight: 500,
+            }}
+          >
+            Liturgia de hoje
+          </span>
+        </div>
+
         <span
-          className="text-[10px] uppercase tracking-[0.15em] px-2 py-1 rounded-full flex-shrink-0"
+          className="text-[10px] uppercase px-2.5 py-1 rounded-full"
           style={{
-            color: style.dot,
-            background: 'rgba(255,255,255,0.03)',
-            border: `1px solid ${style.border}`,
-            fontFamily: 'Poppins, sans-serif',
+            color: 'var(--text-secondary)',
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.06)',
+            fontFamily: 'var(--font-body)',
+            letterSpacing: '0.12em',
+            fontWeight: 500,
           }}
         >
           {grade}
         </span>
       </div>
+
       <p
-        className="text-sm capitalize"
-        style={{ color: '#A8A096', fontFamily: 'Poppins, sans-serif' }}
+        className="text-[28px] leading-[1.1] mb-1.5"
+        style={{
+          color: 'var(--text-primary)',
+          fontFamily: 'var(--font-elegant)',
+          fontWeight: 500,
+          letterSpacing: '-0.005em',
+        }}
+      >
+        {day.title || day.name}
+      </p>
+
+      <p
+        className="text-[13px] capitalize"
+        style={{
+          color: 'var(--text-secondary)',
+          fontFamily: 'var(--font-body)',
+        }}
       >
         {hoje}
       </p>
 
-      <div className="mt-3 flex items-center justify-between gap-3">
+      <div className="mt-5 flex items-center justify-between gap-3">
         <span
-          className="text-xs"
-          style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+          className="text-[12px]"
+          style={{
+            color: 'var(--text-muted)',
+            fontFamily: 'var(--font-body)',
+          }}
         >
           {day.season}
         </span>
+
         <span
-          className="inline-flex items-center gap-1 text-xs px-3 py-2 rounded-full"
-          style={{
-            color: '#0F0E0C',
-            fontFamily: 'Poppins, sans-serif',
-            fontWeight: 600,
-            background: 'linear-gradient(135deg, #C9A84C, #A88B3A)',
-          }}
+          className="ios-cta-gold inline-flex items-center gap-1.5 text-[12.5px] pl-3.5 pr-3 py-2 rounded-full"
         >
-          Ler liturgia do dia <ArrowRight className="w-3 h-3" />
+          Ler liturgia
+          <ArrowRight className="w-3.5 h-3.5" strokeWidth={2.25} />
         </span>
       </div>
     </Link>
