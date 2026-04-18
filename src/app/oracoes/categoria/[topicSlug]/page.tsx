@@ -4,8 +4,10 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { resolvePrayerIcon } from '@/features/prayers/icon-map'
-import { fetchLibraryTree, fetchTopic } from '@/features/prayers/queries'
+import { fetchTopic } from '@/features/prayers/queries'
 
+// Dynamic: queries.ts usa cookies() (supabase SSR) e não podemos pré-gerar
+// no build. ISR de 1h cobre cache na borda pós-render.
 export const revalidate = 3600
 
 type PageProps = {
@@ -13,11 +15,6 @@ type PageProps = {
 }
 
 const SITE = process.env.NEXT_PUBLIC_APP_URL || 'https://www.veritasdei.com.br'
-
-export async function generateStaticParams() {
-  const tree = await fetchLibraryTree()
-  return tree.map((t) => ({ topicSlug: t.slug }))
-}
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { topicSlug } = await params
