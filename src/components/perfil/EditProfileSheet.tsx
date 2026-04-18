@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   X,
@@ -44,6 +45,11 @@ export default function EditProfileSheet({
   const [loaded, setLoaded] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Portal só monta no client — evita mismatch de SSR.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const [name, setName] = useState('')
   const [handle, setHandle] = useState('')
@@ -63,14 +69,19 @@ export default function EditProfileSheet({
     setLoaded(true)
   }, [open, profile])
 
-  // Fecha com Escape.
+  // Fecha com Escape + trava scroll do body enquanto aberto.
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = previousOverflow
+    }
   }, [open, onClose])
 
   async function handleSave() {
@@ -130,7 +141,12 @@ export default function EditProfileSheet({
     setLinks(links.map((l, idx) => (idx === i ? { ...l, ...patch } : l)))
   }
 
-  return (
+  // Renderizado num portal pra escapar do `willChange:transform` do
+  // PageTransition (que vira containing block e arrasta o `position:fixed`
+  // pro fundo da página em vez de prender na viewport).
+  if (!mounted) return null
+
+  const overlay = (
     <AnimatePresence>
       {open && loaded && (
         <>
@@ -434,6 +450,8 @@ export default function EditProfileSheet({
       )}
     </AnimatePresence>
   )
+
+  return createPortal(overlay, document.body)
 }
 
 function FieldBlock({
