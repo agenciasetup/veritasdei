@@ -2,6 +2,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Copy, Download, Share2, Check, Loader2 } from 'lucide-react'
 import type { VeritasPost } from '@/lib/community/types'
 import { renderShareCard, SHARE_IMAGE_WIDTH, SHARE_IMAGE_HEIGHT } from '@/lib/image/share-card'
@@ -64,6 +65,10 @@ export default function ShareImageModal({ post, open, onClose, onAction }: Props
   }, [open, onClose])
 
   if (!open || !post) return null
+  // Render condicional ao DOM client: precisa portalizar fora da arvore
+  // de VeritasCard (que tem `content-visibility: auto` — cria containing
+  // block e clipa position: fixed).
+  if (typeof document === 'undefined') return null
 
   async function handleCopy() {
     if (!blob || !post) return
@@ -127,7 +132,7 @@ export default function ShareImageModal({ post, open, onClose, onAction }: Props
     handleSave()
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(4px)' }}
@@ -223,7 +228,8 @@ export default function ShareImageModal({ post, open, onClose, onAction }: Props
           />
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
