@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation'
-import RequirePremium from '@/components/payments/RequirePremium'
 import HashtagFeedClient from '@/components/comunidade/HashtagFeedClient'
 import { getCommunityFlags } from '@/lib/community/config'
 
@@ -26,12 +25,5 @@ export default async function HashtagPage({ params }: Props) {
     notFound()
   }
 
-  return (
-    <RequirePremium
-      title={`#${slug}`}
-      description="Acesse todos os Veritas com esta hashtag."
-    >
-      <HashtagFeedClient slug={slug} />
-    </RequirePremium>
-  )
+  return <HashtagFeedClient slug={slug} />
 }

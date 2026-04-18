@@ -14,6 +14,7 @@ import {
   FileText,
   BookOpen,
   ChevronDown,
+  Users,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
@@ -27,15 +28,17 @@ import {
 import { VocacaoIcon } from '@/components/icons/VocacaoIcons'
 import { isValidCpf, maskCpf, stripCpf } from '@/lib/utils/cpf'
 import { useHaptic } from '@/hooks/useHaptic'
+import CommunityProfileFields from '@/components/comunidade/CommunityProfileFields'
 import { SectionTitle, FormInput, FormSelect } from './shared'
 
-type Section = 'pessoal' | 'endereco' | 'fe' | 'social'
+type Section = 'pessoal' | 'endereco' | 'fe' | 'social' | 'comunidade'
 
 const SECTIONS: { key: Section; label: string; icon: React.ElementType }[] = [
-  { key: 'pessoal',  label: 'Dados Pessoais', icon: User },
-  { key: 'endereco', label: 'Endereço',       icon: MapPin },
-  { key: 'fe',       label: 'Vida de Fé',     icon: Church },
-  { key: 'social',   label: 'Social',         icon: Heart },
+  { key: 'pessoal',    label: 'Dados Pessoais',   icon: User },
+  { key: 'endereco',   label: 'Endereço',         icon: MapPin },
+  { key: 'fe',         label: 'Vida de Fé',       icon: Church },
+  { key: 'social',     label: 'Social',           icon: Heart },
+  { key: 'comunidade', label: 'Comunidade',       icon: Users },
 ]
 
 /**
@@ -45,15 +48,21 @@ const SECTIONS: { key: Section; label: string; icon: React.ElementType }[] = [
  * Desktop:       chips horizontais (uma seção visível por vez).
  *
  * O state vive aqui dentro (form local + sync com profile via initial).
+ * `initialSection` permite deep-link vindo de `/perfil?tab=editar&section=comunidade`,
+ * abrindo diretamente a aba de perfil público da Comunidade.
  */
-export default function EditarPerfilSection() {
+export default function EditarPerfilSection({
+  initialSection = 'pessoal',
+}: {
+  initialSection?: Section
+} = {}) {
   const { profile, refreshProfile, user } = useAuth()
   const supabase = createClient()!
   const fileInputRef = useRef<HTMLInputElement>(null)
   const haptic = useHaptic()
 
-  const [section, setSection] = useState<Section>('pessoal')
-  const [openMobile, setOpenMobile] = useState<Set<Section>>(new Set(['pessoal']))
+  const [section, setSection] = useState<Section>(initialSection)
+  const [openMobile, setOpenMobile] = useState<Set<Section>>(new Set([initialSection]))
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
@@ -158,7 +167,10 @@ export default function EditarPerfilSection() {
       !!(form.name && (form.cpf || cpfDisplay) && form.vocacao && form.data_nascimento),
     endereco: !!(form.cidade && form.estado),
     fe: !!(form.paroquia && (form.sacramentos as string[] | undefined)?.length),
-    social: !!(form.instagram || form.whatsapp || form.public_handle),
+    social: !!(form.instagram || form.whatsapp),
+    // A seção Comunidade tem seu próprio botão Salvar e gate Premium,
+    // então não participa do check de completude do formulário principal.
+    comunidade: !!profile?.public_handle,
   }
 
   const avatarUrl = profile?.profile_image_url
@@ -441,34 +453,30 @@ export default function EditarPerfilSection() {
         </div>
       )
     }
-    // social
-    return (
-      <div className="space-y-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormInput
-            label="Handle Público (Comunidade)"
-            value={(form.public_handle as string) ?? ''}
-            onChange={(v) => updateField('public_handle', v.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-            placeholder="ex: joao_paulo"
-            icon={<AtSign className="w-4 h-4" />}
-          />
-          <FormInput
-            label="Instagram"
-            value={(form.instagram as string) ?? ''}
-            onChange={(v) => updateField('instagram', v)}
-            placeholder="@seuperfil"
-            icon={<AtSign className="w-4 h-4" />}
-          />
-          <FormInput
-            label="WhatsApp"
-            value={(form.whatsapp as string) ?? ''}
-            onChange={(v) => updateField('whatsapp', v)}
-            placeholder="(11) 99999-9999"
-            icon={<Phone className="w-4 h-4" />}
-          />
+    if (s === 'social') {
+      return (
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormInput
+              label="Instagram"
+              value={(form.instagram as string) ?? ''}
+              onChange={(v) => updateField('instagram', v)}
+              placeholder="@seuperfil"
+              icon={<AtSign className="w-4 h-4" />}
+            />
+            <FormInput
+              label="WhatsApp"
+              value={(form.whatsapp as string) ?? ''}
+              onChange={(v) => updateField('whatsapp', v)}
+              placeholder="(11) 99999-9999"
+              icon={<Phone className="w-4 h-4" />}
+            />
+          </div>
         </div>
-      </div>
-    )
+      )
+    }
+    // comunidade — capa, handle, bio, links, privacidade.
+    return <CommunityProfileFields />
   }
 
   const SaveButton = (
@@ -680,7 +688,7 @@ export default function EditarPerfilSection() {
             />
           </div>
           {renderSectionBody(section)}
-          {SaveButton}
+          {section !== 'comunidade' && SaveButton}
         </div>
       </div>
     </div>
@@ -691,13 +699,14 @@ function initFormFromProfile(
   profile: ReturnType<typeof useAuth>['profile'],
 ): ProfileUpdate {
   if (!profile) return {}
+  // public_handle fica fora: é gerenciado pela seção Comunidade via
+  // PUT /api/comunidade/perfil, que valida unicidade e formato.
   return {
     name: profile.name ?? '',
     cpf: profile.cpf ?? '',
     vocacao: profile.vocacao,
     genero: profile.genero,
     data_nascimento: profile.data_nascimento,
-    public_handle: profile.public_handle ?? '',
     instagram: profile.instagram ?? '',
     whatsapp: profile.whatsapp ?? '',
     endereco: profile.endereco ?? '',

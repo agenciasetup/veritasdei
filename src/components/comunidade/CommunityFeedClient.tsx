@@ -16,6 +16,7 @@ import {
 import { share as platformShare } from '@/lib/platform'
 import type { FeedResponse, VeritasPost } from '@/lib/community/types'
 import { useAuth } from '@/contexts/AuthContext'
+import { useSubscription } from '@/contexts/SubscriptionContext'
 import VeritasCard from '@/components/comunidade/VeritasCard'
 import { VeritasFeedSkeleton } from '@/components/comunidade/VeritasCardSkeleton'
 import QuoteModal from '@/components/comunidade/QuoteModal'
@@ -91,6 +92,7 @@ interface CommunityFeedClientProps {
 
 export default function CommunityFeedClient({ initialFeed = null }: CommunityFeedClientProps = {}) {
   const { user, profile } = useAuth()
+  const { isPremium } = useSubscription()
   const isClergy = profile
     ? ['padre', 'diacono', 'bispo', 'religioso'].includes(profile.community_role)
     : false
@@ -625,7 +627,7 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
               <NotificationsBell />
 
               <Link
-                href="/comunidade/perfil/editar"
+                href="/perfil?tab=editar&section=comunidade"
                 aria-label="Meu perfil"
                 className="p-2 rounded-full"
                 style={{ color: '#8A8378' }}
@@ -649,7 +651,7 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
 
         <TrendingHashtags />
 
-        {!composerOpen && (
+        {!composerOpen && user && isPremium && (
           <button
             type="button"
             onClick={() => {
@@ -700,6 +702,63 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
               Publicar
             </span>
           </button>
+        )}
+
+        {!composerOpen && user && !isPremium && (
+          <div
+            className="flex items-center gap-3 mb-4 py-3"
+            style={{
+              borderTop: '0.5px solid rgba(242,237,228,0.08)',
+              borderBottom: '0.5px solid rgba(242,237,228,0.08)',
+            }}
+          >
+            <span
+              className="flex-1 text-[13px] leading-snug"
+              style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}
+            >
+              Ler o feed é livre. Para publicar, curtir e seguir, assine o plano Estudos.
+            </span>
+            <Link
+              href="/planos"
+              className="flex-shrink-0 text-xs uppercase tracking-[0.12em] px-3 py-1.5 rounded-full"
+              style={{
+                color: '#0F0E0C',
+                fontFamily: 'Cinzel, serif',
+                background: 'linear-gradient(135deg, #C9A84C, #A88B3A)',
+                fontWeight: 600,
+              }}
+            >
+              Assinar
+            </Link>
+          </div>
+        )}
+
+        {!composerOpen && !user && (
+          <div
+            className="flex items-center gap-3 mb-4 py-3"
+            style={{
+              borderTop: '0.5px solid rgba(242,237,228,0.08)',
+              borderBottom: '0.5px solid rgba(242,237,228,0.08)',
+            }}
+          >
+            <span
+              className="flex-1 text-[13px] leading-snug"
+              style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}
+            >
+              Entre para seguir, curtir e publicar.
+            </span>
+            <Link
+              href="/login?next=/comunidade"
+              className="flex-shrink-0 text-xs uppercase tracking-[0.12em] px-3 py-1.5 rounded-full"
+              style={{
+                color: '#C9A84C',
+                fontFamily: 'Cinzel, serif',
+                border: '1px solid rgba(201,168,76,0.35)',
+              }}
+            >
+              Entrar
+            </Link>
+          </div>
         )}
 
         {composerOpen && (

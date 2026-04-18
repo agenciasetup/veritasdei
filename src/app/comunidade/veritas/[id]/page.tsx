@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation'
-import RequirePremium from '@/components/payments/RequirePremium'
 import ThreadView from '@/components/comunidade/ThreadView'
 import { getCommunityFlags } from '@/lib/community/config'
 
@@ -24,12 +23,5 @@ export default async function VeritasThreadPage({ params }: Props) {
   const { id } = await params
   if (!UUID_RE.test(id)) notFound()
 
-  return (
-    <RequirePremium
-      title="Veritas"
-      description="Acesse esta thread da Comunidade Veritas."
-    >
-      <ThreadView postId={id} />
-    </RequirePremium>
-  )
+  return <ThreadView postId={id} />
 }

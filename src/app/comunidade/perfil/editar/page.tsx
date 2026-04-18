@@ -1,23 +1,8 @@
-import { notFound } from 'next/navigation'
-import RequirePremium from '@/components/payments/RequirePremium'
-import ProfileEditor from '@/components/comunidade/ProfileEditor'
-import { getCommunityFlags } from '@/lib/community/config'
+import { redirect } from 'next/navigation'
 
-export const metadata = {
-  title: 'Editar perfil · Comunidade Veritas',
-  description: 'Edite seu avatar, capa, bio, handle e links.',
-}
-
+// Edição de perfil foi unificada em /perfil. Mantemos este path apenas
+// para bookmarks e links antigos — redireciona direto para a seção
+// Comunidade dentro do editor único.
 export default function ProfileEditPage() {
-  const flags = getCommunityFlags()
-  if (!flags.communityEnabled) notFound()
-
-  return (
-    <RequirePremium
-      title="Editar perfil"
-      description="Personalize seu perfil na Comunidade Veritas."
-    >
-      <ProfileEditor />
-    </RequirePremium>
-  )
+  redirect('/perfil?tab=editar&section=comunidade')
 }

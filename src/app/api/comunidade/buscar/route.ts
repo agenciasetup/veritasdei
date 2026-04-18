@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchPostsByIds } from '@/lib/community/posts'
-import { requireCommunityPremiumAccess } from '@/lib/community/server'
+import { requireCommunitySession } from '@/lib/community/server'
 import { rateLimit } from '@/lib/rate-limit'
 
 const VALID_TABS = new Set(['top', 'posts', 'people', 'hashtags'])
 
+// Busca aberta a qualquer usuário logado — apenas escrever exige Premium.
 export async function GET(req: NextRequest) {
-  const access = await requireCommunityPremiumAccess()
-  if (!access.ok) return access.response
+  const session = await requireCommunitySession()
+  if (!session.ok) return session.response
 
-  const { supabase, user } = access.context
+  const { supabase, user } = session
 
   if (!rateLimit(`community:search:${user.id}`, 60, 60_000)) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
