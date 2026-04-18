@@ -71,6 +71,7 @@ const emptyMeta: PrayerMetaDraft = {
   latinBody: '',
   audioUrl: '',
   videoUrl: '',
+  imageUrl: '',
   keywords: [],
   scriptureRefs: [],
   metaDescription: '',
@@ -101,7 +102,7 @@ export default function EditorShell({ prayerId }: { prayerId: string }) {
       const { data, error: dbError } = await supabase
         .from('content_items')
         .select(
-          'id, title, slug, visible, body, latin_title, latin_body, audio_url, video_url, keywords, scripture_refs, meta_description, indulgence_note, icon_name'
+          'id, title, slug, visible, body, latin_title, latin_body, audio_url, video_url, image_url, keywords, scripture_refs, meta_description, indulgence_note, icon_name'
         )
         .eq('id', prayerId)
         .maybeSingle()
@@ -121,6 +122,7 @@ export default function EditorShell({ prayerId }: { prayerId: string }) {
         latin_body: string | null
         audio_url: string | null
         video_url: string | null
+        image_url: string | null
         keywords: string[] | null
         scripture_refs: string[] | null
         meta_description: string | null
@@ -133,6 +135,7 @@ export default function EditorShell({ prayerId }: { prayerId: string }) {
         latinBody: row.latin_body ?? '',
         audioUrl: row.audio_url ?? '',
         videoUrl: row.video_url ?? '',
+        imageUrl: row.image_url ?? '',
         keywords: row.keywords ?? [],
         scriptureRefs: row.scripture_refs ?? [],
         metaDescription: row.meta_description ?? '',
@@ -200,6 +203,7 @@ export default function EditorShell({ prayerId }: { prayerId: string }) {
       latin_body: draft.latinBody.trim() || null,
       audio_url: draft.audioUrl.trim() || null,
       video_url: draft.videoUrl.trim() || null,
+      image_url: draft.imageUrl.trim() || null,
       keywords: draft.keywords,
       scripture_refs: draft.scriptureRefs,
       meta_description: draft.metaDescription.trim() || null,

@@ -4,6 +4,7 @@ import { X } from 'lucide-react'
 import { useEffect } from 'react'
 
 import TagInput from './TagInput'
+import UploadField from './UploadField'
 import { useAutosizeTextarea } from './useAutosizeTextarea'
 
 export type PrayerMetaDraft = {
@@ -11,6 +12,7 @@ export type PrayerMetaDraft = {
   latinBody: string
   audioUrl: string
   videoUrl: string
+  imageUrl: string
   keywords: string[]
   scriptureRefs: string[]
   metaDescription: string
@@ -154,16 +156,36 @@ export default function MetaPanel({
           </Section>
 
           <Section title="Mídia">
-            <Field label="URL do áudio (MP3/M4A)">
-              <input
+            <Field label="Áudio (MP3/M4A/OGG — até 20MB)">
+              <UploadField
+                kind="audio"
                 value={meta.audioUrl}
-                onChange={(e) => onChange({ ...meta, audioUrl: e.target.value })}
-                placeholder="https://… (upload inline vem no sprint 5)"
-                className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
-                style={inputStyle}
+                onChange={(url) => onChange({ ...meta, audioUrl: url })}
+                placeholder="https://… ou enviar arquivo"
               />
             </Field>
-            <Field label="Link do YouTube">
+            <Field label="Imagem de capa (auto-comprimida)">
+              <UploadField
+                kind="image"
+                value={meta.imageUrl}
+                onChange={(url) => onChange({ ...meta, imageUrl: url })}
+                placeholder="Usada como OpenGraph e preview"
+              />
+              {meta.imageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={meta.imageUrl}
+                  alt="Preview"
+                  className="mt-2 w-full rounded-lg"
+                  style={{
+                    maxHeight: 160,
+                    objectFit: 'cover',
+                    border: '1px solid rgba(201,168,76,0.15)',
+                  }}
+                />
+              )}
+            </Field>
+            <Field label="Link do YouTube (opcional)">
               <input
                 value={meta.videoUrl}
                 onChange={(e) => onChange({ ...meta, videoUrl: e.target.value })}
