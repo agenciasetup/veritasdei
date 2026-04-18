@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
+import { compressImage } from '@/lib/image/compress'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { VocacaoIcon } from '@/components/icons/VocacaoIcons'
 import {
@@ -74,22 +75,24 @@ function VerificacaoContent() {
   }, [user])
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !user || !supabase) return
+    const raw = e.target.files?.[0]
+    if (!raw || !user || !supabase) return
 
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
-    if (!allowedTypes.includes(file.type)) {
+    if (!allowedTypes.includes(raw.type)) {
       setError('Formato inválido. Envie uma imagem (JPG, PNG, WebP) ou PDF.')
       return
     }
-    if (file.size > 10 * 1024 * 1024) {
+    if (raw.size > 10 * 1024 * 1024) {
       setError('Arquivo deve ter no máximo 10MB.')
       return
     }
 
     setUploading(true)
     setError(null)
-    const ext = file.name.split('.').pop()
+    // compressImage passa PDFs direto; comprime imagens.
+    const { file } = await compressImage(raw)
+    const ext = file.name.split('.').pop() ?? 'bin'
     const path = `${user.id}/${Date.now()}.${ext}`
     const { error: uploadError } = await supabase.storage.from('verificacoes').upload(path, file)
     if (uploadError) {

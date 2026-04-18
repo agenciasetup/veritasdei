@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
+import { compressImage } from '@/lib/image/compress'
 import { VOCACOES, SACRAMENTOS, type Vocacao, type Sacramento } from '@/types/auth'
 import { VocacaoIcon } from '@/components/icons/VocacaoIcons'
 import { motion, AnimatePresence, type PanInfo } from 'framer-motion'
@@ -77,14 +78,17 @@ export default function OnboardingPage() {
   }, [profile, user])
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !user || !supabase) return
+    const raw = e.target.files?.[0]
+    if (!raw || !user || !supabase) return
 
-    if (!file.type.startsWith('image/')) return
-    if (file.size > 2 * 1024 * 1024) return
+    if (!raw.type.startsWith('image/')) return
+    // Limite de 2MB aplicado ao ORIGINAL. A compressao abaixo reduz
+    // ainda mais pra economizar storage.
+    if (raw.size > 2 * 1024 * 1024) return
 
     setUploadingAvatar(true)
-    const ext = file.name.split('.').pop()
+    const { file } = await compressImage(raw)
+    const ext = file.name.split('.').pop() ?? 'jpg'
     const path = `${user.id}/avatar.${ext}`
 
     const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })

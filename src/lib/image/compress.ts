@@ -1,23 +1,43 @@
 /**
- * Compressão de imagens client-side antes do upload ao R2.
+ * Compressão de imagens client-side agressiva antes do upload ao R2.
  *
- * Motivação: fotos de celular chegam em 3-5MB. O Cloudflare Image Resizing
- * do lado da view já serve variantes otimizadas, mas o arquivo ORIGINAL
- * é o que gasta banda de upload, storage no R2 e egress no 1º hit do
- * otimizador. Comprimir aqui reduz 60-80% sem perda visível.
+ * Motivação: Cloudflare Image Resizing serve variantes otimizadas na
+ * visualização, mas o arquivo ORIGINAL guardado no R2 consome storage,
+ * banda de upload e egress do otimizador no primeiro hit. Sem compressão
+ * adequada, 5 fotos de celular resultam em ~8MB no bucket.
  *
- * Estratégia: decodificar via createImageBitmap (mais rápido que <img>),
- * redimensionar pra no máximo MAX_DIMENSION preservando aspect ratio,
- * reencodar como WebP quando o browser suporta (Safari 14+, Chrome, Edge,
- * Firefox) ou JPEG quando não. Se algo falha (HEIC em Chrome, por exemplo),
- * devolve o arquivo original pra não bloquear o fluxo de postagem.
+ * Estratégia: decodifica via createImageBitmap, redimensiona pra no máximo
+ * MAX_DIMENSION (1600px — igual à maior variante do CDN, zero upscaling),
+ * e itera por uma escada de qualidades até ficar abaixo do `TARGET_BYTES`
+ * ou atingir o mínimo. WebP quando o browser suporta; JPEG fallback.
+ *
+ * GIFs/SVGs passam direto pra preservar animação. Arquivos já pequenos
+ * (< 60KB) não gastam CPU comprimindo. Se decodificação tombar
+ * (HEIC em Chrome, imagem corrompida, memória) retorna o original
+ * — nunca bloqueia a postagem.
  */
 
-const MAX_DIMENSION = 1920
-const JPEG_QUALITY = 0.82
-const WEBP_QUALITY = 0.80
+// Tamanho máximo do maior lado. Casa com a variante `detail` do
+// Cloudflare Image Resizing (1600px) — não upscala, não desperdiça
+// bytes guardando pixels que nunca serão exibidos.
+const MAX_DIMENSION = 1600
 
-// GIFs animados e SVGs não devem ser recomprimidos — passam direto.
+// Alvo por arquivo. A maioria das fotos de celular chega aqui dentro
+// na primeira passada com WebP 0.72. Itera quality se estourar.
+const TARGET_BYTES = 400 * 1024
+
+// Escada de qualidade — sobe pra primeira, desce até QUALITY_MIN se
+// estourar o alvo. 0.72 WebP ≈ qualidade alta visualmente indistinguível
+// do original; 0.50 ainda fica bom pra feed.
+const WEBP_QUALITIES = [0.72, 0.62, 0.52]
+const JPEG_QUALITIES = [0.76, 0.66, 0.56]
+
+// Arquivos abaixo desse limite passam direto — o overhead de decode+
+// encode não compensa o ganho marginal.
+const SKIP_IF_UNDER = 60 * 1024
+
+// GIFs animados e SVGs não devem ser recomprimidos — preservam animação
+// e resolução vetorial respectivamente.
 const SKIP_COMPRESSION_MIME = new Set<string>([
   'image/gif',
   'image/svg+xml',
@@ -25,16 +45,16 @@ const SKIP_COMPRESSION_MIME = new Set<string>([
 
 interface CompressResult {
   file: File
-  /** true se o arquivo foi efetivamente comprimido. */
   compressed: boolean
-  /** Bytes antes / depois — só pra log/telemetria opcional. */
   originalBytes: number
   finalBytes: number
 }
 
 async function decodeImage(file: File): Promise<ImageBitmap> {
-  // createImageBitmap suporta JPEG/PNG/WebP/AVIF/HEIC (só Safari em HEIC).
-  return await createImageBitmap(file)
+  // createImageBitmap suporta JPEG/PNG/WebP/AVIF/HEIC (Safari).
+  // Usar `imageOrientation: 'from-image'` pra respeitar EXIF de fotos
+  // tiradas em retrato — sem isso elas viriam deitadas.
+  return await createImageBitmap(file, { imageOrientation: 'from-image' })
 }
 
 function computeTargetSize(width: number, height: number): { w: number; h: number } {
@@ -65,8 +85,13 @@ function supportsWebP(): boolean {
 export async function compressImage(file: File): Promise<CompressResult> {
   const originalBytes = file.size
 
-  // Passa direto se for GIF/SVG (não queremos desanimação) ou se já for pequeno.
-  if (SKIP_COMPRESSION_MIME.has(file.type) || file.size < 180 * 1024) {
+  // Se não for imagem (PDF em verificação, por exemplo) ou for GIF/SVG,
+  // passa direto. Mesma coisa pra arquivos ja pequenos.
+  if (
+    !file.type.startsWith('image/')
+    || SKIP_COMPRESSION_MIME.has(file.type)
+    || file.size < SKIP_IF_UNDER
+  ) {
     return { file, compressed: false, originalBytes, finalBytes: originalBytes }
   }
 
@@ -82,27 +107,38 @@ export async function compressImage(file: File): Promise<CompressResult> {
       bitmap.close?.()
       return { file, compressed: false, originalBytes, finalBytes: originalBytes }
     }
+    // Melhor qualidade de resampling pra downscale — importa em fotos
+    // de celular com muito detalhe.
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
     ctx.drawImage(bitmap, 0, 0, w, h)
     bitmap.close?.()
 
     const wantsWebP = supportsWebP()
     const targetType = wantsWebP ? 'image/webp' : 'image/jpeg'
-    const quality = wantsWebP ? WEBP_QUALITY : JPEG_QUALITY
+    const qualities = wantsWebP ? WEBP_QUALITIES : JPEG_QUALITIES
 
-    const blob = await canvasToBlob(canvas, targetType, quality)
-    if (!blob) {
+    let best: Blob | null = null
+    for (const quality of qualities) {
+      const blob = await canvasToBlob(canvas, targetType, quality)
+      if (!blob) continue
+      best = blob
+      if (blob.size <= TARGET_BYTES) break
+    }
+
+    if (!best) {
       return { file, compressed: false, originalBytes, finalBytes: originalBytes }
     }
 
-    // Se a "otimização" ficou maior que o original (formato já era agressivo),
-    // mantém o original.
-    if (blob.size >= file.size) {
+    // Se mesmo no menor quality ficou maior que o original (possivel
+    // com imagens ja muito comprimidas), mantem o original.
+    if (best.size >= file.size) {
       return { file, compressed: false, originalBytes, finalBytes: originalBytes }
     }
 
     const ext = targetType === 'image/webp' ? 'webp' : 'jpg'
     const baseName = file.name.replace(/\.[^.]+$/, '') || 'veritas'
-    const compressed = new File([blob], `${baseName}.${ext}`, {
+    const compressed = new File([best], `${baseName}.${ext}`, {
       type: targetType,
       lastModified: Date.now(),
     })
@@ -114,7 +150,8 @@ export async function compressImage(file: File): Promise<CompressResult> {
       finalBytes: compressed.size,
     }
   } catch {
-    // Qualquer falha (HEIC em Chrome, memória, etc) — upload original.
+    // HEIC em Chrome, memoria, imagem corrompida — upload do original
+    // nao bloqueia o fluxo.
     return { file, compressed: false, originalBytes, finalBytes: originalBytes }
   }
 }
