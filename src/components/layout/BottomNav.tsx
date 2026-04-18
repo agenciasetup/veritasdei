@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from 'react'
  * Navegação mobile — 5 hubs primários.
  *
  * - Hoje: perfil pessoal diário, liturgia, propósitos, atalhos
- * - Orar: rosário, orações, exame de consciência
+ * - Rezar: rosário, orações, exame de consciência
  * - Liturgia: calendário, leituras do dia, paróquias, confissão
  * - Aprender: trilhas, dogmas, catecismo, virtudes, S. Tomás
  * - Perfil: dados pessoais, propósitos, notificações, badge de não-lidas
@@ -26,7 +26,7 @@ import { useEffect, useRef, useState } from 'react'
 
 const NAV_ITEMS = [
   { href: '/',         icon: Home,          label: 'Hoje' },
-  { href: '/orar',     icon: Cross,         label: 'Orar' },
+  { href: '/orar',     icon: Cross,         label: 'Rezar' },
   { href: '/liturgia', icon: CalendarHeart, label: 'Liturgia' },
   { href: '/aprender', icon: BookOpen,      label: 'Aprender' },
   { href: '/perfil',   icon: User,          label: 'Perfil' },
