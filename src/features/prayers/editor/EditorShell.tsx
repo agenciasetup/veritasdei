@@ -16,17 +16,28 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable'
-import { ArrowLeft, Check, Loader2, Save, Settings2 } from 'lucide-react'
+import {
+  ArrowLeft,
+  Check,
+  Eye,
+  EyeOff,
+  Loader2,
+  Pencil,
+  Save,
+  Settings2,
+} from 'lucide-react'
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import PrayerRenderer from '../PrayerRenderer'
 import { parsePrayerBody } from '../parser'
 import type { Block } from '../types'
 import BlockInserter from './BlockInserter'
-import { createBlock } from './factory'
 import MetaPanel, { type PrayerMetaDraft } from './MetaPanel'
-import { serializeBlocks } from './serializer'
 import SortableBlock from './SortableBlock'
+import { revalidatePrayerRoute, togglePrayerVisibility } from './actions'
+import { createBlock } from './factory'
+import { serializeBlocks } from './serializer'
 import { createClient } from '@/lib/supabase/client'
 
 type Identified = { id: string; block: Block }
@@ -39,6 +50,15 @@ type PrayerMeta = {
 }
 
 const uid = () => Math.random().toString(36).slice(2, 10)
+
+function relativeTime(date: Date): string {
+  const diff = Math.round((Date.now() - date.getTime()) / 1000)
+  if (diff < 5) return ' agora'
+  if (diff < 60) return ` há ${diff}s`
+  const min = Math.round(diff / 60)
+  if (min < 60) return ` há ${min}min`
+  return ' há mais de 1h'
+}
 
 /**
  * Canvas editor — shell principal da página de edição de oração.
@@ -69,6 +89,9 @@ export default function EditorShell({ prayerId }: { prayerId: string }) {
   const [savedAt, setSavedAt] = useState<Date | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [metaOpen, setMetaOpen] = useState(false)
+  const [previewMode, setPreviewMode] = useState(false)
+  const [publishing, setPublishing] = useState(false)
+  const autosaveRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Carrega a oração
   useEffect(() => {
@@ -195,7 +218,38 @@ export default function EditorShell({ prayerId }: { prayerId: string }) {
     }
     setDirty(false)
     setSavedAt(new Date())
-  }, [supabase, saving, items, draft, prayerId])
+
+    // Revalida cache da página pública (se publicada)
+    if (meta?.visible && meta.slug) {
+      await revalidatePrayerRoute(meta.slug).catch(() => {})
+    }
+  }, [supabase, saving, items, draft, prayerId, meta])
+
+  // Auto-save debounced (2s de inatividade)
+  useEffect(() => {
+    if (!dirty || saving) return
+    if (autosaveRef.current) clearTimeout(autosaveRef.current)
+    autosaveRef.current = setTimeout(() => {
+      handleSave()
+    }, 2000)
+    return () => {
+      if (autosaveRef.current) clearTimeout(autosaveRef.current)
+    }
+  }, [dirty, saving, items, draft, handleSave])
+
+  const handleTogglePublish = async () => {
+    if (publishing) return
+    setPublishing(true)
+    // Salva antes, se dirty
+    if (dirty) {
+      await handleSave()
+    }
+    const result = await togglePrayerVisibility(prayerId)
+    setPublishing(false)
+    if (result && meta) {
+      setMeta({ ...meta, visible: result.visible, slug: result.slug })
+    }
+  }
 
   // Ctrl/Cmd+S pra salvar
   useEffect(() => {
@@ -274,10 +328,54 @@ export default function EditorShell({ prayerId }: { prayerId: string }) {
           >
             {meta.slug ? `/oracoes/${meta.slug}` : 'sem slug'} ·{' '}
             {meta.visible ? 'Publicada' : 'Rascunho'}
-            {savedAt && !dirty && ' · Salvo'}
-            {dirty && ' · Alterações não salvas'}
+            {saving && ' · Salvando…'}
+            {!saving && savedAt && !dirty && ` · Salvo${relativeTime(savedAt)}`}
+            {!saving && dirty && ' · Alterações não salvas (auto-save em 2s)'}
           </p>
         </div>
+        {/* Preview toggle */}
+        <button
+          type="button"
+          onClick={() => setPreviewMode((v) => !v)}
+          aria-label={previewMode ? 'Voltar a editar' : 'Ver preview'}
+          className="inline-flex items-center justify-center rounded-lg w-9 h-9 transition-colors active:scale-90"
+          style={{
+            background: previewMode
+              ? 'rgba(201,168,76,0.18)'
+              : 'rgba(201,168,76,0.08)',
+            border: `1px solid ${previewMode ? 'rgba(201,168,76,0.4)' : 'rgba(201,168,76,0.2)'}`,
+            color: '#C9A84C',
+          }}
+        >
+          {previewMode ? (
+            <Pencil className="w-4 h-4" />
+          ) : (
+            <Eye className="w-4 h-4" />
+          )}
+        </button>
+        {/* Publicar */}
+        <button
+          type="button"
+          onClick={handleTogglePublish}
+          disabled={publishing}
+          aria-label={meta.visible ? 'Despublicar' : 'Publicar'}
+          className="inline-flex items-center justify-center rounded-lg w-9 h-9 transition-colors active:scale-90 disabled:opacity-60"
+          style={{
+            background: meta.visible
+              ? 'rgba(76,175,80,0.12)'
+              : 'rgba(255,255,255,0.03)',
+            border: `1px solid ${meta.visible ? 'rgba(76,175,80,0.3)' : 'rgba(201,168,76,0.15)'}`,
+            color: meta.visible ? '#66BB6A' : '#8A8378',
+          }}
+        >
+          {publishing ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : meta.visible ? (
+            <Eye className="w-4 h-4" />
+          ) : (
+            <EyeOff className="w-4 h-4" />
+          )}
+        </button>
         <button
           type="button"
           onClick={() => setMetaOpen(true)}
@@ -334,47 +432,75 @@ export default function EditorShell({ prayerId }: { prayerId: string }) {
         </p>
       )}
 
-      {/* Canvas */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={onDragEnd}
-      >
-        <SortableContext
-          items={items.map((i) => i.id)}
-          strategy={verticalListSortingStrategy}
+      {previewMode ? (
+        /* Preview — usa o mesmo PrayerRenderer público */
+        <div
+          className="rounded-2xl p-5"
+          style={{
+            background: 'rgba(15,14,12,0.7)',
+            border: '1px solid rgba(201,168,76,0.12)',
+          }}
         >
-          <div className="flex flex-col gap-3">
-            {items.length === 0 && (
-              <p
-                className="text-center py-8 rounded-xl"
-                style={{
-                  fontFamily: 'Poppins, sans-serif',
-                  color: '#8A8378',
-                  background: 'rgba(255,255,255,0.02)',
-                  border: '1px dashed rgba(201,168,76,0.12)',
-                }}
-              >
-                Adicione o primeiro bloco abaixo.
-              </p>
-            )}
-            {items.map(({ id, block }) => (
-              <SortableBlock
-                key={id}
-                id={id}
-                block={block}
-                onChange={(b) => updateBlock(id, b)}
-                onDelete={() => removeBlock(id)}
-              />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+          {items.length === 0 ? (
+            <p
+              className="text-center py-8"
+              style={{
+                fontFamily: 'Poppins, sans-serif',
+                color: '#8A8378',
+                fontStyle: 'italic',
+              }}
+            >
+              Nada pra mostrar ainda — volte a editar e adicione blocos.
+            </p>
+          ) : (
+            <PrayerRenderer blocks={items.map((i) => i.block)} />
+          )}
+        </div>
+      ) : (
+        <>
+          {/* Canvas */}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={onDragEnd}
+          >
+            <SortableContext
+              items={items.map((i) => i.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="flex flex-col gap-3">
+                {items.length === 0 && (
+                  <p
+                    className="text-center py-8 rounded-xl"
+                    style={{
+                      fontFamily: 'Poppins, sans-serif',
+                      color: '#8A8378',
+                      background: 'rgba(255,255,255,0.02)',
+                      border: '1px dashed rgba(201,168,76,0.12)',
+                    }}
+                  >
+                    Adicione o primeiro bloco abaixo.
+                  </p>
+                )}
+                {items.map(({ id, block }) => (
+                  <SortableBlock
+                    key={id}
+                    id={id}
+                    block={block}
+                    onChange={(b) => updateBlock(id, b)}
+                    onDelete={() => removeBlock(id)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
 
-      {/* Inserter */}
-      <div className="pt-2">
-        <BlockInserter onInsert={(type) => insertBlock(type, true)} />
-      </div>
+          {/* Inserter */}
+          <div className="pt-2">
+            <BlockInserter onInsert={(type) => insertBlock(type, true)} />
+          </div>
+        </>
+      )}
 
       <MetaPanel
         open={metaOpen}
