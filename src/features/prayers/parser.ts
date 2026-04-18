@@ -109,6 +109,20 @@ export function parsePrayerBody(body: string | null | undefined): Block[] {
 }
 
 /**
+ * Parser específico para latin_body — no seed vem tipicamente como
+ * texto plano (sem fences), então tratamos tudo como um único verse
+ * block. Se vier com fences/headings, caímos no parser regular.
+ */
+export function parseLatinBody(latin: string | null | undefined): Block[] {
+  if (!latin) return []
+  const trimmed = latin.trim()
+  if (!trimmed) return []
+  const hasRichSyntax = /^```|^#{2,4}\s/m.test(trimmed)
+  if (hasRichSyntax) return parsePrayerBody(trimmed)
+  return [{ type: 'verse', text: trimmed }]
+}
+
+/**
  * Se o último parágrafo do bloco começar com `— ` (travessão), trata
  * como attribution/reference e retira do corpo.
  */
