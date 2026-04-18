@@ -627,7 +627,7 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
               <NotificationsBell />
 
               <Link
-                href="/perfil?tab=editar&section=comunidade"
+                href="/perfil?edit=1"
                 aria-label="Meu perfil"
                 className="p-2 rounded-full"
                 style={{ color: '#8A8378' }}
