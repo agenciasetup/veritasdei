@@ -23,6 +23,7 @@ import TrendingHashtags from '@/components/comunidade/TrendingHashtags'
 import InfiniteScrollSentinel from '@/components/comunidade/InfiniteScrollSentinel'
 import MentionAutocomplete from '@/components/comunidade/MentionAutocomplete'
 import FormattingToolbar from '@/components/comunidade/FormattingToolbar'
+import MarkdownPreview from '@/components/comunidade/MarkdownPreview'
 import NotificationsBell from '@/components/comunidade/NotificationsBell'
 import PullToRefresh from '@/components/mobile/PullToRefresh'
 import { compressImage } from '@/lib/image/compress'
@@ -740,6 +741,8 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
               maxLength={1000}
             />
           </div>
+
+          <MarkdownPreview value={composerBody} />
 
           {composerAttachments.length > 0 && (
             <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">

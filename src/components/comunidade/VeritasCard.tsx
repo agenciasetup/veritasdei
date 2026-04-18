@@ -27,6 +27,7 @@ import RoleBadge from '@/components/comunidade/RoleBadge'
 import VerifiedBadge from '@/components/comunidade/VerifiedBadge'
 import MediaLightbox from '@/components/comunidade/MediaLightbox'
 import FormattingToolbar from '@/components/comunidade/FormattingToolbar'
+import MarkdownPreview from '@/components/comunidade/MarkdownPreview'
 import ShareImageModal from '@/components/comunidade/ShareImageModal'
 import { useHaptic } from '@/hooks/useHaptic'
 
@@ -545,6 +546,7 @@ export default function VeritasCard({
                   {editError}
                 </p>
               )}
+              <MarkdownPreview value={editBody} />
             </div>
           ) : (
             <Link
