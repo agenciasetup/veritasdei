@@ -13,6 +13,10 @@ export interface Mystery {
   fruit: string
   scripture: string
   reflection: string
+  latinTitle?: string
+  latinFruit?: string
+  latinScripture?: string
+  latinReflection?: string
 }
 
 export type MysterySet = 'gloriosos' | 'gozosos' | 'dolorosos' | 'luminosos'
@@ -22,6 +26,7 @@ export interface MysteryGroup {
   name: string
   days: string
   mysteries: Mystery[]
+  latinName?: string
 }
 
 export interface RosarySection {

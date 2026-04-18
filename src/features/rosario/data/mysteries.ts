@@ -1,9 +1,17 @@
 import type { MysteryGroup } from './types'
 
+/**
+ * The four mystery groups of the Rosary, with Latin titles, fruits, and
+ * Vulgate-quote reflections appended to each mystery. The Latin reflections
+ * are short verse citations drawn from the corresponding scripture passage,
+ * in the Vulgate tradition — they are what the faithful have meditated on
+ * for centuries, not paraphrases.
+ */
 export const MYSTERY_GROUPS: MysteryGroup[] = [
   {
     id: 'gozosos',
     name: 'Mistérios Gozosos',
+    latinName: 'Mysteria Gaudiosa',
     days: 'Segunda e Sábado',
     mysteries: [
       {
@@ -12,6 +20,10 @@ export const MYSTERY_GROUPS: MysteryGroup[] = [
         fruit: 'Humildade',
         scripture: 'Lc 1,26-38',
         reflection: 'O Anjo Gabriel anuncia à Virgem Maria que ela será a Mãe do Salvador. Maria, com profunda humildade, aceita a vontade de Deus: "Eis a escrava do Senhor, faça-se em mim segundo a vossa palavra."',
+        latinTitle: 'Annuntiatio Domini',
+        latinFruit: 'Humilitas',
+        latinScripture: 'Lc 1, 26-38',
+        latinReflection: '"Ecce ancilla Domini; fiat mihi secundum verbum tuum." (Lc 1, 38)',
       },
       {
         number: 2,
@@ -19,6 +31,10 @@ export const MYSTERY_GROUPS: MysteryGroup[] = [
         fruit: 'Caridade para com o próximo',
         scripture: 'Lc 1,39-56',
         reflection: 'Maria, levando Jesus em seu ventre, visita sua prima Isabel nas montanhas da Judeia. Isabel exclama: "Bendita sois vós entre as mulheres, e bendito é o fruto do vosso ventre!"',
+        latinTitle: 'Visitatio Beatae Mariae Virginis',
+        latinFruit: 'Caritas erga proximum',
+        latinScripture: 'Lc 1, 39-56',
+        latinReflection: '"Benedicta tu inter mulieres, et benedictus fructus ventris tui." (Lc 1, 42)',
       },
       {
         number: 3,
@@ -26,6 +42,10 @@ export const MYSTERY_GROUPS: MysteryGroup[] = [
         fruit: 'Pobreza de espírito, desprendimento',
         scripture: 'Lc 2,1-20',
         reflection: 'O Filho de Deus nasce numa pobre gruta em Belém, envolto em panos e deitado numa manjedoura. Os anjos anunciam a boa-nova aos pastores: "Nasceu-vos hoje um Salvador."',
+        latinTitle: 'Nativitas Domini',
+        latinFruit: 'Paupertas spiritus',
+        latinScripture: 'Lc 2, 1-20',
+        latinReflection: '"Natus est vobis hodie Salvator, qui est Christus Dominus." (Lc 2, 11)',
       },
       {
         number: 4,
@@ -33,6 +53,10 @@ export const MYSTERY_GROUPS: MysteryGroup[] = [
         fruit: 'Obediência e pureza',
         scripture: 'Lc 2,22-40',
         reflection: 'Maria e José apresentam o Menino Jesus no Templo conforme a Lei. O velho Simeão profetiza: "Uma espada transpassará a vossa alma", anunciando as dores que Maria sofreria.',
+        latinTitle: 'Praesentatio Domini in Templo',
+        latinFruit: 'Oboedientia et puritas',
+        latinScripture: 'Lc 2, 22-40',
+        latinReflection: '"Et tuam ipsius animam pertransibit gladius." (Lc 2, 35)',
       },
       {
         number: 5,
@@ -40,12 +64,17 @@ export const MYSTERY_GROUPS: MysteryGroup[] = [
         fruit: 'Busca de Deus em todas as coisas',
         scripture: 'Lc 2,41-52',
         reflection: 'Jesus, aos doze anos, é encontrado no Templo entre os doutores. Às palavras angustiadas de Maria, responde: "Não sabíeis que devo estar na casa de meu Pai?"',
+        latinTitle: 'Inventio Iesu in Templo',
+        latinFruit: 'Quaerere Deum in omnibus',
+        latinScripture: 'Lc 2, 41-52',
+        latinReflection: '"Nesciebatis quia in his quae Patris mei sunt, oportet me esse?" (Lc 2, 49)',
       },
     ],
   },
   {
     id: 'luminosos',
     name: 'Mistérios Luminosos',
+    latinName: 'Mysteria Luminosa',
     days: 'Quinta-feira',
     mysteries: [
       {
@@ -54,6 +83,10 @@ export const MYSTERY_GROUPS: MysteryGroup[] = [
         fruit: 'Fidelidade às promessas do Batismo',
         scripture: 'Mt 3,13-17',
         reflection: 'Jesus é batizado por João no rio Jordão. Os céus se abrem e a voz do Pai declara: "Este é o meu Filho amado, no qual pus toda a minha complacência."',
+        latinTitle: 'Baptismus Iesu in Iordane',
+        latinFruit: 'Fidelitas promissionibus Baptismi',
+        latinScripture: 'Mt 3, 13-17',
+        latinReflection: '"Hic est Filius meus dilectus, in quo mihi bene complacui." (Mt 3, 17)',
       },
       {
         number: 2,
@@ -61,6 +94,10 @@ export const MYSTERY_GROUPS: MysteryGroup[] = [
         fruit: 'Confiança na intercessão de Maria',
         scripture: 'Jo 2,1-12',
         reflection: 'Nas bodas de Caná, por intercessão de Maria, Jesus realiza seu primeiro milagre, transformando a água em vinho. Maria diz aos servos: "Fazei tudo o que Ele vos disser."',
+        latinTitle: 'Autorevelatio ad Nuptias Canaae',
+        latinFruit: 'Fiducia in intercessione Mariae',
+        latinScripture: 'Io 2, 1-12',
+        latinReflection: '"Quodcumque dixerit vobis, facite." (Io 2, 5)',
       },
       {
         number: 3,
@@ -68,6 +105,10 @@ export const MYSTERY_GROUPS: MysteryGroup[] = [
         fruit: 'Conversão e confiança em Deus',
         scripture: 'Mc 1,14-15',
         reflection: 'Jesus percorre a Galileia pregando: "O tempo está cumprido e o Reino de Deus está próximo. Convertei-vos e crede no Evangelho." Ele chama todos à conversão.',
+        latinTitle: 'Praedicatio Regni Dei',
+        latinFruit: 'Conversio et fiducia in Deo',
+        latinScripture: 'Mc 1, 14-15',
+        latinReflection: '"Impletum est tempus, et appropinquavit regnum Dei: paenitemini, et credite Evangelio." (Mc 1, 15)',
       },
       {
         number: 4,
@@ -75,6 +116,10 @@ export const MYSTERY_GROUPS: MysteryGroup[] = [
         fruit: 'Desejo da santidade',
         scripture: 'Mt 17,1-8',
         reflection: 'Jesus sobe ao Monte Tabor com Pedro, Tiago e João. Seu rosto brilha como o sol e suas vestes tornam-se brancas como a luz. O Pai declara: "Ouvi-O!"',
+        latinTitle: 'Transfiguratio Domini',
+        latinFruit: 'Desiderium sanctitatis',
+        latinScripture: 'Mt 17, 1-8',
+        latinReflection: '"Hic est Filius meus dilectus, in quo mihi bene complacui: ipsum audite." (Mt 17, 5)',
       },
       {
         number: 5,
@@ -82,12 +127,17 @@ export const MYSTERY_GROUPS: MysteryGroup[] = [
         fruit: 'Amor à Eucaristia',
         scripture: 'Mt 26,26-29',
         reflection: 'Na Última Ceia, Jesus toma o pão e o vinho e os transforma em seu Corpo e Sangue: "Isto é o meu Corpo, que é dado por vós. Fazei isto em memória de Mim."',
+        latinTitle: 'Institutio Eucharistiae',
+        latinFruit: 'Amor erga Eucharistiam',
+        latinScripture: 'Lc 22, 14-20',
+        latinReflection: '"Hoc est corpus meum, quod pro vobis datur. Hoc facite in meam commemorationem." (Lc 22, 19)',
       },
     ],
   },
   {
     id: 'dolorosos',
     name: 'Mistérios Dolorosos',
+    latinName: 'Mysteria Dolorosa',
     days: 'Terça e Sexta-feira',
     mysteries: [
       {
@@ -96,6 +146,10 @@ export const MYSTERY_GROUPS: MysteryGroup[] = [
         fruit: 'Arrependimento dos pecados',
         scripture: 'Lc 22,39-46',
         reflection: 'No Getsêmani, Jesus sua sangue em agonia, prevendo toda a Paixão. Reza ao Pai: "Pai, se é possível, afasta de mim este cálice; contudo, não se faça a minha vontade, mas a Vossa."',
+        latinTitle: 'Agonia Iesu in Horto',
+        latinFruit: 'Paenitentia peccatorum',
+        latinScripture: 'Lc 22, 39-46',
+        latinReflection: '"Pater, si vis, transfer calicem istum a me: verumtamen non mea voluntas, sed tua fiat." (Lc 22, 42)',
       },
       {
         number: 2,
@@ -103,6 +157,10 @@ export const MYSTERY_GROUPS: MysteryGroup[] = [
         fruit: 'Mortificação dos sentidos',
         scripture: 'Jo 19,1',
         reflection: 'Pilatos manda flagelar Jesus. Nosso Senhor sofre os açoites com paciência divina, oferecendo cada golpe pela redenção dos nossos pecados.',
+        latinTitle: 'Flagellatio Domini',
+        latinFruit: 'Mortificatio sensuum',
+        latinScripture: 'Io 19, 1',
+        latinReflection: '"Tunc ergo apprehendit Pilatus Iesum, et flagellavit." (Io 19, 1)',
       },
       {
         number: 3,
@@ -110,6 +168,10 @@ export const MYSTERY_GROUPS: MysteryGroup[] = [
         fruit: 'Desprezo do mundo e das suas vaidades',
         scripture: 'Mt 27,27-31',
         reflection: 'Os soldados tecem uma coroa de espinhos e a cravejam na cabeça de Jesus, zombando: "Salve, Rei dos Judeus!" Jesus aceita a humilhação em silêncio.',
+        latinTitle: 'Coronatio Spinis',
+        latinFruit: 'Contemptus mundi et vanitatum eius',
+        latinScripture: 'Mt 27, 27-31',
+        latinReflection: '"Ave, rex Iudaeorum." (Mt 27, 29)',
       },
       {
         number: 4,
@@ -117,6 +179,10 @@ export const MYSTERY_GROUPS: MysteryGroup[] = [
         fruit: 'Paciência nas adversidades',
         scripture: 'Lc 23,26-32',
         reflection: 'Jesus, exausto, carrega a pesada Cruz pelo caminho do Calvário. Cai várias vezes, mas se levanta, movido pelo amor que nos tem, para completar a obra da salvação.',
+        latinTitle: 'Baiulatio Crucis',
+        latinFruit: 'Patientia in adversitatibus',
+        latinScripture: 'Io 19, 17',
+        latinReflection: '"Et baiulans sibi crucem, exivit in eum qui dicitur Calvariae locum." (Io 19, 17)',
       },
       {
         number: 5,
@@ -124,12 +190,17 @@ export const MYSTERY_GROUPS: MysteryGroup[] = [
         fruit: 'Amor a Deus e salvação das almas',
         scripture: 'Lc 23,33-46',
         reflection: 'Pregado na Cruz, Jesus perdoa seus algozes: "Pai, perdoai-lhes, pois não sabem o que fazem." E entrega o espírito: "Pai, nas Vossas mãos entrego o meu espírito."',
+        latinTitle: 'Crucifixio et Mors Domini',
+        latinFruit: 'Amor Dei et salus animarum',
+        latinScripture: 'Lc 23, 33-46',
+        latinReflection: '"Pater, in manus tuas commendo spiritum meum." (Lc 23, 46)',
       },
     ],
   },
   {
     id: 'gloriosos',
     name: 'Mistérios Gloriosos',
+    latinName: 'Mysteria Gloriosa',
     days: 'Quarta-feira e Domingo',
     mysteries: [
       {
@@ -138,6 +209,10 @@ export const MYSTERY_GROUPS: MysteryGroup[] = [
         fruit: 'Fé',
         scripture: 'Mt 28,1-10',
         reflection: 'Ao terceiro dia, Jesus ressuscita glorioso do sepulcro, vencendo a morte e o pecado. O anjo anuncia às mulheres: "Não está aqui, ressuscitou como havia dito!"',
+        latinTitle: 'Resurrectio Domini',
+        latinFruit: 'Fides',
+        latinScripture: 'Mt 28, 1-10',
+        latinReflection: '"Non est hic: surrexit enim, sicut dixit." (Mt 28, 6)',
       },
       {
         number: 2,
@@ -145,6 +220,10 @@ export const MYSTERY_GROUPS: MysteryGroup[] = [
         fruit: 'Esperança e desejo do Céu',
         scripture: 'At 1,6-11',
         reflection: 'Quarenta dias após a Ressurreição, Jesus sobe ao Céu na presença dos Apóstolos, prometendo: "Eis que estarei convosco todos os dias, até o fim do mundo."',
+        latinTitle: 'Ascensio Domini',
+        latinFruit: 'Spes et desiderium Caeli',
+        latinScripture: 'Act 1, 6-11',
+        latinReflection: '"Elevatus est, videntibus illis, et nubes suscepit eum ab oculis eorum." (Act 1, 9)',
       },
       {
         number: 3,
@@ -152,6 +231,10 @@ export const MYSTERY_GROUPS: MysteryGroup[] = [
         fruit: 'Dons do Espírito Santo',
         scripture: 'At 2,1-13',
         reflection: 'No dia de Pentecostes, o Espírito Santo desce sobre os Apóstolos e sobre Maria em forma de línguas de fogo, enchendo-os de coragem para anunciar o Evangelho.',
+        latinTitle: 'Descensus Spiritus Sancti',
+        latinFruit: 'Dona Spiritus Sancti',
+        latinScripture: 'Act 2, 1-13',
+        latinReflection: '"Et repleti sunt omnes Spiritu Sancto." (Act 2, 4)',
       },
       {
         number: 4,
@@ -159,6 +242,10 @@ export const MYSTERY_GROUPS: MysteryGroup[] = [
         fruit: 'Graça de uma boa morte',
         scripture: 'Ap 12,1',
         reflection: 'Terminado o curso de sua vida terrena, a Virgem Maria é elevada em corpo e alma à glória celeste, coroada como Rainha do Céu e da Terra.',
+        latinTitle: 'Assumptio Beatae Mariae Virginis',
+        latinFruit: 'Gratia bonae mortis',
+        latinScripture: 'Apoc 12, 1',
+        latinReflection: '"Signum magnum apparuit in caelo: mulier amicta sole." (Apoc 12, 1)',
       },
       {
         number: 5,
@@ -166,6 +253,10 @@ export const MYSTERY_GROUPS: MysteryGroup[] = [
         fruit: 'Devoção a Maria Santíssima',
         scripture: 'Ap 12,1',
         reflection: 'Maria é coroada Rainha do Céu e da Terra pelo seu divino Filho. Ela intercede por nós junto a Deus, sendo nossa Mãe e advogada.',
+        latinTitle: 'Coronatio Beatae Mariae Virginis',
+        latinFruit: 'Devotio in Beatissimam Virginem Mariam',
+        latinScripture: 'Apoc 12, 1',
+        latinReflection: '"Et in capite eius corona stellarum duodecim." (Apoc 12, 1)',
       },
     ],
   },

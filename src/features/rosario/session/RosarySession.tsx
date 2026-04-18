@@ -25,28 +25,33 @@ import { MYSTERY_GROUPS, getMysteryForToday } from '@/features/rosario/data/myst
 import { getSpeechText } from '@/features/rosario/data/speechText'
 import { getPrayerById } from '@/features/rosario/data/prayerMap'
 import type { MysterySet } from '@/features/rosario/data/types'
+import { getRosaryTheme, type RosaryLanguage } from '@/features/rosario/data/theme'
 
 /**
  * `<RosarySession />` — orquestrador completo de uma sessão de terço.
  *
- * Layout mobile-first redesenhado:
- *   - Header compacto com nome do mistério + menu
- *   - Contas SVG proeminentes
- *   - Card de oração compacto
- *   - Bottom bar fixa com Voltar / Avançar
- *   - Floating menu (bottom sheet) com todas as opções
+ * Dois modos visuais:
+ *   - `pt` (padrão) — paleta dourada sobre preto profundo.
+ *   - `la` — paleta vinho/rosa para o rito em latim. Toggle fica na topbar.
  */
 
-const ORDINALS: Record<number, string> = { 1: '1º', 2: '2º', 3: '3º', 4: '4º', 5: '5º' }
+const ORDINALS_PT: Record<number, string> = { 1: '1º', 2: '2º', 3: '3º', 4: '4º', 5: '5º' }
+const ORDINALS_LA: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V' }
 
-const MYSTERY_SINGULAR: Record<string, string> = {
+const MYSTERY_SINGULAR_PT: Record<string, string> = {
   gozosos: 'Gozoso',
   luminosos: 'Luminoso',
   dolorosos: 'Doloroso',
   gloriosos: 'Glorioso',
 }
+const MYSTERY_SINGULAR_LA: Record<string, string> = {
+  gozosos: 'Gaudiosum',
+  luminosos: 'Luminosum',
+  dolorosos: 'Dolorosum',
+  gloriosos: 'Gloriosum',
+}
 
-const STEP_LABELS: Record<string, string> = {
+const STEP_LABELS_PT: Record<string, string> = {
   sign_of_cross: 'Sinal da Cruz',
   creed: 'Credo Apostólico',
   our_father: 'Pai Nosso',
@@ -57,6 +62,19 @@ const STEP_LABELS: Record<string, string> = {
   hail_holy_queen: 'Salve Rainha',
   final_prayer: 'Oração Final',
 }
+const STEP_LABELS_LA: Record<string, string> = {
+  sign_of_cross: 'Signum Crucis',
+  creed: 'Symbolum Apostolorum',
+  our_father: 'Pater Noster',
+  hail_mary: 'Ave Maria',
+  glory: 'Gloria Patri',
+  fatima: 'Oratio Fatimae',
+  mystery_announce: 'Contemplatio',
+  hail_holy_queen: 'Salve Regina',
+  final_prayer: 'Oratio Finalis',
+}
+
+const LANGUAGE_STORAGE_KEY = 'rosary:language'
 
 interface RosarySessionProps {
   fullRosary?: boolean
@@ -66,6 +84,21 @@ interface RosarySessionProps {
 const ROSARY_SEQUENCE: MysterySet[] = ['gozosos', 'luminosos', 'dolorosos', 'gloriosos']
 
 export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps) {
+  // --- Language / theme ---
+  const [language, setLanguageState] = useState<RosaryLanguage>('pt')
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY)
+      if (saved === 'la' || saved === 'pt') setLanguageState(saved)
+    } catch {}
+  }, [])
+  const setLanguage = useCallback((lang: RosaryLanguage) => {
+    setLanguageState(lang)
+    try { localStorage.setItem(LANGUAGE_STORAGE_KEY, lang) } catch {}
+  }, [])
+  const theme = useMemo(() => getRosaryTheme(language), [language])
+  const isLatin = language === 'la'
+
   // Rosário completo: track which of the 4 terços we're on (0–3)
   const [rosarioIndex, setRosarioIndex] = useState(0)
   const [showTransition, setShowTransition] = useState(false)
@@ -200,9 +233,9 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
     if (!hydrated) return
     if (!ttsEnabled) return
     if (isCompleted) { ttsStop(); return }
-    const text = getSpeechText(currentStep, mysteryGroup)
+    const text = getSpeechText(currentStep, mysteryGroup, language)
     if (text) ttsSpeak(text)
-  }, [hydrated, ttsEnabled, ttsSpeak, ttsStop, currentStep, mysteryGroup, isCompleted])
+  }, [hydrated, ttsEnabled, ttsSpeak, ttsStop, currentStep, mysteryGroup, isCompleted, language])
 
   // --- Resume banner ---
   const initialResumeIndexRef = useRef<number | null>(null)
@@ -249,39 +282,68 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
   const showAveCounter =
     currentStep.type === 'hail_mary' && currentStep.decadePosition !== undefined
 
+  // Language-resolved text bits
+  const prayerDisplayName = prayer
+    ? (isLatin && prayer.latinName ? prayer.latinName : prayer.name)
+    : null
+  const prayerDisplayText = prayer
+    ? (isLatin && prayer.latinText ? prayer.latinText : prayer.text)
+    : null
+  const mysteryDisplayTitle = mystery
+    ? (isLatin && mystery.latinTitle ? mystery.latinTitle : mystery.title)
+    : null
+  const mysteryDisplayFruit = mystery
+    ? (isLatin && mystery.latinFruit ? mystery.latinFruit : mystery.fruit)
+    : null
+  const mysteryDisplayReflection = mystery
+    ? (isLatin && mystery.latinReflection ? mystery.latinReflection : mystery.reflection)
+    : null
+
   // Phase label for display
   function getPhaseLabel(): string {
-    if (currentStep.phase === 'intro') return 'Introdução'
-    if (currentStep.phase === 'outro') return 'Conclusão'
+    if (currentStep.phase === 'intro') return isLatin ? 'Introitus' : 'Introdução'
+    if (currentStep.phase === 'outro') return isLatin ? 'Conclusio' : 'Conclusão'
     if (currentStep.decade) {
-      const ord = ORDINALS[currentStep.decade] ?? `${currentStep.decade}º`
-      const singular = MYSTERY_SINGULAR[mysteryGroup.id] ?? 'Mistério'
+      if (isLatin) {
+        const ord = ORDINALS_LA[currentStep.decade] ?? `${currentStep.decade}`
+        const singular = MYSTERY_SINGULAR_LA[mysteryGroup.id] ?? 'Mysterium'
+        return `Mysterium ${singular} ${ord}`
+      }
+      const ord = ORDINALS_PT[currentStep.decade] ?? `${currentStep.decade}º`
+      const singular = MYSTERY_SINGULAR_PT[mysteryGroup.id] ?? 'Mistério'
       return `${ord} Mistério ${singular}`
     }
     return ''
   }
 
   // Mystery name for header
-  const mysteryShortName = mysteryGroup.name.replace('Mistérios ', '')
+  const mysteryShortNamePt = mysteryGroup.name.replace('Mistérios ', '')
+  const mysteryShortName =
+    isLatin && mysteryGroup.latinName
+      ? mysteryGroup.latinName.replace('Mysteria ', '')
+      : mysteryShortNamePt
   const headerTitle = fullRosary
     ? `${mysteryShortName} (${rosarioIndex + 1}/4)`
     : mysteryShortName
+
+  const stepLabels = isLatin ? STEP_LABELS_LA : STEP_LABELS_PT
 
   return (
     <div
       className="fixed inset-0 flex flex-col md:static md:inset-auto md:mx-auto md:my-6 md:max-w-4xl md:min-h-[calc(100vh-7rem)] md:rounded-2xl md:border md:overflow-hidden"
       style={{
-        backgroundColor: '#0F0E0C',
-        color: '#F2EDE4',
-        borderColor: 'rgba(201, 168, 76, 0.12)',
+        backgroundColor: theme.pageBg,
+        color: theme.textPrimary,
+        borderColor: theme.border,
+        transition: 'background-color 280ms ease, color 280ms ease, border-color 280ms ease',
       }}
     >
       {/* ── Top bar ── */}
       <header
-        className="flex-shrink-0 flex items-center justify-between px-4 safe-top"
+        className="flex-shrink-0 flex items-center justify-between gap-2 px-3 safe-top"
         style={{
           height: '52px',
-          borderBottom: '1px solid rgba(201, 168, 76, 0.08)',
+          borderBottom: `1px solid ${theme.border}`,
         }}
       >
         {onExit ? (
@@ -289,7 +351,7 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
             type="button"
             onClick={onExit}
             className="flex items-center gap-1.5 text-xs transition"
-            style={{ color: '#7A7368', background: 'none', border: 'none' }}
+            style={{ color: theme.textMuted, background: 'none', border: 'none' }}
             aria-label="Voltar"
           >
             <span aria-hidden>←</span>
@@ -299,7 +361,7 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
           <Link
             href="/orar"
             className="flex items-center gap-1.5 text-xs transition"
-            style={{ color: '#7A7368', textDecoration: 'none' }}
+            style={{ color: theme.textMuted, textDecoration: 'none' }}
             aria-label="Voltar para Orar"
           >
             <span aria-hidden>←</span>
@@ -307,37 +369,66 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
           </Link>
         )}
 
-        <div className="text-center">
+        <div className="text-center min-w-0 flex-1">
           <h1
-            className="text-sm font-medium"
-            style={{ color: '#F2EDE4', fontFamily: 'Cinzel, serif' }}
+            className="text-sm font-medium truncate"
+            style={{ color: theme.textPrimary, fontFamily: 'Cinzel, serif' }}
           >
             {headerTitle}
           </h1>
           {!isOnline && (
-            <span className="text-[9px]" style={{ color: '#D9C077' }}>
+            <span className="text-[9px]" style={{ color: theme.accentLight }}>
               Offline
             </span>
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={() => setMenuOpen(true)}
-          className="flex items-center justify-center w-9 h-9 rounded-full transition active:scale-95"
-          style={{
-            background: 'rgba(201, 168, 76, 0.08)',
-            border: '1px solid rgba(201, 168, 76, 0.15)',
-            color: '#D9C077',
-          }}
-          aria-label="Abrir opções"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <circle cx="12" cy="5" r="1.5" fill="currentColor" />
-            <circle cx="12" cy="12" r="1.5" fill="currentColor" />
-            <circle cx="12" cy="19" r="1.5" fill="currentColor" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Latin toggle — rendered as chiseled text, gray off / accent on */}
+          <button
+            type="button"
+            onClick={() => setLanguage(isLatin ? 'pt' : 'la')}
+            className="flex items-center justify-center h-9 px-3 rounded-full transition active:scale-95"
+            style={{
+              background: isLatin
+                ? 'linear-gradient(180deg, rgba(234,184,192,0.14), rgba(201,117,132,0.08))'
+                : 'rgba(255,255,255,0.02)',
+              border: `1px solid ${isLatin ? theme.borderStrong : 'rgba(122, 115, 104, 0.25)'}`,
+              color: isLatin ? theme.accentLight : '#7A7368',
+              fontFamily: 'Cinzel, serif',
+              fontSize: '10px',
+              letterSpacing: '0.3em',
+              textTransform: 'uppercase',
+              fontWeight: 600,
+              textShadow: isLatin
+                ? `0 0 10px ${theme.accentLight}55`
+                : '0 1px 0 rgba(0,0,0,0.4)',
+            }}
+            aria-pressed={isLatin}
+            aria-label={isLatin ? 'Desativar latim' : 'Ativar latim'}
+            title={isLatin ? 'Rezando em latim' : 'Ativar rito em latim'}
+          >
+            LATIM
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            className="flex items-center justify-center w-9 h-9 rounded-full transition active:scale-95"
+            style={{
+              background: theme.cardBg,
+              border: `1px solid ${theme.border}`,
+              color: theme.accentLight,
+            }}
+            aria-label="Abrir opções"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <circle cx="12" cy="5" r="1.5" fill="currentColor" />
+              <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+              <circle cx="12" cy="19" r="1.5" fill="currentColor" />
+            </svg>
+          </button>
+        </div>
       </header>
 
       {/* ── Resume banner ── */}
@@ -345,20 +436,20 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
         <div
           className="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-2"
           style={{
-            backgroundColor: 'rgba(201, 168, 76, 0.08)',
-            borderBottom: '1px solid rgba(201, 168, 76, 0.15)',
+            backgroundColor: theme.cardBg,
+            borderBottom: `1px solid ${theme.borderStrong}`,
           }}
           role="status"
           aria-live="polite"
         >
-          <span className="text-xs" style={{ color: '#D9C077' }}>
+          <span className="text-xs" style={{ color: theme.accentLight }}>
             Retomando — passo {resumedFrom! + 1}/{totalSteps}
           </span>
           <button
             type="button"
             onClick={dismissResume}
             className="text-[11px] uppercase tracking-wider px-2 py-1 rounded transition"
-            style={{ color: '#D9C077', border: '1px solid rgba(201, 168, 76, 0.3)' }}
+            style={{ color: theme.accentLight, border: `1px solid ${theme.borderStrong}` }}
           >
             Recomeçar
           </button>
@@ -374,9 +465,9 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
             onClick={() => setPickerOpen(true)}
             className="self-center flex items-center gap-1.5 rounded-full px-3 py-1 mb-2 text-[10px] transition active:scale-[0.97]"
             style={{
-              border: '1px solid rgba(201, 168, 76, 0.3)',
-              background: 'rgba(201, 168, 76, 0.06)',
-              color: '#D9C077',
+              border: `1px solid ${theme.borderStrong}`,
+              background: theme.cardBg,
+              color: theme.accentLight,
             }}
           >
             <span aria-hidden>✦</span>
@@ -394,22 +485,23 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
               currentBeadId={currentBeadId}
               completedBeadIds={completedBeadIds}
               onBeadSelect={goToBead}
-              className="w-full max-w-[280px] md:max-w-[360px] h-auto"
+              className="w-full max-w-[340px] md:max-w-[380px] h-auto"
               ariaDescription={`Terço — passo ${currentIndex + 1} de ${totalSteps}`}
+              theme={theme}
             />
           </div>
 
           {/* Compact progress */}
-          <div className="mb-2 md:w-full md:max-w-[360px]" aria-hidden>
+          <div className="mb-2 md:w-full md:max-w-[380px]" aria-hidden>
             <div
               className="h-0.5 w-full overflow-hidden rounded-full"
-              style={{ background: 'rgba(201, 168, 76, 0.08)' }}
+              style={{ background: theme.border }}
             >
               <div
                 className="h-full transition-all duration-500 ease-out"
                 style={{
                   width: `${progressPct}%`,
-                  background: 'linear-gradient(90deg, #C9A84C, #D9C077)',
+                  background: `linear-gradient(90deg, ${theme.accent}, ${theme.accentLight})`,
                 }}
               />
             </div>
@@ -420,9 +512,10 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
         <motion.section
           className="flex-shrink-0 rounded-xl p-4 md:flex-1 md:p-6"
           style={{
-            background: 'rgba(20, 18, 14, 0.6)',
-            border: '1px solid rgba(201, 168, 76, 0.12)',
+            background: theme.cardBg,
+            border: `1px solid ${theme.cardBorder}`,
             touchAction: 'pan-y',
+            transition: 'background-color 280ms ease, border-color 280ms ease',
           }}
           aria-live="polite"
           onPanEnd={(_e, info: PanInfo) => {
@@ -443,14 +536,14 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
           <div className="flex items-center justify-between mb-2">
             <span
               className="text-[10px] uppercase tracking-[0.2em]"
-              style={{ color: '#7A7368' }}
+              style={{ color: theme.textMuted }}
             >
               {getPhaseLabel()}
             </span>
             {showAveCounter && (
               <span
                 className="font-mono text-[11px] uppercase tracking-wider"
-                style={{ color: '#D9C077' }}
+                style={{ color: theme.accentLight }}
               >
                 {currentStep.decadePosition}/10
               </span>
@@ -459,18 +552,18 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
 
           {/* Mystery info (during decades) */}
           {mystery && !isMysteryAnnounce && (
-            <div className="mb-2">
+            <div className="mb-3">
               <h2
-                className="text-base leading-snug"
-                style={{ color: '#F2EDE4', fontFamily: 'Cinzel, serif' }}
+                className="text-base leading-snug md:text-lg"
+                style={{ color: theme.textPrimary, fontFamily: 'Cinzel, serif' }}
               >
-                {mystery.title}
+                {mysteryDisplayTitle}
               </h2>
               <p
                 className="text-[11px] italic mt-0.5"
-                style={{ color: '#7A7368' }}
+                style={{ color: theme.textMuted }}
               >
-                Fruto: {mystery.fruit}
+                {isLatin ? 'Fructus' : 'Fruto'}: {mysteryDisplayFruit}
               </p>
             </div>
           )}
@@ -479,37 +572,58 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
           {isMysteryAnnounce && mystery ? (
             <div>
               <h3
-                className="text-sm mb-1"
-                style={{ color: '#D9C077', fontFamily: 'Cinzel, serif' }}
+                className="text-base mb-2 md:text-lg"
+                style={{ color: theme.accentLight, fontFamily: 'Cinzel, serif' }}
               >
-                {mystery.title}
+                {mysteryDisplayTitle}
               </h3>
               <p
-                className="text-sm italic leading-relaxed"
-                style={{ color: '#F2EDE4', fontFamily: 'var(--font-cormorant, serif)' }}
+                className="text-base italic leading-relaxed md:text-lg"
+                style={{
+                  color: theme.textPrimary,
+                  fontFamily: 'var(--font-cormorant, serif)',
+                  whiteSpace: 'pre-line',
+                }}
               >
-                {mystery.reflection}
+                {mysteryDisplayReflection}
               </p>
-              <p className="mt-2 text-[10px] uppercase tracking-[0.15em]" style={{ color: '#7A7368' }}>
-                Contemple em silêncio
+              <p className="mt-3 text-[10px] uppercase tracking-[0.15em]" style={{ color: theme.textMuted }}>
+                {isLatin ? 'Contemplate in silentio' : 'Contemple em silêncio'}
               </p>
             </div>
           ) : prayer ? (
             <div>
-              <h3 className="text-sm mb-1" style={{ color: '#D9C077' }}>
-                {prayer.name}
+              <h3
+                className="text-base mb-2 md:text-lg"
+                style={{ color: theme.accentLight, fontFamily: 'Cinzel, serif', fontWeight: 500 }}
+              >
+                {prayerDisplayName}
               </h3>
               <p
-                className="text-sm leading-relaxed"
-                style={{ color: '#F2EDE4' }}
+                className="text-base leading-[1.7] md:text-lg"
+                style={{
+                  color: theme.textPrimary,
+                  whiteSpace: 'pre-line',
+                  fontFamily: 'var(--font-cormorant, serif)',
+                }}
               >
-                {prayer.text}
+                {prayerDisplayText}
               </p>
             </div>
           ) : (
-            <p className="text-sm" style={{ color: '#F2EDE4' }}>
-              {STEP_LABELS[currentStep.type] ?? currentStep.type}
+            <p className="text-base" style={{ color: theme.textPrimary }}>
+              {stepLabels[currentStep.type] ?? currentStep.type}
             </p>
+          )}
+
+          {/* Ave Maria progress dots — one per recited Ave in the decade */}
+          {showAveCounter && currentStep.decadePosition !== undefined && (
+            <AveMariaDots
+              current={currentStep.decadePosition}
+              accent={theme.accent}
+              accentLight={theme.accentLight}
+              muted={theme.border}
+            />
           )}
         </motion.section>
       </div>
@@ -518,20 +632,20 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
       {showTransition && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ backgroundColor: 'rgba(15, 14, 12, 0.97)' }}
+          style={{ backgroundColor: `${theme.pageBg}F2` }}
         >
           <div className="text-center px-6 max-w-md">
             <div className="text-4xl mb-4" aria-hidden>✦</div>
             <h2
               className="text-xl mb-2"
-              style={{ color: '#D9C077', fontFamily: 'Cinzel, serif' }}
+              style={{ color: theme.accentLight, fontFamily: 'Cinzel, serif' }}
             >
-              Mistérios {mysteryShortName} concluídos
+              Mistérios {mysteryShortNamePt} concluídos
             </h2>
-            <p className="text-sm mb-1" style={{ color: '#B8AFA2' }}>
+            <p className="text-sm mb-1" style={{ color: theme.textSecondary }}>
               Terço {rosarioIndex + 1} de 4
             </p>
-            <p className="text-xs mb-6" style={{ color: '#7A7368' }}>
+            <p className="text-xs mb-6" style={{ color: theme.textMuted }}>
               Próximo: Mistérios {ROSARY_SEQUENCE[rosarioIndex + 1]
                 ? MYSTERY_GROUPS.find(g => g.id === ROSARY_SEQUENCE[rosarioIndex + 1])?.name.replace('Mistérios ', '') ?? ''
                 : ''}
@@ -541,8 +655,8 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
               onClick={advanceToNextRosarioSet}
               className="rounded-xl px-8 py-3 text-sm font-semibold transition active:scale-[0.97]"
               style={{
-                background: 'linear-gradient(180deg, #C9A84C, #A88437)',
-                color: '#0F0E0C',
+                background: `linear-gradient(180deg, ${theme.buttonGradient[0]}, ${theme.buttonGradient[1]})`,
+                color: theme.buttonText,
               }}
             >
               Continuar o Rosário
@@ -557,8 +671,8 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
           className="flex-shrink-0 flex items-center gap-3 px-4 safe-bottom md:px-8 md:rounded-b-2xl"
           style={{
             height: '72px',
-            borderTop: '1px solid rgba(201, 168, 76, 0.1)',
-            background: 'rgba(15, 14, 12, 0.95)',
+            borderTop: `1px solid ${theme.border}`,
+            background: `${theme.pageBg}F2`,
             backdropFilter: 'blur(12px)',
           }}
         >
@@ -568,8 +682,8 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
             disabled={isFirst}
             className="flex items-center justify-center w-12 h-12 rounded-xl border transition disabled:opacity-25 active:scale-95"
             style={{
-              borderColor: 'rgba(201, 168, 76, 0.25)',
-              color: '#D9C077',
+              borderColor: theme.borderStrong,
+              color: theme.accentLight,
             }}
             aria-label="Voltar"
           >
@@ -583,17 +697,17 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
             onClick={advanceWithHaptic}
             className="flex-1 h-12 rounded-xl text-sm font-semibold transition active:scale-[0.97]"
             style={{
-              background: 'linear-gradient(180deg, #C9A84C, #A88437)',
-              color: '#0F0E0C',
+              background: `linear-gradient(180deg, ${theme.buttonGradient[0]}, ${theme.buttonGradient[1]})`,
+              color: theme.buttonText,
             }}
           >
-            Avançar
+            {isLatin ? 'Procedamus' : 'Avançar'}
           </button>
 
           <div className="w-12 flex items-center justify-center">
             <span
               className="font-mono text-[10px]"
-              style={{ color: '#7A7368' }}
+              style={{ color: theme.textMuted }}
             >
               {currentIndex + 1}/{totalSteps}
             </span>
@@ -604,18 +718,18 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
         <div
           className="flex-shrink-0 px-4 py-6 text-center safe-bottom"
           style={{
-            borderTop: '1px solid rgba(201, 168, 76, 0.15)',
-            background: 'rgba(15, 14, 12, 0.95)',
+            borderTop: `1px solid ${theme.borderStrong}`,
+            background: `${theme.pageBg}F2`,
           }}
         >
           <div className="text-3xl mb-2" aria-hidden>✦</div>
           <h2
             className="text-xl mb-1"
-            style={{ color: '#D9C077', fontFamily: 'Cinzel, serif' }}
+            style={{ color: theme.accentLight, fontFamily: 'Cinzel, serif' }}
           >
             {rosarioFullyComplete ? 'Rosário completo' : 'Terço completo'}
           </h2>
-          <p className="text-xs mb-4" style={{ color: '#7A7368' }}>
+          <p className="text-xs mb-4" style={{ color: theme.textMuted }}>
             Que Nossa Senhora interceda por você
           </p>
           <div className="flex justify-center gap-3">
@@ -627,8 +741,8 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
               }}
               className="rounded-xl px-5 py-2.5 text-sm font-semibold transition active:scale-[0.97]"
               style={{
-                background: 'linear-gradient(180deg, #C9A84C, #A88437)',
-                color: '#0F0E0C',
+                background: `linear-gradient(180deg, ${theme.buttonGradient[0]}, ${theme.buttonGradient[1]})`,
+                color: theme.buttonText,
               }}
             >
               Rezar novamente
@@ -639,8 +753,8 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
                 onClick={onExit}
                 className="rounded-xl border px-5 py-2.5 text-sm transition"
                 style={{
-                  borderColor: 'rgba(201, 168, 76, 0.3)',
-                  color: '#D9C077',
+                  borderColor: theme.borderStrong,
+                  color: theme.accentLight,
                 }}
               >
                 Voltar
@@ -650,8 +764,8 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
                 href="/orar"
                 className="rounded-xl border px-5 py-2.5 text-sm transition"
                 style={{
-                  borderColor: 'rgba(201, 168, 76, 0.3)',
-                  color: '#D9C077',
+                  borderColor: theme.borderStrong,
+                  color: theme.accentLight,
                   textDecoration: 'none',
                 }}
               >
@@ -684,6 +798,7 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
           setResumedFrom(null)
         }}
         onTutorial={onboarding.reopen}
+        theme={theme}
       />
 
       {/* ── Overlays ── */}
@@ -713,6 +828,55 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
           * { transition-duration: 0ms !important; animation-duration: 0ms !important; }
         }
       `}</style>
+    </div>
+  )
+}
+
+/**
+ * Ten small pips that light up as each Ave Maria of the decade is said.
+ * Helps the user keep their place when they accidentally advance twice
+ * or lose focus — they can glance at the dots and know "we're on the 4th."
+ */
+function AveMariaDots({
+  current,
+  accent,
+  accentLight,
+  muted,
+}: {
+  current: number
+  accent: string
+  accentLight: string
+  muted: string
+}) {
+  const total = 10
+  return (
+    <div
+      className="mt-4 flex items-center justify-center gap-1.5"
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={total}
+      aria-valuenow={current}
+      aria-label={`Ave Maria ${current} de ${total}`}
+    >
+      {Array.from({ length: total }, (_, i) => {
+        const n = i + 1
+        const filled = n <= current
+        const isCurrent = n === current
+        return (
+          <span
+            key={n}
+            aria-hidden
+            className="rounded-full transition-all duration-300"
+            style={{
+              width: isCurrent ? 12 : 8,
+              height: isCurrent ? 12 : 8,
+              background: filled ? (isCurrent ? accentLight : accent) : 'transparent',
+              border: `1px solid ${filled ? accentLight : muted}`,
+              boxShadow: isCurrent ? `0 0 8px ${accentLight}80` : 'none',
+            }}
+          />
+        )
+      })}
     </div>
   )
 }
