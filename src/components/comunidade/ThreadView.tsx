@@ -8,6 +8,7 @@ import VeritasCard from '@/components/comunidade/VeritasCard'
 import QuoteModal from '@/components/comunidade/QuoteModal'
 import MentionAutocomplete from '@/components/comunidade/MentionAutocomplete'
 import FormattingToolbar from '@/components/comunidade/FormattingToolbar'
+import MarkdownPreview from '@/components/comunidade/MarkdownPreview'
 import type { VeritasPost } from '@/lib/community/types'
 import { VERITAS_MAX_BODY } from '@/lib/community/constants'
 import { share as platformShare } from '@/lib/platform'
@@ -527,6 +528,7 @@ export default function ThreadView({ postId }: { postId: string }) {
                   </button>
                 </div>
               </div>
+              <MarkdownPreview value={replyBody} />
             </div>
 
             {replies.length > 0 && (

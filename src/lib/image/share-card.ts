@@ -4,13 +4,12 @@
  * 2D — sem round-trip de servidor, sem dependências novas.
  *
  * Visual: fundo preto profundo (`#0F0E0C`) com dois glows vinho em
- * gradiente radial (topo-esquerdo e base-direita), cruz dourada no
- * topo, card do post no meio com avatar/nome/corpo/ações, e "VERITAS DEI"
- * em Cinzel no rodapé — identidade consistente com o produto.
+ * gradiente radial (topo-esquerdo e base-direita), cruz dourada
+ * discreta no topo, card do post no meio com avatar/nome/corpo/mídia/
+ * ações, e "VERITAS DEI" em Cinzel no rodapé.
  *
- * Avatar: carregado com CORS anônimo; se tombar, desenha só o placeholder.
- * Fontes: aguarda `document.fonts.ready` pra usar Poppins/Cinzel; se a
- * rede for lenta, cai nos fallbacks do OS.
+ * Layout adaptativo: o card cresce conforme o conteúdo (corpo + mídia).
+ * Textos curtos geram cards compactos; textos longos exibem até 14 linhas.
  */
 
 import type { VeritasPost } from '@/lib/community/types'
@@ -30,12 +29,24 @@ const REPOST = '#66BB6A'
 // Paths lucide (viewBox 24×24, stroke 2 padrão).
 const ICON_PATHS = {
   chat: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
-  // Repeat2 como dois arcos + setas (simplificado)
   repeat: 'M17 2l4 4-4 4 M3 11v-1a4 4 0 0 1 4-4h14 M7 22l-4-4 4-4 M21 13v1a4 4 0 0 1-4 4H3',
   heart: 'M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z',
   quote: 'M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2zM5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z',
   send: 'M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11zM22 2 11 13',
 }
+
+// Dimensões base do card. A altura é calculada dinamicamente.
+const CARD_W = 920
+const CARD_PAD_X = 44
+const CARD_PAD_Y = 44
+const AVATAR_SIZE = 80
+const HEADER_BOTTOM_GAP = 32
+const BODY_LINE_HEIGHT = 44
+const BODY_MAX_LINES = 14
+const ACTIONS_HEIGHT = 44
+const BODY_ACTIONS_GAP = 32
+const MEDIA_BODY_GAP = 24
+const MEDIA_HEIGHT = 420
 
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -58,7 +69,6 @@ function roundedRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w:
 }
 
 function drawCross(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number) {
-  // Reproduz a geometria do CrossIcon (36×52 viewBox). "size" é a altura.
   const unit = size / 52
   const bx = cx - 18 * unit
   const by = cy - 26 * unit
@@ -67,18 +77,13 @@ function drawCross(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: 
   grad.addColorStop(0, '#D9C077')
   grad.addColorStop(0.5, '#C9A84C')
   grad.addColorStop(1, '#A88B3A')
-
   ctx.fillStyle = grad
 
-  // Vertical beam
   roundedRectPath(ctx, bx + 14 * unit, by + 0 * unit, 8 * unit, 52 * unit, 1.5 * unit)
   ctx.fill()
-
-  // Horizontal beam
   roundedRectPath(ctx, bx + 0 * unit, by + 14 * unit, 36 * unit, 8 * unit, 1.5 * unit)
   ctx.fill()
 
-  // Jewel
   ctx.fillStyle = '#6B1D2A'
   ctx.beginPath()
   ctx.arc(bx + 18 * unit, by + 18 * unit, 3 * unit, 0, Math.PI * 2)
@@ -87,7 +92,6 @@ function drawCross(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: 
   ctx.lineWidth = 1 * unit
   ctx.stroke()
 
-  // Finials
   ctx.fillStyle = 'rgba(201,168,76,0.6)'
   for (const [fx, fy] of [[18, 2], [18, 50], [2, 18], [34, 18]]) {
     ctx.beginPath()
@@ -121,7 +125,6 @@ function drawIcon(
 }
 
 function drawVerifiedBadge(ctx: CanvasRenderingContext2D, cx: number, cy: number, radius: number) {
-  // Círculo dourado com check branco.
   ctx.fillStyle = '#C9A84C'
   ctx.beginPath()
   ctx.arc(cx, cy, radius, 0, Math.PI * 2)
@@ -148,13 +151,9 @@ interface WrapOptions {
   color: string
 }
 
-function wrapText(ctx: CanvasRenderingContext2D, text: string, opts: WrapOptions): number {
-  ctx.font = opts.font
-  ctx.fillStyle = opts.color
-  ctx.textBaseline = 'top'
-  ctx.textAlign = 'left'
-
-  // Quebra por \n primeiro, depois por palavras.
+/** Calcula linhas visíveis (sem desenhar) — útil pra dimensionar o card. */
+function measureLines(ctx: CanvasRenderingContext2D, text: string, font: string, maxWidth: number, maxLines: number): string[] {
+  ctx.font = font
   const paragraphs = text.split('\n')
   const lines: string[] = []
 
@@ -164,20 +163,16 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, opts: WrapOptions
     let current = ''
     for (const word of words) {
       const candidate = current ? `${current} ${word}` : word
-      if (ctx.measureText(candidate).width <= opts.maxWidth) {
+      if (ctx.measureText(candidate).width <= maxWidth) {
         current = candidate
       } else {
         if (current) lines.push(current)
-        // Palavra única maior que o maxWidth: quebra pelos chars.
-        if (ctx.measureText(word).width > opts.maxWidth) {
+        if (ctx.measureText(word).width > maxWidth) {
           let chunk = ''
           for (const ch of word) {
             const next = chunk + ch
-            if (ctx.measureText(next).width <= opts.maxWidth) chunk = next
-            else {
-              lines.push(chunk)
-              chunk = ch
-            }
+            if (ctx.measureText(next).width <= maxWidth) chunk = next
+            else { lines.push(chunk); chunk = ch }
           }
           current = chunk
         } else {
@@ -188,23 +183,29 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, opts: WrapOptions
     if (current) lines.push(current)
   }
 
-  const maxLines = opts.maxLines ?? lines.length
-  const visible = lines.slice(0, maxLines)
-  const truncated = lines.length > maxLines
-
-  visible.forEach((line, idx) => {
-    let drawn = line
-    if (truncated && idx === visible.length - 1) {
-      // Adiciona ellipsis se cortado.
-      while (drawn && ctx.measureText(drawn + '…').width > opts.maxWidth) {
-        drawn = drawn.slice(0, -1)
-      }
-      drawn = `${drawn}…`
+  return lines.slice(0, maxLines).map((line, idx, all) => {
+    const isLast = idx === all.length - 1
+    if (isLast && lines.length > maxLines) {
+      let drawn = line
+      while (drawn && ctx.measureText(drawn + '…').width > maxWidth) drawn = drawn.slice(0, -1)
+      return `${drawn}…`
     }
-    ctx.fillText(drawn, opts.x, opts.y + idx * opts.lineHeight)
+    return line
   })
+}
 
-  return visible.length * opts.lineHeight
+function drawLines(
+  ctx: CanvasRenderingContext2D,
+  lines: string[],
+  opts: Omit<WrapOptions, 'maxLines'>,
+) {
+  ctx.font = opts.font
+  ctx.fillStyle = opts.color
+  ctx.textBaseline = 'top'
+  ctx.textAlign = 'left'
+  lines.forEach((line, idx) => {
+    ctx.fillText(line, opts.x, opts.y + idx * opts.lineHeight)
+  })
 }
 
 function formatCount(n: number): string {
@@ -220,6 +221,54 @@ async function ensureFontsReady(): Promise<void> {
     }
   } catch {
     // noop
+  }
+}
+
+/**
+ * Desenha até 2 imagens de mídia no grid dentro do card. Carrega em
+ * paralelo com crossOrigin anônimo; se uma falhar, desenha um retângulo
+ * translúcido no lugar pra manter o layout.
+ */
+async function drawMediaGrid(
+  ctx: CanvasRenderingContext2D,
+  urls: string[],
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
+  const gap = 12
+  const count = Math.min(urls.length, 2)
+  if (count === 0) return
+
+  const cellW = count === 1 ? width : (width - gap) / 2
+  const cellH = height
+
+  const images = await Promise.all(urls.slice(0, count).map(url => loadImage(url).catch(() => null)))
+
+  for (let i = 0; i < count; i++) {
+    const cx = x + i * (cellW + gap)
+    ctx.save()
+    roundedRectPath(ctx, cx, y, cellW, cellH, 16)
+    ctx.clip()
+    const img = images[i]
+    if (img) {
+      // Cover: escalona pra preencher cellW×cellH preservando aspect.
+      const scale = Math.max(cellW / img.width, cellH / img.height)
+      const drawW = img.width * scale
+      const drawH = img.height * scale
+      const dx = cx + (cellW - drawW) / 2
+      const dy = y + (cellH - drawH) / 2
+      ctx.drawImage(img, dx, dy, drawW, drawH)
+    } else {
+      ctx.fillStyle = 'rgba(201,168,76,0.08)'
+      ctx.fillRect(cx, y, cellW, cellH)
+    }
+    ctx.restore()
+    ctx.strokeStyle = 'rgba(201,168,76,0.14)'
+    ctx.lineWidth = 1
+    roundedRectPath(ctx, cx, y, cellW, cellH, 16)
+    ctx.stroke()
   }
 }
 
@@ -257,37 +306,72 @@ export async function renderShareCard({ post }: RenderShareCardOptions): Promise
   ctx.fillStyle = g2
   ctx.fillRect(0, 0, SHARE_IMAGE_WIDTH, SHARE_IMAGE_HEIGHT)
 
-  // ── 2. Cruz dourada no topo ─────────────────────────────────────
-  drawCross(ctx, SHARE_IMAGE_WIDTH / 2, 185, 130)
+  // ── 2. Cruz discreta no topo ────────────────────────────────────
+  drawCross(ctx, SHARE_IMAGE_WIDTH / 2, 110, 56)
 
-  // ── 3. Card do post (centralizado verticalmente) ───────────────
-  const cardW = 920
-  const cardH = 520
-  const cardX = (SHARE_IMAGE_WIDTH - cardW) / 2
-  const cardY = Math.round((SHARE_IMAGE_HEIGHT - cardH) / 2) + 30
+  // ── 3. Medições pra altura adaptativa do card ──────────────────
+  const bodyMaxW = CARD_W - CARD_PAD_X * 2
+  const plainBody = post.body
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/__(.+?)__/g, '$1')
+    .replace(/~~(.+?)~~/g, '$1')
+    .replace(/(?<![*\w])\*([^\n*]+?)\*(?!\w)/g, '$1')
 
+  const bodyFont = '400 30px Poppins, system-ui, sans-serif'
+  const bodyLines = plainBody.trim()
+    ? measureLines(ctx, plainBody, bodyFont, bodyMaxW, BODY_MAX_LINES)
+    : []
+
+  const hasMedia = post.media.length > 0
+  const bodyHeight = bodyLines.length * BODY_LINE_HEIGHT
+  const mediaHeight = hasMedia ? MEDIA_HEIGHT : 0
+  const mediaSpacing = hasMedia && bodyLines.length > 0 ? MEDIA_BODY_GAP : 0
+
+  const cardH =
+    CARD_PAD_Y * 2
+    + AVATAR_SIZE
+    + HEADER_BOTTOM_GAP
+    + bodyHeight
+    + mediaSpacing
+    + mediaHeight
+    + BODY_ACTIONS_GAP
+    + ACTIONS_HEIGHT
+
+  const cardX = (SHARE_IMAGE_WIDTH - CARD_W) / 2
+  // Centraliza verticalmente entre cruz e rodapé.
+  const topBound = 180
+  const bottomBound = SHARE_IMAGE_HEIGHT - 140
+  const available = bottomBound - topBound
+  const cardY = topBound + Math.max(0, (available - cardH) / 2)
+
+  // ── 4. Card base ────────────────────────────────────────────────
   ctx.fillStyle = 'rgba(20,18,14,0.58)'
-  roundedRectPath(ctx, cardX, cardY, cardW, cardH, 28)
+  roundedRectPath(ctx, cardX, cardY, CARD_W, cardH, 28)
   ctx.fill()
   ctx.strokeStyle = 'rgba(201,168,76,0.18)'
   ctx.lineWidth = 1
   ctx.stroke()
 
-  // ── 4. Avatar circular ──────────────────────────────────────────
-  const avatarSize = 80
-  const avatarX = cardX + 44
-  const avatarY = cardY + 44
+  // ── 5. Avatar circular ──────────────────────────────────────────
+  const avatarX = cardX + CARD_PAD_X
+  const avatarY = cardY + CARD_PAD_Y
 
   ctx.save()
   ctx.beginPath()
-  ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2)
+  ctx.arc(avatarX + AVATAR_SIZE / 2, avatarY + AVATAR_SIZE / 2, AVATAR_SIZE / 2, 0, Math.PI * 2)
   ctx.clip()
 
   let avatarDrawn = false
   if (post.author.profile_image_url) {
     try {
       const img = await loadImage(post.author.profile_image_url)
-      ctx.drawImage(img, avatarX, avatarY, avatarSize, avatarSize)
+      // Cover crop no avatar
+      const scale = Math.max(AVATAR_SIZE / img.width, AVATAR_SIZE / img.height)
+      const drawW = img.width * scale
+      const drawH = img.height * scale
+      const dx = avatarX + (AVATAR_SIZE - drawW) / 2
+      const dy = avatarY + (AVATAR_SIZE - drawH) / 2
+      ctx.drawImage(img, dx, dy, drawW, drawH)
       avatarDrawn = true
     } catch {
       // fallback abaixo
@@ -295,25 +379,23 @@ export async function renderShareCard({ post }: RenderShareCardOptions): Promise
   }
   if (!avatarDrawn) {
     ctx.fillStyle = 'rgba(201,168,76,0.12)'
-    ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize)
-    // Pequena cruz dourada centralizada no placeholder.
+    ctx.fillRect(avatarX, avatarY, AVATAR_SIZE, AVATAR_SIZE)
     ctx.restore()
-    drawCross(ctx, avatarX + avatarSize / 2, avatarY + avatarSize / 2, 40)
+    drawCross(ctx, avatarX + AVATAR_SIZE / 2, avatarY + AVATAR_SIZE / 2, 40)
     ctx.save()
   }
   ctx.restore()
 
-  // Borda dourada sutil se verificado
   if (post.author.verified) {
     ctx.strokeStyle = 'rgba(233,196,106,0.6)'
     ctx.lineWidth = 2
     ctx.beginPath()
-    ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2)
+    ctx.arc(avatarX + AVATAR_SIZE / 2, avatarY + AVATAR_SIZE / 2, AVATAR_SIZE / 2, 0, Math.PI * 2)
     ctx.stroke()
   }
 
-  // ── 5. Nome + badge verificado + handle ────────────────────────
-  const textX = avatarX + avatarSize + 24
+  // ── 6. Nome + badge verificado + handle ────────────────────────
+  const textX = avatarX + AVATAR_SIZE + 24
   const name = post.author.name ?? 'Membro Veritas'
   ctx.font = '600 34px Poppins, system-ui, sans-serif'
   ctx.fillStyle = TEXT_PRIMARY
@@ -332,49 +414,47 @@ export async function renderShareCard({ post }: RenderShareCardOptions): Promise
   ctx.fillStyle = TEXT_MUTED
   ctx.fillText(handle, textX, avatarY + 48)
 
-  // ── 6. Corpo do post ───────────────────────────────────────────
-  const bodyX = cardX + 44
-  const bodyY = avatarY + avatarSize + 32
-  const bodyMaxW = cardW - 88
-  // Remove marcação markdown simples pra evitar **asteriscos** visíveis.
-  const plainBody = post.body
-    .replace(/\*\*(.+?)\*\*/g, '$1')
-    .replace(/__(.+?)__/g, '$1')
-    .replace(/~~(.+?)~~/g, '$1')
-    .replace(/(?<![*\w])\*([^\n*]+?)\*(?!\w)/g, '$1')
+  // ── 7. Corpo ────────────────────────────────────────────────────
+  const bodyX = cardX + CARD_PAD_X
+  const bodyY = avatarY + AVATAR_SIZE + HEADER_BOTTOM_GAP
+  if (bodyLines.length > 0) {
+    drawLines(ctx, bodyLines, {
+      x: bodyX,
+      y: bodyY,
+      maxWidth: bodyMaxW,
+      lineHeight: BODY_LINE_HEIGHT,
+      font: bodyFont,
+      color: TEXT_PRIMARY,
+    })
+  }
 
-  wrapText(ctx, plainBody, {
-    x: bodyX,
-    y: bodyY,
-    maxWidth: bodyMaxW,
-    lineHeight: 44,
-    maxLines: 6,
-    font: '400 30px Poppins, system-ui, sans-serif',
-    color: TEXT_PRIMARY,
-  })
+  // ── 8. Mídia (quando houver) ────────────────────────────────────
+  const mediaY = bodyY + bodyHeight + mediaSpacing
+  if (hasMedia) {
+    const mediaUrls = post.media.slice(0, 2).map(m => m.variants.feed)
+    await drawMediaGrid(ctx, mediaUrls, bodyX, mediaY, bodyMaxW, MEDIA_HEIGHT)
+  }
 
-  // ── 7. Barra de ações (ícones + contagens) ──────────────────────
-  const actionsY = cardY + cardH - 70
+  // ── 9. Barra de ações ───────────────────────────────────────────
+  const actionsY = mediaY + mediaHeight + BODY_ACTIONS_GAP
   const actionSpacing = 125
   const iconSize = 30
-  const labelFont = '500 22px Poppins, system-ui, sans-serif'
-  const textColor = TEXT_MUTED
 
   const m = post.metrics
   const viewer = post.viewer
   const actions: Array<{ key: string; icon: string; count: number; color: string; fill: boolean }> = [
-    { key: 'reply',  icon: ICON_PATHS.chat,   count: m.reply_count,        color: textColor,                                  fill: false },
-    { key: 'repost', icon: ICON_PATHS.repeat, count: m.repost_count,       color: viewer.reposted ? REPOST : textColor,       fill: false },
-    { key: 'like',   icon: ICON_PATHS.heart,  count: m.like_count,         color: viewer.liked ? LIKE : textColor,            fill: viewer.liked },
-    { key: 'quote',  icon: ICON_PATHS.quote,  count: m.quote_count,        color: textColor,                                  fill: false },
-    { key: 'send',   icon: ICON_PATHS.send,   count: m.share_cross_count,  color: viewer.shared_cross ? GOLD : textColor,     fill: false },
+    { key: 'reply',  icon: ICON_PATHS.chat,   count: m.reply_count,       color: TEXT_MUTED,                                fill: false },
+    { key: 'repost', icon: ICON_PATHS.repeat, count: m.repost_count,      color: viewer.reposted ? REPOST : TEXT_MUTED,     fill: false },
+    { key: 'like',   icon: ICON_PATHS.heart,  count: m.like_count,        color: viewer.liked ? LIKE : TEXT_MUTED,          fill: viewer.liked },
+    { key: 'quote',  icon: ICON_PATHS.quote,  count: m.quote_count,       color: TEXT_MUTED,                                fill: false },
+    { key: 'send',   icon: ICON_PATHS.send,   count: m.share_cross_count, color: viewer.shared_cross ? GOLD : TEXT_MUTED,   fill: false },
   ]
 
-  let ax = cardX + 44
+  let ax = cardX + CARD_PAD_X
   for (const action of actions) {
     drawIcon(ctx, action.icon, ax, actionsY, iconSize, action.color, action.fill)
     if (action.count > 0) {
-      ctx.font = labelFont
+      ctx.font = '500 22px Poppins, system-ui, sans-serif'
       ctx.fillStyle = action.color
       ctx.textBaseline = 'top'
       ctx.fillText(formatCount(action.count), ax + iconSize + 10, actionsY + 3)
@@ -382,7 +462,7 @@ export async function renderShareCard({ post }: RenderShareCardOptions): Promise
     ax += actionSpacing
   }
 
-  // ── 8. Rodapé: linha faded + VERITAS DEI ────────────────────────
+  // ── 10. Rodapé ──────────────────────────────────────────────────
   const footerY = SHARE_IMAGE_HEIGHT - 70
   const lineY = footerY - 30
   const lineWidth = 280
@@ -396,24 +476,19 @@ export async function renderShareCard({ post }: RenderShareCardOptions): Promise
 
   ctx.textAlign = 'center'
   ctx.textBaseline = 'top'
-
-  // "VERITAS" em Cinzel dourado + "DEI" em Cinzel cor mais suave.
   ctx.font = '400 32px Cinzel, Georgia, serif'
   const veritas = 'VERITAS'
   const dei = ' DEI'
   const veritasW = ctx.measureText(veritas).width
-  ctx.font = '400 32px Cinzel, Georgia, serif'
   const deiW = ctx.measureText(dei).width
   const totalW = veritasW + deiW
   const startX = (SHARE_IMAGE_WIDTH - totalW) / 2 + veritasW / 2
-
-  ctx.textAlign = 'center'
   ctx.fillStyle = GOLD_SOFT
   ctx.fillText(veritas, startX, footerY)
   ctx.fillStyle = 'rgba(242,237,228,0.72)'
   ctx.fillText(dei, startX + veritasW / 2 + deiW / 2, footerY)
 
-  // ── 9. Export ──────────────────────────────────────────────────
+  // ── 11. Export ──────────────────────────────────────────────────
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
       (blob) => {

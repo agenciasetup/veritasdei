@@ -62,7 +62,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 5,
+  // Zoom de página desabilitado — evita layout quebrado no iOS
+  // (pinch-zoom na estrutura). Imagens no lightbox têm zoom próprio.
+  maximumScale: 1,
+  userScalable: false,
   themeColor: "#0A0A0A",
 }
 
