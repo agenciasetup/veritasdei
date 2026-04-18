@@ -114,43 +114,44 @@ export default function LembretesCard() {
   if (lembretes.length === 0) return null
 
   return (
-    <section className="px-4 mb-3">
-      <h2
-        className="px-1 mb-2 text-xs uppercase tracking-[0.18em]"
-        style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}
-      >
+    <section className="px-4 mb-4">
+      <h2 className="px-1 mb-3 ios-eyebrow uppercase" style={{ letterSpacing: '0.06em' }}>
         Lembretes
       </h2>
       <div className="flex flex-col gap-2 stagger-in">
-        {lembretes.map(l => {
+        {lembretes.map((l) => {
           const Icon = l.icon
           const accent = l.tom === 'alerta' ? '#D94F5C' : '#C9A84C'
           return (
             <Link
               key={l.id}
               href={l.href}
-              className="flex items-center gap-3 p-4 rounded-2xl"
-              style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: `1px solid ${accent}22`,
-              }}
+              className="ios-surface flex items-center gap-3 p-3.5 active:scale-[0.99] transition-transform"
             >
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: `${accent}15`, color: accent }}
+                style={{
+                  background: `${accent}15`,
+                  color: accent,
+                  border: `1px solid ${accent}22`,
+                }}
               >
-                <Icon className="w-5 h-5" />
+                <Icon className="w-[18px] h-[18px]" strokeWidth={1.8} />
               </div>
               <div className="flex-1 min-w-0">
                 <p
-                  className="text-sm"
-                  style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}
+                  className="text-[13.5px] leading-snug"
+                  style={{
+                    color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-body)',
+                    fontWeight: 500,
+                  }}
                 >
                   {l.titulo}
                 </p>
                 <p
-                  className="text-xs truncate"
-                  style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+                  className="text-[12px] truncate mt-0.5"
+                  style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}
                 >
                   {l.subtitulo}
                 </p>

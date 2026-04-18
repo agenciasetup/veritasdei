@@ -5,8 +5,9 @@ import { useEffect, useState } from 'react'
 import { Cross, BookOpen, MapPin, MessagesSquare } from 'lucide-react'
 
 /**
- * Atalhos circulares no estilo "stories" do Instagram:
- * as ações que 90% dos católicos usam diariamente + Comunidade.
+ * Atalhos em squircles estilo iOS — ações que 90% dos católicos usam
+ * diariamente + Comunidade. Usa `ios-tile` para consistência visual
+ * com o resto do feed da home.
  */
 const ATALHOS = [
   { href: '/rosario', icon: Cross, label: 'Terço' },
@@ -39,48 +40,46 @@ export default function AtalhosRapidos() {
   }, [])
 
   return (
-    <section className="px-5 mb-3">
-      <div className="flex items-center justify-around stagger-in">
-        {ATALHOS.map(a => {
+    <section className="px-4 mb-5">
+      <div className="grid grid-cols-4 gap-2.5 stagger-in">
+        {ATALHOS.map((a) => {
           const Icon = a.icon
           const showDot = a.href === '/comunidade' && unread > 0
           return (
             <Link
               key={a.href}
               href={a.href}
-              className="flex flex-col items-center gap-2 active:scale-95 transition-transform"
-              style={{ minWidth: '68px' }}
+              className="flex flex-col items-center gap-2"
+              aria-label={a.label}
             >
               <div
-                className="relative w-16 h-16 rounded-full flex items-center justify-center"
-                style={{
-                  background:
-                    'linear-gradient(135deg, rgba(201,168,76,0.18), rgba(201,168,76,0.03))',
-                  border: '2px solid rgba(201,168,76,0.35)',
-                  boxShadow: '0 4px 20px rgba(201,168,76,0.15)',
-                  color: '#C9A84C',
-                }}
+                className="ios-tile relative w-full aspect-square flex items-center justify-center"
+                style={{ color: 'var(--gold-light)' }}
               >
-                <Icon className="w-6 h-6" strokeWidth={1.5} />
+                <Icon className="w-[22px] h-[22px]" strokeWidth={1.6} />
                 {showDot && (
                   <span
                     aria-label={`${unread} não lidas`}
                     className="absolute"
                     style={{
-                      top: 4,
-                      right: 4,
-                      width: 10,
-                      height: 10,
+                      top: 10,
+                      right: 10,
+                      width: 8,
+                      height: 8,
                       borderRadius: 9999,
-                      background: '#C9A84C',
-                      boxShadow: '0 0 0 2px #0F0E0C',
+                      background: '#D94F5C',
+                      boxShadow: '0 0 0 2px rgba(20,18,14,1)',
                     }}
                   />
                 )}
               </div>
               <span
-                className="text-[11px]"
-                style={{ color: '#A8A096', fontFamily: 'Poppins, sans-serif' }}
+                className="text-[11.5px]"
+                style={{
+                  color: 'var(--text-secondary)',
+                  fontFamily: 'var(--font-body)',
+                  fontWeight: 500,
+                }}
               >
                 {a.label}
               </span>

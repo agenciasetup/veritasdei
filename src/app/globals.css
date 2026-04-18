@@ -414,7 +414,7 @@ body::after {
 }
 
 /* ═══════════════════════════════════════════════════════
-   BACKGROUND RADIAL GLOW
+   BACKGROUND RADIAL GLOW — ambient, very soft
    ═══════════════════════════════════════════════════════ */
 
 .bg-glow {
@@ -423,8 +423,93 @@ body::after {
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(107, 29, 42, 0.12) 0%, transparent 70%),
-    radial-gradient(ellipse 50% 50% at 50% 100%, rgba(201, 168, 76, 0.04) 0%, transparent 60%);
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(107, 29, 42, 0.08) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 60% at 50% 110%, rgba(201, 168, 76, 0.025) 0%, transparent 50%);
+}
+
+/* ═══════════════════════════════════════════════════════
+   iOS-STYLE MATERIAL SURFACES
+   Layered neutrals, no colored glows. Used across the Home feed.
+   ═══════════════════════════════════════════════════════ */
+
+.ios-surface {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0.012) 100%),
+    rgba(20, 18, 14, 0.55);
+  backdrop-filter: blur(18px) saturate(130%);
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.04) inset,
+    0 -1px 0 rgba(0,0,0,0.25) inset,
+    0 10px 30px rgba(0,0,0,0.35);
+  border-radius: 22px;
+}
+
+/* Featured (hero) surface — slightly richer, for the liturgy card */
+.ios-surface-hero {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.01) 60%, rgba(0,0,0,0.15) 100%),
+    rgba(20, 18, 14, 0.75);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid rgba(255,255,255,0.07);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.06) inset,
+    0 -1px 0 rgba(0,0,0,0.3) inset,
+    0 18px 50px rgba(0,0,0,0.45);
+  border-radius: 26px;
+}
+
+/* iOS-style squircle tiles (quick actions) */
+.ios-tile {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.015) 100%),
+    rgba(24, 22, 18, 0.6);
+  border: 1px solid rgba(255,255,255,0.05);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.05) inset,
+    0 8px 20px rgba(0,0,0,0.35);
+  border-radius: 20px;
+  transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out);
+}
+
+.ios-tile:active {
+  transform: scale(0.94);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.04) inset,
+    0 4px 10px rgba(0,0,0,0.3);
+}
+
+/* Section eyebrow label */
+.ios-eyebrow {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+/* Gold CTA pill (home) */
+.ios-cta-gold {
+  background: linear-gradient(180deg, #E4C56E 0%, #C9A84C 50%, #A88332 100%);
+  color: #1C140C;
+  font-family: var(--font-body);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.35) inset,
+    0 -1px 0 rgba(0,0,0,0.15) inset,
+    0 6px 14px rgba(0,0,0,0.35);
+  transition: transform 140ms var(--ease-out), filter 140ms var(--ease-out);
+}
+
+.ios-cta-gold:active {
+  transform: scale(0.97);
+  filter: brightness(0.96);
 }
 
 /* ═══════════════════════════════════════════════════════
