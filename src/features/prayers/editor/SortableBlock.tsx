@@ -4,9 +4,12 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Trash2 } from 'lucide-react'
 
+import CalloutEditor from './blocks/CalloutEditor'
 import DividerEditor from './blocks/DividerEditor'
 import HeadingEditor from './blocks/HeadingEditor'
+import ListEditor from './blocks/ListEditor'
 import ParagraphEditor from './blocks/ParagraphEditor'
+import QuoteEditor from './blocks/QuoteEditor'
 import VerseEditor from './blocks/VerseEditor'
 import { labelForBlockType } from './factory'
 import type { Block } from '../types'
@@ -109,20 +112,13 @@ function BlockEditorSwitch({
       return <ParagraphEditor block={block} onChange={onChange} />
     case 'verse':
       return <VerseEditor block={block} onChange={onChange} />
+    case 'list':
+      return <ListEditor block={block} onChange={onChange} />
+    case 'quote':
+      return <QuoteEditor block={block} onChange={onChange} />
+    case 'callout':
+      return <CalloutEditor block={block} onChange={onChange} />
     case 'divider':
       return <DividerEditor />
-    default:
-      return (
-        <p
-          className="text-xs"
-          style={{
-            color: '#8A8378',
-            fontFamily: 'Poppins, sans-serif',
-            fontStyle: 'italic',
-          }}
-        >
-          Este tipo de bloco ainda não é editável visualmente — virá num próximo sprint.
-        </p>
-      )
   }
 }

@@ -16,15 +16,15 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable'
-import { ArrowLeft, Check, Loader2, Save } from 'lucide-react'
+import { ArrowLeft, Check, Loader2, Save, Settings2 } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { parsePrayerBody } from '../parser'
 import type { Block } from '../types'
 import BlockInserter from './BlockInserter'
 import { createBlock } from './factory'
+import MetaPanel, { type PrayerMetaDraft } from './MetaPanel'
 import { serializeBlocks } from './serializer'
 import SortableBlock from './SortableBlock'
 import { createClient } from '@/lib/supabase/client'
@@ -46,16 +46,29 @@ const uid = () => Math.random().toString(36).slice(2, 10)
  * salva serializando de volta pra body. Round-trip garantido pelo
  * parser ↔ serializer compartilhado.
  */
+const emptyMeta: PrayerMetaDraft = {
+  latinTitle: '',
+  latinBody: '',
+  audioUrl: '',
+  videoUrl: '',
+  keywords: [],
+  scriptureRefs: [],
+  metaDescription: '',
+  indulgenceNote: '',
+  iconName: '',
+}
+
 export default function EditorShell({ prayerId }: { prayerId: string }) {
   const supabase = useMemo(() => createClient(), [])
-  const router = useRouter()
   const [meta, setMeta] = useState<PrayerMeta | null>(null)
+  const [draft, setDraft] = useState<PrayerMetaDraft>(emptyMeta)
   const [items, setItems] = useState<Identified[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [savedAt, setSavedAt] = useState<Date | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [metaOpen, setMetaOpen] = useState(false)
 
   // Carrega a oração
   useEffect(() => {
@@ -64,7 +77,9 @@ export default function EditorShell({ prayerId }: { prayerId: string }) {
     ;(async () => {
       const { data, error: dbError } = await supabase
         .from('content_items')
-        .select('id, title, slug, visible, body')
+        .select(
+          'id, title, slug, visible, body, latin_title, latin_body, audio_url, video_url, keywords, scripture_refs, meta_description, indulgence_note, icon_name'
+        )
         .eq('id', prayerId)
         .maybeSingle()
       if (cancelled) return
@@ -79,8 +94,28 @@ export default function EditorShell({ prayerId }: { prayerId: string }) {
         slug: string | null
         visible: boolean
         body: string
+        latin_title: string | null
+        latin_body: string | null
+        audio_url: string | null
+        video_url: string | null
+        keywords: string[] | null
+        scripture_refs: string[] | null
+        meta_description: string | null
+        indulgence_note: string | null
+        icon_name: string | null
       }
       setMeta({ id: row.id, title: row.title, slug: row.slug, visible: row.visible })
+      setDraft({
+        latinTitle: row.latin_title ?? '',
+        latinBody: row.latin_body ?? '',
+        audioUrl: row.audio_url ?? '',
+        videoUrl: row.video_url ?? '',
+        keywords: row.keywords ?? [],
+        scriptureRefs: row.scripture_refs ?? [],
+        metaDescription: row.meta_description ?? '',
+        indulgenceNote: row.indulgence_note ?? '',
+        iconName: row.icon_name ?? '',
+      })
       const parsed = parsePrayerBody(row.body)
       setItems(parsed.map((b) => ({ id: uid(), block: b })))
       setLoading(false)
@@ -126,14 +161,32 @@ export default function EditorShell({ prayerId }: { prayerId: string }) {
     setDirty(true)
   }
 
+  const updateMeta = (next: PrayerMetaDraft) => {
+    setDraft(next)
+    setDirty(true)
+  }
+
   const handleSave = useCallback(async () => {
     if (!supabase || saving) return
     setSaving(true)
     setError(null)
     const body = serializeBlocks(items.map((i) => i.block))
+    const payload = {
+      body,
+      latin_title: draft.latinTitle.trim() || null,
+      latin_body: draft.latinBody.trim() || null,
+      audio_url: draft.audioUrl.trim() || null,
+      video_url: draft.videoUrl.trim() || null,
+      keywords: draft.keywords,
+      scripture_refs: draft.scriptureRefs,
+      meta_description: draft.metaDescription.trim() || null,
+      indulgence_note: draft.indulgenceNote.trim() || null,
+      icon_name: draft.iconName || null,
+      updated_at: new Date().toISOString(),
+    }
     const { error: dbError } = await supabase
       .from('content_items')
-      .update({ body, updated_at: new Date().toISOString() })
+      .update(payload)
       .eq('id', prayerId)
     setSaving(false)
     if (dbError) {
@@ -142,7 +195,7 @@ export default function EditorShell({ prayerId }: { prayerId: string }) {
     }
     setDirty(false)
     setSavedAt(new Date())
-  }, [supabase, saving, items, prayerId])
+  }, [supabase, saving, items, draft, prayerId])
 
   // Ctrl/Cmd+S pra salvar
   useEffect(() => {
@@ -227,6 +280,19 @@ export default function EditorShell({ prayerId }: { prayerId: string }) {
         </div>
         <button
           type="button"
+          onClick={() => setMetaOpen(true)}
+          aria-label="Metadados"
+          className="inline-flex items-center justify-center rounded-lg w-9 h-9 transition-colors active:scale-90"
+          style={{
+            background: 'rgba(201,168,76,0.08)',
+            border: '1px solid rgba(201,168,76,0.2)',
+            color: '#C9A84C',
+          }}
+        >
+          <Settings2 className="w-4 h-4" />
+        </button>
+        <button
+          type="button"
           onClick={handleSave}
           disabled={saving || !dirty}
           className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm disabled:opacity-50"
@@ -309,6 +375,13 @@ export default function EditorShell({ prayerId }: { prayerId: string }) {
       <div className="pt-2">
         <BlockInserter onInsert={(type) => insertBlock(type, true)} />
       </div>
+
+      <MetaPanel
+        open={metaOpen}
+        meta={draft}
+        onChange={updateMeta}
+        onClose={() => setMetaOpen(false)}
+      />
     </div>
   )
 }

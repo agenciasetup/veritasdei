@@ -1,6 +1,6 @@
 'use client'
 
-import { Heading2, Minus, Plus, Quote, Sparkles, Text } from 'lucide-react'
+import { AlertTriangle, Heading2, List, Minus, Plus, Quote, Sparkles, Text } from 'lucide-react'
 import { useState } from 'react'
 
 import type { Block } from '../types'
@@ -13,8 +13,10 @@ const OPTIONS: Array<{
   { type: 'heading', Icon: Heading2 },
   { type: 'paragraph', Icon: Text },
   { type: 'verse', Icon: Sparkles },
-  { type: 'divider', Icon: Minus },
+  { type: 'list', Icon: List },
   { type: 'quote', Icon: Quote },
+  { type: 'callout', Icon: AlertTriangle },
+  { type: 'divider', Icon: Minus },
 ]
 
 /**
