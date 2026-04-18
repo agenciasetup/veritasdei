@@ -15,12 +15,14 @@ import {
   CreditCard,
   Database,
   Menu,
+  BookOpenText,
 } from 'lucide-react'
 import AdminMobileNav from './AdminMobileNav'
 
 const ADMIN_NAV = [
   { href: '/admin/usuarios',     icon: Users,          label: 'Usuários' },
   { href: '/admin/conteudos',    icon: FileText,       label: 'Conteúdos' },
+  { href: '/admin/oracoes',      icon: BookOpenText,   label: 'Orações' },
   { href: '/admin/trilhas',      icon: GraduationCap,  label: 'Trilhas' },
   { href: '/admin/aprovacoes',   icon: CheckSquare,    label: 'Aprovações' },
   { href: '/admin/ia-knowledge', icon: Brain,          label: 'Base IA' },
