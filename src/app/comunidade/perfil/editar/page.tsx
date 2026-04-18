@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation'
 
-// Edição de perfil foi unificada em /perfil. Mantemos este path apenas
-// para bookmarks e links antigos — redireciona direto para a seção
-// Comunidade dentro do editor único.
+// Edição foi unificada em /perfil com um sheet "Editar perfil". Mantemos
+// este path para bookmarks antigos — redireciona e já abre o sheet.
 export default function ProfileEditPage() {
-  redirect('/perfil?tab=editar&section=comunidade')
+  redirect('/perfil?edit=1')
 }

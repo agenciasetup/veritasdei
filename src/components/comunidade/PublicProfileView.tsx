@@ -131,7 +131,7 @@ export default function PublicProfileView({
 
               {isOwnProfile ? (
                 <Link
-                  href="/perfil?tab=editar&section=comunidade"
+                  href="/perfil?edit=1"
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs uppercase tracking-[0.12em]"
                   style={{
                     background: 'transparent',

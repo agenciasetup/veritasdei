@@ -63,6 +63,10 @@ export interface Profile {
 
   // Pessoal
   profile_image_url: string | null
+  cover_image_url: string | null
+  bio_short: string | null
+  external_links: Array<{ label: string; url: string }>
+  show_likes_public: boolean
   instagram: string | null
   whatsapp: string | null
   data_nascimento: string | null

@@ -146,7 +146,7 @@ export default function ProfileTabs({
           </p>
           {isOwnProfile && (
             <p className="text-xs mt-2" style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}>
-              Você pode habilitar em <Link href="/perfil?tab=editar&section=comunidade" className="underline">Editar perfil</Link>.
+              Você pode habilitar em <Link href="/perfil?edit=1" className="underline">Editar perfil</Link>.
             </p>
           )}
         </div>
