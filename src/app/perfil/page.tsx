@@ -32,6 +32,7 @@ import AssinaturaSection from './sections/AssinaturaSection'
 import CarteirinhaSection from './sections/CarteirinhaSection'
 
 type MainTab = 'editar' | 'propositos' | 'notificacoes' | 'assinatura' | 'carteirinha'
+type EditSection = 'pessoal' | 'endereco' | 'fe' | 'social' | 'comunidade'
 
 interface TabDef {
   key: MainTab
@@ -77,9 +78,27 @@ function PerfilContent() {
     return null // null = mostra a lista no mobile
   })()
 
-  const [mobileTab, setMobileTab] = useState<MainTab | null>(initialTab)
+  const initialSection = (() => {
+    const s = searchParams.get('section')
+    if (
+      s === 'pessoal' ||
+      s === 'endereco' ||
+      s === 'fe' ||
+      s === 'social' ||
+      s === 'comunidade'
+    ) {
+      return s as EditSection
+    }
+    return 'pessoal' as const
+  })()
+
+  // Quando chega ?section=comunidade sem ?tab=, abre diretamente o editor.
+  const effectiveInitialTab: MainTab | null =
+    initialTab ?? (searchParams.get('section') ? 'editar' : null)
+
+  const [mobileTab, setMobileTab] = useState<MainTab | null>(effectiveInitialTab)
   // No desktop, sempre tem uma tab selecionada
-  const [desktopTab, setDesktopTab] = useState<MainTab>(initialTab ?? 'editar')
+  const [desktopTab, setDesktopTab] = useState<MainTab>(effectiveInitialTab ?? 'editar')
 
   function openMobileTab(tab: MainTab) {
     haptic.pulse('selection')
@@ -208,7 +227,7 @@ function PerfilContent() {
                 >
                   {TABS.find((t) => t.key === mobileTab)?.label}
                 </h1>
-                <RenderTab tab={mobileTab} />
+                <RenderTab tab={mobileTab} initialSection={initialSection} />
               </motion.div>
             )}
           </AnimatePresence>
@@ -243,15 +262,21 @@ function PerfilContent() {
             ))}
           </div>
 
-          <RenderTab tab={desktopTab} />
+          <RenderTab tab={desktopTab} initialSection={initialSection} />
         </div>
       </div>
     </div>
   )
 }
 
-function RenderTab({ tab }: { tab: MainTab }) {
-  if (tab === 'editar') return <EditarPerfilSection />
+function RenderTab({
+  tab,
+  initialSection,
+}: {
+  tab: MainTab
+  initialSection: EditSection
+}) {
+  if (tab === 'editar') return <EditarPerfilSection initialSection={initialSection} />
   if (tab === 'propositos') return <PropositosSection />
   if (tab === 'notificacoes') return <NotificacoesSection />
   if (tab === 'assinatura') return <AssinaturaSection />

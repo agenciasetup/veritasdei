@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchPostsByIds } from '@/lib/community/posts'
-import { requireCommunityPremiumAccess } from '@/lib/community/server'
+import { requireCommunitySession } from '@/lib/community/server'
 import { rateLimit } from '@/lib/rate-limit'
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 40
 
+// Leitura de hashtag é aberta a qualquer usuário logado.
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
 ) {
-  const access = await requireCommunityPremiumAccess()
-  if (!access.ok) return access.response
+  const session = await requireCommunitySession()
+  if (!session.ok) return session.response
 
   const { slug: rawSlug } = await params
-  const { supabase, user } = access.context
+  const { supabase, user } = session
 
   if (!rateLimit(`community:hashtag:${user.id}`, 60, 60_000)) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })

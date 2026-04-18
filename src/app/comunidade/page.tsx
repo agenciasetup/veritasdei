@@ -1,9 +1,7 @@
-import RequirePremium from '@/components/payments/RequirePremium'
 import CommunityFeedClient from '@/components/comunidade/CommunityFeedClient'
 import { getCommunityFlags } from '@/lib/community/config'
 import { loadCommunityFeed } from '@/lib/community/feed-loader'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { hasActivePremium } from '@/lib/payments/entitlements'
 import type { FeedResponse } from '@/lib/community/types'
 
 function CommunityDisabledPlaceholder() {
@@ -32,18 +30,15 @@ function CommunityDisabledPlaceholder() {
 
 /**
  * Pre-fetch opcional do feed "for_you" no servidor, antes da hidratação.
- * Se o usuário não está logado ou sem premium, retornamos null e o
- * `CommunityFeedClient` fará o fetch normal via `useEffect` no cliente.
- * Qualquer erro é silencioso — fallback pro comportamento atual.
+ * Qualquer usuário logado (free ou premium) pode ler o feed; só o ato
+ * de postar/curtir/seguir exige Premium. Usuários anônimos caem pro
+ * client fetch — a API retorna 401 e a UI mostra CTA de login.
  */
 async function maybePrefetchFeed(): Promise<FeedResponse | null> {
   try {
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
-
-    const premium = await hasActivePremium(user.id)
-    if (!premium) return null
 
     return await loadCommunityFeed(supabase, user.id, { tab: 'for_you', limit: 20, cursor: null })
   } catch {
@@ -60,12 +55,5 @@ export default async function ComunidadePage() {
 
   const initialFeed = await maybePrefetchFeed()
 
-  return (
-    <RequirePremium
-      title="Comunidade Veritas"
-      description="Acesse o feed de Veritas, interações e perfis da comunidade católica do Veritas Dei."
-    >
-      <CommunityFeedClient initialFeed={initialFeed} />
-    </RequirePremium>
-  )
+  return <CommunityFeedClient initialFeed={initialFeed} />
 }
