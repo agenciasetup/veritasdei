@@ -25,43 +25,56 @@ export default function HubTile({ href, icon, title, subtitle, featured }: HubTi
     <Link
       href={href}
       onClick={() => track(href, title)}
-      className="flex items-center gap-4 p-4 rounded-2xl transition-all active:scale-[0.98] touch-target-lg"
+      className="ios-surface flex items-center gap-4 p-4 transition-transform active:scale-[0.985] touch-target-lg"
       style={{
-        background: featured ? 'rgba(201,168,76,0.08)' : 'rgba(255,255,255,0.03)',
-        border: `1px solid ${featured ? 'rgba(201,168,76,0.25)' : 'rgba(201,168,76,0.08)'}`,
         minHeight: '76px',
+        ...(featured
+          ? {
+              borderColor: 'rgba(201,168,76,0.22)',
+              boxShadow:
+                '0 1px 0 rgba(255,255,255,0.05) inset, 0 10px 30px rgba(0,0,0,0.4), 0 0 0 1px rgba(201,168,76,0.08)',
+            }
+          : null),
       }}
     >
       <div
-        className="flex items-center justify-center rounded-xl flex-shrink-0"
+        className="flex items-center justify-center rounded-2xl flex-shrink-0"
         style={{
-          width: '52px',
-          height: '52px',
+          width: '48px',
+          height: '48px',
           background: featured
-            ? 'linear-gradient(135deg, rgba(201,168,76,0.2), rgba(201,168,76,0.05))'
-            : 'rgba(201,168,76,0.06)',
-          color: '#C9A84C',
+            ? 'linear-gradient(180deg, rgba(201,168,76,0.28) 0%, rgba(201,168,76,0.08) 100%)'
+            : 'rgba(255,255,255,0.04)',
+          border: featured
+            ? '1px solid rgba(201,168,76,0.25)'
+            : '1px solid rgba(255,255,255,0.05)',
+          color: featured ? '#E4C56E' : 'var(--gold-light)',
         }}
       >
         {icon}
       </div>
       <div className="flex-1 min-w-0">
         <p
-          className="text-base font-medium truncate"
-          style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}
+          className="text-[15px] truncate"
+          style={{
+            color: 'var(--text-primary)',
+            fontFamily: 'var(--font-body)',
+            fontWeight: 600,
+            letterSpacing: '-0.005em',
+          }}
         >
           {title}
         </p>
         {subtitle && (
           <p
-            className="text-xs mt-0.5 truncate"
-            style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+            className="text-[12.5px] mt-0.5 truncate"
+            style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}
           >
             {subtitle}
           </p>
         )}
       </div>
-      <ChevronRight className="w-5 h-5 flex-shrink-0" style={{ color: '#7A7368' }} />
+      <ChevronRight className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={2} style={{ color: 'var(--text-muted)' }} />
     </Link>
   )
 }

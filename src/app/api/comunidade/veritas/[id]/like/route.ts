@@ -42,7 +42,7 @@ export async function POST(
       type: 'community.like',
       title: 'Comunidade Veritas',
       body: `${user.email} curtiu seu Veritas.`,
-      targetUrl: `/comunidade?vd=${id}`,
+      targetUrl: `/comunidade/veritas/${id}`,
       payload: {
         actor_user_id: user.id,
         post_id: id,
