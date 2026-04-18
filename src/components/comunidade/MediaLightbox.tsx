@@ -2,6 +2,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { X, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { VeritasMediaAsset } from '@/lib/community/types'
 
@@ -39,8 +40,9 @@ export default function MediaLightbox({ items, startIndex, onClose }: Props) {
 
   const current = items[index]
   if (!current) return null
+  if (typeof document === 'undefined') return null
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center"
       style={{ background: 'rgba(0,0,0,0.95)' }}
@@ -98,6 +100,7 @@ export default function MediaLightbox({ items, startIndex, onClose }: Props) {
           {index + 1} / {items.length}
         </div>
       )}
-    </div>
+    </div>,
+    document.body,
   )
 }
