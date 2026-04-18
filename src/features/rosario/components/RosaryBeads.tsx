@@ -2,6 +2,7 @@
 
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { type BeadId } from '@/features/rosario/data/beadSequence'
+import { ROSARY_THEMES, type RosaryTheme } from '@/features/rosario/data/theme'
 import {
   LAYOUT_CONSTANTS,
   computeRosaryLayout,
@@ -14,6 +15,10 @@ import {
  *
  * Pass `onBeadSelect` to make every bead clickable + keyboard-accessible.
  * When omitted the component is purely decorative.
+ *
+ * A transparent hit-area circle is rendered behind every bead — its radius
+ * is ~2.4× the visual bead so the tap target clears Apple's 44pt guideline
+ * even when the SVG scales down on small phones.
  */
 
 const LAYOUT: readonly BeadLayout[] = Object.freeze(computeRosaryLayout())
@@ -28,6 +33,7 @@ export interface RosaryBeadsProps {
   onBeadSelect?: (beadId: BeadId) => void
   className?: string
   ariaDescription?: string
+  theme?: RosaryTheme
 }
 
 const STYLE = `
@@ -51,6 +57,15 @@ const STYLE = `
   .rosary-bead-button:focus-visible > .rosary-focus-ring {
     opacity: 1;
   }
+  .rosary-bead-button:active .rosary-visible {
+    transform: scale(0.92);
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .rosary-hit-area {
+    fill: transparent;
+    pointer-events: all;
+  }
   .rosary-focus-ring {
     opacity: 0;
     pointer-events: none;
@@ -68,8 +83,11 @@ export function RosaryBeads({
   onBeadSelect,
   className,
   ariaDescription = 'Terço completo',
+  theme = ROSARY_THEMES.pt,
 }: RosaryBeadsProps) {
   const interactive = Boolean(onBeadSelect)
+  const idSuffix = theme.language
+
   return (
     <svg
       viewBox={`0 0 ${C.viewBoxWidth} ${C.viewBoxHeight}`}
@@ -81,18 +99,18 @@ export function RosaryBeads({
       <style>{STYLE}</style>
 
       <defs>
-        <radialGradient id="rosary-bead-current" cx="35%" cy="35%" r="75%">
-          <stop offset="0%" stopColor="#F4E8B8" />
-          <stop offset="55%" stopColor="#D9C077" />
-          <stop offset="100%" stopColor="#C9A84C" />
+        <radialGradient id={`rosary-bead-current-${idSuffix}`} cx="35%" cy="35%" r="75%">
+          <stop offset="0%" stopColor={theme.beadCurrentStops[0]} />
+          <stop offset="55%" stopColor={theme.beadCurrentStops[1]} />
+          <stop offset="100%" stopColor={theme.beadCurrentStops[2]} />
         </radialGradient>
-        <radialGradient id="rosary-bead-future" cx="35%" cy="35%" r="70%">
-          <stop offset="0%" stopColor="rgba(201,168,76,0.22)" />
-          <stop offset="100%" stopColor="rgba(201,168,76,0.08)" />
+        <radialGradient id={`rosary-bead-future-${idSuffix}`} cx="35%" cy="35%" r="70%">
+          <stop offset="0%" stopColor={theme.beadFutureStops[0]} />
+          <stop offset="100%" stopColor={theme.beadFutureStops[1]} />
         </radialGradient>
-        <radialGradient id="rosary-bead-completed" cx="35%" cy="35%" r="70%">
-          <stop offset="0%" stopColor="rgba(201,168,76,0.45)" />
-          <stop offset="100%" stopColor="rgba(201,168,76,0.18)" />
+        <radialGradient id={`rosary-bead-completed-${idSuffix}`} cx="35%" cy="35%" r="70%">
+          <stop offset="0%" stopColor={theme.beadCompletedStops[0]} />
+          <stop offset="100%" stopColor={theme.beadCompletedStops[1]} />
         </radialGradient>
       </defs>
 
@@ -102,7 +120,7 @@ export function RosaryBeads({
         cy={C.loopCenterY}
         r={C.loopRadius}
         fill="none"
-        stroke="rgba(201, 168, 76, 0.22)"
+        stroke={theme.cordStroke}
         strokeWidth={1}
         strokeDasharray="1 5"
       />
@@ -111,7 +129,7 @@ export function RosaryBeads({
         y1={C.loopCenterY + C.loopRadius}
         x2={C.loopCenterX}
         y2={C.loopCenterY + C.loopRadius + 160}
-        stroke="rgba(201, 168, 76, 0.22)"
+        stroke={theme.cordStroke}
         strokeWidth={1}
         strokeDasharray="1 5"
       />
@@ -130,6 +148,7 @@ export function RosaryBeads({
             state={state}
             interactive={interactive}
             onSelect={onBeadSelect}
+            theme={theme}
           />
         )
       })}
@@ -142,16 +161,17 @@ interface BeadShapeProps {
   state: BeadState
   interactive: boolean
   onSelect?: (beadId: BeadId) => void
+  theme: RosaryTheme
 }
 
-function BeadShape({ bead, state, interactive, onSelect }: BeadShapeProps) {
-  const fill = `url(#rosary-bead-${state})`
+function BeadShape({ bead, state, interactive, onSelect, theme }: BeadShapeProps) {
+  const fill = `url(#rosary-bead-${state}-${theme.language})`
   const stroke =
     state === 'current'
-      ? '#D9C077'
+      ? theme.accentLight
       : state === 'completed'
-        ? 'rgba(201,168,76,0.55)'
-        : 'rgba(201,168,76,0.42)'
+        ? theme.borderStrong
+        : theme.border
   const strokeWidth = state === 'current' ? 2 : 1
   const label = describeBead(bead.id)
 
@@ -177,6 +197,12 @@ function BeadShape({ bead, state, interactive, onSelect }: BeadShapeProps) {
 
   const ariaCurrent = state === 'current' ? ('step' as const) : undefined
 
+  // Hit-area radius: big enough that the tap clears 44pt even when the SVG
+  // scales down on small phones. For the crucifix we already have a big
+  // shape, so we just add a small margin.
+  const hitRadius =
+    bead.kind === 'crucifix' ? bead.r + 12 : Math.max(bead.r * 2.4, 18)
+
   if (bead.kind === 'crucifix') {
     const s = bead.r
     return (
@@ -187,13 +213,22 @@ function BeadShape({ bead, state, interactive, onSelect }: BeadShapeProps) {
         data-bead-id={bead.id}
         data-bead-state={state}
       >
+        {/* invisible hit target */}
+        {interactive && (
+          <circle
+            cx={bead.cx}
+            cy={bead.cy}
+            r={hitRadius}
+            className="rosary-hit-area"
+          />
+        )}
         {/* focus ring (hidden unless :focus-visible) */}
         <circle
           cx={bead.cx}
           cy={bead.cy}
           r={s + 8}
           fill="none"
-          stroke="#F4E8B8"
+          stroke={theme.accentLight}
           strokeWidth={2}
           className="rosary-focus-ring"
         />
@@ -203,32 +238,34 @@ function BeadShape({ bead, state, interactive, onSelect }: BeadShapeProps) {
             cy={bead.cy}
             r={s + 6}
             fill="none"
-            stroke="#D9C077"
+            stroke={theme.accentLight}
             strokeWidth={1}
             opacity={0.35}
             className="rosary-pulse-ring"
           />
         )}
-        <rect
-          x={bead.cx - s * 0.17}
-          y={bead.cy - s}
-          width={s * 0.34}
-          height={s * 2}
-          fill={fill}
-          stroke={stroke}
-          strokeWidth={strokeWidth}
-          rx={1}
-        />
-        <rect
-          x={bead.cx - s * 0.65}
-          y={bead.cy - s * 0.17 + s * 0.2}
-          width={s * 1.3}
-          height={s * 0.34}
-          fill={fill}
-          stroke={stroke}
-          strokeWidth={strokeWidth}
-          rx={1}
-        />
+        <g className="rosary-visible">
+          <rect
+            x={bead.cx - s * 0.17}
+            y={bead.cy - s}
+            width={s * 0.34}
+            height={s * 2}
+            fill={fill}
+            stroke={stroke}
+            strokeWidth={strokeWidth}
+            rx={1}
+          />
+          <rect
+            x={bead.cx - s * 0.65}
+            y={bead.cy - s * 0.17 + s * 0.2}
+            width={s * 1.3}
+            height={s * 0.34}
+            fill={fill}
+            stroke={stroke}
+            strokeWidth={strokeWidth}
+            rx={1}
+          />
+        </g>
       </g>
     )
   }
@@ -241,13 +278,22 @@ function BeadShape({ bead, state, interactive, onSelect }: BeadShapeProps) {
       data-bead-id={bead.id}
       data-bead-state={state}
     >
+      {/* invisible hit target */}
+      {interactive && (
+        <circle
+          cx={bead.cx}
+          cy={bead.cy}
+          r={hitRadius}
+          className="rosary-hit-area"
+        />
+      )}
       {/* focus ring (hidden unless :focus-visible) */}
       <circle
         cx={bead.cx}
         cy={bead.cy}
         r={bead.r + 7}
         fill="none"
-        stroke="#F4E8B8"
+        stroke={theme.accentLight}
         strokeWidth={2}
         className="rosary-focus-ring"
       />
@@ -257,7 +303,7 @@ function BeadShape({ bead, state, interactive, onSelect }: BeadShapeProps) {
           cy={bead.cy}
           r={bead.r + 5}
           fill="none"
-          stroke="#D9C077"
+          stroke={theme.accentLight}
           strokeWidth={1}
           opacity={0.4}
           className="rosary-pulse-ring"
@@ -270,6 +316,7 @@ function BeadShape({ bead, state, interactive, onSelect }: BeadShapeProps) {
         fill={fill}
         stroke={stroke}
         strokeWidth={strokeWidth}
+        className="rosary-visible"
       />
     </g>
   )

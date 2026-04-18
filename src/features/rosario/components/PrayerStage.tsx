@@ -167,8 +167,12 @@ function PrayerBlock({
         )}
       </div>
       <p
-        className="mt-2 text-sm leading-relaxed"
-        style={{ color: '#F2EDE4' }}
+        className="mt-2 text-base leading-[1.7]"
+        style={{
+          color: '#F2EDE4',
+          whiteSpace: 'pre-line',
+          fontFamily: 'var(--font-cormorant, serif)',
+        }}
       >
         {text}
       </p>
