@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
+import { compressImage } from '@/lib/image/compress'
 import {
   VOCACOES,
   SACRAMENTOS,
@@ -118,13 +119,14 @@ export default function EditarPerfilSection() {
   }
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !user) return
-    if (!file.type.startsWith('image/')) return
-    if (file.size > 2 * 1024 * 1024) return
+    const raw = e.target.files?.[0]
+    if (!raw || !user) return
+    if (!raw.type.startsWith('image/')) return
+    if (raw.size > 2 * 1024 * 1024) return
 
     setUploadingAvatar(true)
-    const ext = file.name.split('.').pop()
+    const { file } = await compressImage(raw)
+    const ext = file.name.split('.').pop() ?? 'jpg'
     const path = `${user.id}/avatar.${ext}`
     const { error: uploadError } = await supabase.storage
       .from('avatars')

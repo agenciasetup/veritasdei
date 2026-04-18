@@ -14,6 +14,7 @@ import {
   Type,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { compressImage } from '@/lib/image/compress'
 import type { HistoriaBlock, HistoriaBlockType } from '@/types/paroquia'
 import HistoriaBlocksView from './HistoriaBlocksView'
 
@@ -68,21 +69,22 @@ export default function HistoriaBlocksEditor({ value, onChange, onError }: Props
   }
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+    const raw = e.target.files?.[0]
     const blockId = targetIdRef.current
     e.target.value = ''
-    if (!file || !supabase || !blockId) return
+    if (!raw || !supabase || !blockId) return
 
-    if (!file.type.startsWith('image/')) {
+    if (!raw.type.startsWith('image/')) {
       onError?.('Apenas imagens são permitidas.')
       return
     }
-    if (file.size > 5 * 1024 * 1024) {
+    if (raw.size > 5 * 1024 * 1024) {
       onError?.('A imagem deve ter no máximo 5MB.')
       return
     }
 
     setUploadingId(blockId)
+    const { file } = await compressImage(raw)
     const ext = file.name.split('.').pop() ?? 'jpg'
     const path = `historia/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
     const { error } = await supabase.storage.from('paroquias').upload(path, file)

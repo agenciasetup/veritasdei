@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import { Camera, Trash2, GripVertical } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { compressImage } from '@/lib/image/compress'
 import { type FotoParoquia, LABELS_FOTO_SUGERIDOS, MAX_FOTOS } from '@/types/paroquia'
 
 interface Props {
@@ -21,8 +22,8 @@ export default function FotosGallery({ value, onChange, onError }: Props) {
   const [uploading, setUploading] = useState(false)
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !supabase) return
+    const raw = e.target.files?.[0]
+    if (!raw || !supabase) return
     // reset input so selecting the same file again re-triggers onChange
     e.target.value = ''
 
@@ -30,16 +31,17 @@ export default function FotosGallery({ value, onChange, onError }: Props) {
       onError?.(`Máximo de ${MAX_FOTOS} fotos.`)
       return
     }
-    if (!file.type.startsWith('image/')) {
+    if (!raw.type.startsWith('image/')) {
       onError?.('Apenas imagens são permitidas.')
       return
     }
-    if (file.size > 5 * 1024 * 1024) {
+    if (raw.size > 5 * 1024 * 1024) {
       onError?.('A imagem deve ter no máximo 5MB.')
       return
     }
 
     setUploading(true)
+    const { file } = await compressImage(raw)
     const ext = file.name.split('.').pop() ?? 'jpg'
     const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
     const { error } = await supabase.storage.from('paroquias').upload(path, file)

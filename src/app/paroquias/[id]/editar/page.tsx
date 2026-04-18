@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
+import { compressImage } from '@/lib/image/compress'
 import AuthGuard from '@/components/auth/AuthGuard'
 import type {
   CuriosidadeItem,
@@ -273,11 +274,13 @@ function EditarContent({ id }: { id: string }) {
 
     // Upload do doc de verificação se novo (storage ainda via browser client)
     if (verificacaoFile) {
-      const ext = verificacaoFile.name.split('.').pop() ?? 'pdf'
+      // compressImage passa PDFs direto e comprime imagens; MIME-aware.
+      const { file: docFile } = await compressImage(verificacaoFile)
+      const ext = docFile.name.split('.').pop() ?? 'pdf'
       const path = `${user.id}/${paroquia.id}/doc-${Date.now()}.${ext}`
       const up = await supabase.storage
         .from('paroquia-documentos')
-        .upload(path, verificacaoFile, { upsert: true })
+        .upload(path, docFile, { upsert: true })
       if (up.error) {
         console.error('[editar] Upload do documento falhou:', up.error)
         setError(`Não foi possível enviar o documento: ${up.error.message}`)
@@ -805,18 +808,19 @@ function SingleImageUploader({
   const [uploading, setUploading] = useState(false)
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+    const raw = e.target.files?.[0]
     e.target.value = ''
-    if (!file || !supabase) return
-    if (!file.type.startsWith('image/')) {
+    if (!raw || !supabase) return
+    if (!raw.type.startsWith('image/')) {
       onError?.('Apenas imagens são permitidas.')
       return
     }
-    if (file.size > 5 * 1024 * 1024) {
+    if (raw.size > 5 * 1024 * 1024) {
       onError?.('A imagem deve ter no máximo 5MB.')
       return
     }
     setUploading(true)
+    const { file } = await compressImage(raw)
     const ext = file.name.split('.').pop() ?? 'jpg'
     const path = `single/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
     const { error } = await supabase.storage.from('paroquias').upload(path, file)

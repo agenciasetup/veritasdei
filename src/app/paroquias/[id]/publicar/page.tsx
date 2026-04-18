@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
+import { compressImage } from '@/lib/image/compress'
 import AuthGuard from '@/components/auth/AuthGuard'
 import type { Paroquia } from '@/types/paroquia'
 import {
@@ -62,18 +63,19 @@ function PublicarContent({ id }: { id: string }) {
   }, [id, supabase])
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !supabase) return
+    const raw = e.target.files?.[0]
+    if (!raw || !supabase) return
     e.target.value = ''
-    if (!file.type.startsWith('image/')) {
+    if (!raw.type.startsWith('image/')) {
       setError('Apenas imagens são permitidas.')
       return
     }
-    if (file.size > 5 * 1024 * 1024) {
+    if (raw.size > 5 * 1024 * 1024) {
       setError('A imagem deve ter no máximo 5MB.')
       return
     }
     setUploadingImage(true)
+    const { file } = await compressImage(raw)
     const ext = file.name.split('.').pop() ?? 'jpg'
     const path = `posts/${id}/${Date.now()}.${ext}`
     const { error: upErr } = await supabase.storage.from('paroquias').upload(path, file)
