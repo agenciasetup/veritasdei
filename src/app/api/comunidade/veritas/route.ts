@@ -213,7 +213,7 @@ export async function POST(req: NextRequest) {
         type: `community.${kind}`,
         title: 'Comunidade Veritas',
         body: `${post.author.name ?? 'Um membro'} ${kindLabel}.`,
-        targetUrl: `/comunidade?vd=${post.id}`,
+        targetUrl: `/comunidade/veritas/${post.id}`,
         payload: {
           actor_user_id: user.id,
           post_id: post.id,

@@ -1,29 +1,14 @@
 'use client'
 
-import {
-  type FormEvent,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, X, Clock, Sparkles, ArrowUpRight } from 'lucide-react'
+import { X, Clock } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { getDailyIceBreakers } from '@/lib/icebreakers'
+import SearchPrompt from '@/components/search/SearchPrompt'
 import { useHaptic } from '@/hooks/useHaptic'
 
 const RECENTS_KEY = 'veritasdei:search:recents'
 const MAX_RECENTS = 6
-
-const QUICK_CATEGORIES = [
-  { label: 'Catecismo', href: '/catecismo-pio-x' },
-  { label: 'Sacramentos', href: '/sacramentos' },
-  { label: 'Mandamentos', href: '/mandamentos' },
-  { label: 'Dogmas', href: '/dogmas' },
-  { label: 'Orações', href: '/oracoes' },
-  { label: 'Igrejas próximas', href: '/paroquias/buscar?mode=nearby' },
-] as const
 
 function loadRecents(): string[] {
   if (typeof window === 'undefined') return []
@@ -49,28 +34,14 @@ interface SearchOverlayProps {
   onClose: () => void
 }
 
+/**
+ * Overlay da lupa na home. Foco numa única ação: pesquisar.
+ * Sem blocos de categorias ou sugestões pastorais — isso mora em /aprender.
+ */
 export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   const router = useRouter()
   const haptic = useHaptic()
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [query, setQuery] = useState('')
-  // Lazy init: roda 1x na mount client-side. Browser-safe via guard interno.
   const [recents, setRecents] = useState<string[]>(() => loadRecents())
-  const ice = useMemo(() => getDailyIceBreakers(4), [])
-
-  // Focus o input quando o overlay abrir; limpar query é feito via "store
-  // previous" no render (sem effect → sem cascading rerenders).
-  useEffect(() => {
-    if (!open) return
-    const id = requestAnimationFrame(() => inputRef.current?.focus())
-    return () => cancelAnimationFrame(id)
-  }, [open])
-
-  const [wasOpen, setWasOpen] = useState(open)
-  if (wasOpen !== open) {
-    if (wasOpen && !open && query !== '') setQuery('')
-    setWasOpen(open)
-  }
 
   // ESC fecha
   useEffect(() => {
@@ -92,20 +63,12 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
     }
   }, [open])
 
-  function commitSearch(q: string) {
-    const trimmed = q.trim()
-    if (!trimmed) return
-    haptic.pulse('selection')
-    const next = [trimmed, ...recents.filter((r) => r !== trimmed)].slice(0, MAX_RECENTS)
+  function commit(q: string) {
+    const next = [q, ...recents.filter((r) => r !== q)].slice(0, MAX_RECENTS)
     setRecents(next)
     saveRecents(next)
     onClose()
-    router.push(`/buscar?q=${encodeURIComponent(trimmed)}`)
-  }
-
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    commitSearch(query)
+    router.push(`/buscar?q=${encodeURIComponent(q)}`)
   }
 
   function clearRecents() {
@@ -126,157 +89,90 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
           aria-modal="true"
           aria-label="Buscar"
           style={{
-            background: 'rgba(10,9,7,0.96)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
+            background: 'rgba(10,9,7,0.97)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
           }}
         >
-          <div className="safe-top px-4 pt-3 pb-2">
-            <form
-              onSubmit={handleSubmit}
-              className="flex items-center gap-2 rounded-2xl px-3 h-12"
+          <div className="safe-top flex items-center justify-end px-4 pt-3">
+            <button
+              type="button"
+              onClick={() => {
+                haptic.pulse('tap')
+                onClose()
+              }}
+              aria-label="Fechar"
+              className="w-10 h-10 rounded-full flex items-center justify-center active:scale-90 transition-transform"
               style={{
-                background: 'rgba(20,18,14,0.85)',
-                border: '1px solid rgba(201,168,76,0.18)',
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                color: 'var(--text-primary)',
               }}
             >
-              <Search className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--gold)' }} />
-              <input
-                ref={inputRef}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar no catecismo, orações, paróquias…"
-                aria-label="Buscar"
-                enterKeyHint="search"
-                className="flex-1 h-full bg-transparent outline-none text-sm"
-                style={{
-                  color: 'var(--text-primary)',
-                  fontFamily: 'var(--font-body)',
-                }}
-              />
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="Cancelar"
-                className="touch-target flex items-center justify-center -mr-2"
-                style={{ color: 'var(--text-muted)' }}
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </form>
+              <X className="w-5 h-5" strokeWidth={2} />
+            </button>
           </div>
 
-          <div className="px-4 pb-8 overflow-y-auto" style={{ height: 'calc(100% - 80px)' }}>
-            {/* Recentes */}
+          <div className="pb-8 overflow-y-auto" style={{ height: 'calc(100% - 64px)' }}>
+            <SearchPrompt autoFocus onSubmit={commit} />
+
             {recents.length > 0 && (
-              <section className="mt-4">
-                <div className="flex items-center justify-between px-1 mb-2">
+              <section className="mt-7 max-w-2xl mx-auto px-5">
+                <div className="flex items-center justify-between mb-2">
                   <span
-                    className="text-xs uppercase tracking-[0.18em]"
-                    style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}
+                    className="text-[11px] uppercase"
+                    style={{
+                      color: 'var(--text-muted)',
+                      fontFamily: 'var(--font-body)',
+                      letterSpacing: '0.14em',
+                      fontWeight: 500,
+                    }}
                   >
                     Recentes
                   </span>
                   <button
                     type="button"
                     onClick={clearRecents}
-                    className="text-xs"
-                    style={{ color: 'var(--gold)' }}
+                    className="text-[12px] active:scale-95 transition-transform"
+                    style={{ color: 'var(--gold-light)', fontFamily: 'var(--font-body)' }}
                   >
                     Limpar
                   </button>
                 </div>
-                <ul className="flex flex-col gap-1">
-                  {recents.map((r) => (
+                <ul className="flex flex-col">
+                  {recents.map((r, i) => (
                     <li key={r}>
                       <button
                         type="button"
-                        onClick={() => commitSearch(r)}
-                        className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left active:scale-[0.99]"
+                        onClick={() => commit(r)}
+                        className="w-full flex items-center gap-3 py-3 text-left active:opacity-70"
                         style={{
-                          background: 'rgba(255,255,255,0.02)',
-                          color: 'var(--text-primary)',
-                          fontFamily: 'var(--font-body)',
+                          borderBottom:
+                            i < recents.length - 1
+                              ? '1px solid rgba(255,255,255,0.04)'
+                              : 'none',
                         }}
                       >
-                        <Clock className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--text-muted)' }} />
-                        <span className="text-sm truncate flex-1">{r}</span>
+                        <Clock
+                          className="w-[15px] h-[15px] flex-shrink-0"
+                          strokeWidth={1.8}
+                          style={{ color: 'var(--text-muted)' }}
+                        />
+                        <span
+                          className="text-[14px] truncate flex-1"
+                          style={{
+                            color: 'var(--text-primary)',
+                            fontFamily: 'var(--font-body)',
+                          }}
+                        >
+                          {r}
+                        </span>
                       </button>
                     </li>
                   ))}
                 </ul>
               </section>
             )}
-
-            {/* Categorias rápidas */}
-            <section className="mt-5">
-              <div className="px-1 mb-2 flex items-center gap-2">
-                <Sparkles className="w-3.5 h-3.5" style={{ color: 'var(--gold)' }} />
-                <span
-                  className="text-xs uppercase tracking-[0.18em]"
-                  style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}
-                >
-                  Categorias
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {QUICK_CATEGORIES.map((c) => (
-                  <button
-                    key={c.href}
-                    type="button"
-                    onClick={() => {
-                      haptic.pulse('tap')
-                      onClose()
-                      router.push(c.href)
-                    }}
-                    className="theme-chip active:scale-95"
-                  >
-                    {c.label}
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            {/* Sugestões pastorais */}
-            <section className="mt-6">
-              <div className="px-1 mb-2 flex items-center gap-2">
-                <span
-                  className="text-xs uppercase tracking-[0.18em]"
-                  style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}
-                >
-                  Comece por aqui
-                </span>
-              </div>
-              <ul className="flex flex-col gap-2">
-                {ice.map((ib) => (
-                  <li key={ib.question}>
-                    <button
-                      type="button"
-                      onClick={() => commitSearch(ib.question)}
-                      className="w-full flex items-start gap-2 px-3 py-3 rounded-xl text-left active:scale-[0.99]"
-                      style={{
-                        background: 'rgba(20,18,14,0.6)',
-                        border: '1px solid rgba(201,168,76,0.12)',
-                      }}
-                    >
-                      <span
-                        className="text-sm leading-relaxed flex-1"
-                        style={{
-                          color: 'var(--text-secondary)',
-                          fontFamily: 'var(--font-body)',
-                        }}
-                      >
-                        {ib.question}
-                      </span>
-                      <ArrowUpRight
-                        className="w-4 h-4 flex-shrink-0 mt-0.5"
-                        style={{ color: 'var(--text-muted)' }}
-                      />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
           </div>
         </motion.div>
       )}
