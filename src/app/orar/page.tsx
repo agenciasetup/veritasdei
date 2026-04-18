@@ -19,7 +19,7 @@ export default function OrarPage() {
     <AuthGuard>
       <main className="min-h-screen pb-24">
         <HubHeader
-          title="Orar"
+          title="Rezar"
           subtitle="Momentos de oração para fortalecer sua fé"
         />
 
@@ -42,7 +42,7 @@ export default function OrarPage() {
               href="/oracoes"
               icon={<BookOpen className="w-6 h-6" />}
               title="Orações"
-              subtitle="Pai-Nosso, Credo, Ave-Maria e outras"
+              subtitle="Dia a dia, Missa, Essenciais e Ocasiões"
             />
             <HubTile
               href="/exame-consciencia"
