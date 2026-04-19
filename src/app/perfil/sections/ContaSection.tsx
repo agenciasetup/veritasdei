@@ -72,6 +72,7 @@ export default function ContaSection() {
   const [openMobile, setOpenMobile] = useState<Set<Group>>(new Set(['identidade']))
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const [form, setForm] = useState<ProfileUpdate>(() => initForm(profile))
   const [cpfDisplay, setCpfDisplay] = useState<string>(
@@ -108,20 +109,42 @@ export default function ContaSection() {
       return
     }
     setCpfError('')
+    setSaveError(null)
     setSaving(true)
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ ...form, cpf: cpfRaw.length === 11 ? cpfRaw : null })
-      .eq('id', user.id)
+    try {
+      // Normaliza valores — enums não aceitam string vazia, transforma em null.
+      const normalized: Record<string, unknown> = { ...form }
+      if (normalized.relationship_status === '') normalized.relationship_status = null
+      if (normalized.genero === '') normalized.genero = null
+      for (const key of ['instagram', 'whatsapp', 'tiktok', 'youtube', 'endereco', 'cidade', 'estado', 'pais', 'cep', 'paroquia', 'diocese', 'tempo_catolico', 'pastoral', 'comunidade', 'religiao_anterior'] as const) {
+        if (normalized[key] === '') normalized[key] = null
+      }
+      normalized.cpf = cpfRaw.length === 11 ? cpfRaw : null
 
-    if (!error) {
+      const { error } = await supabase
+        .from('profiles')
+        .update(normalized)
+        .eq('id', user.id)
+
+      if (error) {
+        console.error('[Perfil] save error:', error)
+        setSaveError(translateSaveError(error.message ?? error.code ?? ''))
+        haptic.pulse('warning')
+        return
+      }
+
       await refreshProfile()
       haptic.pulse('complete')
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
+    } catch (err) {
+      console.error('[Perfil] save exception:', err)
+      setSaveError(err instanceof Error ? err.message : 'Erro ao salvar.')
+      haptic.pulse('warning')
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
   }
 
   function toggleMobile(g: Group) {
@@ -450,7 +473,20 @@ export default function ContaSection() {
   }
 
   const SaveButton = (
-    <div className="mt-6 flex justify-end">
+    <div className="mt-6 flex flex-col gap-3 items-stretch sm:flex-row sm:items-center sm:justify-end">
+      {saveError && (
+        <div
+          className="flex-1 rounded-xl px-3 py-2 text-xs"
+          style={{
+            background: 'rgba(107,29,42,0.14)',
+            border: '1px solid rgba(217,79,92,0.35)',
+            color: '#D94F5C',
+            fontFamily: 'Poppins, sans-serif',
+          }}
+        >
+          {saveError}
+        </div>
+      )}
       <button
         onClick={handleSave}
         disabled={saving}
@@ -593,6 +629,24 @@ export default function ContaSection() {
       </div>
     </div>
   )
+}
+
+function translateSaveError(raw: string): string {
+  if (!raw) return 'Erro ao salvar o perfil.'
+  const lower = raw.toLowerCase()
+  if (lower.includes('profiles_relationship_status_not_clergy_chk')) {
+    return 'Estado civil não pode ser preenchido por padre, diácono, bispo ou religioso.'
+  }
+  if (lower.includes('profiles_handle') || lower.includes('public_handle')) {
+    return 'Handle inválido ou já em uso.'
+  }
+  if (lower.includes('duplicate key') || lower.includes('unique')) {
+    return 'Já existe um perfil com esses dados.'
+  }
+  if (lower.includes('rls') || lower.includes('permission')) {
+    return 'Sem permissão para atualizar esse campo. Entre em contato com o suporte.'
+  }
+  return `Erro ao salvar: ${raw}`
 }
 
 function initForm(profile: ReturnType<typeof useAuth>['profile']): ProfileUpdate {
