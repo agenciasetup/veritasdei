@@ -110,10 +110,22 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
   useEffect(() => {
     if (nearbyCoords) return
     if (profile?.location_lat != null && profile?.location_lng != null) {
-      setNearbyCoords({ lat: Number(profile.location_lat), lng: Number(profile.location_lng) })
+      const lat = Number(profile.location_lat)
+      const lng = Number(profile.location_lng)
+      setNearbyCoords({ lat, lng })
       setNearbyStatus('ready')
+
+      // Se coords existem mas cidade está faltando, dispara o backfill
+      // server-side (Nominatim). Fire-and-forget.
+      if (!profile.location_city || !profile.location_state) {
+        void fetch('/api/comunidade/location', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ latitude: lat, longitude: lng }),
+        })
+      }
     }
-  }, [profile?.location_lat, profile?.location_lng, nearbyCoords])
+  }, [profile?.location_lat, profile?.location_lng, profile?.location_city, profile?.location_state, nearbyCoords])
   const [items, setItems] = useState<VeritasPost[]>(initialFeed?.items ?? [])
   const [cursor, setCursor] = useState<string | null>(initialFeed?.cursor ?? null)
   const [loading, setLoading] = useState(false)

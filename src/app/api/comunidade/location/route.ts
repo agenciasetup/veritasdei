@@ -26,9 +26,9 @@ function pickComponent(
   return null
 }
 
-async function reverseGeocode(lat: number, lng: number): Promise<{ city: string | null; state: string | null }> {
+async function reverseGeocodeGoogle(lat: number, lng: number): Promise<{ city: string | null; state: string | null } | null> {
   const apiKey = process.env.API_PLACES_NEW
-  if (!apiKey) return { city: null, state: null }
+  if (!apiKey) return null
 
   const url = new URL('https://maps.googleapis.com/maps/api/geocode/json')
   url.searchParams.set('latlng', `${lat},${lng}`)
@@ -36,22 +36,69 @@ async function reverseGeocode(lat: number, lng: number): Promise<{ city: string 
   url.searchParams.set('result_type', 'locality|administrative_area_level_2|administrative_area_level_1')
   url.searchParams.set('key', apiKey)
 
-  const res = await fetch(url.toString())
-  if (!res.ok) return { city: null, state: null }
-
-  const data = await res.json() as { status?: string; results?: Array<{ address_components: AddressComponent[] }> }
-  if (data.status !== 'OK' || !data.results?.length) return { city: null, state: null }
-
-  let city: string | null = null
-  let state: string | null = null
-  for (const result of data.results) {
-    const comps = result.address_components
-    if (!city) city = pickComponent(comps, ['administrative_area_level_2', 'locality'])
-    if (!state) state = pickComponent(comps, ['administrative_area_level_1'], true)
-    if (city && state) break
+  try {
+    const res = await fetch(url.toString())
+    if (!res.ok) return null
+    const data = await res.json() as { status?: string; results?: Array<{ address_components: AddressComponent[] }> }
+    if (data.status !== 'OK' || !data.results?.length) return null
+    let city: string | null = null
+    let state: string | null = null
+    for (const result of data.results) {
+      const comps = result.address_components
+      if (!city) city = pickComponent(comps, ['administrative_area_level_2', 'locality'])
+      if (!state) state = pickComponent(comps, ['administrative_area_level_1'], true)
+      if (city && state) break
+    }
+    return { city, state }
+  } catch {
+    return null
   }
+}
 
-  return { city, state }
+async function reverseGeocodeNominatim(lat: number, lng: number): Promise<{ city: string | null; state: string | null } | null> {
+  // Fallback grátis via OpenStreetMap. Limite ~1 req/s, já temos rate limit
+  // upstream. User-Agent é obrigatório pela política do Nominatim.
+  try {
+    const url = new URL('https://nominatim.openstreetmap.org/reverse')
+    url.searchParams.set('lat', String(lat))
+    url.searchParams.set('lon', String(lng))
+    url.searchParams.set('format', 'json')
+    url.searchParams.set('accept-language', 'pt-BR')
+    url.searchParams.set('zoom', '10')
+
+    const res = await fetch(url.toString(), {
+      headers: { 'User-Agent': 'VeritasDei/1.0 (contato@veritasdei.com.br)' },
+    })
+    if (!res.ok) return null
+
+    const data = await res.json() as {
+      address?: {
+        city?: string
+        town?: string
+        village?: string
+        municipality?: string
+        county?: string
+        state?: string
+        'ISO3166-2-lvl4'?: string
+      }
+    }
+    const addr = data.address ?? {}
+    const city = addr.city ?? addr.town ?? addr.village ?? addr.municipality ?? addr.county ?? null
+    const stateIso = addr['ISO3166-2-lvl4'] ?? ''
+    // Ex: "BR-SP" → "SP"
+    const stateShort = stateIso.includes('-') ? stateIso.split('-').pop() ?? null : null
+    return { city, state: stateShort ?? addr.state ?? null }
+  } catch {
+    return null
+  }
+}
+
+async function reverseGeocode(lat: number, lng: number): Promise<{ city: string | null; state: string | null }> {
+  const google = await reverseGeocodeGoogle(lat, lng)
+  if (google && (google.city || google.state)) return google
+  const osm = await reverseGeocodeNominatim(lat, lng)
+  if (osm) return osm
+  return { city: null, state: null }
 }
 
 export async function POST(req: NextRequest) {
@@ -65,7 +112,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
   }
 
-  let payload: { latitude?: number; longitude?: number } = {}
+  let payload: { latitude?: number; longitude?: number; city?: string | null; state?: string | null } = {}
   try {
     payload = await req.json() as typeof payload
   } catch {
@@ -82,7 +129,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invalid_coords' }, { status: 400 })
   }
 
-  const { city, state } = await reverseGeocode(lat, lng)
+  // Client pode mandar city/state já resolvidos (do próprio geocoder do browser
+  // quando disponível). Senão o servidor resolve.
+  const clientCity = typeof payload.city === 'string' && payload.city.trim() ? payload.city.trim().slice(0, 120) : null
+  const clientState = typeof payload.state === 'string' && payload.state.trim() ? payload.state.trim().slice(0, 60) : null
+
+  let city = clientCity
+  let state = clientState
+  if (!city || !state) {
+    const resolved = await reverseGeocode(lat, lng)
+    city = city ?? resolved.city
+    state = state ?? resolved.state
+  }
 
   const { error } = await supabase
     .from('profiles')
