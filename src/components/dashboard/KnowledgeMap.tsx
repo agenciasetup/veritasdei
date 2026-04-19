@@ -192,6 +192,7 @@ function MapNodeStrip({ node }: { node: MapNode }) {
   return (
     <Link
       href={`/${node.slug}`}
+      title={`${label} — ${node.studied} de ${node.total} estudados`}
       className="flex flex-col items-center justify-center w-24 h-28 rounded-2xl active:scale-95 transition-transform"
       style={{
         background: 'rgba(20,18,14,0.6)',
@@ -224,11 +225,12 @@ function MapNodeStrip({ node }: { node: MapNode }) {
       >
         {label}
       </span>
-      {hasProgress && (
-        <span className="text-[10px] mt-0.5 font-medium" style={{ color: accentColor }}>
-          {pct}%
-        </span>
-      )}
+      <span
+        className="text-[10px] mt-0.5 font-medium"
+        style={{ color: hasProgress ? accentColor : 'var(--text-muted)' }}
+      >
+        {node.studied}/{node.total}
+      </span>
     </Link>
   )
 }
@@ -247,6 +249,7 @@ function MapNodeCard({ node, index }: { node: MapNode & { x: number; y: number }
   return (
     <Link
       href={`/${node.slug}`}
+      title={`${label} — ${node.studied} de ${node.total} estudados${pct > 0 ? ` (${pct}%)` : ''}`}
       className="absolute flex flex-col items-center group fade-in"
       style={{
         left: `${node.x}%`,
@@ -306,18 +309,16 @@ function MapNodeCard({ node, index }: { node: MapNode & { x: number; y: number }
       >
         {label}
       </span>
-      {/* Progress percentage */}
-      {hasProgress && (
-        <span
-          className="text-[9px] font-medium"
-          style={{
-            color: accentColor,
-            fontFamily: 'Poppins, sans-serif',
-          }}
-        >
-          {pct}%
-        </span>
-      )}
+      {/* Fração X/Y */}
+      <span
+        className="text-[9px] font-medium"
+        style={{
+          color: hasProgress ? accentColor : 'var(--text-muted)',
+          fontFamily: 'Poppins, sans-serif',
+        }}
+      >
+        {node.studied}/{node.total}
+      </span>
     </Link>
   )
 }
