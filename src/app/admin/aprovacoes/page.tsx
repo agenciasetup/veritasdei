@@ -6,8 +6,9 @@ import { useAuth } from '@/contexts/AuthContext'
 import { VocacaoIcon } from '@/components/icons/VocacaoIcons'
 import {
   CheckSquare, Church, Shield, CheckCircle, XCircle,
-  FileText, MapPin, User, ExternalLink, BadgeCheck,
+  FileText, MapPin, User, ExternalLink, BadgeCheck, Crown,
 } from 'lucide-react'
+import { decideClaim } from '@/app/paroquias/[id]/claim/actions'
 
 interface Verificacao {
   id: string
@@ -34,7 +35,23 @@ interface ParoquiaPendente {
   profiles?: { name: string | null; email: string | null; vocacao: string }
 }
 
-type Tab = 'verificacoes' | 'paroquias' | 'igrejas-verif'
+type Tab = 'verificacoes' | 'paroquias' | 'igrejas-verif' | 'claims'
+
+interface ClaimRow {
+  id: string
+  paroquia_id: string
+  user_id: string | null
+  nome_solicitante: string
+  email_solicitante: string
+  whatsapp: string | null
+  relacao: string | null
+  role_solicitada: 'admin' | 'moderator'
+  mensagem: string | null
+  documento_path: string | null
+  created_at: string
+  paroquia: { id: string; nome: string; cidade: string; estado: string; foto_url: string | null } | null
+  solicitante: { name: string | null; email: string | null } | null
+}
 
 interface ParoquiaVerif {
   id: string
@@ -61,6 +78,7 @@ export default function AdminAprovacoesPage() {
   const [verificacoes, setVerificacoes] = useState<Verificacao[]>([])
   const [paroquias, setParoquias] = useState<ParoquiaPendente[]>([])
   const [igrejasVerif, setIgrejasVerif] = useState<ParoquiaVerif[]>([])
+  const [claims, setClaims] = useState<ClaimRow[]>([])
   const [loading, setLoading] = useState(true)
 
   const fetchVerificacoes = useCallback(async () => {
@@ -132,11 +150,52 @@ export default function AdminAprovacoesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const fetchClaims = useCallback(async () => {
+    if (!supabase) return
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('paroquia_claims')
+      .select(
+        'id, paroquia_id, user_id, nome_solicitante, email_solicitante, whatsapp, relacao, role_solicitada, mensagem, documento_path, created_at, paroquia:paroquias(id, nome, cidade, estado, foto_url)',
+      )
+      .eq('status', 'pendente')
+      .order('created_at', { ascending: true })
+
+    if (error) {
+      console.error('[admin] claims fetch error:', error)
+      setClaims([])
+      setLoading(false)
+      return
+    }
+
+    const rows = (data as unknown as ClaimRow[]) ?? []
+    const userIds = Array.from(
+      new Set(rows.map(r => r.user_id).filter((v): v is string => !!v)),
+    )
+    if (userIds.length > 0) {
+      const { data: users } = await supabase
+        .from('profiles')
+        .select('id, name, email')
+        .in('id', userIds)
+      type U = { id: string; name: string | null; email: string | null }
+      const list = (users as U[] | null) ?? []
+      const byId = new Map<string, U>(list.map(u => [u.id, u]))
+      for (const r of rows) {
+        const u = r.user_id ? byId.get(r.user_id) : null
+        r.solicitante = u ? { name: u.name, email: u.email } : null
+      }
+    }
+    setClaims(rows)
+    setLoading(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     if (tab === 'verificacoes') fetchVerificacoes()
     else if (tab === 'paroquias') fetchParoquias()
-    else fetchIgrejasVerif()
-  }, [tab, fetchVerificacoes, fetchParoquias, fetchIgrejasVerif])
+    else if (tab === 'igrejas-verif') fetchIgrejasVerif()
+    else if (tab === 'claims') fetchClaims()
+  }, [tab, fetchVerificacoes, fetchParoquias, fetchIgrejasVerif, fetchClaims])
 
   const handleVerificacao = async (id: string, action: 'aprovado' | 'rejeitado') => {
     if (!supabase || !profile) return
@@ -189,7 +248,21 @@ export default function AdminAprovacoesPage() {
     if (data?.signedUrl) window.open(data.signedUrl, '_blank')
   }
 
-  const totalPending = verificacoes.length + paroquias.length + igrejasVerif.length
+  const handleClaim = async (id: string, action: 'aprovar' | 'rejeitar') => {
+    const notas = action === 'rejeitar'
+      ? (prompt('Motivo da rejeição (será enviado ao solicitante):') ?? '').trim() || null
+      : null
+    const result = await decideClaim({
+      claimId: id,
+      action,
+      adminNotas: notas,
+    })
+    if (!result.ok) {
+      alert(result.error)
+      return
+    }
+    fetchClaims()
+  }
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -208,6 +281,7 @@ export default function AdminAprovacoesPage() {
           { key: 'verificacoes' as Tab, icon: Shield, label: 'Verificações de Título' },
           { key: 'paroquias' as Tab, icon: Church, label: 'Paróquias Pendentes' },
           { key: 'igrejas-verif' as Tab, icon: BadgeCheck, label: 'Verificações de Igrejas' },
+          { key: 'claims' as Tab, icon: Crown, label: 'Reivindicações' },
         ].map(({ key, icon: Icon, label }) => (
           <button key={key} onClick={() => setTab(key)}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs transition-all"
@@ -448,6 +522,99 @@ export default function AdminAprovacoesPage() {
                       <XCircle className="w-4 h-4" /> Rejeitar
                     </button>
                     <button onClick={() => handleParoquia(p.id, 'aprovada')}
+                      className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium active:scale-[0.98] touch-target-lg"
+                      style={{ background: 'rgba(76,175,80,0.12)', border: '1px solid rgba(76,175,80,0.3)', color: '#4CAF50', fontFamily: 'Poppins, sans-serif' }}>
+                      <CheckCircle className="w-4 h-4" /> Aprovar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ═══ REIVINDICAÇÕES ═══ */}
+      {!loading && tab === 'claims' && (
+        <>
+          {claims.length === 0 ? (
+            <EmptyState icon={Crown} message="Nenhuma reivindicação pendente" />
+          ) : (
+            <div className="space-y-3">
+              {claims.map(c => (
+                <div key={c.id} className="rounded-2xl p-5"
+                  style={{ background: 'rgba(16,16,16,0.7)', border: '1px solid rgba(201,168,76,0.1)' }}>
+                  <div className="flex items-start gap-4">
+                    {c.paroquia?.foto_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={c.paroquia.foto_url} alt={c.paroquia.nome} loading="lazy" decoding="async" className="w-14 h-14 rounded-xl object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
+                        style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.15)' }}>
+                        <Church className="w-5 h-5" style={{ color: '#C9A84C' }} />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                        <p className="text-sm font-bold" style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}>
+                          {c.paroquia?.nome ?? '—'}
+                        </p>
+                        <span className="text-xs px-2 py-0.5 rounded-full"
+                          style={{
+                            background: c.role_solicitada === 'admin' ? 'rgba(107,29,42,0.18)' : 'rgba(201,168,76,0.08)',
+                            color: c.role_solicitada === 'admin' ? '#D94F5C' : '#C9A84C',
+                            fontFamily: 'Poppins, sans-serif',
+                          }}>
+                          {c.role_solicitada === 'admin' ? 'Administrador' : 'Moderador'}
+                        </span>
+                      </div>
+                      {c.paroquia && (
+                        <p className="text-xs flex items-center gap-1" style={{ color: '#B8AFA2' }}>
+                          <MapPin className="w-3 h-3" style={{ color: '#C9A84C' }} />
+                          {c.paroquia.cidade}, {c.paroquia.estado}
+                        </p>
+                      )}
+                      <div className="mt-2 text-xs space-y-0.5" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
+                        <p>
+                          <User className="inline w-3 h-3 mr-1" style={{ color: '#C9A84C' }} />
+                          <strong style={{ color: '#F2EDE4' }}>{c.nome_solicitante}</strong>
+                          {c.solicitante?.name && c.solicitante.name !== c.nome_solicitante && (
+                            <span className="ml-1" style={{ color: '#7A7368' }}>(conta: {c.solicitante.name})</span>
+                          )}
+                        </p>
+                        <p style={{ color: '#7A7368' }}>{c.email_solicitante}</p>
+                        {c.whatsapp && <p style={{ color: '#7A7368' }}>WhatsApp: {c.whatsapp}</p>}
+                        {c.relacao && <p>Relação: {c.relacao}</p>}
+                      </div>
+                      {c.mensagem && (
+                        <p className="text-xs mt-2 p-2 rounded-lg whitespace-pre-wrap"
+                          style={{ background: 'rgba(10,10,10,0.5)', color: '#B8AFA2' }}>
+                          {c.mensagem}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-3 mt-2 flex-wrap">
+                        {c.documento_path && (
+                          <button
+                            onClick={() => openVerifDoc(c.documento_path!)}
+                            className="inline-flex items-center gap-1 text-xs underline cursor-pointer"
+                            style={{ color: '#C9A84C', background: 'none', border: 'none' }}>
+                            <FileText className="w-3 h-3" /> Ver documento
+                            <ExternalLink className="w-3 h-3" />
+                          </button>
+                        )}
+                        <span className="text-xs" style={{ color: '#7A736860' }}>
+                          {new Date(c.created_at).toLocaleDateString('pt-BR')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 md:flex md:justify-end gap-2 mt-3">
+                    <button onClick={() => handleClaim(c.id, 'rejeitar')}
+                      className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium active:scale-[0.98] touch-target-lg"
+                      style={{ background: 'rgba(217,79,92,0.1)', border: '1px solid rgba(217,79,92,0.25)', color: '#D94F5C', fontFamily: 'Poppins, sans-serif' }}>
+                      <XCircle className="w-4 h-4" /> Rejeitar
+                    </button>
+                    <button onClick={() => handleClaim(c.id, 'aprovar')}
                       className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium active:scale-[0.98] touch-target-lg"
                       style={{ background: 'rgba(76,175,80,0.12)', border: '1px solid rgba(76,175,80,0.3)', color: '#4CAF50', fontFamily: 'Poppins, sans-serif' }}>
                       <CheckCircle className="w-4 h-4" /> Aprovar

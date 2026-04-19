@@ -183,7 +183,7 @@ export default function CadastrarWizard() {
           informacoes_extras: state.informacoesExtras.trim() || null,
           horarios_missa: state.horariosMissa,
           horarios_confissao: state.horariosConfissao,
-          status: 'aprovada',
+          status: 'pendente',
           criado_por: user.id,
           owner_user_id: user.id,
         })
