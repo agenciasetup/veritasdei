@@ -4,6 +4,7 @@ import "./globals.css"
 import AppShell from "@/components/layout/AppShell"
 import { AuthProvider } from "@/contexts/AuthContext"
 import PwaRegister from "@/components/layout/PwaRegister"
+import NoZoom from "@/components/layout/NoZoom"
 
 // next/font/google: self-hosting + auto-subset + preload com display:swap.
 // Pesos reduzidos vs versão antiga (-400/-500 typical) para economia de bytes.
@@ -87,6 +88,7 @@ export default function RootLayout({
           <AppShell>{children}</AppShell>
         </AuthProvider>
         <PwaRegister />
+        <NoZoom />
       </body>
     </html>
   )

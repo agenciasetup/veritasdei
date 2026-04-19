@@ -89,6 +89,11 @@
 
 html {
   scroll-behavior: smooth;
+  /* Bloqueia pinch/double-tap zoom (complementa listeners em NoZoom.tsx) */
+  touch-action: pan-x pan-y;
+  -ms-touch-action: pan-x pan-y;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -98,6 +103,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  touch-action: pan-x pan-y;
 }
 
 /* ── Noise / Grain Overlay ── */
