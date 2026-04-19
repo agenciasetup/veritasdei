@@ -75,18 +75,22 @@ function PublicarContent({ id }: { id: string }) {
       return
     }
     setUploadingImage(true)
-    const { file } = await compressImage(raw)
-    const ext = file.name.split('.').pop() ?? 'jpg'
-    const path = `posts/${id}/${Date.now()}.${ext}`
-    const { error: upErr } = await supabase.storage.from('paroquias').upload(path, file)
-    if (upErr) {
-      setError(upErr.message)
+    try {
+      const { file } = await compressImage(raw)
+      const ext = file.name.split('.').pop() ?? 'jpg'
+      const path = `posts/${id}/${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('paroquias').upload(path, file)
+      if (upErr) {
+        setError(upErr.message)
+        return
+      }
+      const { data } = supabase.storage.from('paroquias').getPublicUrl(path)
+      setImagemUrl(data.publicUrl)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Falha ao enviar imagem.')
+    } finally {
       setUploadingImage(false)
-      return
     }
-    const { data } = supabase.storage.from('paroquias').getPublicUrl(path)
-    setImagemUrl(data.publicUrl)
-    setUploadingImage(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -110,6 +114,8 @@ function PublicarContent({ id }: { id: string }) {
       setSaving(false)
       return
     }
+    // refresh invalida o RSC cache; sem isso o post novo não aparece na lista.
+    router.refresh()
     router.push(`/paroquias/${paroquia.id}`)
   }
 

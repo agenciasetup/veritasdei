@@ -311,7 +311,11 @@ function EditarContent({ id }: { id: string }) {
 
     setSaving(false)
     setSuccess('Alterações salvas.')
-    setTimeout(() => router.push(`/paroquias/${paroquia.id}`), 800)
+    setTimeout(() => {
+      // refresh invalida o RSC cache; sem isso a página destino mostra dados antigos.
+      router.refresh()
+      router.push(`/paroquias/${paroquia.id}`)
+    }, 800)
   }
 
   if (loading) {

@@ -41,19 +41,23 @@ export default function FotosGallery({ value, onChange, onError }: Props) {
     }
 
     setUploading(true)
-    const { file } = await compressImage(raw)
-    const ext = file.name.split('.').pop() ?? 'jpg'
-    const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
-    const { error } = await supabase.storage.from('paroquias').upload(path, file)
-    if (error) {
-      onError?.(error.message)
+    try {
+      const { file } = await compressImage(raw)
+      const ext = file.name.split('.').pop() ?? 'jpg'
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+      const { error } = await supabase.storage.from('paroquias').upload(path, file)
+      if (error) {
+        onError?.(error.message)
+        return
+      }
+      const { data } = supabase.storage.from('paroquias').getPublicUrl(path)
+      const nextLabel = LABELS_FOTO_SUGERIDOS[value.length] ?? ''
+      onChange([...value, { url: data.publicUrl, label: nextLabel }])
+    } catch (e) {
+      onError?.(e instanceof Error ? e.message : 'Falha ao enviar foto.')
+    } finally {
       setUploading(false)
-      return
     }
-    const { data } = supabase.storage.from('paroquias').getPublicUrl(path)
-    const nextLabel = LABELS_FOTO_SUGERIDOS[value.length] ?? ''
-    onChange([...value, { url: data.publicUrl, label: nextLabel }])
-    setUploading(false)
   }
 
   const updateLabel = (i: number, label: string) => {
