@@ -89,17 +89,28 @@ export default function Home() {
       <div className="bg-glow" />
 
       <PullToRefresh onRefresh={() => router.refresh()}>
-        <HojeHeader />
+        {/* Mobile: stack vertical (default).
+            Desktop: container max-w + 2-col dashboard layout.
+            mx-auto + max-w-6xl impede o efeito de "mobile esticado". */}
+        <div className="md:max-w-6xl md:mx-auto md:px-6 md:pt-3">
+          <HojeHeader />
 
-        <LiturgiaHojeCard />
+          <LiturgiaHojeCard />
 
-        <PropositosStrip />
+          <div className="md:grid md:grid-cols-12 md:gap-6">
+            {/* Coluna principal */}
+            <div className="md:col-span-8 flex flex-col">
+              <PropositosStrip />
+              <LembretesCard />
+            </div>
 
-        <AtalhosRapidos />
-
-        <ContinueLearning userId={user?.id} />
-
-        <LembretesCard />
+            {/* Side rail (atalhos + continuar) */}
+            <aside className="md:col-span-4 flex flex-col">
+              <AtalhosRapidos />
+              <ContinueLearning userId={user?.id} />
+            </aside>
+          </div>
+        </div>
       </PullToRefresh>
 
       <footer className="relative z-10 py-4 text-center mt-auto">

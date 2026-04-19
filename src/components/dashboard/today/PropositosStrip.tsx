@@ -24,11 +24,11 @@ export default function PropositosStrip() {
 
   if (loading && propositos.length === 0) {
     return (
-      <section className="mb-5">
-        <div className="px-5 mb-3 flex items-center justify-between">
+      <section className="mb-5 md:!px-0">
+        <div className="px-5 md:px-1 mb-3 flex items-center justify-between">
           <h2 className="ios-eyebrow">Meus propósitos</h2>
         </div>
-        <div className="px-4 flex gap-3 overflow-x-auto no-scrollbar">
+        <div className="px-4 md:px-0 flex gap-3 overflow-x-auto no-scrollbar">
           {[0, 1].map((i) => (
             <div
               key={i}
@@ -45,8 +45,8 @@ export default function PropositosStrip() {
   const lista = propositosAtivos.length > 0 ? propositosAtivos : propositos.slice(0, 3)
 
   return (
-    <section className="mb-5">
-      <div className="px-5 mb-3 flex items-center justify-between">
+    <section className="mb-5 md:!px-0 md:mb-6">
+      <div className="px-5 md:px-1 mb-3 flex items-center justify-between">
         <h2 className="ios-eyebrow">Meus propósitos</h2>
         <button
           type="button"
@@ -60,7 +60,7 @@ export default function PropositosStrip() {
       </div>
 
       <div
-        className="px-4 flex gap-3 overflow-x-auto no-scrollbar no-overscroll-x"
+        className="px-4 md:px-0 flex gap-3 md:gap-3.5 overflow-x-auto no-scrollbar no-overscroll-x"
         style={{ scrollSnapType: 'x mandatory' }}
       >
         {lista.map((p) => {

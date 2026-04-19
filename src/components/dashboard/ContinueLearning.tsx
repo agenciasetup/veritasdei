@@ -105,9 +105,9 @@ export default function ContinueLearning({ userId }: ContinueLearningProps) {
   if (loading || trails.length === 0) return null
 
   return (
-    <div className="w-full max-w-2xl mx-auto mt-8 fade-in" style={{ animationDelay: '0.35s' }}>
+    <div className="w-full max-w-2xl mx-auto mt-8 px-4 md:max-w-none md:mx-0 md:mt-2 md:px-0 fade-in" style={{ animationDelay: '0.35s' }}>
       {/* Section header */}
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-3 px-1">
         <BookOpen className="w-4 h-4" style={{ color: 'var(--gold)' }} />
         <h3
           className="text-xs tracking-[0.15em] uppercase"

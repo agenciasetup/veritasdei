@@ -114,7 +114,7 @@ export default function LembretesCard() {
   if (lembretes.length === 0) return null
 
   return (
-    <section className="px-4 mb-4">
+    <section className="px-4 mb-4 md:!px-0 md:mb-6">
       <h2 className="px-1 mb-3 ios-eyebrow uppercase" style={{ letterSpacing: '0.06em' }}>
         Lembretes
       </h2>
