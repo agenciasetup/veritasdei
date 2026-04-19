@@ -86,8 +86,16 @@ export default function KnowledgeMap({ userId }: KnowledgeMapProps) {
         </ul>
       </div>
 
-      {/* ─── Desktop: radial map ─── */}
-      <div className="hidden md:block relative w-full" style={{ paddingBottom: '100%' }}>
+      {/* ─── Desktop: radial map ───
+          Container forçado a quadrado via aspect-ratio + max-width centralizado.
+          Evita distorção dos nós quando o grid pai varia de largura. */}
+      <div
+        className="hidden md:block relative mx-auto"
+        style={{
+          width: 'min(100%, 520px)',
+          aspectRatio: '1 / 1',
+        }}
+      >
         <div className="absolute inset-0">
           {/* SVG connection lines */}
           <svg

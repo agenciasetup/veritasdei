@@ -117,6 +117,19 @@ export interface PublicProfileSnapshot {
     veritas_count: number
     created_at: string
     show_likes_public?: boolean
+    // Gamificação (populado pela RPC get_public_profile_snapshot)
+    level?: number
+    total_xp?: number
+    current_streak?: number
+    longest_streak?: number
+    equipped_reliquia?: {
+      id: string
+      slug: string
+      name: string
+      description: string
+      image_url: string | null
+      rarity: 'comum' | 'rara' | 'epica' | 'lendaria'
+    } | null
   } | null
   veritas: Array<{
     id: string

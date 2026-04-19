@@ -6,6 +6,8 @@ import { usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { getDisplayName } from '@/lib/greetings'
 import CrossIcon from '@/components/icons/CrossIcon'
+import LevelBadge from '@/components/gamification/LevelBadge'
+import { useUserLevel } from '@/lib/gamification/useUserLevel'
 import {
   ChevronLeft, ChevronRight, Home, Church, Droplets, ScrollText,
   Tablets, BookOpen, Scale, Heart, GraduationCap, MapPin, Map,
@@ -81,7 +83,8 @@ const NAV_GROUPS: NavGroup[] = [
 export default function Sidebar() {
   const [expanded, setExpanded] = useState(false)
   const pathname = usePathname()
-  const { isAuthenticated, profile, signOut, isLoading } = useAuth()
+  const { isAuthenticated, profile, signOut, isLoading, user } = useAuth()
+  const level = useUserLevel(user?.id) ?? 1
 
   const avatarUrl = profile?.profile_image_url
 
@@ -198,9 +201,12 @@ export default function Sidebar() {
                     <User className="w-[18px] h-[18px] flex-shrink-0" />
                   )}
                   {expanded && (
-                    <span className="text-sm whitespace-nowrap truncate" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                      {getDisplayName(profile.vocacao, profile.name) || 'Meu Perfil'}
-                    </span>
+                    <>
+                      <span className="text-sm whitespace-nowrap truncate flex-1" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                        {getDisplayName(profile.vocacao, profile.name) || 'Meu Perfil'}
+                      </span>
+                      <LevelBadge level={level} size="xs" />
+                    </>
                   )}
                   <SidebarTooltip expanded={expanded} label="Meu Perfil" />
                 </Link>

@@ -5,8 +5,11 @@ import KnowledgeMap from '@/components/dashboard/KnowledgeMap'
 import StudyStreak from '@/components/dashboard/StudyStreak'
 import MapaHero from '@/components/dashboard/mapa/MapaHero'
 import ContinueStudying from '@/components/dashboard/mapa/ContinueStudying'
-import XpCard from '@/components/dashboard/mapa/XpCard'
 import AchievementsGrid from '@/components/dashboard/mapa/AchievementsGrid'
+import JourneyHero from '@/components/gamification/JourneyHero'
+import DailyMissionCard from '@/components/gamification/DailyMissionCard'
+import StreakFlames from '@/components/gamification/StreakFlames'
+import ReliquiaShowcase from '@/components/gamification/ReliquiaShowcase'
 
 export default function MapaPage() {
   const { user } = useAuth()
@@ -19,34 +22,56 @@ export default function MapaPage() {
 
       <main className="relative z-10 flex-1 px-4">
         <div className="md:max-w-6xl md:mx-auto md:px-2">
+          {/* Jornada — full width em ambos os breakpoints, peça central */}
+          <div className="mb-5 md:mb-6">
+            <JourneyHero />
+          </div>
+
+          {/* Chamas dos últimos 7 dias */}
+          <div
+            className="rounded-2xl p-4 mb-5 md:mb-6 fade-in"
+            style={{
+              background: 'rgba(20,18,14,0.55)',
+              border: '1px solid rgba(242,237,228,0.06)',
+              animationDelay: '0.15s',
+            }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span
+                className="text-[10px] uppercase tracking-[0.2em]"
+                style={{ fontFamily: 'Cinzel, serif', color: 'var(--gold)' }}
+              >
+                Últimos 7 dias
+              </span>
+            </div>
+            <StreakFlames />
+          </div>
+
           {/* Mobile: empilhado. Desktop: mapa à esquerda (8/12), rail direito (4/12). */}
           <div className="md:grid md:grid-cols-12 md:gap-6 md:items-start">
-            {/* Mobile-only: retomar + XP antes do mapa */}
+            {/* Mobile-only: missão + retomar antes do mapa */}
             <div className="md:hidden mb-5 space-y-3">
+              <DailyMissionCard />
               <ContinueStudying userId={user?.id} />
-              <XpCard userId={user?.id} />
             </div>
 
-            {/* Coluna principal: mapa */}
-            <div className="md:col-span-8">
+            {/* Coluna principal: mapa + conquistas + reliquário */}
+            <div className="md:col-span-8 space-y-8 md:space-y-10">
               <KnowledgeMap userId={user?.id} />
 
-              {/* Conquistas — abaixo do mapa em ambos os breakpoints */}
-              <div className="mt-8 md:mt-10">
-                <AchievementsGrid userId={user?.id} />
-              </div>
+              <AchievementsGrid userId={user?.id} />
+
+              <ReliquiaShowcase />
             </div>
 
             {/* Side rail desktop */}
             <aside className="hidden md:flex md:col-span-4 flex-col gap-4 md:sticky md:top-4">
+              <DailyMissionCard />
               <ContinueStudying userId={user?.id} />
-              <XpCard userId={user?.id} />
-              <div>
-                <StudyStreak userId={user?.id} />
-              </div>
+              <StudyStreak userId={user?.id} />
             </aside>
 
-            {/* Mobile-only: streak depois do mapa */}
+            {/* Mobile-only: streak depois */}
             <div className="md:hidden mt-2">
               <StudyStreak userId={user?.id} />
             </div>

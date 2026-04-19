@@ -21,6 +21,10 @@ import { useSubscription } from '@/contexts/SubscriptionContext'
 import { uploadProfileImage } from '@/lib/media/upload'
 import { VOCACOES } from '@/types/auth'
 import { VocacaoIcon } from '@/components/icons/VocacaoIcons'
+import LevelBadge from '@/components/gamification/LevelBadge'
+import XpBar from '@/components/gamification/XpBar'
+import EquippedReliquiaChip from '@/components/gamification/EquippedReliquiaChip'
+import { useGamification } from '@/lib/gamification/useGamification'
 
 /**
  * Header estilo Instagram: capa + avatar + nome/handle/bio + stats + botão
@@ -38,6 +42,7 @@ export default function ProfileHeaderCard({
   const { profile, user, refreshProfile } = useAuth()
   const { isPremium } = useSubscription()
   const supabase = createClient()
+  const gami = useGamification(user?.id)
 
   const [stats, setStats] = useState<{
     followers: number
@@ -347,6 +352,7 @@ export default function ProfileHeaderCard({
               Verificado
             </span>
           )}
+          <LevelBadge level={gami.level} size="sm" />
           {vocacaoMeta && (
             <span
               className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full"
@@ -372,6 +378,24 @@ export default function ProfileHeaderCard({
               ? `@${profile.public_handle}`
               : `#${profile.user_number}`}
           </p>
+        )}
+
+        {/* Gamificação: XP bar + relíquia equipada */}
+        {!gami.loading && gami.totalXp > 0 && (
+          <div className="mt-3 flex items-center gap-3 flex-wrap">
+            <div className="flex-1 min-w-[160px]">
+              <XpBar
+                level={gami.level}
+                xpInLevel={gami.xpInLevel}
+                xpToNextLevel={gami.xpToNextLevel}
+                percentInLevel={gami.percentInLevel}
+                size="sm"
+              />
+            </div>
+            {gami.equippedReliquia && (
+              <EquippedReliquiaChip reliquia={gami.equippedReliquia} size="sm" showName />
+            )}
+          </div>
         )}
 
         {/* Bio */}
