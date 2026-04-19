@@ -13,11 +13,13 @@ import {
   ChevronDown,
   Info,
 } from 'lucide-react'
+import { TikTokIcon, YouTubeIcon } from '@/components/icons/SocialIcons'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
 import {
   VOCACOES,
   SACRAMENTOS,
+  RELATIONSHIP_STATUSES,
   type Sacramento,
   type ProfileUpdate,
 } from '@/types/auth'
@@ -62,6 +64,9 @@ export default function ContaSection() {
   const { profile, refreshProfile, user } = useAuth()
   const supabase = createClient()!
   const haptic = useHaptic()
+  const isClergy = profile
+    ? ['padre', 'diacono', 'bispo', 'religioso'].includes(profile.community_role)
+    : false
 
   const [group, setGroup] = useState<Group>('identidade')
   const [openMobile, setOpenMobile] = useState<Set<Group>>(new Set(['identidade']))
@@ -226,6 +231,31 @@ export default function ContaSection() {
               placeholder="(11) 99999-9999"
               icon={<Phone className="w-4 h-4" />}
             />
+            <FormInput
+              label="TikTok"
+              value={(form.tiktok as string) ?? ''}
+              onChange={v => updateField('tiktok', v)}
+              placeholder="@seuperfil"
+              icon={<TikTokIcon size={16} />}
+            />
+            <FormInput
+              label="YouTube"
+              value={(form.youtube as string) ?? ''}
+              onChange={v => updateField('youtube', v)}
+              placeholder="@seucanal"
+              icon={<YouTubeIcon size={16} />}
+            />
+            {!isClergy && (
+              <FormSelect
+                label="Estado civil (opcional)"
+                value={(form.relationship_status as string) ?? ''}
+                onChange={v => updateField('relationship_status', (v as '' | 'solteiro' | 'casado' | 'namorando') || null)}
+                options={[
+                  { value: '', label: 'Prefiro não dizer' },
+                  ...RELATIONSHIP_STATUSES.map(s => ({ value: s.value, label: s.label })),
+                ]}
+              />
+            )}
           </div>
         </div>
       )
@@ -574,6 +604,9 @@ function initForm(profile: ReturnType<typeof useAuth>['profile']): ProfileUpdate
     data_nascimento: profile.data_nascimento,
     instagram: profile.instagram ?? '',
     whatsapp: profile.whatsapp ?? '',
+    tiktok: profile.tiktok ?? '',
+    youtube: profile.youtube ?? '',
+    relationship_status: profile.relationship_status ?? null,
     endereco: profile.endereco ?? '',
     cidade: profile.cidade ?? '',
     estado: profile.estado ?? '',

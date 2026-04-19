@@ -20,6 +20,9 @@ export async function GET(req: NextRequest) {
       tab: req.nextUrl.searchParams.get('tab'),
       limit: req.nextUrl.searchParams.get('limit'),
       cursor: req.nextUrl.searchParams.get('cursor'),
+      latitude: req.nextUrl.searchParams.get('lat'),
+      longitude: req.nextUrl.searchParams.get('lng'),
+      radiusKm: req.nextUrl.searchParams.get('radius'),
     })
     return NextResponse.json(response)
   } catch (err) {
