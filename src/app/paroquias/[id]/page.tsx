@@ -60,6 +60,9 @@ export default function ParoquiaPublicPage({ params }: PageProps) {
   const [notFound, setNotFound] = useState(false)
   const [activeTab, setActiveTab] = useState<TabKey>('sobre')
   const [activePhoto, setActivePhoto] = useState(0)
+  const [myRole, setMyRole] = useState<'admin' | 'moderator' | null>(null)
+  const [hasAdmin, setHasAdmin] = useState(false)
+  const [hasPendingClaim, setHasPendingClaim] = useState(false)
 
   useEffect(() => {
     if (!supabase) return
@@ -85,8 +88,17 @@ export default function ParoquiaPublicPage({ params }: PageProps) {
         .eq('paroquia_id', id)
         .order('published_at', { ascending: false })
         .limit(20)
+
+      const { count: adminCount } = await supabase!
+        .from('paroquia_members')
+        .select('id', { count: 'exact', head: true })
+        .eq('paroquia_id', id)
+        .eq('role', 'admin')
+        .is('revoked_at', null)
+
       if (!cancelled) {
         setPosts((postsData as ParoquiaPost[]) ?? [])
+        setHasAdmin((adminCount ?? 0) > 0)
         setLoading(false)
       }
     }
@@ -95,6 +107,44 @@ export default function ParoquiaPublicPage({ params }: PageProps) {
       cancelled = true
     }
   }, [id, supabase])
+
+  // Busca role do user atual nesta igreja
+  useEffect(() => {
+    let cancelled = false
+    async function loadRole() {
+      if (!supabase || !user?.id) {
+        if (!cancelled) {
+          setMyRole(null)
+          setHasPendingClaim(false)
+        }
+        return
+      }
+      const { data: membership } = await supabase
+        .from('paroquia_members')
+        .select('role')
+        .eq('paroquia_id', id)
+        .eq('user_id', user.id)
+        .is('revoked_at', null)
+        .maybeSingle()
+
+      const { data: pc } = await supabase
+        .from('paroquia_claims')
+        .select('id')
+        .eq('paroquia_id', id)
+        .eq('user_id', user.id)
+        .eq('status', 'pendente')
+        .maybeSingle()
+
+      if (cancelled) return
+      const role = (membership as { role?: 'admin' | 'moderator' } | null)?.role ?? null
+      setMyRole(role)
+      setHasPendingClaim(!!pc)
+    }
+    loadRole()
+    return () => {
+      cancelled = true
+    }
+  }, [id, supabase, user?.id])
 
   const photos = useMemo(() => {
     if (!paroquia) return []
@@ -133,9 +183,14 @@ export default function ParoquiaPublicPage({ params }: PageProps) {
   }
 
   const tipoLabel = TIPOS_IGREJA.find(t => t.value === paroquia.tipo_igreja)?.label
-  const isOwner =
+  const canManage = myRole !== null
+  const isChurchAdmin = myRole === 'admin'
+  // Fallback: se backfill ainda não rodou e só temos owner_user_id, respeita
+  const isLegacyOwner =
     !!user?.id &&
     (user.id === paroquia.owner_user_id || user.id === paroquia.criado_por)
+  const showMemberActions = canManage || isLegacyOwner
+  const showClaimCta = !!user?.id && !canManage && paroquia.status === 'aprovada' && !hasPendingClaim
 
   const enderecoLinha = [paroquia.rua, paroquia.numero, paroquia.bairro]
     .filter(Boolean)
@@ -262,34 +317,36 @@ export default function ParoquiaPublicPage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Owner actions */}
-          {isOwner && (
+          {/* Member actions */}
+          {showMemberActions && (
             <div className="flex flex-wrap items-center gap-2 mt-5">
               <Link
-                href={`/paroquias/${paroquia.id}/editar`}
+                href={`/paroquias/${paroquia.id}/gerenciar`}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs tracking-wider uppercase"
                 style={{
                   fontFamily: 'Cinzel, serif',
-                  background: 'rgba(201,168,76,0.08)',
-                  border: '1px solid rgba(201,168,76,0.15)',
-                  color: '#C9A84C',
+                  background: 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
+                  color: '#0A0A0A',
                 }}
               >
-                <Pencil className="w-3.5 h-3.5" /> Editar perfil
+                <Pencil className="w-3.5 h-3.5" />
+                {isChurchAdmin ? 'Gerenciar igreja' : 'Painel de moderação'}
               </Link>
-              {paroquia.verificado ? (
+              {paroquia.verificado && (
                 <Link
                   href={`/paroquias/${paroquia.id}/publicar`}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs tracking-wider uppercase"
                   style={{
                     fontFamily: 'Cinzel, serif',
-                    background: 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
-                    color: '#0A0A0A',
+                    background: 'rgba(201,168,76,0.08)',
+                    border: '1px solid rgba(201,168,76,0.15)',
+                    color: '#C9A84C',
                   }}
                 >
                   <MessageSquarePlus className="w-3.5 h-3.5" /> Publicar aviso
                 </Link>
-              ) : (
+              )}
+              {!paroquia.verificado && (
                 <span
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs"
                   style={{
@@ -299,12 +356,44 @@ export default function ParoquiaPublicPage({ params }: PageProps) {
                     color: '#7A7368',
                   }}
                 >
-                  <Shield className="w-3.5 h-3.5" />
-                  {paroquia.verificacao_solicitada_em
-                    ? 'Verificação em análise'
-                    : 'Publicação liberada após verificação'}
+                  <Shield className="w-3.5 h-3.5" /> Feed liberado após verificação
                 </span>
               )}
+            </div>
+          )}
+
+          {/* Claim CTA — usuário logado que ainda não é representante */}
+          {showClaimCta && (
+            <div className="mt-5">
+              <Link
+                href={`/paroquias/${paroquia.id}/claim`}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs tracking-wider uppercase"
+                style={{
+                  fontFamily: 'Cinzel, serif',
+                  background: hasAdmin ? 'rgba(201,168,76,0.08)' : 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
+                  border: hasAdmin ? '1px solid rgba(201,168,76,0.2)' : 'none',
+                  color: hasAdmin ? '#C9A84C' : '#0A0A0A',
+                }}
+              >
+                <Shield className="w-3.5 h-3.5" />
+                {hasAdmin ? 'Sou representante desta igreja' : 'Reivindicar esta igreja'}
+              </Link>
+            </div>
+          )}
+
+          {hasPendingClaim && (
+            <div className="mt-5">
+              <span
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs"
+                style={{
+                  fontFamily: 'Poppins, sans-serif',
+                  background: 'rgba(201,168,76,0.04)',
+                  border: '1px dashed rgba(201,168,76,0.2)',
+                  color: '#7A7368',
+                }}
+              >
+                <Shield className="w-3.5 h-3.5" /> Sua reivindicação está em análise
+              </span>
             </div>
           )}
         </div>

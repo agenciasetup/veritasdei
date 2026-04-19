@@ -98,20 +98,21 @@ export default function ParoquiasPage() {
             </p>
           </div>
 
-          {isAuthenticated && (
-            <Link
-              href="/paroquias/cadastrar"
-              className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold tracking-wider uppercase transition-all hover:scale-[1.02]"
-              style={{
-                fontFamily: 'Cinzel, serif',
-                background: 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
-                color: '#0A0A0A',
-              }}
-            >
-              <Plus className="w-4 h-4" />
-              Cadastrar Paróquia
-            </Link>
-          )}
+          <Link
+            href="/paroquias/sugerir"
+            className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold tracking-wider uppercase transition-all hover:scale-[1.02]"
+            style={{
+              fontFamily: 'Cinzel, serif',
+              background: isAuthenticated
+                ? 'rgba(201,168,76,0.08)'
+                : 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
+              border: isAuthenticated ? '1px solid rgba(201,168,76,0.2)' : 'none',
+              color: isAuthenticated ? '#C9A84C' : '#0A0A0A',
+            }}
+          >
+            <Plus className="w-4 h-4" />
+            Sugerir Igreja
+          </Link>
         </div>
 
         <div
@@ -186,15 +187,13 @@ export default function ParoquiasPage() {
             <p className="text-lg" style={{ fontFamily: 'Cinzel, serif', color: '#7A7368' }}>
               Nenhuma paróquia encontrada
             </p>
-            {isAuthenticated && (
-              <Link
-                href="/paroquias/cadastrar"
-                className="inline-flex items-center gap-2 mt-4 text-sm underline"
-                style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
-              >
-                Cadastrar a primeira paróquia
-              </Link>
-            )}
+            <Link
+              href="/paroquias/sugerir"
+              className="inline-flex items-center gap-2 mt-4 text-sm underline"
+              style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
+            >
+              Sugerir a primeira igreja
+            </Link>
           </div>
         )}
 
