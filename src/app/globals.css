@@ -279,7 +279,8 @@ body::after {
   align-items: center;
   gap: 1rem;
   color: var(--gold-dim);
-  margin: 2rem 0;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
 }
 
 .ornament-divider::before,

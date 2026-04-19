@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { User, Users, Link2, Cross, Crown } from 'lucide-react'
+import { User, Users, Link2, Cross, Crown, ArrowLeft } from 'lucide-react'
 
 type PrayerMode = 'individual' | 'grupo' | 'entrar'
 type PrayerType = 'terco' | 'rosario'
@@ -60,6 +60,14 @@ export function RosaryDashboard({ onStartIndividual }: Props) {
   return (
     <div className="relative z-10 mx-auto max-w-xl px-4 py-10 md:py-14">
       <div className="bg-glow" aria-hidden />
+
+      <Link
+        href="/orar"
+        className="inline-flex items-center gap-2 text-sm mb-4 relative z-10"
+        style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+      >
+        <ArrowLeft className="w-4 h-4" /> Voltar
+      </Link>
 
       <header className="mb-8 text-center relative z-10">
         <h1

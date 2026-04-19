@@ -82,32 +82,36 @@ export function CollapsibleHeader({
       </div>
 
       {/* Expanded large title */}
-      <header className="px-5 pt-16 pb-3 relative">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            {expandedExtra && <div className="mb-3">{expandedExtra}</div>}
-            <h1
-              className="text-3xl leading-tight font-semibold"
-              style={{
-                fontFamily: 'var(--font-elegant)',
-                color: 'var(--text-primary)',
-              }}
-            >
-              {title}
-            </h1>
-            {subtitle && (
-              <p
-                className="text-sm mt-1.5"
-                style={{
-                  color: 'var(--text-muted)',
-                  fontFamily: 'var(--font-body)',
-                }}
-              >
-                {subtitle}
-              </p>
-            )}
-          </div>
-          {rightAction && <div className="flex-shrink-0 pt-1">{rightAction}</div>}
+      <header className="px-5 pt-16 pb-2 relative text-center">
+        {rightAction && (
+          <div className="absolute right-5 top-16">{rightAction}</div>
+        )}
+        {expandedExtra && <div className="mb-3">{expandedExtra}</div>}
+        <h1
+          className="text-3xl leading-tight font-semibold"
+          style={{
+            fontFamily: 'var(--font-elegant)',
+            color: 'var(--text-primary)',
+          }}
+        >
+          {title}
+        </h1>
+        {subtitle && (
+          <p
+            className="text-sm mt-1.5"
+            style={{
+              color: 'var(--text-muted)',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            {subtitle}
+          </p>
+        )}
+        <div
+          className="ornament-divider max-w-xs mx-auto"
+          style={{ marginTop: '1rem', marginBottom: '0.5rem' }}
+        >
+          <span>&#10022;</span>
         </div>
         <div ref={sentinelRef} className="h-px" aria-hidden="true" />
       </header>

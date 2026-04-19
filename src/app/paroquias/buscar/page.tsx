@@ -198,24 +198,33 @@ export default function BuscarPage() {
       <div className="max-w-6xl mx-auto relative z-10">
         <button
           onClick={() => router.back()}
-          className="inline-flex items-center gap-2 text-sm mb-6"
+          className="inline-flex items-center gap-2 text-sm mb-4"
           style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif', background: 'none', border: 'none' }}
         >
           <ArrowLeft className="w-4 h-4" /> Voltar
         </button>
 
-        <h1
-          className="text-2xl md:text-3xl font-bold tracking-wider uppercase mb-2"
-          style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
-        >
-          Igrejas
-        </h1>
-        <p className="text-sm mb-6" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
-          Primeiro mostramos igrejas perto de você. Se quiser, busque por cidade.
-        </p>
+        <header className="text-center mb-6">
+          <h1
+            className="text-2xl md:text-3xl font-bold tracking-wider uppercase"
+            style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
+          >
+            Igrejas
+          </h1>
+          <p className="text-sm mt-2" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+            Primeiro mostramos igrejas perto de você. Se quiser, busque por cidade.
+          </p>
+          <div
+            className="ornament-divider max-w-xs mx-auto"
+            style={{ marginTop: '1rem', marginBottom: '0' }}
+          >
+            <span>&#10022;</span>
+          </div>
+        </header>
 
+        <div className="mb-6 flex justify-center">
         <div
-          className="mb-6 inline-flex rounded-xl p-1 gap-1"
+          className="inline-flex rounded-xl p-1 gap-1"
           style={{ background: 'rgba(16,16,16,0.75)', border: '1px solid rgba(201,168,76,0.12)' }}
         >
           <button
@@ -245,10 +254,11 @@ export default function BuscarPage() {
             Buscar por cidade
           </button>
         </div>
+        </div>
 
         {mode === 'nearby' && (
           <section>
-            <div className="mb-4 flex flex-wrap items-center gap-2">
+            <div className="mb-4 flex flex-wrap items-center justify-center gap-2">
               <button
                 onClick={() => geo.request()}
                 disabled={geo.status === 'prompting' || geo.status === 'loading'}
@@ -531,7 +541,7 @@ export default function BuscarPage() {
           </section>
         )}
 
-        <div className="pt-2">
+        <div className="pt-2 text-center">
           <Link
             href="/paroquias"
             className="text-xs underline"
