@@ -31,13 +31,16 @@ interface ImmersiveReaderProps {
   onMarkStudied?: () => void
   /** Whether already marked as studied */
   isStudied?: boolean
+  /** Content rendered in the sticky top bar, under the scroll progress */
+  topSlot?: React.ReactNode
+  /** Content rendered above the title header */
+  headerSlot?: React.ReactNode
+  /** Content rendered between items and the mark-as-studied button */
+  afterItems?: React.ReactNode
+  /** Content rendered after the mark-as-studied button (e.g. next button) */
+  footerSlot?: React.ReactNode
 }
 
-/**
- * Immersive vertical scroll reader — replaces the carousel.
- * Renders content items as a continuous, scrollable article
- * with visual sections for each content type.
- */
 export default function ImmersiveReader({
   title,
   subtitle,
@@ -45,6 +48,10 @@ export default function ImmersiveReader({
   items,
   onMarkStudied,
   isStudied,
+  topSlot,
+  headerSlot,
+  afterItems,
+  footerSlot,
 }: ImmersiveReaderProps) {
   const [fontScale, setFontScale] = useState<FontScale>(() => loadFontScale())
   const [scrollPct, setScrollPct] = useState(0)
@@ -118,7 +125,9 @@ export default function ImmersiveReader({
             />
           </button>
         </div>
+        {topSlot ? <div className="mt-2">{topSlot}</div> : null}
       </div>
+      {headerSlot ? <div className="mb-2">{headerSlot}</div> : null}
       {/* ── Title section ── */}
       <header className="text-center py-10 md:py-14 fade-in">
         {subtitle && (
@@ -164,6 +173,8 @@ export default function ImmersiveReader({
         {renderGroupedItems(items)}
       </div>
 
+      {afterItems ? <div className="mt-4">{afterItems}</div> : null}
+
       {/* ── Mark as studied button ── */}
       {onMarkStudied && (
         <div className="mt-12 text-center fade-in">
@@ -198,6 +209,8 @@ export default function ImmersiveReader({
           </button>
         </div>
       )}
+
+      {footerSlot ? <div className="mt-6">{footerSlot}</div> : null}
     </article>
   )
 }

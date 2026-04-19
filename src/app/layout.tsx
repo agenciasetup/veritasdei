@@ -5,6 +5,7 @@ import AppShell from "@/components/layout/AppShell"
 import { AuthProvider } from "@/contexts/AuthContext"
 import PwaRegister from "@/components/layout/PwaRegister"
 import NoZoom from "@/components/layout/NoZoom"
+import GamificationEventsProvider from "@/components/gamification/GamificationEventsProvider"
 
 // next/font/google: self-hosting + auto-subset + preload com display:swap.
 // Pesos reduzidos vs versão antiga (-400/-500 typical) para economia de bytes.
@@ -87,7 +88,9 @@ export default function RootLayout({
           Pular para o conteúdo
         </a>
         <AuthProvider>
-          <AppShell>{children}</AppShell>
+          <GamificationEventsProvider>
+            <AppShell>{children}</AppShell>
+          </GamificationEventsProvider>
         </AuthProvider>
         <PwaRegister />
         <NoZoom />
