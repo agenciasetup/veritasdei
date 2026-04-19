@@ -716,7 +716,7 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
               className="flex-1 text-[13px] leading-snug"
               style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}
             >
-              Ler o feed é livre. Para publicar, curtir e seguir, assine o plano Estudos.
+              Ler, curtir, repostar e compartilhar são livres. Para publicar e seguir, assine o plano Estudos.
             </span>
             <Link
               href="/planos"

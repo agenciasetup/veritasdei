@@ -2,17 +2,17 @@ import { NextResponse } from 'next/server'
 import { rateLimit } from '@/lib/rate-limit'
 import { COMMUNITY_EVENTS } from '@/lib/community/events'
 import { pushCommunityNotification } from '@/lib/community/notifications'
-import { requireCommunityPremiumAccess } from '@/lib/community/server'
+import { requireCommunitySession } from '@/lib/community/server'
 
 export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const access = await requireCommunityPremiumAccess()
-  if (!access.ok) return access.response
+  const session = await requireCommunitySession()
+  if (!session.ok) return session.response
 
   const { id } = await params
-  const { supabase, user } = access.context
+  const { supabase, user } = session
 
   if (!rateLimit(`community:like:${user.id}`, 60, 60_000)) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
@@ -58,11 +58,11 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const access = await requireCommunityPremiumAccess()
-  if (!access.ok) return access.response
+  const session = await requireCommunitySession()
+  if (!session.ok) return session.response
 
   const { id } = await params
-  const { supabase, user } = access.context
+  const { supabase, user } = session
 
   const { error } = await supabase
     .from('vd_reactions')
