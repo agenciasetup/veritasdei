@@ -6,6 +6,14 @@ export type UserRole = 'user' | 'admin'
 export type AccountStatus = 'active' | 'pending_verification' | 'suspended'
 export type PlanKey = 'free' | 'estudos'
 
+export type RelationshipStatus = 'solteiro' | 'casado' | 'namorando'
+
+export const RELATIONSHIP_STATUSES: { value: RelationshipStatus; label: string }[] = [
+  { value: 'solteiro', label: 'Solteiro(a)' },
+  { value: 'namorando', label: 'Namorando' },
+  { value: 'casado', label: 'Casado(a)' },
+]
+
 export type Vocacao =
   | 'leigo'
   | 'diacono'
@@ -69,8 +77,18 @@ export interface Profile {
   show_likes_public: boolean
   instagram: string | null
   whatsapp: string | null
+  tiktok: string | null
+  youtube: string | null
+  relationship_status: RelationshipStatus | null
   data_nascimento: string | null
   genero: 'masculino' | 'feminino' | null
+
+  // Localização GPS (aba "Próximo" na comunidade)
+  location_lat: number | null
+  location_lng: number | null
+  location_city: string | null
+  location_state: string | null
+  location_updated_at: string | null
 
   // Endereço
   endereco: string | null

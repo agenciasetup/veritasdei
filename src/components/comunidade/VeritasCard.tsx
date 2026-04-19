@@ -18,6 +18,7 @@ import {
   Trash2,
   Pencil,
   Send,
+  MapPin,
 } from 'lucide-react'
 import CrossIcon from '@/components/icons/CrossIcon'
 import type { VeritasPost } from '@/lib/community/types'
@@ -358,6 +359,16 @@ export default function VeritasCard({
             >
               · {formatRelative(post.created_at)}
             </span>
+            {post.city && (
+              <span
+                className="text-[12px] flex-shrink-0 inline-flex items-center gap-0.5 ml-1"
+                style={{ color: TEXT_SUBTLE, fontFamily: 'Poppins, sans-serif' }}
+                title={post.state ? `${post.city}, ${post.state}` : post.city}
+              >
+                <MapPin className="w-3 h-3" strokeWidth={1.6} />
+                <span className="truncate max-w-[140px]">{post.city}</span>
+              </span>
+            )}
 
             {hasMenu && (
               <div ref={menuRef} className="relative ml-auto">

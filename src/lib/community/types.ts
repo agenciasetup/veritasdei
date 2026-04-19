@@ -1,4 +1,4 @@
-import type { Profile } from '@/types/auth'
+import type { Profile, RelationshipStatus } from '@/types/auth'
 
 export type VeritasKind = 'original' | 'reply' | 'repost' | 'quote'
 export type VeritasPostVariant = 'default' | 'reflection'
@@ -73,6 +73,8 @@ export interface VeritasPost {
   parent?: VeritasParentSnapshot | null
   created_at: string
   edited_at: string | null
+  city: string | null
+  state: string | null
   author: VeritasAuthorSnapshot
   metrics: VeritasMetrics
   media: VeritasMediaAsset[]
@@ -105,6 +107,11 @@ export interface PublicProfileSnapshot {
     paroquia: string | null
     diocese: string | null
     comunidade: string | null
+    relationship_status: RelationshipStatus | null
+    instagram: string | null
+    whatsapp: string | null
+    tiktok: string | null
+    youtube: string | null
     follower_count: number
     following_count: number
     veritas_count: number
@@ -123,7 +130,7 @@ export interface PublicProfileSnapshot {
 }
 
 export interface FeedResponse {
-  tab: 'for_you' | 'following'
+  tab: 'for_you' | 'following' | 'nearby'
   cursor: string | null
   items: VeritasPost[]
 }

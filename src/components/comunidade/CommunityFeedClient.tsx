@@ -16,6 +16,7 @@ import {
 import { share as platformShare } from '@/lib/platform'
 import type { FeedResponse, VeritasPost } from '@/lib/community/types'
 import { useAuth } from '@/contexts/AuthContext'
+import { MapPin } from 'lucide-react'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import VeritasCard from '@/components/comunidade/VeritasCard'
 import { VeritasFeedSkeleton } from '@/components/comunidade/VeritasCardSkeleton'
@@ -101,7 +102,18 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
   // Regra: clero precisa estar verificado; admin pode sempre.
   const canPublishReflection = (isClergy && profile?.verified) || isAdmin
   const [variantReflection, setVariantReflection] = useState(false)
-  const [tab, setTab] = useState<'for_you' | 'following'>('for_you')
+  const [tab, setTab] = useState<'for_you' | 'following' | 'nearby'>('for_you')
+  const [nearbyStatus, setNearbyStatus] = useState<'idle' | 'prompting' | 'denied' | 'unavailable' | 'ready'>('idle')
+  const [nearbyCoords, setNearbyCoords] = useState<{ lat: number; lng: number } | null>(null)
+
+  // Sincroniza coords com o profile (useAuth pode carregar depois do mount).
+  useEffect(() => {
+    if (nearbyCoords) return
+    if (profile?.location_lat != null && profile?.location_lng != null) {
+      setNearbyCoords({ lat: Number(profile.location_lat), lng: Number(profile.location_lng) })
+      setNearbyStatus('ready')
+    }
+  }, [profile?.location_lat, profile?.location_lng, nearbyCoords])
   const [items, setItems] = useState<VeritasPost[]>(initialFeed?.items ?? [])
   const [cursor, setCursor] = useState<string | null>(initialFeed?.cursor ?? null)
   const [loading, setLoading] = useState(false)
@@ -164,7 +176,7 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
     }
   }, [loading, items.length])
 
-  async function loadFeed(nextTab: 'for_you' | 'following', append = false) {
+  async function loadFeed(nextTab: 'for_you' | 'following' | 'nearby', append = false, coords?: { lat: number; lng: number } | null) {
     if (append && !cursor) return
 
     if (append) {
@@ -180,6 +192,11 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
         limit: '20',
       })
       if (append && cursor) query.set('cursor', cursor)
+      const effectiveCoords = coords ?? nearbyCoords
+      if (nextTab === 'nearby' && effectiveCoords) {
+        query.set('lat', String(effectiveCoords.lat))
+        query.set('lng', String(effectiveCoords.lng))
+      }
 
       const res = await fetch(`/api/comunidade/feed?${query.toString()}`, {
         cache: 'no-store',
@@ -208,9 +225,64 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
     }
   }
 
-  async function ensureFeedLoaded(nextTab: 'for_you' | 'following') {
+  async function requestNearbyLocation(): Promise<{ lat: number; lng: number } | null> {
+    if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+      setNearbyStatus('unavailable')
+      setError('Geolocalização não disponível neste dispositivo.')
+      return null
+    }
+
+    setNearbyStatus('prompting')
+
+    return new Promise<{ lat: number; lng: number } | null>((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const lat = pos.coords.latitude
+          const lng = pos.coords.longitude
+          setNearbyCoords({ lat, lng })
+          setNearbyStatus('ready')
+
+          // Persiste no perfil (fire-and-forget, não bloqueia o feed).
+          void fetch('/api/comunidade/location', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ latitude: lat, longitude: lng }),
+          })
+
+          resolve({ lat, lng })
+        },
+        (err) => {
+          if (err.code === err.PERMISSION_DENIED) {
+            setNearbyStatus('denied')
+            setError('Permissão de localização negada.')
+          } else {
+            setNearbyStatus('unavailable')
+            setError('Não foi possível obter sua localização.')
+          }
+          resolve(null)
+        },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 5 * 60 * 1000 },
+      )
+    })
+  }
+
+  async function ensureFeedLoaded(nextTab: 'for_you' | 'following' | 'nearby') {
     setTab(nextTab)
     setCursor(null)
+
+    if (nextTab === 'nearby') {
+      let coords = nearbyCoords
+      if (!coords) {
+        coords = await requestNearbyLocation()
+      }
+      if (!coords) {
+        setItems([])
+        return
+      }
+      await loadFeed(nextTab, false, coords)
+      return
+    }
+
     await loadFeed(nextTab, false)
   }
 
@@ -566,7 +638,7 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
             <button
               type="button"
               onClick={() => ensureFeedLoaded('for_you')}
-              className="relative px-4 py-3 text-[13px] uppercase tracking-[0.14em]"
+              className="relative px-3 md:px-4 py-3 text-[13px] uppercase tracking-[0.14em]"
               style={{
                 color: tab === 'for_you' ? '#F2EDE4' : '#8A8378',
                 fontFamily: 'Poppins, sans-serif',
@@ -574,7 +646,7 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
                 border: 'none',
               }}
             >
-              Para você
+              Feed
               {tab === 'for_you' && (
                 <span
                   className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full"
@@ -585,7 +657,7 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
             <button
               type="button"
               onClick={() => ensureFeedLoaded('following')}
-              className="relative px-4 py-3 text-[13px] uppercase tracking-[0.14em]"
+              className="relative px-3 md:px-4 py-3 text-[13px] uppercase tracking-[0.14em]"
               style={{
                 color: tab === 'following' ? '#F2EDE4' : '#8A8378',
                 fontFamily: 'Poppins, sans-serif',
@@ -593,8 +665,28 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
                 border: 'none',
               }}
             >
-              Seguindo
+              Amigos
               {tab === 'following' && (
+                <span
+                  className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full"
+                  style={{ background: '#C9A84C' }}
+                />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => ensureFeedLoaded('nearby')}
+              className="relative px-3 md:px-4 py-3 text-[13px] uppercase tracking-[0.14em] inline-flex items-center gap-1.5"
+              style={{
+                color: tab === 'nearby' ? '#F2EDE4' : '#8A8378',
+                fontFamily: 'Poppins, sans-serif',
+                background: 'transparent',
+                border: 'none',
+              }}
+            >
+              <MapPin className="w-3.5 h-3.5" strokeWidth={1.6} />
+              Próximo
+              {tab === 'nearby' && (
                 <span
                   className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full"
                   style={{ background: '#C9A84C' }}
@@ -971,7 +1063,53 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
               />
             ))}
 
-            {!loading && items.length === 0 && (
+            {!loading && items.length === 0 && tab === 'nearby' && (nearbyStatus === 'denied' || nearbyStatus === 'unavailable') && (
+              <div
+                className="py-16 text-center px-6"
+                style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}
+              >
+                <MapPin className="w-6 h-6 mx-auto mb-3" style={{ color: '#C9A84C' }} strokeWidth={1.4} />
+                <p className="text-sm mb-3" style={{ color: '#E7DED1' }}>
+                  Precisamos da sua localização para mostrar Veritas próximos.
+                </p>
+                <p className="text-xs mb-4">
+                  {nearbyStatus === 'denied'
+                    ? 'Você negou a permissão. Habilite nas configurações do navegador e tente novamente.'
+                    : 'Não foi possível obter sua localização agora.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { void requestNearbyLocation().then(coords => { if (coords) void loadFeed('nearby', false, coords) }) }}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs uppercase tracking-[0.12em]"
+                  style={{
+                    background: 'rgba(16,16,16,0.65)',
+                    border: '1px solid rgba(201,168,76,0.35)',
+                    color: '#C9A84C',
+                    fontFamily: 'Cinzel, serif',
+                  }}
+                >
+                  <MapPin className="w-3.5 h-3.5" strokeWidth={1.6} />
+                  Ativar localização
+                </button>
+              </div>
+            )}
+
+            {!loading && items.length === 0 && tab === 'nearby' && nearbyStatus === 'ready' && (
+              <div
+                className="py-16 text-center px-6"
+                style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}
+              >
+                <MapPin className="w-6 h-6 mx-auto mb-3" style={{ color: '#C9A84C' }} strokeWidth={1.4} />
+                <p className="text-sm" style={{ color: '#E7DED1' }}>
+                  Ninguém postou perto de você ainda.
+                </p>
+                <p className="text-xs mt-2">
+                  Seja o primeiro a compartilhar um Veritas na sua região.
+                </p>
+              </div>
+            )}
+
+            {!loading && items.length === 0 && tab !== 'nearby' && (
               <div
                 className="py-16 text-center"
                 style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowLeft, MapPin, Calendar, Link as LinkIcon } from 'lucide-react'
+import { ArrowLeft, MapPin, Calendar, Link as LinkIcon, Heart } from 'lucide-react'
+import { InstagramIcon, TikTokIcon, YouTubeIcon, WhatsAppIcon } from '@/components/icons/SocialIcons'
 import type { PublicProfileSnapshot } from '@/lib/community/types'
 import CrossIcon from '@/components/icons/CrossIcon'
 import RoleBadge from '@/components/comunidade/RoleBadge'
@@ -29,6 +30,38 @@ function safeLinkHost(raw: string): string {
   } catch {
     return raw
   }
+}
+
+const RELATIONSHIP_LABEL: Record<'solteiro' | 'casado' | 'namorando', string> = {
+  solteiro: 'Solteiro(a)',
+  namorando: 'Namorando',
+  casado: 'Casado(a)',
+}
+
+function normalizeHandle(raw: string): string {
+  return raw.replace(/^@+/, '').trim()
+}
+
+function instagramUrl(raw: string): string {
+  const handle = normalizeHandle(raw)
+  return `https://instagram.com/${handle}`
+}
+
+function tiktokUrl(raw: string): string {
+  const handle = normalizeHandle(raw)
+  return `https://tiktok.com/@${handle}`
+}
+
+function youtubeUrl(raw: string): string {
+  const trimmed = raw.trim()
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  const handle = normalizeHandle(trimmed)
+  return `https://youtube.com/@${handle}`
+}
+
+function whatsappUrl(raw: string): string {
+  const digits = raw.replace(/\D+/g, '')
+  return `https://wa.me/${digits}`
 }
 
 export default function PublicProfileView({
@@ -178,6 +211,73 @@ export default function PublicProfileView({
               >
                 {profile.bio_short}
               </p>
+            )}
+
+            {(profile.relationship_status || profile.instagram || profile.tiktok || profile.youtube || profile.whatsapp) && (
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                {profile.relationship_status && (
+                  <span
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] uppercase tracking-[0.1em]"
+                    style={{
+                      background: 'rgba(201,168,76,0.08)',
+                      border: '1px solid rgba(201,168,76,0.2)',
+                      color: '#C9A84C',
+                      fontFamily: 'Poppins, sans-serif',
+                    }}
+                  >
+                    <Heart className="w-3 h-3" strokeWidth={1.7} />
+                    {RELATIONSHIP_LABEL[profile.relationship_status]}
+                  </span>
+                )}
+                {profile.instagram && (
+                  <a
+                    href={instagramUrl(profile.instagram)}
+                    target="_blank"
+                    rel="noopener noreferrer nofollow"
+                    aria-label="Instagram"
+                    className="inline-flex items-center justify-center w-8 h-8 rounded-full"
+                    style={{ background: 'rgba(16,16,16,0.6)', border: '1px solid rgba(201,168,76,0.18)', color: '#E7DED1' }}
+                  >
+                    <InstagramIcon size={16} />
+                  </a>
+                )}
+                {profile.tiktok && (
+                  <a
+                    href={tiktokUrl(profile.tiktok)}
+                    target="_blank"
+                    rel="noopener noreferrer nofollow"
+                    aria-label="TikTok"
+                    className="inline-flex items-center justify-center w-8 h-8 rounded-full"
+                    style={{ background: 'rgba(16,16,16,0.6)', border: '1px solid rgba(201,168,76,0.18)', color: '#E7DED1' }}
+                  >
+                    <TikTokIcon size={16} />
+                  </a>
+                )}
+                {profile.youtube && (
+                  <a
+                    href={youtubeUrl(profile.youtube)}
+                    target="_blank"
+                    rel="noopener noreferrer nofollow"
+                    aria-label="YouTube"
+                    className="inline-flex items-center justify-center w-8 h-8 rounded-full"
+                    style={{ background: 'rgba(16,16,16,0.6)', border: '1px solid rgba(201,168,76,0.18)', color: '#E7DED1' }}
+                  >
+                    <YouTubeIcon size={16} />
+                  </a>
+                )}
+                {profile.whatsapp && (
+                  <a
+                    href={whatsappUrl(profile.whatsapp)}
+                    target="_blank"
+                    rel="noopener noreferrer nofollow"
+                    aria-label="WhatsApp"
+                    className="inline-flex items-center justify-center w-8 h-8 rounded-full"
+                    style={{ background: 'rgba(16,16,16,0.6)', border: '1px solid rgba(201,168,76,0.18)', color: '#E7DED1' }}
+                  >
+                    <WhatsAppIcon size={16} />
+                  </a>
+                )}
+              </div>
             )}
 
             {/* Meta (localização, data, links). */}

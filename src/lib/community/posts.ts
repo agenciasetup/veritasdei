@@ -11,6 +11,8 @@ interface PostRow {
   parent_post_id: string | null
   created_at: string
   edited_at: string | null
+  city: string | null
+  state: string | null
 }
 
 interface AuthorRow {
@@ -72,7 +74,7 @@ export async function fetchPostsByIds(
 
   const { data: postsData, error: postsError } = await supabase
     .from('vd_posts')
-    .select('id, author_user_id, kind, variant, body, parent_post_id, created_at, edited_at')
+    .select('id, author_user_id, kind, variant, body, parent_post_id, created_at, edited_at, city, state')
     .in('id', postIds)
     .is('deleted_at', null)
 
@@ -256,6 +258,8 @@ export async function fetchPostsByIds(
         parent: parentSnapshot,
         created_at: post.created_at,
         edited_at: post.edited_at ?? null,
+        city: post.city ?? null,
+        state: post.state ?? null,
         author: {
           id: author?.id ?? post.author_user_id,
           public_handle: author?.public_handle ?? null,
@@ -336,7 +340,7 @@ function applyAuthorDiversity(posts: VeritasPost[]): VeritasPost[] {
 }
 
 export function buildFeedResponse(params: {
-  tab: 'for_you' | 'following'
+  tab: 'for_you' | 'following' | 'nearby'
   posts: VeritasPost[]
   limit: number
 }): FeedResponse {
@@ -345,7 +349,7 @@ export function buildFeedResponse(params: {
   const visible = params.posts.filter(post => !post.viewer.blocked_author && !post.viewer.muted_author)
 
   let sorted: VeritasPost[]
-  if (params.tab === 'following') {
+  if (params.tab === 'following' || params.tab === 'nearby') {
     sorted = visible
       .sort((a, b) => {
         const dateDiff = new Date(b.created_at).getTime() - new Date(a.created_at).getTime()

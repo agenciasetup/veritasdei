@@ -3,12 +3,18 @@ import { VERITAS_AUTO_HIDE_REPORT_THRESHOLD } from './constants'
 import { buildFeedResponse, clampPageSize, fetchPostsByIds, parseCursor } from './posts'
 import type { FeedResponse } from './types'
 
-export type FeedTab = 'for_you' | 'following'
+export type FeedTab = 'for_you' | 'following' | 'nearby'
 
 export interface FeedLoadParams {
   tab?: FeedTab | string | null
   limit?: number | string | null
   cursor?: string | null
+  /** Usado apenas quando tab === 'nearby'. Se ausente, cai na localização salva
+   *  no profile; se nem isso existir, devolve feed vazio. */
+  latitude?: number | string | null
+  longitude?: number | string | null
+  /** Raio em km para tab 'nearby'. Default 60. */
+  radiusKm?: number | string | null
 }
 
 /**
@@ -24,11 +30,18 @@ export async function loadCommunityFeed(
   viewerUserId: string,
   params: FeedLoadParams,
 ): Promise<FeedResponse> {
-  const tab: FeedTab = params.tab === 'following' ? 'following' : 'for_you'
+  const tab: FeedTab =
+    params.tab === 'following' ? 'following'
+    : params.tab === 'nearby' ? 'nearby'
+    : 'for_you'
   const limit = clampPageSize(
     typeof params.limit === 'string' ? Number(params.limit) : (params.limit ?? 20),
   )
   const cursor = parseCursor(typeof params.cursor === 'string' ? params.cursor : null)
+
+  if (tab === 'nearby') {
+    return loadNearbyFeed(supabase, viewerUserId, params, { limit, cursor })
+  }
 
   const { data: followsRows } = await supabase
     .from('vd_follows')
@@ -143,4 +156,62 @@ export async function loadCommunityFeed(
     : posts.filter(post => post.metrics.report_count < VERITAS_AUTO_HIDE_REPORT_THRESHOLD)
 
   return buildFeedResponse({ tab, posts: filtered, limit })
+}
+
+function coerceNumber(value: number | string | null | undefined): number | null {
+  if (value === null || value === undefined) return null
+  const n = typeof value === 'string' ? Number(value) : value
+  return Number.isFinite(n) ? n : null
+}
+
+async function loadNearbyFeed(
+  supabase: SupabaseClient,
+  viewerUserId: string,
+  params: FeedLoadParams,
+  resolved: { limit: number; cursor: string | null },
+): Promise<FeedResponse> {
+  let lat = coerceNumber(params.latitude)
+  let lng = coerceNumber(params.longitude)
+
+  // Fallback: usa localização salva no profile se o client não mandou.
+  if (lat === null || lng === null) {
+    const { data: profileRow } = await supabase
+      .from('profiles')
+      .select('location_lat, location_lng')
+      .eq('id', viewerUserId)
+      .maybeSingle()
+
+    const row = profileRow as { location_lat: number | null; location_lng: number | null } | null
+    if (row?.location_lat !== null && row?.location_lng !== null && row) {
+      lat = Number(row.location_lat)
+      lng = Number(row.location_lng)
+    }
+  }
+
+  if (lat === null || lng === null || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return { tab: 'nearby', cursor: null, items: [] }
+  }
+
+  const radiusKm = Math.max(1, Math.min(200, coerceNumber(params.radiusKm) ?? 60))
+
+  const { data: rpcRows, error } = await supabase.rpc('get_nearby_veritas', {
+    p_viewer_id: viewerUserId,
+    p_lat: lat,
+    p_lng: lng,
+    p_radius_km: radiusKm,
+    p_limit: Math.max(resolved.limit * 3, 80),
+    p_cursor: resolved.cursor,
+  })
+
+  if (error) throw new Error(error.message)
+
+  const candidateIds = ((rpcRows ?? []) as Array<{ id: string }>).map(row => row.id)
+  if (!candidateIds.length) {
+    return { tab: 'nearby', cursor: null, items: [] }
+  }
+
+  const posts = await fetchPostsByIds(supabase, viewerUserId, candidateIds)
+  const filtered = posts.filter(post => post.metrics.report_count < VERITAS_AUTO_HIDE_REPORT_THRESHOLD)
+
+  return buildFeedResponse({ tab: 'nearby', posts: filtered, limit: resolved.limit })
 }
