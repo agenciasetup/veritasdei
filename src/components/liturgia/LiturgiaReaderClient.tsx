@@ -79,35 +79,76 @@ function sanitizeLeitura(leitura: LeituraRef | null): LeituraRef | null {
   return { referencia, texto }
 }
 
+const PROCLAMACAO_REGEX = /(^|\n)\s*Proclamação do Evangelho[^\n]*/i
+const EVANGELHO_HEADER_REGEX = /(^|\n)\s*Evangelho\s*\(([^)]+)\)/i
+
 function extractEvangelhoChunk(rawText: string): {
   beforeText: string
+  aclamacaoRef?: string
+  aclamacaoText?: string
   evangelhoRef?: string
   evangelhoText: string
 } | null {
   const text = rawText.trim()
   if (!text) return null
 
-  const markers = [
-    text.search(/\n\s*Evangelho\s*\(/i),
-    text.search(/\n\s*Proclamação do Evangelho/i),
-  ].filter((index) => index >= 0)
+  const headerMatch = text.match(EVANGELHO_HEADER_REGEX)
+  const proclamacaoMatch = text.match(PROCLAMACAO_REGEX)
 
-  if (!markers.length) return null
+  if (!headerMatch && !proclamacaoMatch) return null
 
-  const markerIndex = Math.min(...markers)
-  const beforeText = text.slice(0, markerIndex).trim()
-  const chunk = text.slice(markerIndex).trim()
+  // Determine where the gospel block starts. When both are present, the
+  // "Evangelho (ref)" header comes first (as the acclamation header in
+  // Canção Nova format); the acclamation verse sits between it and the
+  // "Proclamação do Evangelho" marker.
+  let startIndex: number
+  let aclamacaoRef: string | undefined
+  let aclamacaoText: string | undefined
+  let evangelhoRef: string | undefined
+  let evangelhoText: string
 
-  const refMatch = chunk.match(/^Evangelho\s*\(([^)]+)\)/i) ?? chunk.match(/Evangelho\s*\(([^)]+)\)/i)
-  const evangelhoRef = refMatch?.[1]?.trim()
+  if (
+    headerMatch?.index !== undefined &&
+    (proclamacaoMatch?.index === undefined || headerMatch.index <= proclamacaoMatch.index)
+  ) {
+    const headerPrefix = headerMatch[1] ?? ''
+    startIndex = headerMatch.index + headerPrefix.length
+    evangelhoRef = headerMatch[2]?.trim()
 
-  const evangelhoText = chunk
-    .replace(/^Evangelho\s*\([^)]+\)\s*/i, '')
-    .trim()
+    const afterHeader = text
+      .slice(startIndex)
+      .replace(/^Evangelho\s*\([^)]+\)\s*/i, '')
+    const proclInAfter = afterHeader.match(PROCLAMACAO_REGEX)
+
+    if (proclInAfter?.index !== undefined) {
+      const proclPrefix = proclInAfter[1] ?? ''
+      const proclStart = proclInAfter.index + proclPrefix.length
+      const aclam = afterHeader.slice(0, proclStart).trim()
+      if (aclam) {
+        aclamacaoText = aclam
+        aclamacaoRef = evangelhoRef
+      }
+      evangelhoText = afterHeader.slice(proclStart).trim()
+    } else {
+      evangelhoText = afterHeader.trim()
+    }
+  } else if (proclamacaoMatch?.index !== undefined) {
+    const proclPrefix = proclamacaoMatch[1] ?? ''
+    startIndex = proclamacaoMatch.index + proclPrefix.length
+    evangelhoText = text.slice(startIndex).trim()
+  } else {
+    return null
+  }
 
   if (!evangelhoText) return null
 
-  return { beforeText, evangelhoRef, evangelhoText }
+  return {
+    beforeText: text.slice(0, startIndex).trim(),
+    aclamacaoRef,
+    aclamacaoText,
+    evangelhoRef,
+    evangelhoText,
+  }
 }
 
 function normalizeLiturgia(liturgia: LiturgiaDia): {
@@ -117,37 +158,55 @@ function normalizeLiturgia(liturgia: LiturgiaDia): {
   aclamacao: LeituraRef | null
   evangelho: LeituraRef | null
 } {
-  const primeira = sanitizeLeitura(liturgia.primeira_leitura)
-  const segunda = sanitizeLeitura(liturgia.segunda_leitura)
+  const primeiraRef = liturgia.primeira_leitura?.referencia?.trim() ?? ''
+  let primeiraText = sanitizeLiturgicalText(liturgia.primeira_leitura?.texto ?? '')
 
   const salmoRef = liturgia.salmo?.referencia?.trim() ?? ''
   let salmoText = sanitizeLiturgicalText(liturgia.salmo?.texto ?? '')
 
-  const aclamacaoRef = liturgia.aclamacao?.referencia?.trim() ?? ''
+  const segundaRef = liturgia.segunda_leitura?.referencia?.trim() ?? ''
+  let segundaText = sanitizeLiturgicalText(liturgia.segunda_leitura?.texto ?? '')
+
+  let aclamacaoRef = liturgia.aclamacao?.referencia?.trim() ?? ''
   let aclamacaoText = sanitizeLiturgicalText(liturgia.aclamacao?.texto ?? '')
 
   let evangelhoRef = liturgia.evangelho?.referencia?.trim() ?? ''
   let evangelhoText = sanitizeLiturgicalText(liturgia.evangelho?.texto ?? '')
 
-  const salmoChunk = extractEvangelhoChunk(salmoText)
-  if (salmoChunk) {
-    salmoText = sanitizeLiturgicalText(salmoChunk.beforeText)
+  // The Canção Nova scrape sometimes appends the whole evangelho block
+  // (acclamation + proclamation + gospel text) to the last reading before it.
+  // On weekdays that's the salmo or aclamação; on Sundays with a second
+  // reading, it's segunda_leitura. Walk the fields in liturgical order and
+  // peel off the evangelho block wherever it landed.
+  const tryExtract = (fieldText: string): string => {
+    const chunk = extractEvangelhoChunk(fieldText)
+    if (!chunk) return fieldText
+
+    if (chunk.aclamacaoText && isReferenceOnlyText(aclamacaoText, aclamacaoRef)) {
+      aclamacaoText = sanitizeLiturgicalText(chunk.aclamacaoText)
+      if (!aclamacaoRef && chunk.aclamacaoRef) aclamacaoRef = chunk.aclamacaoRef
+    }
 
     if (isReferenceOnlyText(evangelhoText, evangelhoRef)) {
-      evangelhoText = sanitizeLiturgicalText(salmoChunk.evangelhoText)
-      if (!evangelhoRef && salmoChunk.evangelhoRef) evangelhoRef = salmoChunk.evangelhoRef
+      evangelhoText = sanitizeLiturgicalText(chunk.evangelhoText)
+      if (!evangelhoRef && chunk.evangelhoRef) evangelhoRef = chunk.evangelhoRef
     }
+
+    return sanitizeLiturgicalText(chunk.beforeText)
   }
 
-  const aclamacaoChunk = extractEvangelhoChunk(aclamacaoText)
-  if (aclamacaoChunk) {
-    aclamacaoText = sanitizeLiturgicalText(aclamacaoChunk.beforeText)
+  primeiraText = tryExtract(primeiraText)
+  salmoText = tryExtract(salmoText)
+  segundaText = tryExtract(segundaText)
+  aclamacaoText = tryExtract(aclamacaoText)
 
-    if (isReferenceOnlyText(evangelhoText, evangelhoRef)) {
-      evangelhoText = sanitizeLiturgicalText(aclamacaoChunk.evangelhoText)
-      if (!evangelhoRef && aclamacaoChunk.evangelhoRef) evangelhoRef = aclamacaoChunk.evangelhoRef
-    }
-  }
+  const primeira = primeiraText.trim()
+    ? { referencia: primeiraRef, texto: primeiraText.trim() }
+    : null
+
+  const segunda = segundaText.trim()
+    ? { referencia: segundaRef, texto: segundaText.trim() }
+    : null
 
   const salmo = salmoText.trim()
     ? { referencia: salmoRef, texto: salmoText.trim() }
