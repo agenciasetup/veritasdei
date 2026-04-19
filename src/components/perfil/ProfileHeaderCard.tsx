@@ -120,7 +120,10 @@ export default function ProfileHeaderCard({
           .upload(path, compressed, { upsert: true })
         if (upErr) throw upErr
         const { data } = supabase.storage.from('avatars').getPublicUrl(path)
-        publicUrl = data.publicUrl
+        // Upsert reusa a mesma key → URL pública idêntica entre uploads.
+        // Sem cache-buster o browser serve a foto antiga do cache e o
+        // usuário acha que não trocou.
+        publicUrl = `${data.publicUrl}?v=${Date.now()}`
       }
       const { error: saveErr } = await supabase
         .from('profiles')

@@ -87,16 +87,20 @@ export default function OnboardingPage() {
     if (raw.size > 2 * 1024 * 1024) return
 
     setUploadingAvatar(true)
-    const { file } = await compressImage(raw)
-    const ext = file.name.split('.').pop() ?? 'jpg'
-    const path = `${user.id}/avatar.${ext}`
+    try {
+      const { file } = await compressImage(raw)
+      const ext = file.name.split('.').pop() ?? 'jpg'
+      const path = `${user.id}/avatar.${ext}`
 
-    const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
-    if (!error) {
-      const { data } = supabase.storage.from('avatars').getPublicUrl(path)
-      setAvatarUrl(data.publicUrl)
+      const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
+      if (!error) {
+        const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+        // Cache-bust: upsert reusa a key, sem isso retry na mesma página mostra foto antiga.
+        setAvatarUrl(`${data.publicUrl}?v=${Date.now()}`)
+      }
+    } finally {
+      setUploadingAvatar(false)
     }
-    setUploadingAvatar(false)
   }
 
   const toggleSacramento = (s: Sacramento) => {
