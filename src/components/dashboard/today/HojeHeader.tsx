@@ -6,6 +6,8 @@ import { Search, Bell } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { getDisplayName } from '@/lib/greetings'
 import SearchOverlay from '@/components/mobile/SearchOverlay'
+import LevelBadge from '@/components/gamification/LevelBadge'
+import { useGamification } from '@/lib/gamification/useGamification'
 
 /**
  * Header da tela "Hoje" — estilo Instagram/WhatsApp:
@@ -23,10 +25,11 @@ function getGreeting(): string {
 }
 
 export default function HojeHeader() {
-  const { profile } = useAuth()
+  const { profile, user } = useAuth()
   const [searchOpen, setSearchOpen] = useState(false)
   const displayName = getDisplayName(profile?.vocacao, profile?.name ?? null) || 'Irmão(ã)'
   const avatarUrl = profile?.profile_image_url
+  const { level } = useGamification(user?.id)
 
   const iconBtnStyle: React.CSSProperties = {
     background: 'rgba(255,255,255,0.05)',
@@ -78,17 +81,20 @@ export default function HojeHeader() {
             >
               {getGreeting()}
             </p>
-            <p
-              className="text-[17px] md:text-[19px] truncate -mt-0.5"
-              style={{
-                color: 'var(--text-primary)',
-                fontFamily: 'var(--font-body)',
-                fontWeight: 600,
-                letterSpacing: '-0.01em',
-              }}
-            >
-              {displayName}
-            </p>
+            <div className="flex items-center gap-2 -mt-0.5">
+              <p
+                className="text-[17px] md:text-[19px] truncate"
+                style={{
+                  color: 'var(--text-primary)',
+                  fontFamily: 'var(--font-body)',
+                  fontWeight: 600,
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                {displayName}
+              </p>
+              <LevelBadge level={level} size="xs" />
+            </div>
           </div>
         </Link>
 

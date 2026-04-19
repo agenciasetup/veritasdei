@@ -26,6 +26,8 @@ import { renderVeritasBody } from '@/lib/community/body-renderer'
 import { VERITAS_MAX_BODY } from '@/lib/community/constants'
 import RoleBadge from '@/components/comunidade/RoleBadge'
 import VerifiedBadge from '@/components/comunidade/VerifiedBadge'
+import LevelBadge from '@/components/gamification/LevelBadge'
+import { useUserLevel } from '@/lib/gamification/useUserLevel'
 import MediaLightbox from '@/components/comunidade/MediaLightbox'
 import FormattingToolbar from '@/components/comunidade/FormattingToolbar'
 import MarkdownPreview from '@/components/comunidade/MarkdownPreview'
@@ -223,6 +225,7 @@ export default function VeritasCard({
       ? `/comunidade/p/${post.author.user_number}`
       : '#'
 
+  const authorLevel = useUserLevel(post.author.id)
   const isOwnPost = viewerUserId === post.author_user_id
   const isReflection = post.variant === 'reflection'
   const handleLabel = post.author.public_handle
@@ -352,6 +355,7 @@ export default function VeritasCard({
               </span>
             )}
             {post.author.verified && <VerifiedBadge size={14} />}
+            {authorLevel !== null && <LevelBadge level={authorLevel} size="xs" />}
             <RoleBadge role={post.author.community_role} size="sm" />
             <span
               className="text-[13px] flex-shrink-0"

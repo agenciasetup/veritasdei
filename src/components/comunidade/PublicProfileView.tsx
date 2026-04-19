@@ -9,6 +9,9 @@ import VerifiedBadge from '@/components/comunidade/VerifiedBadge'
 import ProfileFollowButton from '@/components/comunidade/ProfileFollowButton'
 import ProfileTabs from '@/components/comunidade/ProfileTabs'
 import { OrnamentDivider } from '@/components/landing/components/OrnamentDivider'
+import LevelBadge from '@/components/gamification/LevelBadge'
+import EquippedReliquiaChip from '@/components/gamification/EquippedReliquiaChip'
+import type { Reliquia } from '@/types/gamification'
 
 interface Props {
   snapshot: PublicProfileSnapshot
@@ -193,8 +196,21 @@ export default function PublicProfileView({
                   {profile.name ?? 'Membro Veritas'}
                 </h1>
                 {profile.verified && <VerifiedBadge size={18} />}
+                {typeof profile.level === 'number' && profile.level > 0 && (
+                  <LevelBadge level={profile.level} size="sm" />
+                )}
                 <RoleBadge role={profile.community_role} />
               </div>
+
+              {profile.equipped_reliquia && (
+                <div className="mt-2">
+                  <EquippedReliquiaChip
+                    reliquia={profile.equipped_reliquia as Reliquia}
+                    size="sm"
+                    showName
+                  />
+                </div>
+              )}
 
               <p
                 className="text-[13px] mt-0.5"
