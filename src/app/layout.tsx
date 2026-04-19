@@ -54,8 +54,10 @@ export const metadata: Metadata = {
     description: "Terço, liturgia, orações, paróquias e aprendizado católico.",
     type: "website",
   },
+  // Favicon e icon principal vêm de src/app/favicon.ico + src/app/icon.svg
+  // (convenção de arquivo do Next). Apple touch icon usa o SVG maskable de
+  // public/icon.svg (quadrado arredondado, melhor para home-screen iOS).
   icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
     apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
   },
 }
