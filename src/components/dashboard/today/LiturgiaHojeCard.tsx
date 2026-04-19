@@ -41,7 +41,7 @@ export default function LiturgiaHojeCard() {
   return (
     <Link
       href="/liturgia/hoje"
-      className="ios-surface-hero block mx-4 mb-4 p-5 overflow-hidden transition-transform active:scale-[0.985]"
+      className="ios-surface-hero block mx-4 mb-4 p-5 md:mx-0 md:mb-6 md:p-7 overflow-hidden transition-transform active:scale-[0.985] md:hover:scale-[1.005] md:transition-all"
       style={{ isolation: 'isolate' }}
     >
       {/* Camada de tint litúrgico: MUITO sutil, só um hint de cor no topo */}
@@ -90,7 +90,7 @@ export default function LiturgiaHojeCard() {
       </div>
 
       <p
-        className="text-[28px] leading-[1.1] mb-1.5"
+        className="text-[28px] md:text-[36px] leading-[1.1] mb-1.5"
         style={{
           color: 'var(--text-primary)',
           fontFamily: 'var(--font-elegant)',

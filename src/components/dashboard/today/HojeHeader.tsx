@@ -37,7 +37,7 @@ export default function HojeHeader() {
 
   return (
     <>
-      <header className="flex items-center justify-between px-5 pt-5 pb-4">
+      <header className="flex items-center justify-between px-5 pt-5 pb-4 md:px-0 md:pt-0 md:pb-6">
         <Link href="/perfil" className="flex items-center gap-3 min-w-0 flex-1 active:scale-[0.99] transition-transform">
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -45,7 +45,7 @@ export default function HojeHeader() {
               src={avatarUrl}
               alt="Avatar"
               loading="lazy"
-              className="w-11 h-11 rounded-full object-cover flex-shrink-0"
+              className="w-11 h-11 md:w-12 md:h-12 rounded-full object-cover flex-shrink-0"
               style={{
                 border: '1px solid rgba(255,255,255,0.08)',
                 boxShadow: '0 1px 0 rgba(255,255,255,0.08) inset, 0 4px 12px rgba(0,0,0,0.3)',
@@ -53,7 +53,7 @@ export default function HojeHeader() {
             />
           ) : (
             <div
-              className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 text-[15px]"
+              className="w-11 h-11 md:w-12 md:h-12 rounded-full flex items-center justify-center flex-shrink-0 text-[15px] md:text-base"
               style={{
                 background: 'linear-gradient(180deg, rgba(201,168,76,0.28) 0%, rgba(201,168,76,0.1) 100%)',
                 border: '1px solid rgba(255,255,255,0.08)',
@@ -79,7 +79,7 @@ export default function HojeHeader() {
               {getGreeting()}
             </p>
             <p
-              className="text-[17px] truncate -mt-0.5"
+              className="text-[17px] md:text-[19px] truncate -mt-0.5"
               style={{
                 color: 'var(--text-primary)',
                 fontFamily: 'var(--font-body)',
