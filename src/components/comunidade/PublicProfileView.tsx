@@ -87,14 +87,14 @@ export default function PublicProfileView({
 
   return (
     <main className="min-h-screen relative">
-      <div className="bg-glow" />
+      
 
       <div className="max-w-3xl mx-auto relative z-10">
         <div className="px-4 md:px-8 pt-6">
           <Link
             href="/comunidade"
             className="inline-flex items-center gap-2 text-sm"
-            style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}
+            style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
           >
             <ArrowLeft className="w-4 h-4" /> Comunidade
           </Link>
@@ -125,7 +125,7 @@ export default function PublicProfileView({
               <div
                 aria-hidden
                 className="absolute inset-0 flex items-center justify-center opacity-15"
-                style={{ color: '#C9A84C' }}
+                style={{ color: 'var(--accent)' }}
               >
                 <CrossIcon size="lg" />
               </div>
@@ -171,8 +171,8 @@ export default function PublicProfileView({
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs uppercase tracking-[0.12em]"
                   style={{
                     background: 'transparent',
-                    border: '1px solid rgba(201,168,76,0.4)',
-                    color: '#C9A84C',
+                    border: '1px solid var(--accent)',
+                    color: 'var(--accent)',
                     fontFamily: 'Poppins, sans-serif',
                   }}
                 >
@@ -191,7 +191,7 @@ export default function PublicProfileView({
               <div className="flex items-center gap-2 flex-wrap">
                 <h1
                   className="text-[22px] md:text-[26px] leading-tight"
-                  style={{ fontFamily: 'Cormorant Garamond, serif', color: '#F2EDE4', fontWeight: 500 }}
+                  style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)', fontWeight: 700, letterSpacing: '0.04em' }}
                 >
                   {profile.name ?? 'Membro Veritas'}
                 </h1>
@@ -214,7 +214,7 @@ export default function PublicProfileView({
 
               <p
                 className="text-[13px] mt-0.5"
-                style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}
+                style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
               >
                 {profile.public_handle ? `@${profile.public_handle}` : `#${profile.user_number ?? '-'}`}
               </p>
@@ -223,7 +223,7 @@ export default function PublicProfileView({
             {profile.bio_short && (
               <p
                 className="mb-3 text-[14px] leading-relaxed whitespace-pre-line"
-                style={{ color: '#E7DED1', fontFamily: 'Poppins, sans-serif' }}
+                style={{ color: 'var(--text-2)', fontFamily: 'Poppins, sans-serif' }}
               >
                 {profile.bio_short}
               </p>
@@ -235,9 +235,9 @@ export default function PublicProfileView({
                   <span
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] uppercase tracking-[0.1em]"
                     style={{
-                      background: 'rgba(201,168,76,0.08)',
-                      border: '1px solid rgba(201,168,76,0.2)',
-                      color: '#C9A84C',
+                      background: 'var(--accent-soft)',
+                      border: '1px solid var(--accent-soft)',
+                      color: 'var(--accent)',
                       fontFamily: 'Poppins, sans-serif',
                     }}
                   >
@@ -252,7 +252,7 @@ export default function PublicProfileView({
                     rel="noopener noreferrer nofollow"
                     aria-label="Instagram"
                     className="inline-flex items-center justify-center w-8 h-8 rounded-full"
-                    style={{ background: 'rgba(16,16,16,0.6)', border: '1px solid rgba(201,168,76,0.18)', color: '#E7DED1' }}
+                    style={{ background: 'var(--surface-2)', border: '1px solid var(--border-1)', color: 'var(--text-2)' }}
                   >
                     <InstagramIcon size={16} />
                   </a>
@@ -264,7 +264,7 @@ export default function PublicProfileView({
                     rel="noopener noreferrer nofollow"
                     aria-label="TikTok"
                     className="inline-flex items-center justify-center w-8 h-8 rounded-full"
-                    style={{ background: 'rgba(16,16,16,0.6)', border: '1px solid rgba(201,168,76,0.18)', color: '#E7DED1' }}
+                    style={{ background: 'var(--surface-2)', border: '1px solid var(--border-1)', color: 'var(--text-2)' }}
                   >
                     <TikTokIcon size={16} />
                   </a>
@@ -276,7 +276,7 @@ export default function PublicProfileView({
                     rel="noopener noreferrer nofollow"
                     aria-label="YouTube"
                     className="inline-flex items-center justify-center w-8 h-8 rounded-full"
-                    style={{ background: 'rgba(16,16,16,0.6)', border: '1px solid rgba(201,168,76,0.18)', color: '#E7DED1' }}
+                    style={{ background: 'var(--surface-2)', border: '1px solid var(--border-1)', color: 'var(--text-2)' }}
                   >
                     <YouTubeIcon size={16} />
                   </a>
@@ -288,7 +288,7 @@ export default function PublicProfileView({
                     rel="noopener noreferrer nofollow"
                     aria-label="WhatsApp"
                     className="inline-flex items-center justify-center w-8 h-8 rounded-full"
-                    style={{ background: 'rgba(16,16,16,0.6)', border: '1px solid rgba(201,168,76,0.18)', color: '#E7DED1' }}
+                    style={{ background: 'var(--surface-2)', border: '1px solid var(--border-1)', color: 'var(--text-2)' }}
                   >
                     <WhatsAppIcon size={16} />
                   </a>
@@ -299,7 +299,7 @@ export default function PublicProfileView({
             {/* Meta (localização, data, links). */}
             <div
               className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mb-3 text-[12px]"
-              style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}
+              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
             >
               {location && (
                 <span className="inline-flex items-center gap-1.5">
@@ -324,7 +324,7 @@ export default function PublicProfileView({
                   target="_blank"
                   rel="noopener noreferrer nofollow"
                   className="inline-flex items-center gap-1.5 hover:underline"
-                  style={{ color: '#C9A84C' }}
+                  style={{ color: 'var(--accent)' }}
                 >
                   <LinkIcon className="w-3.5 h-3.5" strokeWidth={1.5} />
                   {link.label || safeLinkHost(link.url)}
@@ -343,8 +343,8 @@ export default function PublicProfileView({
                   : `/comunidade/p/${profile.user_number ?? ''}/seguindo`}
                 className="hover:underline"
               >
-                <strong style={{ color: '#F2EDE4' }}>{profile.following_count}</strong>
-                <span style={{ color: '#8A8378' }}> seguindo</span>
+                <strong style={{ color: 'var(--text-1)' }}>{profile.following_count}</strong>
+                <span style={{ color: 'var(--text-3)' }}> seguindo</span>
               </Link>
               <Link
                 href={profile.public_handle
@@ -352,14 +352,14 @@ export default function PublicProfileView({
                   : `/comunidade/p/${profile.user_number ?? ''}/seguidores`}
                 className="hover:underline"
               >
-                <strong style={{ color: '#F2EDE4' }}>{profile.follower_count}</strong>
-                <span style={{ color: '#8A8378' }}>
+                <strong style={{ color: 'var(--text-1)' }}>{profile.follower_count}</strong>
+                <span style={{ color: 'var(--text-3)' }}>
                   {' '}{profile.follower_count === 1 ? 'seguidor' : 'seguidores'}
                 </span>
               </Link>
               <span>
-                <strong style={{ color: '#F2EDE4' }}>{profile.veritas_count}</strong>
-                <span style={{ color: '#8A8378' }}>{' '}Veritas</span>
+                <strong style={{ color: 'var(--text-1)' }}>{profile.veritas_count}</strong>
+                <span style={{ color: 'var(--text-3)' }}>{' '}Veritas</span>
               </span>
             </div>
           </div>
