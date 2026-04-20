@@ -16,13 +16,13 @@ export function SectionTitle({
     <div className="flex items-center gap-3 mb-2">
       <div
         className="w-9 h-9 rounded-xl flex items-center justify-center"
-        style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.15)' }}
+        style={{ background: 'var(--accent-soft)', border: '1px solid var(--border-1)' }}
       >
-        <Icon className="w-4 h-4" style={{ color: '#C9A84C' }} />
+        <Icon className="w-4 h-4" style={{ color: 'var(--accent)' }} />
       </div>
       <h2
         className="text-lg font-bold tracking-wider uppercase"
-        style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
+        style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
       >
         {title}
       </h2>
@@ -51,7 +51,7 @@ export function FormInput({
     <div className={className}>
       <label
         className="block text-xs mb-2 tracking-wider uppercase"
-        style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}
+        style={{ fontFamily: 'var(--font-display)', color: 'var(--text-2)' }}
       >
         {label}
       </label>
@@ -59,7 +59,7 @@ export function FormInput({
         {icon && (
           <span
             className="absolute left-3 top-1/2 -translate-y-1/2"
-            style={{ color: '#7A7368' }}
+            style={{ color: 'var(--text-3)' }}
           >
             {icon}
           </span>
@@ -71,10 +71,10 @@ export function FormInput({
           placeholder={placeholder}
           className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200 touch-target-lg"
           style={{
-            background: 'rgba(10,10,10,0.6)',
-            border: '1px solid rgba(201,168,76,0.12)',
-            color: '#F2EDE4',
-            fontFamily: 'Poppins, sans-serif',
+            background: 'var(--surface-inset)',
+            border: '1px solid var(--border-1)',
+            color: 'var(--text-1)',
+            fontFamily: 'var(--font-body)',
             outline: 'none',
             paddingLeft: icon ? '2.5rem' : undefined,
           }}
@@ -99,7 +99,7 @@ export function FormSelect({
     <div>
       <label
         className="block text-xs mb-2 tracking-wider uppercase"
-        style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}
+        style={{ fontFamily: 'var(--font-display)', color: 'var(--text-2)' }}
       >
         {label}
       </label>
@@ -108,10 +108,10 @@ export function FormSelect({
         onChange={(e) => onChange(e.target.value)}
         className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200 touch-target-lg"
         style={{
-          background: 'rgba(10,10,10,0.6)',
-          border: '1px solid rgba(201,168,76,0.12)',
-          color: '#F2EDE4',
-          fontFamily: 'Poppins, sans-serif',
+          background: 'var(--surface-inset)',
+          border: '1px solid var(--border-1)',
+          color: 'var(--text-1)',
+          fontFamily: 'var(--font-body)',
           outline: 'none',
         }}
       >

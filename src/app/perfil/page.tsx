@@ -96,8 +96,6 @@ function PerfilContent() {
 
   return (
     <div className="min-h-screen relative pb-24 md:pb-12">
-      <div className="bg-glow" aria-hidden />
-
       <div className="max-w-3xl mx-auto relative z-10 px-4 md:px-6 pt-4">
         {/* Header Instagram-like — sempre visível, com quick-edit de avatar/capa. */}
         <ProfileHeaderCard onEditClick={() => setEditOpen(true)} />
@@ -106,7 +104,7 @@ function PerfilContent() {
         <div
           className="mt-6 -mx-4 md:mx-0 px-4 md:px-0 flex gap-2 overflow-x-auto pb-2 no-scrollbar"
           style={{
-            borderBottom: '0.5px solid rgba(242,237,228,0.08)',
+            borderBottom: '1px solid var(--border-2)',
           }}
         >
           {TABS.map(({ key, label, icon: Icon }) => {
@@ -116,12 +114,12 @@ function PerfilContent() {
                 key={key}
                 type="button"
                 onClick={() => selectTab(key)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 text-xs tracking-[0.12em] uppercase whitespace-nowrap active:scale-95 transition-all"
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-xs tracking-[0.12em] uppercase whitespace-nowrap active:scale-95 transition-colors"
                 style={{
-                  fontFamily: 'Cinzel, serif',
-                  color: active ? '#C9A84C' : '#8A8378',
+                  fontFamily: 'var(--font-display)',
+                  color: active ? 'var(--text-1)' : 'var(--text-3)',
                   borderBottom: active
-                    ? '2px solid #C9A84C'
+                    ? '2px solid var(--accent)'
                     : '2px solid transparent',
                   marginBottom: -1,
                 }}
@@ -186,19 +184,19 @@ function PerfilContent() {
                 await signOut()
                 router.push('/login')
               }}
-              className="w-full flex items-center gap-3 px-4 py-4 touch-target-lg active:bg-white/5 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-4 touch-target-lg transition-colors"
             >
-              <LogOut className="w-4 h-4" style={{ color: '#D94F5C' }} />
+              <LogOut className="w-4 h-4" style={{ color: 'var(--danger)' }} />
               <span
                 className="text-sm font-medium"
-                style={{ color: '#D94F5C', fontFamily: 'Poppins, sans-serif' }}
+                style={{ color: 'var(--danger)', fontFamily: 'var(--font-body)' }}
               >
                 Sair
               </span>
               <span className="ml-auto">
                 <ChevronLeft
                   className="w-4 h-4 rotate-180"
-                  style={{ color: '#6A635A' }}
+                  style={{ color: 'var(--text-3)' }}
                 />
               </span>
             </button>
@@ -226,8 +224,8 @@ function SecondaryGroup({ children }: { children: React.ReactNode }) {
     <div
       className="rounded-2xl overflow-hidden"
       style={{
-        background: 'rgba(20,18,14,0.6)',
-        border: '1px solid rgba(201,168,76,0.1)',
+        background: 'var(--surface-2)',
+        border: '1px solid var(--border-1)',
       }}
     >
       {children}
@@ -251,16 +249,16 @@ function SecondaryLink({
   return (
     <Link
       href={href}
-      className="w-full flex items-center gap-3 px-4 py-4 touch-target-lg active:bg-white/5 transition-colors"
+      className="w-full flex items-center gap-3 px-4 py-4 touch-target-lg transition-colors"
       style={{
-        borderBottom: isLast ? 'none' : '1px solid rgba(201,168,76,0.08)',
+        borderBottom: isLast ? 'none' : '1px solid var(--border-2)',
         textDecoration: 'none',
       }}
     >
-      <span style={{ color: '#C9A84C' }}>{icon}</span>
+      <span style={{ color: 'var(--accent)' }}>{icon}</span>
       <span
         className="flex-1 text-sm font-medium"
-        style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}
+        style={{ color: 'var(--text-1)', fontFamily: 'var(--font-body)' }}
       >
         {label}
       </span>
@@ -268,9 +266,9 @@ function SecondaryLink({
         <span
           className="text-[10px] px-2 py-0.5 rounded-full"
           style={{
-            background: 'rgba(102,187,106,0.12)',
-            color: '#66BB6A',
-            fontFamily: 'Poppins, sans-serif',
+            background: 'color-mix(in srgb, var(--success) 16%, transparent)',
+            color: 'var(--success)',
+            fontFamily: 'var(--font-body)',
           }}
         >
           {badge}
@@ -278,7 +276,7 @@ function SecondaryLink({
       )}
       <ChevronLeft
         className="w-4 h-4 rotate-180"
-        style={{ color: '#6A635A' }}
+        style={{ color: 'var(--text-3)' }}
       />
     </Link>
   )

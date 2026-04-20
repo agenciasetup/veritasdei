@@ -166,10 +166,10 @@ export default function ContaSection() {
             <div>
               <label
                 className="block text-xs mb-2 tracking-wider uppercase"
-                style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}
+                style={{ fontFamily: 'var(--font-display)', color: 'var(--text-2)' }}
               >
                 Email{' '}
-                <span style={{ color: '#7A7368', fontSize: 10 }}>(verificado)</span>
+                <span style={{ color: 'var(--text-3)', fontSize: 10 }}>(verificado)</span>
               </label>
               <input
                 type="email"
@@ -178,10 +178,10 @@ export default function ContaSection() {
                 disabled
                 className="w-full px-4 py-3 rounded-xl text-sm"
                 style={{
-                  background: 'rgba(10,10,10,0.45)',
-                  border: '1px solid rgba(201,168,76,0.08)',
-                  color: '#8A8378',
-                  fontFamily: 'Poppins, sans-serif',
+                  background: 'var(--surface-inset)',
+                  border: '1px solid var(--border-1)',
+                  color: 'var(--text-3)',
+                  fontFamily: 'var(--font-body)',
                   cursor: 'not-allowed',
                 }}
               />
@@ -189,10 +189,10 @@ export default function ContaSection() {
             <div>
               <label
                 className="block text-xs mb-2 tracking-wider uppercase"
-                style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}
+                style={{ fontFamily: 'var(--font-display)', color: 'var(--text-2)' }}
               >
                 CPF{' '}
-                <span style={{ color: '#C9A84C', fontSize: 10 }}>
+                <span style={{ color: 'var(--accent)', fontSize: 10 }}>
                   (obrigatório para contagem)
                 </span>
               </label>
@@ -208,19 +208,19 @@ export default function ContaSection() {
                 maxLength={14}
                 className="w-full px-4 py-3 rounded-xl text-sm touch-target-lg"
                 style={{
-                  background: 'rgba(10,10,10,0.6)',
+                  background: 'var(--surface-inset)',
                   border: cpfError
-                    ? '1px solid rgba(220,38,38,0.5)'
+                    ? '1px solid var(--danger)'
                     : '1px solid rgba(201,168,76,0.12)',
-                  color: '#F2EDE4',
-                  fontFamily: 'Poppins, sans-serif',
+                  color: 'var(--text-1)',
+                  fontFamily: 'var(--font-body)',
                   outline: 'none',
                 }}
               />
               {cpfError && (
                 <p
                   className="text-xs mt-1.5"
-                  style={{ color: '#EF4444', fontFamily: 'Poppins, sans-serif' }}
+                  style={{ color: 'var(--danger)', fontFamily: 'var(--font-body)' }}
                 >
                   {cpfError}
                 </p>
@@ -323,7 +323,7 @@ export default function ContaSection() {
         <div>
           <label
             className="block text-xs mb-3 tracking-wider uppercase"
-            style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}
+            style={{ fontFamily: 'var(--font-display)', color: 'var(--text-2)' }}
           >
             Vocação
           </label>
@@ -335,7 +335,7 @@ export default function ContaSection() {
                 onClick={() => updateField('vocacao', v.value)}
                 className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs touch-target-lg active:scale-95"
                 style={{
-                  fontFamily: 'Poppins, sans-serif',
+                  fontFamily: 'var(--font-body)',
                   background:
                     form.vocacao === v.value
                       ? 'rgba(201,168,76,0.12)'
@@ -344,7 +344,7 @@ export default function ContaSection() {
                     form.vocacao === v.value
                       ? '1px solid rgba(201,168,76,0.3)'
                       : '1px solid rgba(201,168,76,0.08)',
-                  color: form.vocacao === v.value ? '#C9A84C' : '#8A8378',
+                  color: form.vocacao === v.value ? 'var(--accent)' : 'var(--text-3)',
                 }}
               >
                 <VocacaoIcon vocacao={v.value} size={16} />
@@ -391,8 +391,8 @@ export default function ContaSection() {
         <div
           className="flex items-center gap-3 p-4 rounded-xl"
           style={{
-            background: 'rgba(10,10,10,0.5)',
-            border: '1px solid rgba(201,168,76,0.08)',
+            background: 'var(--surface-inset)',
+            border: '1px solid var(--border-1)',
           }}
         >
           <button
@@ -400,7 +400,7 @@ export default function ContaSection() {
             onClick={() => updateField('veio_de_outra_religiao', !form.veio_de_outra_religiao)}
             className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0"
             style={{
-              background: form.veio_de_outra_religiao ? '#C9A84C' : 'transparent',
+              background: form.veio_de_outra_religiao ? 'var(--accent)' : 'transparent',
               border: form.veio_de_outra_religiao
                 ? 'none'
                 : '2px solid rgba(201,168,76,0.3)',
@@ -412,7 +412,7 @@ export default function ContaSection() {
           </button>
           <span
             className="text-sm"
-            style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}
+            style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}
           >
             Veio de outra religião?
           </span>
@@ -430,7 +430,7 @@ export default function ContaSection() {
         <div>
           <label
             className="text-xs mb-3 tracking-wider uppercase flex items-center gap-2"
-            style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}
+            style={{ fontFamily: 'var(--font-display)', color: 'var(--text-2)' }}
           >
             <BookOpen className="w-4 h-4" />
             Sacramentos Recebidos
@@ -445,18 +445,18 @@ export default function ContaSection() {
                   onClick={() => toggleSacramento(sac.value)}
                   className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left touch-target-lg active:scale-[0.98]"
                   style={{
-                    fontFamily: 'Poppins, sans-serif',
+                    fontFamily: 'var(--font-body)',
                     background: checked ? 'rgba(201,168,76,0.1)' : 'rgba(10,10,10,0.4)',
                     border: checked
                       ? '1px solid rgba(201,168,76,0.25)'
                       : '1px solid rgba(201,168,76,0.06)',
-                    color: checked ? '#C9A84C' : '#8A8378',
+                    color: checked ? 'var(--accent)' : 'var(--text-3)',
                   }}
                 >
                   <div
                     className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
                     style={{
-                      background: checked ? '#C9A84C' : 'transparent',
+                      background: checked ? 'var(--accent)' : 'transparent',
                       border: checked ? 'none' : '2px solid rgba(201,168,76,0.25)',
                     }}
                   >
@@ -480,10 +480,10 @@ export default function ContaSection() {
         <div
           className="flex-1 rounded-xl px-3 py-2 text-xs"
           style={{
-            background: 'rgba(107,29,42,0.14)',
-            border: '1px solid rgba(217,79,92,0.35)',
-            color: '#D94F5C',
-            fontFamily: 'Poppins, sans-serif',
+            background: 'color-mix(in srgb, var(--danger) 14%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--danger) 35%, transparent)',
+            color: 'var(--danger)',
+            fontFamily: 'var(--font-body)',
           }}
         >
           {saveError}
@@ -494,13 +494,13 @@ export default function ContaSection() {
         disabled={saving}
         className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold tracking-wider uppercase transition-all touch-target-lg active:scale-[0.98]"
         style={{
-          fontFamily: 'Cinzel, serif',
+          fontFamily: 'var(--font-display)',
           background: saved
             ? 'rgba(76,175,80,0.15)'
             : saving
               ? 'rgba(201,168,76,0.15)'
-              : 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
-          color: saved ? '#66BB6A' : saving ? '#8A8378' : '#0A0A0A',
+              : 'var(--accent)',
+          color: saved ? 'var(--success)' : saving ? 'var(--text-3)' : 'var(--accent-contrast)',
           border: saved ? '1px solid rgba(76,175,80,0.3)' : 'none',
         }}
       >
@@ -511,7 +511,7 @@ export default function ContaSection() {
         ) : saving ? (
           <span
             className="w-4 h-4 border-2 rounded-full animate-spin"
-            style={{ borderColor: 'rgba(201,168,76,0.3)', borderTopColor: '#C9A84C' }}
+            style={{ borderColor: 'var(--border-1)', borderTopColor: 'var(--accent)' }}
           />
         ) : (
           <>
@@ -536,7 +536,7 @@ export default function ContaSection() {
               key={g.key}
               className="rounded-2xl overflow-hidden"
               style={{
-                background: 'rgba(20,18,14,0.6)',
+                background: 'var(--surface-2)',
                 border: `1px solid ${
                   isOpen ? 'rgba(201,168,76,0.18)' : 'rgba(201,168,76,0.08)'
                 }`,
@@ -549,10 +549,10 @@ export default function ContaSection() {
                 aria-expanded={isOpen}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <Icon className="w-4 h-4 flex-shrink-0" style={{ color: '#C9A84C' }} />
+                  <Icon className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--accent)' }} />
                   <span
                     className="text-sm font-medium"
-                    style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}
+                    style={{ color: 'var(--text-1)', fontFamily: 'var(--font-body)' }}
                   >
                     {g.label}
                   </span>
@@ -560,7 +560,7 @@ export default function ContaSection() {
                 <ChevronDown
                   className="w-4 h-4 transition-transform"
                   style={{
-                    color: '#8A8378',
+                    color: 'var(--text-3)',
                     transform: isOpen ? 'rotate(180deg)' : 'rotate(0)',
                   }}
                 />
@@ -569,7 +569,7 @@ export default function ContaSection() {
                 <div className="px-4 pb-5">
                   <p
                     className="text-xs mb-4 flex items-start gap-2"
-                    style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+                    style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
                   >
                     <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                     {g.desc}
@@ -592,13 +592,13 @@ export default function ContaSection() {
               onClick={() => setGroup(key)}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs whitespace-nowrap"
               style={{
-                fontFamily: 'Poppins, sans-serif',
+                fontFamily: 'var(--font-body)',
                 background: group === key ? 'rgba(201,168,76,0.12)' : 'rgba(16,16,16,0.6)',
                 border:
                   group === key
                     ? '1px solid rgba(201,168,76,0.25)'
                     : '1px solid rgba(201,168,76,0.08)',
-                color: group === key ? '#C9A84C' : '#8A8378',
+                color: group === key ? 'var(--accent)' : 'var(--text-3)',
               }}
             >
               <Icon className="w-4 h-4" />
@@ -610,16 +610,16 @@ export default function ContaSection() {
         <div
           className="rounded-2xl p-6 md:p-8"
           style={{
-            background: 'rgba(16,16,16,0.8)',
+            background: 'var(--surface-2)',
             backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(201,168,76,0.15)',
+            border: '1px solid var(--border-1)',
             boxShadow: '0 12px 48px rgba(0,0,0,0.4)',
           }}
         >
           {groupDesc && (
             <p
               className="text-xs mb-5 flex items-start gap-2"
-              style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
             >
               <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
               {groupDesc}
