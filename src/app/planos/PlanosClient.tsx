@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation'
 import { Check, Sparkles, Loader2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
+import PremiumFeaturesCarousel from '@/components/payments/PremiumFeaturesCarousel'
 
 type Price = {
   id: string
@@ -129,6 +130,12 @@ export default function PlanosClient({ plans }: { plans: Plan[] }) {
             </p>
           )}
         </header>
+
+        {!isPremium && (
+          <div className="mb-8">
+            <PremiumFeaturesCarousel variant="full" />
+          </div>
+        )}
 
         {isPremium && (
           <div
