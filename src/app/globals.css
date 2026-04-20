@@ -164,6 +164,39 @@
 }
 
 /* ═══════════════════════════════════════════════════════
+   LITURGICAL SEASON OVERRIDES (opt-in)
+   Em Quaresma e Advento, a Igreja usa paramentos roxos —
+   o app espelha isso no acento quando
+   `html[data-liturgical-season="quaresma|advento"]` está set
+   (controlado por LiturgicalThemeSync). Sutil o bastante para
+   não brigar com a identidade do tema.
+   ═══════════════════════════════════════════════════════ */
+:root[data-liturgical-season="quaresma"],
+:root[data-liturgical-season="advento"] {
+  --accent:         #7A4C82;
+  --accent-hover:   #8E5C96;
+  --accent-soft:    rgba(122, 76, 130, 0.15);
+}
+
+:root[data-theme="light"][data-liturgical-season="quaresma"],
+:root[data-theme="light"][data-liturgical-season="advento"] {
+  --accent:         #5E3A66;
+  --accent-hover:   #4E2F56;
+  --accent-contrast:#FFFFFF;
+  --accent-soft:    rgba(94, 58, 102, 0.10);
+}
+
+@media (prefers-color-scheme: light) {
+  :root[data-theme="system"][data-liturgical-season="quaresma"],
+  :root[data-theme="system"][data-liturgical-season="advento"] {
+    --accent:         #5E3A66;
+    --accent-hover:   #4E2F56;
+    --accent-contrast:#FFFFFF;
+    --accent-soft:    rgba(94, 58, 102, 0.10);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
    AUTO THEME (system preference, applied when data-theme="system")
    O ThemeProvider (Sprint 1.2) escreve `data-theme="system"` e
    deixa este media query decidir. Fallback caso JS falhe.

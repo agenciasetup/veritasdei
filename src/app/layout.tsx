@@ -6,6 +6,7 @@ import { AuthProvider } from "@/contexts/AuthContext"
 import { ThemeProvider } from "@/contexts/ThemeContext"
 import ThemeScript from "@/components/ThemeScript"
 import ThemeSupabaseSync from "@/components/theme/ThemeSupabaseSync"
+import LiturgicalThemeSync from "@/components/theme/LiturgicalThemeSync"
 import PwaRegister from "@/components/layout/PwaRegister"
 import NoZoom from "@/components/layout/NoZoom"
 import GamificationEventsProvider from "@/components/gamification/GamificationEventsProvider"
@@ -95,6 +96,7 @@ export default function RootLayout({
           Pular para o conteúdo
         </a>
         <ThemeProvider>
+          <LiturgicalThemeSync />
           <AuthProvider>
             <ThemeSupabaseSync />
             <GamificationEventsProvider>
