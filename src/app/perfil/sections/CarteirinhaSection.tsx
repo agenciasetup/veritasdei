@@ -61,14 +61,14 @@ export default function CarteirinhaSection() {
             <div className="text-center">
               <h3
                 className="text-lg font-bold tracking-[0.2em] uppercase"
-                style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
+                style={{ fontFamily: 'var(--font-display)', color: 'var(--accent)' }}
               >
                 Veritas Dei
               </h3>
               <p
                 className="text-[10px] tracking-[0.15em] uppercase"
                 style={{
-                  fontFamily: 'Poppins, sans-serif',
+                  fontFamily: 'var(--font-body)',
                   color: 'rgba(201,168,76,0.7)',
                 }}
               >
@@ -104,13 +104,13 @@ export default function CarteirinhaSection() {
               <div className="flex-1 min-w-0">
                 <h4
                   className="text-lg font-bold truncate"
-                  style={{ fontFamily: 'Cinzel, serif', color: '#2A1F14' }}
+                  style={{ fontFamily: 'var(--font-display)', color: '#2A1F14' }}
                 >
                   {profile?.name ?? 'Membro'}
                 </h4>
                 <p
                   className="text-sm"
-                  style={{ fontFamily: 'Poppins, sans-serif', color: '#6B1D2A' }}
+                  style={{ fontFamily: 'var(--font-body)', color: '#6B1D2A' }}
                 >
                   {vocacaoLabel}
                 </p>
@@ -137,7 +137,7 @@ export default function CarteirinhaSection() {
               <div>
                 <p
                   className="text-[10px] tracking-wider uppercase mb-2"
-                  style={{ fontFamily: 'Cinzel, serif', color: '#8B7355' }}
+                  style={{ fontFamily: 'var(--font-display)', color: '#8B7355' }}
                 >
                   Sacramentos Recebidos
                 </p>
@@ -149,7 +149,7 @@ export default function CarteirinhaSection() {
                         key={s}
                         className="text-[11px] px-2.5 py-1 rounded-full"
                         style={{
-                          fontFamily: 'Poppins, sans-serif',
+                          fontFamily: 'var(--font-body)',
                           background: 'rgba(107,29,42,0.08)',
                           border: '1px solid rgba(201,168,76,0.3)',
                           color: '#6B1D2A',
@@ -175,14 +175,14 @@ export default function CarteirinhaSection() {
                 {profile?.user_number && (
                   <p
                     className="text-[10px] tracking-wider uppercase font-bold"
-                    style={{ fontFamily: 'Cinzel, serif', color: '#6B1D2A' }}
+                    style={{ fontFamily: 'var(--font-display)', color: '#6B1D2A' }}
                   >
                     ID #{String(profile.user_number).padStart(6, '0')}
                   </p>
                 )}
                 <p
                   className="text-[10px] tracking-wider uppercase"
-                  style={{ fontFamily: 'Cinzel, serif', color: '#8B7355' }}
+                  style={{ fontFamily: 'var(--font-display)', color: '#8B7355' }}
                 >
                   {memberSince ? `Membro desde ${memberSince}` : 'Membro'}
                 </p>
@@ -191,7 +191,7 @@ export default function CarteirinhaSection() {
                 className="w-6 h-6 rounded-full flex items-center justify-center"
                 style={{
                   background: 'rgba(107,29,42,0.06)',
-                  border: '1px solid rgba(201,168,76,0.25)',
+                  border: '1px solid var(--accent-soft)',
                 }}
               >
                 <CrossIcon size="xs" />
@@ -205,10 +205,10 @@ export default function CarteirinhaSection() {
         onClick={handleShare}
         className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold tracking-wider uppercase transition-all touch-target-lg active:scale-[0.98]"
         style={{
-          fontFamily: 'Cinzel, serif',
+          fontFamily: 'var(--font-display)',
           background: 'linear-gradient(135deg, rgba(201,168,76,0.15) 0%, rgba(201,168,76,0.08) 100%)',
           border: '1px solid rgba(201,168,76,0.3)',
-          color: '#C9A84C',
+          color: 'var(--accent)',
         }}
       >
         <Share2 className="w-4 h-4" />
@@ -233,13 +233,13 @@ function CardRow({
       <div>
         <p
           className="text-[10px] tracking-wider uppercase"
-          style={{ fontFamily: 'Cinzel, serif', color: '#8B7355' }}
+          style={{ fontFamily: 'var(--font-display)', color: '#8B7355' }}
         >
           {label}
         </p>
         <p
           className="text-sm"
-          style={{ fontFamily: 'Poppins, sans-serif', color: '#2A1F14' }}
+          style={{ fontFamily: 'var(--font-body)', color: '#2A1F14' }}
         >
           {value}
         </p>
