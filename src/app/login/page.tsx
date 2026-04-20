@@ -16,7 +16,7 @@ export default function LoginPage() {
   return (
     <Suspense fallback={
       <div className="flex items-center justify-center min-h-screen">
-        <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(201,168,76,0.3)', borderTopColor: '#C9A84C' }} />
+        <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--border-1)', borderTopColor: 'var(--accent)' }} />
       </div>
     }>
       <LoginPageInner />
@@ -123,8 +123,8 @@ function LoginPageInner() {
         href="/"
         className="absolute left-6 flex items-center gap-2 text-sm transition-colors z-10 touch-target active:opacity-70"
         style={{
-          color: '#8A8378',
-          fontFamily: 'Poppins, sans-serif',
+          color: 'var(--text-3)',
+          fontFamily: 'var(--font-body)',
           top: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)',
         }}
       >
@@ -139,11 +139,11 @@ function LoginPageInner() {
 
       <h1
         className="text-2xl md:text-3xl font-bold tracking-widest uppercase mb-2"
-        style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
+        style={{ fontFamily: 'var(--font-display)', color: 'var(--accent)' }}
       >
         Veritas Dei
       </h1>
-      <p className="text-sm mb-8" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+      <p className="text-sm mb-8" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}>
         Entre para a comunidade católica
       </p>
 
@@ -151,14 +151,14 @@ function LoginPageInner() {
       <div
         className="w-full max-w-lg rounded-2xl p-6 md:p-8 relative z-10"
         style={{
-          background: 'rgba(16,16,16,0.85)',
+          background: 'var(--surface-2)',
           backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(201,168,76,0.15)',
+          border: '1px solid var(--border-1)',
           boxShadow: '0 12px 48px rgba(0,0,0,0.5)',
         }}
       >
         {/* ═══ OAuth Buttons ═══ */}
-        <p className="text-xs mb-2" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
+        <p className="text-xs mb-2" style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}>
           Forma mais fácil: toque em Google e continue.
         </p>
         <div className="space-y-2 mb-5">
@@ -167,25 +167,25 @@ function LoginPageInner() {
 
         {/* Divider */}
         <div className="flex items-center gap-3 mb-5">
-          <span className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.1)' }} />
-          <span className="text-xs" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+          <span className="flex-1 h-px" style={{ background: 'var(--accent-soft)' }} />
+          <span className="text-xs" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}>
             ou use seu e-mail
           </span>
-          <span className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.1)' }} />
+          <span className="flex-1 h-px" style={{ background: 'var(--accent-soft)' }} />
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 p-1 rounded-xl" style={{ background: 'rgba(10,10,10,0.6)' }}>
+        <div className="flex gap-1 mb-6 p-1 rounded-xl" style={{ background: 'var(--surface-inset)' }}>
           {TABS.map(({ key, label, icon }) => (
             <button
               key={key}
               onClick={() => { setTab(key); clearState() }}
               className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-medium transition-all duration-200"
               style={{
-                fontFamily: 'Poppins, sans-serif',
-                background: tab === key ? 'rgba(201,168,76,0.12)' : 'transparent',
-                color: tab === key ? '#C9A84C' : '#7A7368',
-                border: tab === key ? '1px solid rgba(201,168,76,0.2)' : '1px solid transparent',
+                fontFamily: 'var(--font-body)',
+                background: tab === key ? 'var(--accent-soft)' : 'transparent',
+                color: tab === key ? 'var(--accent)' : 'var(--text-3)',
+                border: tab === key ? '1px solid var(--accent-soft)' : '1px solid transparent',
               }}
             >
               {icon}
@@ -201,8 +201,8 @@ function LoginPageInner() {
             style={{
               background: 'rgba(107,29,42,0.15)',
               border: '1px solid rgba(107,29,42,0.3)',
-              color: '#D94F5C',
-              fontFamily: 'Poppins, sans-serif',
+              color: 'var(--danger)',
+              fontFamily: 'var(--font-body)',
             }}
           >
             {error}
@@ -214,10 +214,10 @@ function LoginPageInner() {
           <div
             className="mb-4 px-4 py-3 rounded-xl text-sm flex items-start gap-2"
             style={{
-              background: 'rgba(201,168,76,0.08)',
-              border: '1px solid rgba(201,168,76,0.2)',
-              color: '#C9A84C',
-              fontFamily: 'Poppins, sans-serif',
+              background: 'var(--accent-soft)',
+              border: '1px solid var(--accent-soft)',
+              color: 'var(--accent)',
+              fontFamily: 'var(--font-body)',
             }}
           >
             <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -236,12 +236,12 @@ function LoginPageInner() {
                 onClick={() => setShowPassword(!showPassword)}
                 aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                 className="absolute right-1 top-[30px] touch-target flex items-center justify-center rounded-lg active:scale-95"
-                style={{ color: '#8A8378' }}
+                style={{ color: 'var(--text-3)' }}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            <button type="button" onClick={() => { setTab('primeiro-acesso'); clearState() }} className="text-xs underline" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+            <button type="button" onClick={() => { setTab('primeiro-acesso'); clearState() }} className="text-xs underline" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}>
               Esqueci minha senha
             </button>
             <SubmitButton loading={loading}>Entrar</SubmitButton>
@@ -260,7 +260,7 @@ function LoginPageInner() {
                 onClick={() => setShowPassword(!showPassword)}
                 aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                 className="absolute right-1 top-[30px] touch-target flex items-center justify-center rounded-lg active:scale-95"
-                style={{ color: '#8A8378' }}
+                style={{ color: 'var(--text-3)' }}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -268,7 +268,7 @@ function LoginPageInner() {
 
             {/* Vocação */}
             <div>
-              <label className="block text-xs mb-2 tracking-wider uppercase" style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}>Vocação</label>
+              <label className="block text-xs mb-2 tracking-wider uppercase" style={{ fontFamily: 'var(--font-display)', color: 'var(--text-2)' }}>Vocação</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {VOCACOES.map((v) => (
                   <button
@@ -277,10 +277,10 @@ function LoginPageInner() {
                     onClick={() => setVocacao(v.value)}
                     className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all"
                     style={{
-                      fontFamily: 'Poppins, sans-serif',
-                      background: vocacao === v.value ? 'rgba(201,168,76,0.12)' : 'rgba(10,10,10,0.5)',
-                      border: vocacao === v.value ? '1px solid rgba(201,168,76,0.3)' : '1px solid rgba(201,168,76,0.08)',
-                      color: vocacao === v.value ? '#C9A84C' : '#7A7368',
+                      fontFamily: 'var(--font-body)',
+                      background: vocacao === v.value ? 'var(--accent-soft)' : 'var(--surface-inset)',
+                      border: vocacao === v.value ? '1px solid var(--accent-soft)' : '1px solid var(--border-1)',
+                      color: vocacao === v.value ? 'var(--accent)' : 'var(--text-3)',
                     }}
                   >
                     <VocacaoIcon vocacao={v.value} size={16} />
@@ -297,7 +297,7 @@ function LoginPageInner() {
         {/* ═══ PRIMEIRO ACESSO / MAGIC LINK TAB ═══ */}
         {tab === 'primeiro-acesso' && (
           <form onSubmit={handleMagicLink} className="space-y-4">
-            <p className="text-sm leading-relaxed mb-2" style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}>
+            <p className="text-sm leading-relaxed mb-2" style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}>
               Insira seu e-mail e enviaremos um link de acesso. Ideal para primeiro login ou recuperação de senha.
             </p>
             <InputField label="E-mail" type="email" value={email} onChange={setEmail} placeholder="seu@email.com" required />
@@ -328,7 +328,7 @@ function OAuthButton({ provider, onClick, disabled }: { provider: 'google' | 'fa
       onClick={onClick}
       disabled={disabled}
       className="w-full flex items-center justify-center gap-3 py-3 rounded-xl text-sm font-medium transition-all hover:opacity-90"
-      style={{ background: bg, color, fontFamily: 'Poppins, sans-serif', border: provider === 'apple' ? '1px solid rgba(255,255,255,0.15)' : 'none' }}
+      style={{ background: bg, color, fontFamily: 'var(--font-body)', border: provider === 'apple' ? '1px solid var(--border-1)' : 'none' }}
     >
       <Icon />
       {label}
@@ -370,13 +370,13 @@ function InputField({
 }) {
   return (
     <div>
-      <label className="block text-xs mb-2 tracking-wider uppercase" style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}>{label}</label>
+      <label className="block text-xs mb-2 tracking-wider uppercase" style={{ fontFamily: 'var(--font-display)', color: 'var(--text-2)' }}>{label}</label>
       <input
         type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} required={required} minLength={minLength}
         className="w-full px-4 py-3 rounded-xl text-sm transition-all duration-200"
-        style={{ background: 'rgba(10,10,10,0.6)', border: '1px solid rgba(201,168,76,0.12)', color: '#F2EDE4', fontFamily: 'Poppins, sans-serif', outline: 'none' }}
-        onFocus={(e) => { e.target.style.borderColor = 'rgba(201,168,76,0.4)'; e.target.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.08)' }}
-        onBlur={(e) => { e.target.style.borderColor = 'rgba(201,168,76,0.12)'; e.target.style.boxShadow = 'none' }}
+        style={{ background: 'var(--surface-inset)', border: '1px solid var(--border-1)', color: 'var(--text-1)', fontFamily: 'var(--font-body)', outline: 'none' }}
+        onFocus={(e) => { e.target.style.borderColor = 'var(--accent)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-soft)' }}
+        onBlur={(e) => { e.target.style.borderColor = 'var(--border-1)'; e.target.style.boxShadow = 'none' }}
       />
     </div>
   )
@@ -388,15 +388,15 @@ function SubmitButton({ children, loading }: { children: React.ReactNode; loadin
       type="submit" disabled={loading}
       className="w-full py-3 rounded-xl text-sm font-semibold tracking-wider uppercase transition-all duration-200 flex items-center justify-center gap-2"
       style={{
-        fontFamily: 'Cinzel, serif',
-        background: loading ? 'rgba(201,168,76,0.15)' : 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
-        color: loading ? '#7A7368' : '#0A0A0A',
+        fontFamily: 'var(--font-display)',
+        background: loading ? 'var(--accent-soft)' : 'var(--accent)',
+        color: loading ? 'var(--text-3)' : 'var(--accent-contrast)',
         border: 'none',
         cursor: loading ? 'not-allowed' : 'pointer',
       }}
     >
       {loading ? (
-        <div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(201,168,76,0.3)', borderTopColor: '#C9A84C' }} />
+        <div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--border-1)', borderTopColor: 'var(--accent)' }} />
       ) : children}
     </button>
   )
