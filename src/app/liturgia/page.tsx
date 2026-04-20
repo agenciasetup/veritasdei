@@ -40,9 +40,8 @@ export default function LiturgiaPage() {
           <div
             className="p-5 rounded-2xl"
             style={{
-              background:
-                'linear-gradient(135deg, rgba(201,168,76,0.08), rgba(201,168,76,0.02))',
-              border: '1px solid rgba(201,168,76,0.18)',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border-1)',
             }}
           >
             <div className="flex items-center gap-2 mb-2">
@@ -52,20 +51,24 @@ export default function LiturgiaPage() {
               />
               <span
                 className="text-[11px] uppercase tracking-[0.15em]"
-                style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+                style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
               >
                 Hoje — {hoje}
               </span>
             </div>
             <p
-              className="text-xl mb-1"
-              style={{ color: '#F2EDE4', fontFamily: 'Cormorant Garamond, serif' }}
+              className="text-xl mb-1 tracking-[0.04em]"
+              style={{
+                color: 'var(--text-1)',
+                fontFamily: 'var(--font-display)',
+                fontWeight: 600,
+              }}
             >
               {day.title || day.name}
             </p>
             <p
               className="text-sm"
-              style={{ color: '#A8A096', fontFamily: 'Poppins, sans-serif' }}
+              style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}
             >
               {day.season}
             </p>

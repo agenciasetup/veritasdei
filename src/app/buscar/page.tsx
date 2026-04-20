@@ -97,14 +97,18 @@ function BuscarInner() {
         <section className="px-4 max-w-3xl mx-auto min-h-[68vh] flex flex-col justify-center">
           <div className="text-center mb-8">
             <p
-              className="text-2xl md:text-3xl leading-tight"
-              style={{ color: '#F2EDE4', fontFamily: 'Cormorant Garamond, serif' }}
+              className="text-2xl md:text-3xl leading-tight tracking-[0.04em]"
+              style={{
+                color: 'var(--text-1)',
+                fontFamily: 'var(--font-display)',
+                fontWeight: 600,
+              }}
             >
               {buildPastoralGreeting(displayName)}
             </p>
             <p
               className="text-sm mt-3"
-              style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
             >
               Pergunte com liberdade. Eu respondo com base na fé católica e nas fontes.
             </p>
@@ -124,8 +128,14 @@ function BuscarInner() {
                 key={item.question}
                 type="button"
                 onClick={() => void handleSearch(item.question)}
-                className="theme-chip"
-                style={{ minHeight: 44 }}
+                className="px-4 py-2 rounded-xl text-sm active:scale-[0.97] transition-transform"
+                style={{
+                  minHeight: 44,
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border-1)',
+                  color: 'var(--text-2)',
+                  fontFamily: 'var(--font-body)',
+                }}
               >
                 {item.question}
               </button>
@@ -137,7 +147,7 @@ function BuscarInner() {
           <section className="px-4 pt-6 max-w-2xl mx-auto">
             <p
               className="text-sm mb-3"
-              style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
             >
               {buildPastoralGreeting(displayName)}
             </p>
@@ -153,12 +163,15 @@ function BuscarInner() {
           {error && (
             <div className="px-4 max-w-2xl mx-auto mt-4">
               <div
-                className="glass-card px-6 py-4 text-center"
-                style={{ borderColor: 'rgba(107, 29, 42, 0.3)' }}
+                className="px-6 py-4 text-center rounded-2xl"
+                style={{
+                  background: 'color-mix(in srgb, var(--danger) 10%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--danger) 30%, transparent)',
+                }}
               >
                 <p
                   className="text-sm"
-                  style={{ color: '#8B3145', fontFamily: 'Poppins, sans-serif' }}
+                  style={{ color: 'var(--danger)', fontFamily: 'var(--font-body)' }}
                 >
                   {error}
                 </p>
