@@ -24,6 +24,7 @@ import Link from 'next/link'
 import { Lock, Sparkles } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getEntitlement } from '@/lib/payments/entitlements'
+import PremiumFeaturesCarousel from './PremiumFeaturesCarousel'
 
 type Props = {
   children: ReactNode
@@ -123,30 +124,42 @@ function LoginCTA() {
 
 function Upsell({ title, description }: { title: string; description: string }) {
   return (
-    <main className="min-h-screen flex items-center justify-center px-6 py-16">
+    <main className="min-h-screen flex items-center justify-center px-4 py-12 md:py-16">
       <div
-        className="max-w-md w-full p-8 rounded-3xl text-center"
+        className="max-w-lg w-full p-6 md:p-8 rounded-3xl"
         style={{
           background: 'var(--surface-2)',
           border: '1px solid var(--border-1)',
         }}
       >
-        <PremiumBadge />
-        <h1
-          className="text-2xl md:text-[28px] tracking-[0.08em] uppercase mb-2"
-          style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)', fontWeight: 700, lineHeight: 1.15 }}
-        >
-          {title}
-        </h1>
-        <p
-          className="text-sm mb-6"
-          style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}
-        >
-          {description}
-        </p>
+        <div className="text-center">
+          <PremiumBadge />
+          <h1
+            className="text-2xl md:text-[28px] tracking-[0.08em] uppercase mb-2"
+            style={{
+              fontFamily: 'var(--font-display)',
+              color: 'var(--text-1)',
+              fontWeight: 700,
+              lineHeight: 1.15,
+            }}
+          >
+            {title}
+          </h1>
+          <p
+            className="text-sm mb-6 max-w-sm mx-auto"
+            style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}
+          >
+            {description}
+          </p>
+        </div>
+
+        <div className="mb-6">
+          <PremiumFeaturesCarousel variant="popup" />
+        </div>
+
         <Link
           href="/planos"
-          className="inline-block w-full px-6 py-3 rounded-xl text-sm mb-2 active:scale-[0.98] transition-transform"
+          className="inline-block w-full text-center px-6 py-3 rounded-xl text-sm mb-2 active:scale-[0.98] transition-transform"
           style={{
             background: 'var(--accent)',
             color: 'var(--accent-contrast)',
@@ -158,7 +171,7 @@ function Upsell({ title, description }: { title: string; description: string }) 
         </Link>
         <Link
           href="/rezar"
-          className="inline-block w-full text-xs py-2"
+          className="block w-full text-center text-xs py-2"
           style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
         >
           Voltar
