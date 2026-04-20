@@ -30,8 +30,8 @@ export default function AprenderContent() {
   return (
     <main className="min-h-screen pb-24">
       <HubHeader
-        title="Aprender"
-        subtitle="Trilhas de estudo, dogmas e doutores da Igreja"
+        title="Formação"
+        subtitle="Trilhas guiadas de doutrina, dogmas e doutores da Igreja"
       />
 
       <PullToRefresh onRefresh={() => router.refresh()}>

@@ -35,8 +35,8 @@ type Props = {
 
 export default async function RequirePremium({
   children,
-  title = 'Conteúdo Premium',
-  description = 'Esta parte do Veritas Dei faz parte do Modo Estudo — trilhas, dogmas, doutores da Igreja e formação completa.',
+  title = 'Formação Premium',
+  description = 'Trilhas guiadas com quiz, dogmas, sacramentos, São Tomás e doutores da Igreja. Estudo aprofundado para católicos que querem crescer na fé.',
 }: Props) {
   const supabase = await createServerSupabaseClient()
   const {
@@ -56,36 +56,61 @@ export default async function RequirePremium({
   return <Upsell title={title} description={description} />
 }
 
+function PremiumBadge() {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] tracking-[0.14em] uppercase mb-4"
+      style={{
+        background: 'var(--accent-soft)',
+        color: 'var(--accent)',
+        fontFamily: 'var(--font-body)',
+        fontWeight: 600,
+      }}
+    >
+      <Sparkles className="w-3 h-3" />
+      Premium
+    </span>
+  )
+}
+
 function LoginCTA() {
   return (
     <main className="min-h-screen flex items-center justify-center px-6">
       <div
         className="max-w-md w-full p-8 rounded-3xl text-center"
         style={{
-          background: 'rgba(255,255,255,0.02)',
-          border: '1px solid rgba(201,168,76,0.2)',
+          background: 'var(--surface-2)',
+          border: '1px solid var(--border-1)',
         }}
       >
-        <Lock className="w-10 h-10 mx-auto mb-4" style={{ color: '#C9A84C' }} />
+        <div
+          className="inline-flex items-center justify-center w-12 h-12 rounded-2xl mb-4"
+          style={{
+            background: 'var(--accent-soft)',
+            color: 'var(--accent)',
+          }}
+        >
+          <Lock className="w-5 h-5" />
+        </div>
         <h1
-          className="text-2xl mb-2"
-          style={{ fontFamily: 'Cormorant Garamond, serif', color: '#F2EDE4' }}
+          className="text-2xl tracking-[0.08em] uppercase mb-2"
+          style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)', fontWeight: 700 }}
         >
           Entre para continuar
         </h1>
         <p
           className="text-sm mb-6"
-          style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+          style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
         >
-          Faça login para acessar o Modo Estudo.
+          Faça login para acessar a Formação Premium.
         </p>
         <Link
           href="/login?next=/planos"
-          className="inline-block px-6 py-3 rounded-xl text-sm"
+          className="inline-block w-full px-6 py-3 rounded-xl text-sm active:scale-[0.98] transition-transform"
           style={{
-            background: 'linear-gradient(135deg, #C9A84C, #A88B3A)',
-            color: '#0F0E0C',
-            fontFamily: 'Poppins, sans-serif',
+            background: 'var(--accent)',
+            color: 'var(--accent-contrast)',
+            fontFamily: 'var(--font-body)',
             fontWeight: 600,
           }}
         >
@@ -102,47 +127,39 @@ function Upsell({ title, description }: { title: string; description: string }) 
       <div
         className="max-w-md w-full p-8 rounded-3xl text-center"
         style={{
-          background: 'rgba(255,255,255,0.02)',
-          border: '1px solid rgba(201,168,76,0.25)',
+          background: 'var(--surface-2)',
+          border: '1px solid var(--border-1)',
         }}
       >
-        <div
-          className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4"
-          style={{
-            background: 'linear-gradient(135deg, rgba(201,168,76,0.18), rgba(201,168,76,0.05))',
-            border: '1px solid rgba(201,168,76,0.3)',
-          }}
-        >
-          <Sparkles className="w-6 h-6" style={{ color: '#C9A84C' }} />
-        </div>
+        <PremiumBadge />
         <h1
-          className="text-2xl mb-2"
-          style={{ fontFamily: 'Cormorant Garamond, serif', color: '#F2EDE4' }}
+          className="text-2xl md:text-[28px] tracking-[0.08em] uppercase mb-2"
+          style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)', fontWeight: 700, lineHeight: 1.15 }}
         >
           {title}
         </h1>
         <p
           className="text-sm mb-6"
-          style={{ color: '#A8A096', fontFamily: 'Poppins, sans-serif' }}
+          style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}
         >
           {description}
         </p>
         <Link
           href="/planos"
-          className="inline-block w-full px-6 py-3 rounded-xl text-sm mb-2"
+          className="inline-block w-full px-6 py-3 rounded-xl text-sm mb-2 active:scale-[0.98] transition-transform"
           style={{
-            background: 'linear-gradient(135deg, #C9A84C, #A88B3A)',
-            color: '#0F0E0C',
-            fontFamily: 'Poppins, sans-serif',
+            background: 'var(--accent)',
+            color: 'var(--accent-contrast)',
+            fontFamily: 'var(--font-body)',
             fontWeight: 600,
           }}
         >
           Ver planos
         </Link>
         <Link
-          href="/"
+          href="/rezar"
           className="inline-block w-full text-xs py-2"
-          style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+          style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
         >
           Voltar
         </Link>
