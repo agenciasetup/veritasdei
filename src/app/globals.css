@@ -569,9 +569,9 @@ body::after {
 .skeleton {
   background: linear-gradient(
     90deg,
-    rgba(201, 168, 76, 0.05) 25%,
-    rgba(201, 168, 76, 0.1) 50%,
-    rgba(201, 168, 76, 0.05) 75%
+    var(--surface-inset) 25%,
+    color-mix(in srgb, var(--accent) 12%, var(--surface-inset)) 50%,
+    var(--surface-inset) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.8s ease-in-out infinite;
