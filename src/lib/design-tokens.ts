@@ -5,34 +5,91 @@
  * Mantenha sincronizado com src/app/globals.css :root.
  */
 
+/**
+ * Tokens semânticos por tema. Use `theme.dark` / `theme.light` ao escrever
+ * componentes novos ou quando precisar de acesso ao valor hex via JS
+ * (ex: canvas, react-flow, meta theme-color).
+ *
+ * Para CSS, prefira as CSS vars correspondentes (`var(--surface-1)` etc) —
+ * elas respondem automaticamente ao `data-theme` do <html>.
+ */
+export const theme = {
+  dark: {
+    surface1:       '#0F0E0C',
+    surface2:       '#141210',
+    surface3:       '#1C1913',
+    surfaceInset:   'rgba(0, 0, 0, 0.35)',
+    text1:          '#F2EDE4',
+    text2:          '#B8AFA7',
+    text3:          '#8A8378',
+    textInverse:    '#1C140C',
+    border1:        'rgba(242, 237, 228, 0.12)',
+    border2:        'rgba(242, 237, 228, 0.06)',
+    accent:         '#C9A84C',
+    accentHover:    '#D9C077',
+    accentContrast: '#1C140C',
+    accentSoft:     'rgba(201, 168, 76, 0.15)',
+    success:        '#66BB6A',
+    danger:         '#D94F5C',
+    warning:        '#E67E22',
+  },
+  light: {
+    surface1:       '#F7F2E8',
+    surface2:       '#FFFFFF',
+    surface3:       '#FBF6EC',
+    surfaceInset:   'rgba(28, 20, 12, 0.04)',
+    text1:          '#1C140C',
+    text2:          '#4A3E30',
+    text3:          '#7A6E5E',
+    textInverse:    '#F7F2E8',
+    border1:        'rgba(28, 20, 12, 0.12)',
+    border2:        'rgba(28, 20, 12, 0.06)',
+    accent:         '#8B2435',
+    accentHover:    '#6B1D2A',
+    accentContrast: '#FFFFFF',
+    accentSoft:     'rgba(139, 36, 53, 0.10)',
+    success:        '#2E7D32',
+    danger:         '#B71C3A',
+    warning:        '#B3621F',
+  },
+} as const
+
+export type ThemeName = keyof typeof theme
+export type ThemeTokens = typeof theme.dark
+
+/**
+ * Legacy — valores hex fixos (tema dark). Mantido para compatibilidade
+ * com chamadores que leem cores via JS (ex: três.js, react-flow).
+ * Novos componentes devem usar `theme.dark` / `theme.light` ou CSS vars.
+ */
 export const colors = {
   // ── Core surface ──
-  bgDeep:        '#0F0E0C',
-  bgSurface:     '#141210',
+  bgDeep:        theme.dark.surface1,
+  bgSurface:     theme.dark.surface2,
   bgCard:        'rgba(20, 18, 14, 0.72)',
-  bgCardSolid:   '#18160F',
+  bgCardSolid:   theme.dark.surface3,
   bgVerse:       'rgba(22, 18, 14, 0.6)',
 
   // ── Text ──
-  textPrimary:   '#F2EDE4',
-  textSecondary: '#B8AFA7',
-  textMuted:     '#8A8378', // bumped de #7A7368 para WCAG AA em texto pequeno
+  textPrimary:   theme.dark.text1,
+  textSecondary: theme.dark.text2,
+  textMuted:     theme.dark.text3,
 
   // ── Accents ──
-  gold:          '#C9A84C',
-  goldLight:     '#D9C077',
-  goldDim:       'rgba(201, 168, 76, 0.15)',
+  gold:          theme.dark.accent,
+  goldLight:     theme.dark.accentHover,
+  goldDim:       theme.dark.accentSoft,
   wine:          '#6B1D2A',
   wineLight:     '#8B3145',
 
   // ── Borders ──
   borderGold:    'rgba(201, 168, 76, 0.12)',
-  borderSubtle:  'rgba(242, 237, 228, 0.06)',
+  borderSubtle:  theme.dark.border2,
 
   // ── Semantic ──
-  success:       '#66BB6A',
-  danger:        '#D94F5C',
-  warning:       '#E67E22',
+  success:       theme.dark.success,
+  danger:        theme.dark.danger,
+  warning:       theme.dark.warning,
 } as const
 
 export const fonts = {

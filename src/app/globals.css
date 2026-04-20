@@ -4,43 +4,69 @@
    VERITAS DEI — Gothic Catholic Theme
    ═══════════════════════════════════════════════════════ */
 
-:root {
-  /* ── Core Palette ── */
-  --bg-deep:        #0F0E0C;
-  --bg-surface:     #141210;
+:root,
+:root[data-theme="dark"] {
+  /* ═══════════════════════════════════════════════════════
+     SEMANTIC TOKENS — dark (default)
+     Use estes em novos componentes. Os aliases legacy abaixo
+     apontam para estes valores.
+     ═══════════════════════════════════════════════════════ */
+  --surface-1:      #0F0E0C; /* deepest — app background */
+  --surface-2:      #141210; /* elevated surfaces / nav */
+  --surface-3:      #1C1913; /* cards / sheets */
+  --surface-inset:  rgba(0, 0, 0, 0.35); /* inputs inset */
+
+  --text-1:         #F2EDE4;
+  --text-2:         #B8AFA7;
+  --text-3:         #8A8378;
+  --text-inverse:   #1C140C;
+
+  --border-1:       rgba(242, 237, 228, 0.12);
+  --border-2:       rgba(242, 237, 228, 0.06);
+
+  --accent:         #C9A84C;
+  --accent-hover:   #D9C077;
+  --accent-contrast:#1C140C;
+  --accent-soft:    rgba(201, 168, 76, 0.15);
+
+  --success:        #66BB6A;
+  --danger:         #D94F5C;
+  --warning:        #E67E22;
+
+  /* ═══════════════════════════════════════════════════════
+     LEGACY ALIASES — apontam para semânticos. Migrar
+     gradualmente (Fase 2) para os semânticos acima.
+     ═══════════════════════════════════════════════════════ */
+  --bg-deep:        var(--surface-1);
+  --bg-surface:     var(--surface-2);
   --bg-card:        rgba(20, 18, 14, 0.72);
-  --bg-card-solid:  #18160F;
+  --bg-card-solid:  var(--surface-3);
   --bg-verse:       rgba(22, 18, 14, 0.6);
 
-  /* ── Text ── */
-  --text-primary:   #F2EDE4;
-  --text-secondary: #B8AFA7;
-  --text-muted:     #8A8378; /* bumped de #7A7368 para WCAG AA em texto pequeno */
+  --text-primary:   var(--text-1);
+  --text-secondary: var(--text-2);
+  --text-muted:     var(--text-3);
 
-  /* ── Accents ── */
-  --gold:           #C9A84C;
-  --gold-light:     #D9C077;
-  --gold-dim:       rgba(201, 168, 76, 0.15);
+  --gold:           var(--accent);
+  --gold-light:     var(--accent-hover);
+  --gold-dim:       var(--accent-soft);
   --wine:           #6B1D2A;
   --wine-light:     #8B3145;
   --wine-dim:       rgba(107, 29, 42, 0.25);
 
-  /* ── Borders & Glass ── */
   --border-gold:    rgba(201, 168, 76, 0.12);
-  --border-subtle:  rgba(242, 237, 228, 0.06);
+  --border-subtle:  var(--border-2);
   --glass-blur:     20px;
 
-  /* ── Legacy mapping ── */
-  --background:     #0F0E0C;
-  --foreground:     #F2EDE4;
-  --accent-primary: #C9A84C;
+  --background:     var(--surface-1);
+  --foreground:     var(--text-1);
+  --accent-primary: var(--accent);
   --accent-secondary: #6B1D2A;
-  --border-color:   rgba(201, 168, 76, 0.12);
+  --border-color:   var(--border-1);
 
-  /* ── Semantic colors ── */
-  --color-success:  #66BB6A;
-  --color-danger:   #D94F5C;
-  --color-warning:  #E67E22;
+  --color-success:  var(--success);
+  --color-danger:   var(--danger);
+  --color-warning:  var(--warning);
 
   /* ── Touch targets ── */
   --touch-target:    44px;
@@ -74,9 +100,164 @@
   --velvet:         radial-gradient(140% 120% at 50% 0%, rgba(107,29,42,0.35) 0%, rgba(22,15,13,0.95) 55%, #0A0806 100%);
 }
 
+/* ═══════════════════════════════════════════════════════
+   LIGHT THEME
+   Consumers que ainda usam aliases (`--gold`, `--text-primary`,
+   etc) recebem automaticamente os valores light. Sprint 2.x
+   migra componentes para tokens semânticos (`--accent`, `--text-1`).
+   ═══════════════════════════════════════════════════════ */
+:root[data-theme="light"] {
+  --surface-1:      #F7F2E8; /* paper — app background */
+  --surface-2:      #FFFFFF; /* elevated surfaces / nav */
+  --surface-3:      #FBF6EC; /* cards / sheets */
+  --surface-inset:  rgba(28, 20, 12, 0.04);
+
+  --text-1:         #1C140C; /* ink */
+  --text-2:         #4A3E30;
+  --text-3:         #7A6E5E;
+  --text-inverse:   #F7F2E8;
+
+  --border-1:       rgba(28, 20, 12, 0.12);
+  --border-2:       rgba(28, 20, 12, 0.06);
+
+  /* Wine como accent no light — contraste AA com surface clara,
+     mantém tom católico sem borrar o ouro em fundo claro. */
+  --accent:         #8B2435;
+  --accent-hover:   #6B1D2A;
+  --accent-contrast:#FFFFFF;
+  --accent-soft:    rgba(139, 36, 53, 0.10);
+
+  --success:        #2E7D32;
+  --danger:         #B71C3A;
+  --warning:        #B3621F;
+
+  /* Legacy aliases — recalibradas para tema claro */
+  --bg-deep:        var(--surface-1);
+  --bg-surface:     var(--surface-2);
+  --bg-card:        rgba(255, 255, 255, 0.82);
+  --bg-card-solid:  var(--surface-3);
+  --bg-verse:       rgba(247, 242, 232, 0.82);
+
+  --text-primary:   var(--text-1);
+  --text-secondary: var(--text-2);
+  --text-muted:     var(--text-3);
+
+  --gold:           var(--accent);
+  --gold-light:     var(--accent-hover);
+  --gold-dim:       var(--accent-soft);
+
+  --border-gold:    rgba(139, 36, 53, 0.16);
+  --border-subtle:  var(--border-2);
+
+  --background:     var(--surface-1);
+  --foreground:     var(--text-1);
+  --accent-primary: var(--accent);
+  --border-color:   var(--border-1);
+
+  --color-success:  var(--success);
+  --color-danger:   var(--danger);
+  --color-warning:  var(--warning);
+
+  /* Landing vignettes em light — paper-like */
+  --hero-vignette:  radial-gradient(120% 90% at 12% 0%, rgba(139, 36, 53, 0.20) 0%, rgba(247, 242, 232, 0.92) 46%, #F7F2E8 100%);
+  --velvet:         radial-gradient(140% 120% at 50% 0%, rgba(139, 36, 53, 0.15) 0%, rgba(247, 242, 232, 0.95) 55%, #F7F2E8 100%);
+}
+
+/* ═══════════════════════════════════════════════════════
+   AUTO THEME (system preference, applied when data-theme="system")
+   O ThemeProvider (Sprint 1.2) escreve `data-theme="system"` e
+   deixa este media query decidir. Fallback caso JS falhe.
+   ═══════════════════════════════════════════════════════ */
+@media (prefers-color-scheme: light) {
+  :root[data-theme="system"] {
+    --surface-1:      #F7F2E8;
+    --surface-2:      #FFFFFF;
+    --surface-3:      #FBF6EC;
+    --surface-inset:  rgba(28, 20, 12, 0.04);
+    --text-1:         #1C140C;
+    --text-2:         #4A3E30;
+    --text-3:         #7A6E5E;
+    --text-inverse:   #F7F2E8;
+    --border-1:       rgba(28, 20, 12, 0.12);
+    --border-2:       rgba(28, 20, 12, 0.06);
+    --accent:         #8B2435;
+    --accent-hover:   #6B1D2A;
+    --accent-contrast:#FFFFFF;
+    --accent-soft:    rgba(139, 36, 53, 0.10);
+    --success:        #2E7D32;
+    --danger:         #B71C3A;
+    --warning:        #B3621F;
+    --bg-deep:        var(--surface-1);
+    --bg-surface:     var(--surface-2);
+    --bg-card:        rgba(255, 255, 255, 0.82);
+    --bg-card-solid:  var(--surface-3);
+    --bg-verse:       rgba(247, 242, 232, 0.82);
+    --text-primary:   var(--text-1);
+    --text-secondary: var(--text-2);
+    --text-muted:     var(--text-3);
+    --gold:           var(--accent);
+    --gold-light:     var(--accent-hover);
+    --gold-dim:       var(--accent-soft);
+    --border-gold:    rgba(139, 36, 53, 0.16);
+    --border-subtle:  var(--border-2);
+    --background:     var(--surface-1);
+    --foreground:     var(--text-1);
+    --accent-primary: var(--accent);
+    --border-color:   var(--border-1);
+    --color-success:  var(--success);
+    --color-danger:   var(--danger);
+    --color-warning:  var(--warning);
+    --hero-vignette:  radial-gradient(120% 90% at 12% 0%, rgba(139, 36, 53, 0.20) 0%, rgba(247, 242, 232, 0.92) 46%, #F7F2E8 100%);
+    --velvet:         radial-gradient(140% 120% at 50% 0%, rgba(139, 36, 53, 0.15) 0%, rgba(247, 242, 232, 0.95) 55%, #F7F2E8 100%);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   TAILWIND v4 — @theme inline
+   Expõe tokens semânticos como utilitários Tailwind:
+     bg-surface-1 / bg-surface-2 / bg-surface-3
+     text-1 / text-2 / text-3 / text-inverse
+     border-1 / border-2
+     bg-accent / text-accent / border-accent
+     bg-accent-soft / text-accent-contrast
+     text-success / text-danger / text-warning (e bg-/border-)
+   Classes respondem a `data-theme` do <html> via CSS vars.
+   ═══════════════════════════════════════════════════════ */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  /* Surfaces */
+  --color-surface-1:     var(--surface-1);
+  --color-surface-2:     var(--surface-2);
+  --color-surface-3:     var(--surface-3);
+  --color-surface-inset: var(--surface-inset);
+
+  /* Text */
+  --color-text-1:       var(--text-1);
+  --color-text-2:       var(--text-2);
+  --color-text-3:       var(--text-3);
+  --color-text-inverse: var(--text-inverse);
+
+  /* Borders */
+  --color-border-1: var(--border-1);
+  --color-border-2: var(--border-2);
+
+  /* Accent */
+  --color-accent:          var(--accent);
+  --color-accent-hover:    var(--accent-hover);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-accent-soft:     var(--accent-soft);
+
+  /* Feedback */
+  --color-success: var(--success);
+  --color-danger:  var(--danger);
+  --color-warning: var(--warning);
+
+  /* Fontes semânticas (expõe `font-display`, `font-elegant`, `font-body`) */
+  --font-display: var(--font-display);
+  --font-elegant: var(--font-elegant);
+  --font-body:    var(--font-body);
 }
 
 /* ═══════════════════════════════════════════════════════
