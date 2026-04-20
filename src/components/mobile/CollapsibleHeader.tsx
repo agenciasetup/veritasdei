@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import Divider from '@/components/ui/Divider'
 
 /**
  * `<CollapsibleHeader />` — padrão Large Title estilo iOS.
@@ -62,17 +63,17 @@ export function CollapsibleHeader({
           style={{
             opacity: collapsed ? 1 : 0,
             pointerEvents: collapsed ? 'auto' : 'none',
-            background: 'rgba(15,14,12,0.85)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            borderBottom: '1px solid rgba(201,168,76,0.08)',
+            background: 'color-mix(in srgb, var(--surface-2) 92%, transparent)',
+            backdropFilter: 'saturate(130%) blur(8px)',
+            WebkitBackdropFilter: 'saturate(130%) blur(8px)',
+            borderBottom: '1px solid var(--border-1)',
           }}
         >
           <h1
-            className="text-base font-medium truncate"
+            className="text-sm font-semibold tracking-[0.12em] uppercase truncate"
             style={{
-              color: 'var(--text-primary)',
-              fontFamily: 'var(--font-body)',
+              color: 'var(--text-1)',
+              fontFamily: 'var(--font-display)',
             }}
           >
             {title}
@@ -88,31 +89,27 @@ export function CollapsibleHeader({
         )}
         {expandedExtra && <div className="mb-3">{expandedExtra}</div>}
         <h1
-          className="text-3xl leading-tight font-semibold"
+          className="text-[28px] leading-tight tracking-[0.1em] uppercase"
           style={{
-            fontFamily: 'var(--font-elegant)',
-            color: 'var(--text-primary)',
+            fontFamily: 'var(--font-display)',
+            color: 'var(--text-1)',
+            fontWeight: 700,
           }}
         >
           {title}
         </h1>
         {subtitle && (
           <p
-            className="text-sm mt-1.5"
+            className="text-sm mt-2 max-w-md mx-auto"
             style={{
-              color: 'var(--text-muted)',
+              color: 'var(--text-3)',
               fontFamily: 'var(--font-body)',
             }}
           >
             {subtitle}
           </p>
         )}
-        <div
-          className="ornament-divider max-w-xs mx-auto"
-          style={{ marginTop: '1rem', marginBottom: '0.5rem' }}
-        >
-          <span>&#10022;</span>
-        </div>
+        <Divider variant="ornament" className="max-w-[180px] mx-auto" spacing="default" />
         <div ref={sentinelRef} className="h-px" aria-hidden="true" />
       </header>
 

@@ -7,8 +7,12 @@ import { useRecentRoutes } from '@/hooks/useRecentRoutes'
 
 /**
  * Card grande, arredondado, tocável — usado nas páginas de hub
- * (/orar, /liturgia, /aprender). Visual pensado pra dedo de mobile:
- * alvo mínimo de 72px, alto contraste, ícone grande à esquerda.
+ * (`/rezar`, `/formacao`, `/igrejas`, `/biblioteca`). Visual flat
+ * iOS-style pensado pra dedo de mobile: alvo mínimo 76px, alto
+ * contraste, ícone grande à esquerda.
+ *
+ * `featured` destaca o tile principal do hub (ex: Terço em /rezar)
+ * com acento sutil na borda + fundo do ícone.
  */
 
 interface HubTileProps {
@@ -25,16 +29,14 @@ export default function HubTile({ href, icon, title, subtitle, featured }: HubTi
     <Link
       href={href}
       onClick={() => track(href, title)}
-      className="ios-surface flex items-center gap-4 p-4 transition-transform active:scale-[0.985] touch-target-lg"
+      className="flex items-center gap-4 p-4 rounded-2xl transition-transform duration-150 ease-out active:scale-[0.985] touch-target-lg"
       style={{
         minHeight: '76px',
-        ...(featured
-          ? {
-              borderColor: 'rgba(201,168,76,0.22)',
-              boxShadow:
-                '0 1px 0 rgba(255,255,255,0.05) inset, 0 10px 30px rgba(0,0,0,0.4), 0 0 0 1px rgba(201,168,76,0.08)',
-            }
-          : null),
+        background: 'var(--surface-2)',
+        border: `1px solid ${featured ? 'var(--accent-soft)' : 'var(--border-1)'}`,
+        boxShadow: featured
+          ? '0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.06)'
+          : undefined,
       }}
     >
       <div
@@ -42,13 +44,9 @@ export default function HubTile({ href, icon, title, subtitle, featured }: HubTi
         style={{
           width: '48px',
           height: '48px',
-          background: featured
-            ? 'linear-gradient(180deg, rgba(201,168,76,0.28) 0%, rgba(201,168,76,0.08) 100%)'
-            : 'rgba(255,255,255,0.04)',
-          border: featured
-            ? '1px solid rgba(201,168,76,0.25)'
-            : '1px solid rgba(255,255,255,0.05)',
-          color: featured ? '#E4C56E' : 'var(--gold-light)',
+          background: featured ? 'var(--accent-soft)' : 'var(--surface-3)',
+          border: `1px solid ${featured ? 'var(--accent-soft)' : 'var(--border-2)'}`,
+          color: featured ? 'var(--accent)' : 'var(--text-2)',
         }}
       >
         {icon}
@@ -57,7 +55,7 @@ export default function HubTile({ href, icon, title, subtitle, featured }: HubTi
         <p
           className="text-[15px] truncate"
           style={{
-            color: 'var(--text-primary)',
+            color: 'var(--text-1)',
             fontFamily: 'var(--font-body)',
             fontWeight: 600,
             letterSpacing: '-0.005em',
@@ -68,13 +66,17 @@ export default function HubTile({ href, icon, title, subtitle, featured }: HubTi
         {subtitle && (
           <p
             className="text-[12.5px] mt-0.5 truncate"
-            style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}
+            style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
           >
             {subtitle}
           </p>
         )}
       </div>
-      <ChevronRight className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={2} style={{ color: 'var(--text-muted)' }} />
+      <ChevronRight
+        className="w-[18px] h-[18px] flex-shrink-0"
+        strokeWidth={2}
+        style={{ color: 'var(--text-3)' }}
+      />
     </Link>
   )
 }
