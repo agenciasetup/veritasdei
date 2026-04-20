@@ -333,30 +333,22 @@ body::after {
    GLASSMORPHISM CARDS
    ═══════════════════════════════════════════════════════ */
 
+/* Legacy — refatorada como Card flat. Novos componentes devem usar <Card variant="flat"> em @/components/ui/Card. */
 .glass-card {
-  background: var(--bg-card);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid rgba(201,168,76,0.15);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  background: var(--surface-2);
+  border: 1px solid var(--border-1);
   border-radius: 20px;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
 }
 
 @media (hover: hover) {
   .glass-card:hover {
-    border-color: rgba(201, 168, 76, 0.25);
-    box-shadow:
-      0 16px 56px rgba(0, 0, 0, 0.5),
-      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    border-color: var(--accent-soft);
   }
 }
 
 .glass-card:active {
   transform: scale(0.985);
-  border-color: rgba(201, 168, 76, 0.22);
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -464,11 +456,12 @@ body::after {
    ORNAMENTAL ELEMENTS
    ═══════════════════════════════════════════════════════ */
 
+/* Legacy — preferir <Divider variant="ornament"> em @/components/ui/Divider. */
 .ornament-divider {
   display: flex;
   align-items: center;
   gap: 1rem;
-  color: var(--gold-dim);
+  color: var(--accent-soft);
   margin-top: 2rem;
   margin-bottom: 2rem;
 }
@@ -478,17 +471,11 @@ body::after {
   content: '';
   flex: 1;
   height: 1px;
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(201, 168, 76, 0.15),
-    rgba(107, 29, 42, 0.12),
-    transparent
-  );
+  background: linear-gradient(to right, transparent, var(--border-1) 40%, var(--border-1) 60%, transparent);
 }
 
 .ornament-divider span {
-  color: var(--gold);
+  color: var(--accent);
   font-size: 1rem;
   opacity: 0.6;
 }
@@ -549,25 +536,24 @@ body::after {
    THEME CHIPS
    ═══════════════════════════════════════════════════════ */
 
+/* Legacy — migrar para botão flat em tokens (primary/ghost em @/components/ui/Button). */
 .theme-chip {
-  background: rgba(16, 16, 16, 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid var(--border-gold);
-  color: var(--text-secondary);
-  font-family: 'Poppins', sans-serif;
+  background: var(--surface-2);
+  border: 1px solid var(--border-1);
+  color: var(--text-2);
+  font-family: var(--font-body);
   font-size: 0.85rem;
   padding: 0.5rem 1.25rem;
   border-radius: 999px;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
 }
 
 @media (hover: hover) {
   .theme-chip:hover {
-    border-color: var(--gold);
-    color: var(--gold);
-    background: rgba(201, 168, 76, 0.08);
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-soft);
   }
 }
 
@@ -629,56 +615,32 @@ body::after {
    Layered neutrals, no colored glows. Used across the Home feed.
    ═══════════════════════════════════════════════════════ */
 
+/* Legacy — refatoradas para flat em tokens. Novos componentes devem usar <Card variant="flat|elevated">. */
 .ios-surface {
   position: relative;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0.012) 100%),
-    rgba(20, 18, 14, 0.55);
-  backdrop-filter: blur(18px) saturate(130%);
-  -webkit-backdrop-filter: blur(18px) saturate(130%);
-  border: 1px solid rgba(255,255,255,0.06);
-  box-shadow:
-    0 1px 0 rgba(255,255,255,0.04) inset,
-    0 -1px 0 rgba(0,0,0,0.25) inset,
-    0 10px 30px rgba(0,0,0,0.35);
+  background: var(--surface-2);
+  border: 1px solid var(--border-1);
   border-radius: 22px;
 }
 
-/* Featured (hero) surface — slightly richer, for the liturgy card */
 .ios-surface-hero {
   position: relative;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.01) 60%, rgba(0,0,0,0.15) 100%),
-    rgba(20, 18, 14, 0.75);
-  backdrop-filter: blur(22px) saturate(140%);
-  -webkit-backdrop-filter: blur(22px) saturate(140%);
-  border: 1px solid rgba(255,255,255,0.07);
-  box-shadow:
-    0 1px 0 rgba(255,255,255,0.06) inset,
-    0 -1px 0 rgba(0,0,0,0.3) inset,
-    0 18px 50px rgba(0,0,0,0.45);
+  background: var(--surface-3);
+  border: 1px solid var(--border-1);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.06);
   border-radius: 26px;
 }
 
-/* iOS-style squircle tiles (quick actions) */
 .ios-tile {
   position: relative;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.015) 100%),
-    rgba(24, 22, 18, 0.6);
-  border: 1px solid rgba(255,255,255,0.05);
-  box-shadow:
-    0 1px 0 rgba(255,255,255,0.05) inset,
-    0 8px 20px rgba(0,0,0,0.35);
+  background: var(--surface-2);
+  border: 1px solid var(--border-1);
   border-radius: 20px;
-  transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out);
+  transition: transform 180ms var(--ease-out), border-color 180ms var(--ease-out);
 }
 
 .ios-tile:active {
   transform: scale(0.94);
-  box-shadow:
-    0 1px 0 rgba(255,255,255,0.04) inset,
-    0 4px 10px rgba(0,0,0,0.3);
 }
 
 /* Section eyebrow label */
@@ -687,20 +649,16 @@ body::after {
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.06em;
-  color: var(--text-muted);
+  color: var(--text-3);
 }
 
-/* Gold CTA pill (home) */
+/* Legacy gold CTA — usar <Button variant="primary|gold"> em novos componentes. */
 .ios-cta-gold {
-  background: linear-gradient(180deg, #E4C56E 0%, #C9A84C 50%, #A88332 100%);
-  color: #1C140C;
+  background: var(--accent);
+  color: var(--accent-contrast);
   font-family: var(--font-body);
   font-weight: 600;
   letter-spacing: 0.01em;
-  box-shadow:
-    0 1px 0 rgba(255,255,255,0.35) inset,
-    0 -1px 0 rgba(0,0,0,0.15) inset,
-    0 6px 14px rgba(0,0,0,0.35);
   transition: transform 140ms var(--ease-out), filter 140ms var(--ease-out);
 }
 
@@ -734,20 +692,20 @@ body::after {
    PAGE HEADER — Shared across feature pages
    ═══════════════════════════════════════════════════════ */
 
+/* Legacy — preferir hero section custom com Cinzel + <Divider variant="ornament">. */
 .page-header {
   text-align: center;
   padding: 2.5rem 1.5rem 2rem;
 }
 
 .page-header h1 {
-  font-family: 'Cinzel', serif;
+  font-family: var(--font-display);
   font-weight: 700;
-  color: var(--gold);
+  color: var(--text-1);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-size: 1.875rem;
   line-height: 1.2;
-  text-shadow: 0 2px 20px rgba(107,29,42,0.3);
 }
 
 @media (min-width: 768px) {
@@ -766,8 +724,8 @@ body::after {
 }
 
 .page-header .subtitle {
-  font-family: 'Poppins', sans-serif;
-  color: var(--text-muted);
+  font-family: var(--font-body);
+  color: var(--text-3);
   font-size: 0.95rem;
   max-width: 36rem;
   margin: 0.75rem auto 0;
@@ -784,24 +742,19 @@ body::after {
    FEATURE CARD — Larger, more visual card style
    ═══════════════════════════════════════════════════════ */
 
+/* Legacy — refatorada como Card flat. Novos componentes devem usar <Card variant="elevated"> ou similar. */
 .feature-card {
-  background: var(--bg-card);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid var(--border-gold);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  background: var(--surface-2);
+  border: 1px solid var(--border-1);
   border-radius: 20px;
   padding: 2rem;
-  transition: all 0.3s ease;
+  transition: border-color 0.2s ease, transform 0.15s ease;
   cursor: pointer;
 }
 
 @media (hover: hover) {
   .feature-card:hover {
-    border-color: rgba(201, 168, 76, 0.3);
-    box-shadow: 0 16px 56px rgba(0, 0, 0, 0.5);
-    background: linear-gradient(135deg, rgba(107,29,42,0.06) 0%, rgba(201,168,76,0.04) 100%);
-    transform: translateY(-2px);
+    border-color: var(--accent-soft);
   }
 }
 
@@ -1237,60 +1190,48 @@ section {
   letter-spacing: 0.22em;
 }
 
-/* Gold CTA button */
+/* Legacy — migrar para <Button variant="gold"> em @/components/ui/Button. */
 .btn-gold {
-  background: linear-gradient(135deg, #F2DB92 0%, #E0C98A 25%, #C9A84C 55%, #A88332 100%);
-  color: #1C140C;
-  font-family: 'Cinzel', serif;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-family: var(--font-display);
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  box-shadow:
-    0 2px 0 rgba(255,255,255,0.25) inset,
-    0 -2px 0 rgba(0,0,0,0.15) inset,
-    0 18px 40px rgba(201,168,76,0.32),
-    0 0 0 1px rgba(120,85,30,0.4);
-  transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+  transition: transform 0.2s ease, filter 0.2s ease;
 }
 
 .btn-gold:hover {
-  transform: translateY(-1px);
   filter: brightness(1.06);
-  box-shadow:
-    0 2px 0 rgba(255,255,255,0.3) inset,
-    0 -2px 0 rgba(0,0,0,0.15) inset,
-    0 22px 48px rgba(201,168,76,0.42),
-    0 0 0 1px rgba(120,85,30,0.5);
 }
 
 .btn-gold:active {
-  transform: translateY(0);
+  transform: scale(0.98);
 }
 
+/* Legacy — migrar para <Button variant="ghost">. */
 .btn-ghost-dark {
-  background: rgba(242,237,228,0.05);
-  color: var(--text-primary);
-  border: 1px solid rgba(242,237,228,0.22);
-  font-family: 'Cinzel', serif;
+  background: transparent;
+  color: var(--text-1);
+  border: 1px solid var(--border-1);
+  font-family: var(--font-display);
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .btn-ghost-dark:hover {
-  background: rgba(242,237,228,0.10);
-  border-color: rgba(201,168,76,0.45);
+  background: var(--surface-inset);
+  border-color: var(--accent-soft);
 }
 
 .btn-ghost-light {
   background: rgba(90,22,37,0.04);
   color: var(--wine-soft);
   border: 1px solid rgba(90,22,37,0.28);
-  font-family: 'Cinzel', serif;
+  font-family: var(--font-display);
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  transition: background 0.25s ease, border-color 0.25s ease;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .btn-ghost-light:hover {
