@@ -74,40 +74,39 @@ export default function ParoquiasPage() {
   })
 
   const statusIcon = (s: string) => {
-    if (s === 'aprovada') return <CheckCircle className="w-4 h-4" style={{ color: '#4CAF50' }} />
-    if (s === 'rejeitada') return <XCircle className="w-4 h-4" style={{ color: '#D94F5C' }} />
-    return <Hourglass className="w-4 h-4" style={{ color: '#C9A84C' }} />
+    if (s === 'aprovada') return <CheckCircle className="w-4 h-4" style={{ color: 'var(--success)' }} />
+    if (s === 'rejeitada') return <XCircle className="w-4 h-4" style={{ color: 'var(--danger)' }} />
+    return <Hourglass className="w-4 h-4" style={{ color: 'var(--accent)' }} />
   }
 
   return (
     <div className="min-h-screen px-4 md:px-8 py-8 relative">
-      <div className="bg-glow" />
-
       <div className="max-w-6xl mx-auto relative z-10">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1
-              className="text-2xl md:text-3xl font-bold tracking-wider uppercase"
-              style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
+              className="text-2xl md:text-3xl font-bold tracking-[0.08em] uppercase"
+              style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
             >
-              Catálogo de Paróquias
+              Igrejas
             </h1>
-            <p className="text-sm mt-1" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
-              Catálogo completo (secundário). O fluxo principal fica em “Igrejas perto de mim”.
+            <p
+              className="text-sm mt-1"
+              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+            >
+              Catálogo completo. Para encontrar igrejas perto, use a busca.
             </p>
           </div>
 
           <Link
             href="/paroquias/sugerir"
-            className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold tracking-wider uppercase transition-all hover:scale-[1.02]"
+            className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold tracking-[0.08em] uppercase active:scale-[0.98] transition-transform"
             style={{
-              fontFamily: 'Cinzel, serif',
-              background: isAuthenticated
-                ? 'rgba(201,168,76,0.08)'
-                : 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
-              border: isAuthenticated ? '1px solid rgba(201,168,76,0.2)' : 'none',
-              color: isAuthenticated ? '#C9A84C' : '#0A0A0A',
+              fontFamily: 'var(--font-body)',
+              background: isAuthenticated ? 'var(--accent-soft)' : 'var(--accent)',
+              border: isAuthenticated ? '1px solid var(--accent-soft)' : 'none',
+              color: isAuthenticated ? 'var(--accent)' : 'var(--accent-contrast)',
             }}
           >
             <Plus className="w-4 h-4" />
@@ -117,16 +116,19 @@ export default function ParoquiasPage() {
 
         <div
           className="rounded-2xl p-4 mb-6 flex flex-wrap items-center gap-3"
-          style={{ background: 'rgba(16,16,16,0.7)', border: '1px solid rgba(201,168,76,0.1)' }}
+          style={{
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border-1)',
+          }}
         >
           <Link
             href="/paroquias/buscar?mode=nearby"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs active:scale-[0.97] transition-transform"
             style={{
-              color: '#0A0A0A',
-              fontFamily: 'Poppins, sans-serif',
+              color: 'var(--accent-contrast)',
+              fontFamily: 'var(--font-body)',
               fontWeight: 600,
-              background: 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
+              background: 'var(--accent)',
             }}
           >
             <Navigation className="w-3.5 h-3.5" />
@@ -136,10 +138,10 @@ export default function ParoquiasPage() {
             href="/paroquias/buscar?mode=city"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs"
             style={{
-              color: '#C9A84C',
-              fontFamily: 'Poppins, sans-serif',
-              background: 'rgba(201,168,76,0.08)',
-              border: '1px solid rgba(201,168,76,0.2)',
+              color: 'var(--accent)',
+              fontFamily: 'var(--font-body)',
+              background: 'var(--accent-soft)',
+              border: '1px solid var(--accent-soft)',
             }}
           >
             <MapPin className="w-3.5 h-3.5" />
@@ -154,24 +156,28 @@ export default function ParoquiasPage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Buscar por nome, cidade ou diocese..."
-            className="w-full max-w-xl px-4 py-3 rounded-xl text-sm"
+            className="w-full max-w-xl px-4 py-3 rounded-xl text-sm outline-none"
             style={{
-              background: 'rgba(10,10,10,0.6)',
-              border: '1px solid rgba(201,168,76,0.12)',
-              color: '#F2EDE4',
-              fontFamily: 'Poppins, sans-serif',
-              outline: 'none',
+              background: 'var(--surface-inset)',
+              border: '1px solid var(--border-1)',
+              color: 'var(--text-1)',
+              fontFamily: 'var(--font-body)',
             }}
-            onFocus={e => { e.target.style.borderColor = 'rgba(201,168,76,0.4)' }}
-            onBlur={e => { e.target.style.borderColor = 'rgba(201,168,76,0.12)' }}
           />
         </div>
 
         {/* Loading */}
         {loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1, 2, 3].map(i => (
-              <div key={i} className="rounded-2xl p-6" style={{ background: 'rgba(16,16,16,0.7)', border: '1px solid rgba(201,168,76,0.08)' }}>
+              <div
+                key={i}
+                className="rounded-2xl p-6"
+                style={{
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border-1)',
+                }}
+              >
                 <div className="skeleton h-6 w-3/4 mb-4" />
                 <div className="skeleton h-4 w-1/2 mb-2" />
                 <div className="skeleton h-4 w-2/3" />
@@ -183,14 +189,17 @@ export default function ParoquiasPage() {
         {/* Empty state */}
         {!loading && filtered.length === 0 && (
           <div className="text-center py-16">
-            <Church className="w-12 h-12 mx-auto mb-4" style={{ color: '#7A7368', opacity: 0.5 }} />
-            <p className="text-lg" style={{ fontFamily: 'Cinzel, serif', color: '#7A7368' }}>
+            <Church className="w-12 h-12 mx-auto mb-4 opacity-40" style={{ color: 'var(--text-3)' }} />
+            <p
+              className="text-lg tracking-[0.06em] uppercase"
+              style={{ fontFamily: 'var(--font-display)', color: 'var(--text-2)' }}
+            >
               Nenhuma paróquia encontrada
             </p>
             <Link
               href="/paroquias/sugerir"
               className="inline-flex items-center gap-2 mt-4 text-sm underline"
-              style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
+              style={{ color: 'var(--accent)', fontFamily: 'var(--font-body)' }}
             >
               Sugerir a primeira igreja
             </Link>
@@ -199,18 +208,17 @@ export default function ParoquiasPage() {
 
         {/* Grid */}
         {!loading && filtered.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map(p => {
               const isOwner =
                 !!user?.id && (user.id === p.owner_user_id || user.id === p.criado_por)
               return (
                 <div
                   key={p.id}
-                  className="rounded-2xl p-6 transition-all duration-200 hover:border-[rgba(201,168,76,0.25)] relative"
+                  className="rounded-2xl p-6 transition-colors relative"
                   style={{
-                    background: 'rgba(16,16,16,0.7)',
-                    backdropFilter: 'blur(16px)',
-                    border: '1px solid rgba(201,168,76,0.1)',
+                    background: 'var(--surface-2)',
+                    border: '1px solid var(--border-1)',
                   }}
                 >
                   <Link href={`/paroquias/${p.id}`} className="block">
@@ -225,8 +233,8 @@ export default function ParoquiasPage() {
                     {/* Status badge */}
                     <div className="flex items-center justify-between mb-3 gap-2">
                       <h3
-                        className="text-base font-bold tracking-wide uppercase"
-                        style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
+                        className="text-base font-bold tracking-[0.04em] uppercase"
+                        style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
                       >
                         {p.nome}
                       </h3>
@@ -239,45 +247,46 @@ export default function ParoquiasPage() {
                     {/* Info */}
                     <div
                       className="space-y-2 text-sm"
-                      style={{ color: '#B8AFA2', fontFamily: 'Poppins, sans-serif' }}
+                      style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}
                     >
                       {p.diocese && (
-                        <p className="text-xs" style={{ color: '#7A7368' }}>{p.diocese}</p>
+                        <p className="text-xs" style={{ color: 'var(--text-3)' }}>{p.diocese}</p>
                       )}
                       <div className="flex items-center gap-2">
-                        <MapPin className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#C9A84C' }} />
+                        <MapPin className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--accent)' }} />
                         <span>{p.cidade}, {p.estado}</span>
                       </div>
                       {p.padre_responsavel && (
                         <div className="flex items-center gap-2">
-                          <Church className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#C9A84C' }} />
+                          <Church className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--accent)' }} />
                           <span>Pe. {p.padre_responsavel}</span>
                         </div>
                       )}
                       {p.telefone && (
                         <div className="flex items-center gap-2">
-                          <Phone className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#C9A84C' }} />
+                          <Phone className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--accent)' }} />
                           <span>{p.telefone}</span>
                         </div>
                       )}
                       {p.horarios_missa && p.horarios_missa.length > 0 && (
                         <div className="flex items-start gap-2">
-                          <Clock className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: '#C9A84C' }} />
+                          <Clock className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: 'var(--accent)' }} />
                           <div className="flex flex-wrap gap-1">
                             {p.horarios_missa.slice(0, 3).map((h, i) => (
                               <span
                                 key={i}
                                 className="text-xs px-2 py-0.5 rounded-full"
                                 style={{
-                                  background: 'rgba(201,168,76,0.08)',
-                                  border: '1px solid rgba(201,168,76,0.12)',
+                                  background: 'var(--accent-soft)',
+                                  border: '1px solid var(--accent-soft)',
+                                  color: 'var(--accent)',
                                 }}
                               >
                                 {h.dia} {h.horario}
                               </span>
                             ))}
                             {p.horarios_missa.length > 3 && (
-                              <span className="text-xs" style={{ color: '#7A7368' }}>
+                              <span className="text-xs" style={{ color: 'var(--text-3)' }}>
                                 +{p.horarios_missa.length - 3}
                               </span>
                             )}
@@ -291,17 +300,17 @@ export default function ParoquiasPage() {
                   {(isOwner || (isAdmin && p.status === 'pendente')) && (
                     <div
                       className="flex items-center gap-2 mt-4 pt-4"
-                      style={{ borderTop: '1px solid rgba(201,168,76,0.08)' }}
+                      style={{ borderTop: '1px solid var(--border-2)' }}
                     >
                       {isOwner && (
                         <Link
                           href={`/paroquias/${p.id}/editar`}
-                          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all"
+                          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-colors"
                           style={{
-                            background: 'rgba(201,168,76,0.08)',
-                            border: '1px solid rgba(201,168,76,0.15)',
-                            color: '#C9A84C',
-                            fontFamily: 'Poppins, sans-serif',
+                            background: 'var(--accent-soft)',
+                            border: '1px solid var(--accent-soft)',
+                            color: 'var(--accent)',
+                            fontFamily: 'var(--font-body)',
                           }}
                         >
                           <Pencil className="w-3.5 h-3.5" />
@@ -312,12 +321,12 @@ export default function ParoquiasPage() {
                         <>
                           <button
                             onClick={() => handleApprove(p.id)}
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all"
+                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-colors"
                             style={{
-                              background: 'rgba(76,175,80,0.1)',
-                              border: '1px solid rgba(76,175,80,0.2)',
-                              color: '#4CAF50',
-                              fontFamily: 'Poppins, sans-serif',
+                              background: 'color-mix(in srgb, var(--success) 14%, transparent)',
+                              border: '1px solid color-mix(in srgb, var(--success) 28%, transparent)',
+                              color: 'var(--success)',
+                              fontFamily: 'var(--font-body)',
                             }}
                           >
                             <CheckCircle className="w-3.5 h-3.5" />
@@ -325,12 +334,12 @@ export default function ParoquiasPage() {
                           </button>
                           <button
                             onClick={() => handleReject(p.id)}
-                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all"
+                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-colors"
                             style={{
-                              background: 'rgba(217,79,92,0.1)',
-                              border: '1px solid rgba(217,79,92,0.2)',
-                              color: '#D94F5C',
-                              fontFamily: 'Poppins, sans-serif',
+                              background: 'color-mix(in srgb, var(--danger) 14%, transparent)',
+                              border: '1px solid color-mix(in srgb, var(--danger) 28%, transparent)',
+                              color: 'var(--danger)',
+                              fontFamily: 'var(--font-body)',
                             }}
                           >
                             <XCircle className="w-3.5 h-3.5" />
@@ -349,18 +358,21 @@ export default function ParoquiasPage() {
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between mt-8">
-            <p className="text-xs" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+            <p
+              className="text-xs"
+              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+            >
               Página {page + 1} de {totalPages} ({total} paróquias)
             </p>
             <div className="flex items-center gap-2">
               <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
-                className="p-2 rounded-lg transition-all disabled:opacity-30"
-                style={{ background: 'rgba(201,168,76,0.08)', color: '#C9A84C' }}>
+                className="p-2 rounded-lg transition-opacity disabled:opacity-30"
+                style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
-                className="p-2 rounded-lg transition-all disabled:opacity-30"
-                style={{ background: 'rgba(201,168,76,0.08)', color: '#C9A84C' }}>
+                className="p-2 rounded-lg transition-opacity disabled:opacity-30"
+                style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
