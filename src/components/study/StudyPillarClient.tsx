@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import StudyReader from './StudyReader'
 import { computeNext, type PillarSequenceEntry } from '@/lib/study/navigation'
 import type { StudyPillarContext } from '@/lib/study/types'
+import Divider from '@/components/ui/Divider'
 
 interface Props {
   pillarSlug: string
@@ -28,10 +29,61 @@ function Loader() {
     <div className="flex items-center justify-center py-20">
       <div
         className="w-8 h-8 border-2 rounded-full animate-spin"
-        style={{ borderColor: 'rgba(201,168,76,0.2)', borderTopColor: '#C9A84C' }}
+        style={{ borderColor: 'var(--border-1)', borderTopColor: 'var(--accent)' }}
       />
     </div>
   )
+}
+
+function PillarHero({ title, subtitle }: { title: string; subtitle?: string | null }) {
+  return (
+    <section className="relative z-10 text-center px-5 pt-8 pb-4">
+      <h1
+        className="text-2xl md:text-3xl tracking-[0.08em] uppercase"
+        style={{
+          fontFamily: 'var(--font-display)',
+          color: 'var(--text-1)',
+          fontWeight: 700,
+          lineHeight: 1.15,
+        }}
+      >
+        {title}
+      </h1>
+      {subtitle ? (
+        <p
+          className="mt-2 text-sm max-w-md mx-auto"
+          style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+        >
+          {subtitle}
+        </p>
+      ) : null}
+      <Divider variant="ornament" className="max-w-[180px] mx-auto" spacing="default" />
+    </section>
+  )
+}
+
+function BackChip({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs tracking-[0.08em] uppercase active:scale-[0.97] transition-transform"
+      style={{
+        background: 'var(--surface-2)',
+        border: '1px solid var(--border-1)',
+        color: 'var(--text-2)',
+        fontFamily: 'var(--font-body)',
+        fontWeight: 500,
+      }}
+    >
+      <ArrowLeft className="w-4 h-4" />
+      <span>{label}</span>
+    </Link>
+  )
+}
+
+const CARD_STYLE: React.CSSProperties = {
+  background: 'var(--surface-2)',
+  border: '1px solid var(--border-1)',
 }
 
 export default function StudyPillarClient({ pillarSlug, topicSlug, subtopicSlug }: Props) {
@@ -83,41 +135,34 @@ function PillarTopicGrid({
 }) {
   return (
     <div className="flex flex-col min-h-screen relative">
-      <div className="bg-glow" />
-      <section className="page-header relative z-10">
-        <h1>{group.title}</h1>
-        <p className="subtitle">{group.description || group.subtitle || ''}</p>
-        <div className="ornament-divider max-w-sm mx-auto mt-4">
-          <span>&#10022;</span>
-        </div>
-      </section>
+      <PillarHero title={group.title} subtitle={group.description || group.subtitle || ''} />
       <main className="relative z-10 flex-1 pb-16">
-        <div className="max-w-6xl mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
           {topics.map((topic, i) => (
             <Link
               key={topic.id}
               href={`/estudo/${pillarSlug}/${topic.slug}`}
-              className="feature-card text-left fade-in"
-              style={{ animationDelay: `${i * 0.06}s` }}
+              className="text-left p-5 rounded-2xl fade-in active:scale-[0.99] transition-transform"
+              style={{ ...CARD_STYLE, animationDelay: `${i * 0.06}s` }}
             >
               {topic.sort_order > 0 && topic.subtitle ? (
                 <span
                   className="text-xs tracking-[0.15em] uppercase block mb-3"
-                  style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
+                  style={{ color: 'var(--accent)', fontFamily: 'var(--font-body)' }}
                 >
                   {topic.subtitle}
                 </span>
               ) : null}
               <h3
-                className="text-lg font-semibold leading-snug mb-2"
-                style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
+                className="text-base font-semibold leading-snug mb-2 tracking-[0.04em]"
+                style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
               >
                 {topic.title}
               </h3>
               {topic.description ? (
                 <p
                   className="text-sm leading-relaxed line-clamp-2"
-                  style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+                  style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
                 >
                   {topic.description}
                 </p>
@@ -186,20 +231,16 @@ function PillarTopicView({
     const next = computeNext(sequence, targetSubtopic.slug, `/estudo/${pillarSlug}`)
     return (
       <div className="flex flex-col min-h-screen relative">
-        <div className="bg-glow" />
-        <header className="relative z-10 w-full pt-8 pb-2 px-4 md:px-8">
+        <header className="relative z-10 w-full pt-6 pb-2 px-4 md:px-8">
           <div className="max-w-7xl mx-auto">
-            <Link
+            <BackChip
               href={
                 subtopics.length > 1
                   ? `/estudo/${pillarSlug}/${topicSlug}`
                   : `/estudo/${pillarSlug}`
               }
-              className="theme-chip inline-flex items-center gap-2 !px-5 !py-2.5"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>{subtopics.length > 1 ? topic.title : group.title}</span>
-            </Link>
+              label={subtopics.length > 1 ? topic.title : group.title}
+            />
           </div>
         </header>
         <main className="relative z-10 flex-1 pb-16">
@@ -231,52 +272,39 @@ function PillarTopicView({
   // Subtopic grid when topic has multiple subtopics
   return (
     <div className="flex flex-col min-h-screen relative">
-      <div className="bg-glow" />
-      <header className="relative z-10 w-full pt-8 pb-2 px-4 md:px-8">
+      <header className="relative z-10 w-full pt-6 pb-2 px-4 md:px-8">
         <div className="max-w-7xl mx-auto">
-          <Link
-            href={`/estudo/${pillarSlug}`}
-            className="theme-chip inline-flex items-center gap-2 !px-5 !py-2.5"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>{group.title}</span>
-          </Link>
+          <BackChip href={`/estudo/${pillarSlug}`} label={group.title} />
         </div>
       </header>
-      <section className="page-header relative z-10">
-        <h1>{topic.title}</h1>
-        {topic.description ? <p className="subtitle">{topic.description}</p> : null}
-        <div className="ornament-divider max-w-sm mx-auto mt-4">
-          <span>&#10022;</span>
-        </div>
-      </section>
+      <PillarHero title={topic.title} subtitle={topic.description} />
       <main className="relative z-10 flex-1 pb-16">
-        <div className="max-w-6xl mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
           {subtopics.map((sub, i) => (
             <Link
               key={sub.id}
               href={`/estudo/${pillarSlug}/${topicSlug}/${sub.slug}`}
-              className="feature-card text-left fade-in"
-              style={{ animationDelay: `${i * 0.06}s` }}
+              className="text-left p-5 rounded-2xl fade-in active:scale-[0.99] transition-transform"
+              style={{ ...CARD_STYLE, animationDelay: `${i * 0.06}s` }}
             >
               {sub.subtitle ? (
                 <span
                   className="text-xs tracking-[0.15em] uppercase block mb-3"
-                  style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
+                  style={{ color: 'var(--accent)', fontFamily: 'var(--font-body)' }}
                 >
                   {sub.subtitle}
                 </span>
               ) : null}
               <h3
-                className="text-lg font-semibold leading-snug mb-2"
-                style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
+                className="text-base font-semibold leading-snug mb-2 tracking-[0.04em]"
+                style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
               >
                 {sub.title}
               </h3>
               {sub.description ? (
                 <p
                   className="text-sm leading-relaxed line-clamp-2"
-                  style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+                  style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
                 >
                   {sub.description}
                 </p>
@@ -284,8 +312,8 @@ function PillarTopicView({
               <span
                 className="mt-3 inline-block text-[11px]"
                 style={{
-                  color: isStudied(sub.id) ? 'var(--gold)' : 'var(--text-muted)',
-                  fontFamily: 'Poppins, sans-serif',
+                  color: isStudied(sub.id) ? 'var(--accent)' : 'var(--text-3)',
+                  fontFamily: 'var(--font-body)',
                 }}
               >
                 {isStudied(sub.id) ? '✓ estudado' : 'Abrir'}
@@ -300,14 +328,17 @@ function PillarTopicView({
 
 function EmptyTopic({ pillarSlug }: { pillarSlug: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <p className="text-lg mb-2" style={{ fontFamily: 'Cinzel, serif', color: '#7A7368' }}>
+    <div className="flex flex-col items-center justify-center py-20 text-center px-5">
+      <p
+        className="text-lg mb-2 tracking-[0.06em] uppercase"
+        style={{ fontFamily: 'var(--font-display)', color: 'var(--text-2)' }}
+      >
         Conteúdo não disponível
       </p>
       <Link
         href={`/estudo/${pillarSlug}`}
         className="inline-flex items-center gap-2 mt-4 text-sm"
-        style={{ color: 'var(--gold)', fontFamily: 'Poppins, sans-serif' }}
+        style={{ color: 'var(--accent)', fontFamily: 'var(--font-body)' }}
       >
         <ArrowLeft className="w-4 h-4" />
         Voltar ao pilar
