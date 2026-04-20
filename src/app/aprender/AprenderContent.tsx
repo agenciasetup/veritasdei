@@ -2,7 +2,8 @@
 
 import {
   GraduationCap, Map, Network, Church, Droplets, BookMarked,
-  Library, Tablets, ScrollText, Scale, Heart,
+  Library, Tablets, ScrollText, Scale, Heart, BookOpen,
+  Gem, Flame, Calendar, Search,
 } from 'lucide-react'
 import HubHeader from '@/components/hubs/HubHeader'
 import HubTile from '@/components/hubs/HubTile'
@@ -14,14 +15,10 @@ import PullToRefresh from '@/components/mobile/PullToRefresh'
 /**
  * Hub de aprendizado.
  *
- * Layout enxuto (iOS/Claude-like):
- *   1. Cabeçalho grande "Aprender"
- *   2. Prompt de busca conversacional (lidera a intenção do usuário)
- *   3. Três grupos colapsáveis: Trilhas, Doutrina, Referência
- *
- * Deliberadamente SEM "recentemente acessado", ProgressOverview ou chips
- * de ice-breaker isolados — a intenção principal ("pesquisar/aprender")
- * centraliza tudo no input, e os blocos abaixo são só para navegação direta.
+ * Todos os tiles doutrinais agora apontam para `/estudo/[pilar]` —
+ * rota canônica do StudyReader com deepdive + anotações + quiz.
+ * As rotas antigas (`/dogmas`, etc.) continuam funcionando como
+ * listagem simples, mas o hub promove a nova experiência.
  */
 export default function AprenderContent() {
   const router = useRouter()
@@ -45,11 +42,17 @@ export default function AprenderContent() {
         <div className="px-4 max-w-2xl mx-auto">
           <HubGroup id="aprender-trilhas" label="Trilhas & Visual" icon={GraduationCap}>
             <HubTile
-              href="/trilhas"
+              href="/meu-estudo"
+              icon={<Search className="w-6 h-6" />}
+              title="Meu Estudo"
+              subtitle="Nível, progresso por pilar e anotações"
+              featured
+            />
+            <HubTile
+              href="/estudo/trilhas"
               icon={<GraduationCap className="w-6 h-6" />}
               title="Trilhas de Estudo"
               subtitle="Roteiros guiados por tema"
-              featured
             />
             <HubTile
               href="/mapa"
@@ -67,55 +70,88 @@ export default function AprenderContent() {
 
           <HubGroup id="aprender-doutrina" label="Doutrina" icon={Church}>
             <HubTile
-              href="/dogmas"
+              href="/estudo/dogmas"
               icon={<Church className="w-6 h-6" />}
               title="Dogmas"
-              subtitle="As verdades definidas da fé"
+              subtitle="As 44 verdades definidas da fé"
             />
             <HubTile
-              href="/sacramentos"
+              href="/estudo/sacramentos"
               icon={<Droplets className="w-6 h-6" />}
               title="Sacramentos"
               subtitle="Os 7 sinais sensíveis da graça"
             />
             <HubTile
-              href="/catecismo-pio-x"
+              href="/estudo/catecismo-pio-x"
               icon={<BookMarked className="w-6 h-6" />}
               title="Catecismo Pio X"
-              subtitle="Ensinamento claro e conciso"
+              subtitle="As 4 Partes: Fé, Oração, Sacramentos, Mandamentos"
             />
             <HubTile
-              href="/sao-tomas"
+              href="/estudo/sao-tomas"
               icon={<Library className="w-6 h-6" />}
-              title="São Tomás de Aquino"
-              subtitle="Suma Teológica e doutrina"
+              title="Suma Teológica"
+              subtitle="As 4 Partes de São Tomás de Aquino"
             />
           </HubGroup>
 
-          <HubGroup id="aprender-referencia" label="Referência" icon={ScrollText}>
+          <HubGroup id="aprender-referencia" label="Moral e Vida Cristã" icon={ScrollText}>
             <HubTile
-              href="/mandamentos"
+              href="/estudo/mandamentos"
               icon={<Tablets className="w-6 h-6" />}
               title="Mandamentos"
-              subtitle="A Lei de Deus"
+              subtitle="Os 10 mandamentos e sua vivência"
             />
             <HubTile
-              href="/preceitos"
+              href="/estudo/preceitos"
               icon={<ScrollText className="w-6 h-6" />}
               title="Preceitos da Igreja"
               subtitle="Os 5 preceitos da vida cristã"
             />
             <HubTile
-              href="/virtudes-pecados"
+              href="/estudo/virtudes-pecados"
               icon={<Scale className="w-6 h-6" />}
               title="Virtudes e Pecados"
-              subtitle="O que edifica e o que destrói"
+              subtitle="Teologais, cardeais e os 7 capitais"
             />
             <HubTile
-              href="/obras-misericordia"
+              href="/estudo/obras-misericordia"
               icon={<Heart className="w-6 h-6" />}
               title="Obras de Misericórdia"
-              subtitle="Corporais e espirituais"
+              subtitle="7 corporais e 7 espirituais"
+            />
+            <HubTile
+              href="/estudo/exame-consciencia"
+              icon={<BookOpen className="w-6 h-6" />}
+              title="Exame de Consciência"
+              subtitle="Prática diária e preparação para a Confissão"
+            />
+          </HubGroup>
+
+          <HubGroup id="aprender-oracao" label="Oração e Devoções" icon={Flame}>
+            <HubTile
+              href="/estudo/oracoes"
+              icon={<BookOpen className="w-6 h-6" />}
+              title="Orações"
+              subtitle="Essenciais, dia a dia, Missa, ocasiões"
+            />
+            <HubTile
+              href="/estudo/rosario"
+              icon={<Gem className="w-6 h-6" />}
+              title="Rosário"
+              subtitle="20 mistérios meditados"
+            />
+            <HubTile
+              href="/estudo/novenas"
+              icon={<Flame className="w-6 h-6" />}
+              title="Novenas"
+              subtitle="Aparecida, São José, Sagrado Coração e mais"
+            />
+            <HubTile
+              href="/estudo/liturgia-calendario"
+              icon={<Calendar className="w-6 h-6" />}
+              title="Liturgia e Calendário"
+              subtitle="Santo do dia e Evangelho comentado"
             />
           </HubGroup>
         </div>
