@@ -63,14 +63,14 @@ export function PrayerStage({ step, mysteryGroup, isCompleted, onAdvance }: Pray
     <section
       className="rounded-2xl border p-5 md:p-6"
       style={{
-        borderColor: 'rgba(201, 168, 76, 0.22)',
+        borderColor: 'var(--accent-soft)',
         backgroundColor: 'rgba(20, 18, 14, 0.6)',
       }}
       aria-live="polite"
     >
       <div
         className="text-[10px] uppercase tracking-[0.25em]"
-        style={{ color: '#7A7368' }}
+        style={{ color: 'var(--text-3)' }}
       >
         {phaseLabel}
       </div>
@@ -79,13 +79,13 @@ export function PrayerStage({ step, mysteryGroup, isCompleted, onAdvance }: Pray
         <header className="mt-2">
           <h2
             className="font-serif text-lg leading-snug md:text-xl"
-            style={{ color: '#F2EDE4' }}
+            style={{ color: 'var(--text-1)' }}
           >
             {mystery.title}
           </h2>
           <p
             className="mt-1 text-xs italic"
-            style={{ color: '#7A7368', fontFamily: 'var(--font-cormorant, serif)' }}
+            style={{ color: 'var(--text-3)', fontFamily: 'var(--font-cormorant, serif)' }}
           >
             Fruto: {mystery.fruit} · {mystery.scripture}
           </p>
@@ -103,7 +103,7 @@ export function PrayerStage({ step, mysteryGroup, isCompleted, onAdvance }: Pray
             fallbackLabel={STEP_LABELS[step.type] ?? step.type}
           />
         ) : (
-          <p className="text-sm" style={{ color: '#F2EDE4' }}>
+          <p className="text-sm" style={{ color: 'var(--text-1)' }}>
             {STEP_LABELS[step.type] ?? step.type}
           </p>
         )}
@@ -112,7 +112,7 @@ export function PrayerStage({ step, mysteryGroup, isCompleted, onAdvance }: Pray
       {showAveCounter && (
         <div
           className="mt-4 font-mono text-[11px] uppercase tracking-[0.2em]"
-          style={{ color: '#D9C077' }}
+          style={{ color: 'var(--accent)' }}
           aria-label={`Ave Maria ${step.decadePosition} de 10`}
         >
           Ave Maria {step.decadePosition} / 10
@@ -126,8 +126,8 @@ export function PrayerStage({ step, mysteryGroup, isCompleted, onAdvance }: Pray
           disabled={isCompleted}
           className="w-full rounded-lg px-4 py-3 text-sm font-semibold transition disabled:opacity-30"
           style={{
-            backgroundColor: '#C9A84C',
-            color: '#0F0E0C',
+            backgroundColor: 'var(--accent)',
+            color: 'var(--accent-contrast)',
           }}
         >
           {isCompleted ? 'Terço completo ✦' : 'Avançar'}
@@ -153,14 +153,14 @@ function PrayerBlock({
       <div className="flex items-baseline gap-2">
         <h3
           className="font-serif text-base"
-          style={{ color: '#D9C077' }}
+          style={{ color: 'var(--accent)' }}
         >
           {name || fallbackLabel}
         </h3>
         {latinName && (
           <span
             className="text-[10px] uppercase tracking-[0.2em]"
-            style={{ color: '#7A7368' }}
+            style={{ color: 'var(--text-3)' }}
           >
             {latinName}
           </span>
@@ -169,7 +169,7 @@ function PrayerBlock({
       <p
         className="mt-2 text-base leading-[1.7]"
         style={{
-          color: '#F2EDE4',
+          color: 'var(--text-1)',
           whiteSpace: 'pre-line',
           fontFamily: 'var(--font-cormorant, serif)',
         }}
@@ -185,19 +185,19 @@ function MysteryReflection({ reflection }: { reflection: string }) {
     <>
       <h3
         className="font-serif text-base"
-        style={{ color: '#D9C077' }}
+        style={{ color: 'var(--accent)' }}
       >
         Meditação
       </h3>
       <p
         className="mt-2 text-sm italic leading-relaxed"
-        style={{ color: '#F2EDE4', fontFamily: 'var(--font-cormorant, serif)' }}
+        style={{ color: 'var(--text-1)', fontFamily: 'var(--font-cormorant, serif)' }}
       >
         {reflection}
       </p>
       <p
         className="mt-3 text-[11px] uppercase tracking-[0.2em]"
-        style={{ color: '#7A7368' }}
+        style={{ color: 'var(--text-3)' }}
       >
         Contemple em silêncio antes de avançar
       </p>

@@ -12,14 +12,14 @@ export default function MysteryHeader({ mystery, decadeNumber }: MysteryHeaderPr
     <div
       className="rounded-xl p-5 mb-3"
       style={{
-        background: 'rgba(201,168,76,0.05)',
-        border: '1px solid rgba(201,168,76,0.12)',
+        background: 'var(--accent-soft)',
+        border: '1px solid var(--border-1)',
       }}
     >
       {/* Decade number */}
       <span
         className="text-[10px] tracking-[0.2em] uppercase block mb-2"
-        style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
+        style={{ color: 'var(--accent)', fontFamily: 'var(--font-body)' }}
       >
         {decadeNumber}ª Dezena
       </span>
@@ -27,13 +27,13 @@ export default function MysteryHeader({ mystery, decadeNumber }: MysteryHeaderPr
       {/* Mystery title */}
       <h3
         className="text-base font-semibold leading-snug mb-2"
-        style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
+        style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
       >
         {mystery.title}
       </h3>
 
       {/* Fruit */}
-      <p className="text-xs mb-3" style={{ color: '#D9C077', fontFamily: 'Poppins, sans-serif' }}>
+      <p className="text-xs mb-3" style={{ color: 'var(--accent)', fontFamily: 'var(--font-body)' }}>
         Fruto: {mystery.fruit}
       </p>
 
@@ -41,19 +41,19 @@ export default function MysteryHeader({ mystery, decadeNumber }: MysteryHeaderPr
       <div
         className="rounded-lg p-3 mb-2"
         style={{
-          background: 'rgba(15,14,12,0.5)',
+          background: 'var(--surface-inset)',
           borderLeft: '3px solid rgba(201,168,76,0.3)',
         }}
       >
         <p
           className="text-[10px] tracking-[0.15em] uppercase mb-1"
-          style={{ color: '#C9A84C', fontFamily: 'Cinzel, serif' }}
+          style={{ color: 'var(--accent)', fontFamily: 'var(--font-display)' }}
         >
           {mystery.scripture}
         </p>
         <p
           className="text-sm leading-relaxed italic"
-          style={{ color: '#B8AFA2', fontFamily: 'Cormorant Garamond, serif' }}
+          style={{ color: 'var(--text-2)', fontFamily: 'var(--font-display)' }}
         >
           {mystery.reflection}
         </p>

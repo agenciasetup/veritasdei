@@ -103,10 +103,10 @@ export function HistoryStats({ sessions }: HistoryStatsProps) {
       </div>
 
       {total > 0 && (
-        <div className="mt-5 pt-5" style={{ borderTop: '1px solid rgba(201,168,76,0.12)' }}>
+        <div className="mt-5 pt-5" style={{ borderTop: '1px solid var(--border-1)' }}>
           <div
             className="mb-2 text-[10px] uppercase tracking-[0.2em]"
-            style={{ color: '#7A7368' }}
+            style={{ color: 'var(--text-3)' }}
           >
             Por mistério
           </div>
@@ -115,12 +115,12 @@ export function HistoryStats({ sessions }: HistoryStatsProps) {
               <li
                 key={key}
                 className="flex items-baseline justify-between"
-                style={{ color: '#F2EDE4' }}
+                style={{ color: 'var(--text-1)' }}
               >
-                <span className="text-xs" style={{ color: '#7A7368' }}>
+                <span className="text-xs" style={{ color: 'var(--text-3)' }}>
                   {MYSTERY_LABEL[key]}
                 </span>
-                <span className="font-mono text-sm" style={{ color: '#D9C077' }}>
+                <span className="font-mono text-sm" style={{ color: 'var(--accent)' }}>
                   {byMystery[key]}
                 </span>
               </li>
@@ -137,13 +137,13 @@ function Stat({ value, label }: { value: string; label: string }) {
     <div>
       <div
         className="font-serif text-2xl md:text-3xl"
-        style={{ color: '#D9C077', fontFamily: 'Cinzel, serif' }}
+        style={{ color: 'var(--accent)', fontFamily: 'var(--font-display)' }}
       >
         {value}
       </div>
       <div
         className="mt-0.5 text-[10px] uppercase tracking-[0.2em]"
-        style={{ color: '#7A7368' }}
+        style={{ color: 'var(--text-3)' }}
       >
         {label}
       </div>

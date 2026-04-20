@@ -103,14 +103,17 @@ async function LiturgiaContent() {
 
 export default function LiturgiaHojePage() {
   return (
-    <main id="main-content" className="min-h-screen relative">
-      <div className="bg-glow" />
+    <main
+      id="main-content"
+      className="min-h-screen relative"
+      style={{ background: 'var(--surface-1)' }}
+    >
       <Suspense
         fallback={
           <div className="flex items-center justify-center min-h-screen">
             <div
               className="w-8 h-8 border-2 rounded-full animate-spin"
-              style={{ borderColor: 'rgba(201,168,76,0.2)', borderTopColor: '#C9A84C' }}
+              style={{ borderColor: 'var(--border-1)', borderTopColor: 'var(--accent)' }}
             />
           </div>
         }
