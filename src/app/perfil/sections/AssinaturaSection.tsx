@@ -43,49 +43,49 @@ export default function AssinaturaSection() {
       <div className="mb-4">
         <h2
           className="text-lg mb-1"
-          style={{ fontFamily: 'Cormorant Garamond, serif', color: '#F2EDE4' }}
+          style={{ fontFamily: 'var(--font-elegant)', color: 'var(--text-1)' }}
         >
           Minha assinatura
         </h2>
-        <p className="text-xs" style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}>
+        <p className="text-xs" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}>
           Gerencie seu plano, método de pagamento e histórico de cobranças.
         </p>
       </div>
 
       {loading ? (
-        <div className="py-10 text-center text-sm" style={{ color: '#8A8378' }}>
+        <div className="py-10 text-center text-sm" style={{ color: 'var(--text-3)' }}>
           Carregando…
         </div>
       ) : isPremium ? (
         <div
           className="p-5 rounded-2xl mb-4"
           style={{
-            background: 'linear-gradient(135deg, rgba(201,168,76,0.1), rgba(201,168,76,0.02))',
-            border: '1px solid rgba(201,168,76,0.3)',
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border-1)',
           }}
         >
           <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="w-5 h-5" style={{ color: '#C9A84C' }} />
+            <Sparkles className="w-5 h-5" style={{ color: 'var(--accent)' }} />
             <span
               className="text-base font-medium"
-              style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}
+              style={{ color: 'var(--text-1)', fontFamily: 'var(--font-body)' }}
             >
               Veritas Dei {plano === 'premium' ? 'Premium' : plano}
             </span>
             <span
               className="ml-auto text-[11px] px-2 py-0.5 rounded-full"
               style={{
-                background: 'rgba(102,187,106,0.15)',
-                color: '#66BB6A',
-                border: '1px solid rgba(102,187,106,0.3)',
-                fontFamily: 'Poppins, sans-serif',
+                background: 'color-mix(in srgb, var(--success) 15%, transparent)',
+                color: 'var(--success)',
+                border: '1px solid color-mix(in srgb, var(--success) 30%, transparent)',
+                fontFamily: 'var(--font-body)',
               }}
             >
               {status === 'trialing' ? 'Em avaliação' : 'Ativo'}
             </span>
           </div>
           {expiraFmt && (
-            <p className="text-xs mb-1" style={{ color: '#A8A096', fontFamily: 'Poppins, sans-serif' }}>
+            <p className="text-xs mb-1" style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}>
               {cancelAtPeriodEnd
                 ? `Acesso até ${expiraFmt} (não renovará)`
                 : `Próxima cobrança: ${expiraFmt}`}
@@ -96,20 +96,20 @@ export default function AssinaturaSection() {
         <div
           className="p-5 rounded-2xl mb-4 text-center"
           style={{
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px dashed rgba(201,168,76,0.25)',
+            background: 'var(--surface-inset)',
+            border: '1px dashed var(--border-1)',
           }}
         >
-          <p className="text-sm mb-4" style={{ color: '#A8A096', fontFamily: 'Poppins, sans-serif' }}>
+          <p className="text-sm mb-4" style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}>
             Você ainda não tem um plano ativo.
           </p>
           <Link
             href="/planos"
             className="inline-block px-6 py-3 rounded-xl text-sm touch-target-lg active:scale-[0.98]"
             style={{
-              background: 'linear-gradient(135deg, #C9A84C, #A88B3A)',
+              background: 'var(--accent)',
               color: '#0F0E0C',
-              fontFamily: 'Poppins, sans-serif',
+              fontFamily: 'var(--font-body)',
               fontWeight: 600,
             }}
           >
@@ -125,7 +125,7 @@ export default function AssinaturaSection() {
             background: 'rgba(230,126,34,0.12)',
             border: '1px solid rgba(230,126,34,0.3)',
             color: '#E67E22',
-            fontFamily: 'Poppins, sans-serif',
+            fontFamily: 'var(--font-body)',
           }}
         >
           {error}
@@ -139,10 +139,10 @@ export default function AssinaturaSection() {
           disabled={busy}
           className="w-full py-3 rounded-xl text-sm touch-target-lg active:scale-[0.98]"
           style={{
-            background: 'rgba(201,168,76,0.12)',
-            border: '1px solid rgba(201,168,76,0.3)',
-            color: '#C9A84C',
-            fontFamily: 'Poppins, sans-serif',
+            background: 'var(--accent-soft)',
+            border: '1px solid var(--border-1)',
+            color: 'var(--accent)',
+            fontFamily: 'var(--font-body)',
           }}
         >
           {busy ? 'Abrindo…' : 'Gerenciar pagamento'}

@@ -80,11 +80,11 @@ export default function NotificacoesSection() {
       <div className="mb-4">
         <h2
           className="text-lg mb-1"
-          style={{ fontFamily: 'Cormorant Garamond, serif', color: '#F2EDE4' }}
+          style={{ fontFamily: 'var(--font-elegant)', color: 'var(--text-1)' }}
         >
           Notificações
         </h2>
-        <p className="text-xs" style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}>
+        <p className="text-xs" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}>
           Receba lembretes de oração, confissão e missa no seu celular.
         </p>
       </div>
@@ -92,21 +92,21 @@ export default function NotificacoesSection() {
       <div
         className="p-4 rounded-2xl mb-4"
         style={{
-          background: 'rgba(201,168,76,0.06)',
-          border: '1px solid rgba(201,168,76,0.18)',
+          background: 'var(--accent-soft)',
+          border: '1px solid var(--border-1)',
         }}
       >
         <div className="flex items-start justify-between gap-4 mb-3">
           <div>
             <p
               className="text-base font-medium"
-              style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}
+              style={{ color: 'var(--text-1)', fontFamily: 'var(--font-body)' }}
             >
               Lembretes no celular
             </p>
-            <p className="text-xs mt-1" style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}>
               Estado:{' '}
-              <strong style={{ color: enabled ? '#66BB6A' : '#C9A84C' }}>
+              <strong style={{ color: enabled ? 'var(--success)' : 'var(--accent)' }}>
                 {permissao === 'unsupported'
                   ? 'não suportado'
                   : enabled
@@ -124,9 +124,9 @@ export default function NotificacoesSection() {
             aria-pressed={enabled}
             className="flex-shrink-0 relative w-12 h-7 rounded-full transition-colors disabled:opacity-50 touch-target-lg"
             style={{
-              background: enabled ? 'rgba(102,187,106,0.35)' : 'rgba(255,255,255,0.08)',
+              background: enabled ? 'color-mix(in srgb, var(--success) 35%, transparent)' : 'var(--surface-inset)',
               border: `1px solid ${
-                enabled ? 'rgba(102,187,106,0.6)' : 'rgba(255,255,255,0.15)'
+                enabled ? 'color-mix(in srgb, var(--success) 60%, transparent)' : 'var(--border-1)'
               }`,
             }}
           >
@@ -134,7 +134,7 @@ export default function NotificacoesSection() {
               className="absolute top-0.5 w-5 h-5 rounded-full transition-all"
               style={{
                 left: enabled ? 'calc(100% - 22px)' : '2px',
-                background: enabled ? '#66BB6A' : '#7A7368',
+                background: enabled ? 'var(--success)' : 'var(--text-3)',
               }}
             />
           </button>
@@ -145,7 +145,7 @@ export default function NotificacoesSection() {
             className="text-[11px] mt-2"
             style={{
               color: msgTom === 'ok' ? '#66BB6A' : '#D94F5C',
-              fontFamily: 'Poppins, sans-serif',
+              fontFamily: 'var(--font-body)',
             }}
           >
             {msg}
@@ -159,10 +159,10 @@ export default function NotificacoesSection() {
             disabled={busy}
             className="mt-3 w-full py-2.5 rounded-xl text-sm disabled:opacity-50 touch-target-lg active:scale-[0.98]"
             style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(201,168,76,0.2)',
-              color: '#C9A84C',
-              fontFamily: 'Poppins, sans-serif',
+              background: 'var(--surface-inset)',
+              border: '1px solid var(--border-1)',
+              color: 'var(--accent)',
+              fontFamily: 'var(--font-body)',
             }}
           >
             Enviar notificação de teste
@@ -172,7 +172,7 @@ export default function NotificacoesSection() {
         {iosNaoInstalado && (
           <p
             className="text-[11px] mt-3 leading-relaxed"
-            style={{ color: '#E67E22', fontFamily: 'Poppins, sans-serif' }}
+            style={{ color: '#E67E22', fontFamily: 'var(--font-body)' }}
           >
             No iPhone, notificações só funcionam após instalar o app: toque em{' '}
             <strong>Compartilhar</strong> → <strong>Adicionar à Tela de Início</strong>.

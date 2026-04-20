@@ -235,7 +235,7 @@ export default function OnboardingPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div
           className="w-8 h-8 border-2 rounded-full animate-spin"
-          style={{ borderColor: 'rgba(201,168,76,0.2)', borderTopColor: '#C9A84C' }}
+          style={{ borderColor: 'var(--border-1)', borderTopColor: 'var(--accent)' }}
         />
       </div>
     )
@@ -250,8 +250,8 @@ export default function OnboardingPage() {
         onClick={handleSkipAll}
         className="absolute right-6 text-xs transition-colors active:opacity-70 z-10 touch-target"
         style={{
-          color: '#8A8378',
-          fontFamily: 'Poppins, sans-serif',
+          color: 'var(--text-3)',
+          fontFamily: 'var(--font-body)',
           top: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)',
         }}
       >
@@ -281,16 +281,16 @@ export default function OnboardingPage() {
                 <div
                   className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"
                   style={{
-                    fontFamily: 'Cinzel, serif',
+                    fontFamily: 'var(--font-display)',
                     background:
                       i <= currentStepIdx
-                        ? 'rgba(201,168,76,0.15)'
-                        : 'rgba(10,10,10,0.6)',
+                        ? 'var(--accent-soft)'
+                        : 'var(--surface-inset)',
                     border:
                       i <= currentStepIdx
-                        ? '2px solid #C9A84C'
-                        : '2px solid rgba(201,168,76,0.1)',
-                    color: i <= currentStepIdx ? '#C9A84C' : '#8A8378',
+                        ? '2px solid var(--accent)'
+                        : '2px solid var(--border-1)',
+                    color: i <= currentStepIdx ? 'var(--accent)' : 'var(--text-3)',
                   }}
                 >
                   {i < currentStepIdx ? <Check className="w-4 h-4" /> : i + 1}
@@ -298,8 +298,8 @@ export default function OnboardingPage() {
                 <span
                   className="text-[10px] mt-1.5 hidden sm:block"
                   style={{
-                    fontFamily: 'Poppins, sans-serif',
-                    color: i <= currentStepIdx ? '#C9A84C' : '#8A8378',
+                    fontFamily: 'var(--font-body)',
+                    color: i <= currentStepIdx ? 'var(--accent)' : 'var(--text-3)',
                   }}
                 >
                   {s.label}
@@ -309,12 +309,12 @@ export default function OnboardingPage() {
           })}
         </div>
         {/* Progress line */}
-        <div className="h-0.5 rounded-full overflow-hidden" style={{ background: 'rgba(201,168,76,0.1)' }}>
+        <div className="h-0.5 rounded-full overflow-hidden" style={{ background: 'var(--accent-soft)' }}>
           <div
             className="h-full rounded-full transition-all duration-500"
             style={{
               width: `${(currentStepIdx / Math.max(totalVisible - 1, 1)) * 100}%`,
-              background: 'linear-gradient(90deg, #C9A84C, #A88B3A)',
+              background: 'var(--accent)',
             }}
           />
         </div>
@@ -330,9 +330,9 @@ export default function OnboardingPage() {
         onPanEnd={handleSwipe}
         className="w-full max-w-lg rounded-2xl p-6 md:p-8 relative z-10"
         style={{
-          background: 'rgba(16,16,16,0.85)',
+          background: 'var(--surface-2)',
           backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(201,168,76,0.15)',
+          border: '1px solid var(--border-1)',
           boxShadow: '0 12px 48px rgba(0,0,0,0.5)',
           minHeight: '380px',
           touchAction: 'pan-y',
@@ -343,11 +343,11 @@ export default function OnboardingPage() {
           <div>
             <h2
               className="text-xl font-bold tracking-wider uppercase mb-1 text-center"
-              style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
+              style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
             >
               Quem é você?
             </h2>
-            <p className="text-sm mb-8 text-center" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+            <p className="text-sm mb-8 text-center" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}>
               Escolha o tipo de perfil para continuar
             </p>
 
@@ -357,23 +357,23 @@ export default function OnboardingPage() {
                 onClick={() => setPerfilTipo('fiel')}
                 className="flex items-start gap-3 p-4 rounded-xl text-left transition-all"
                 style={{
-                  fontFamily: 'Poppins, sans-serif',
-                  background: perfilTipo === 'fiel' ? 'rgba(201,168,76,0.12)' : 'rgba(10,10,10,0.5)',
-                  border: perfilTipo === 'fiel' ? '2px solid rgba(201,168,76,0.4)' : '2px solid rgba(201,168,76,0.08)',
-                  color: perfilTipo === 'fiel' ? '#C9A84C' : '#B8AFA2',
+                  fontFamily: 'var(--font-body)',
+                  background: perfilTipo === 'fiel' ? 'var(--accent-soft)' : 'var(--surface-inset)',
+                  border: perfilTipo === 'fiel' ? '2px solid var(--accent)' : '2px solid var(--border-1)',
+                  color: perfilTipo === 'fiel' ? 'var(--accent)' : 'var(--text-2)',
                 }}
               >
                 <div
                   className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.15)' }}
+                  style={{ background: 'var(--accent-soft)', border: '1px solid var(--border-1)' }}
                 >
-                  <Users className="w-5 h-5" style={{ color: '#C9A84C' }} />
+                  <Users className="w-5 h-5" style={{ color: 'var(--accent)' }} />
                 </div>
                 <div>
-                  <div className="text-sm font-bold mb-1" style={{ fontFamily: 'Cinzel, serif' }}>
+                  <div className="text-sm font-bold mb-1" style={{ fontFamily: 'var(--font-display)' }}>
                     Sou um fiel
                   </div>
-                  <div className="text-xs" style={{ color: '#7A7368' }}>
+                  <div className="text-xs" style={{ color: 'var(--text-3)' }}>
                     Cadastre sua vocação, sacramentos e paróquia — acompanhe estudos, formação e comunidade.
                   </div>
                 </div>
@@ -384,23 +384,23 @@ export default function OnboardingPage() {
                 onClick={() => setPerfilTipo('igreja')}
                 className="flex items-start gap-3 p-4 rounded-xl text-left transition-all"
                 style={{
-                  fontFamily: 'Poppins, sans-serif',
-                  background: perfilTipo === 'igreja' ? 'rgba(201,168,76,0.12)' : 'rgba(10,10,10,0.5)',
-                  border: perfilTipo === 'igreja' ? '2px solid rgba(201,168,76,0.4)' : '2px solid rgba(201,168,76,0.08)',
-                  color: perfilTipo === 'igreja' ? '#C9A84C' : '#B8AFA2',
+                  fontFamily: 'var(--font-body)',
+                  background: perfilTipo === 'igreja' ? 'var(--accent-soft)' : 'var(--surface-inset)',
+                  border: perfilTipo === 'igreja' ? '2px solid var(--accent)' : '2px solid var(--border-1)',
+                  color: perfilTipo === 'igreja' ? 'var(--accent)' : 'var(--text-2)',
                 }}
               >
                 <div
                   className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.15)' }}
+                  style={{ background: 'var(--accent-soft)', border: '1px solid var(--border-1)' }}
                 >
-                  <Church className="w-5 h-5" style={{ color: '#C9A84C' }} />
+                  <Church className="w-5 h-5" style={{ color: 'var(--accent)' }} />
                 </div>
                 <div>
-                  <div className="text-sm font-bold mb-1" style={{ fontFamily: 'Cinzel, serif' }}>
+                  <div className="text-sm font-bold mb-1" style={{ fontFamily: 'var(--font-display)' }}>
                     Represento uma Igreja
                   </div>
-                  <div className="text-xs" style={{ color: '#7A7368' }}>
+                  <div className="text-xs" style={{ color: 'var(--text-3)' }}>
                     Cadastre uma igreja (CNPJ, tipo, horários, fotos). Após a verificação, publique
                     avisos no feed da sua igreja.
                   </div>
@@ -408,9 +408,9 @@ export default function OnboardingPage() {
               </button>
             </div>
 
-            <div className="mt-6 flex items-start gap-2 p-3 rounded-xl" style={{ background: 'rgba(201,168,76,0.05)', border: '1px solid rgba(201,168,76,0.1)' }}>
-              <HeartHandshake className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#C9A84C' }} />
-              <p className="text-xs" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+            <div className="mt-6 flex items-start gap-2 p-3 rounded-xl" style={{ background: 'var(--accent-soft)', border: '1px solid var(--border-1)' }}>
+              <HeartHandshake className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--accent)' }} />
+              <p className="text-xs" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}>
                 O mesmo usuário pode administrar várias igrejas no futuro.
               </p>
             </div>
@@ -422,11 +422,11 @@ export default function OnboardingPage() {
           <div className="flex flex-col items-center">
             <h2
               className="text-xl font-bold tracking-wider uppercase mb-1 text-center"
-              style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
+              style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
             >
               {perfilTipo === 'igreja' ? 'Seu Nome' : 'Seu Perfil'}
             </h2>
-            <p className="text-sm mb-8 text-center" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+            <p className="text-sm mb-8 text-center" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}>
               {perfilTipo === 'igreja'
                 ? 'Nome do responsável pela igreja no Veritas Dei'
                 : 'Como a comunidade vai te conhecer'}
@@ -437,28 +437,28 @@ export default function OnboardingPage() {
               <div
                 className="w-28 h-28 rounded-2xl overflow-hidden flex items-center justify-center"
                 style={{
-                  background: avatarUrl ? 'transparent' : 'rgba(201,168,76,0.08)',
-                  border: '2px solid rgba(201,168,76,0.2)',
+                  background: avatarUrl ? 'transparent' : 'var(--accent-soft)',
+                  border: '2px solid var(--accent-soft)',
                 }}
               >
                 {avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={avatarUrl} alt="Avatar" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 ) : (
-                  <User className="w-12 h-12" style={{ color: '#C9A84C', opacity: 0.5 }} />
+                  <User className="w-12 h-12" style={{ color: 'var(--accent)', opacity: 0.5 }} />
                 )}
               </div>
               <button
                 onClick={() => fileInputRef.current?.click()}
                 className="absolute -bottom-2 -right-2 w-9 h-9 rounded-xl flex items-center justify-center transition-all"
                 style={{
-                  background: 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
-                  color: '#0A0A0A',
+                  background: 'var(--accent)',
+                  color: 'var(--accent-contrast)',
                 }}
                 disabled={uploadingAvatar}
               >
                 {uploadingAvatar ? (
-                  <div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(10,10,10,0.3)', borderTopColor: '#0A0A0A' }} />
+                  <div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: 'color-mix(in srgb, var(--accent-contrast) 30%, transparent)', borderTopColor: 'var(--accent-contrast)' }} />
                 ) : (
                   <Camera className="w-4 h-4" />
                 )}
@@ -474,7 +474,7 @@ export default function OnboardingPage() {
 
             {/* Name */}
             <div className="w-full">
-              <label className="block text-xs mb-2 tracking-wider uppercase" style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}>
+              <label className="block text-xs mb-2 tracking-wider uppercase" style={{ fontFamily: 'var(--font-display)', color: 'var(--text-2)' }}>
                 Nome completo
               </label>
               <input
@@ -484,14 +484,14 @@ export default function OnboardingPage() {
                 placeholder="Como você quer ser chamado"
                 className="w-full px-4 py-3 rounded-xl text-sm"
                 style={{
-                  background: 'rgba(10,10,10,0.6)',
-                  border: '1px solid rgba(201,168,76,0.12)',
-                  color: '#F2EDE4',
-                  fontFamily: 'Poppins, sans-serif',
+                  background: 'var(--surface-inset)',
+                  border: '1px solid var(--border-1)',
+                  color: 'var(--text-1)',
+                  fontFamily: 'var(--font-body)',
                   outline: 'none',
                 }}
-                onFocus={e => { e.target.style.borderColor = 'rgba(201,168,76,0.4)' }}
-                onBlur={e => { e.target.style.borderColor = 'rgba(201,168,76,0.12)' }}
+                onFocus={e => { e.target.style.borderColor = 'var(--accent)' }}
+                onBlur={e => { e.target.style.borderColor = 'var(--accent-soft)' }}
               />
             </div>
           </div>
@@ -502,11 +502,11 @@ export default function OnboardingPage() {
           <div>
             <h2
               className="text-xl font-bold tracking-wider uppercase mb-1 text-center"
-              style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
+              style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
             >
               Sua Vocação
             </h2>
-            <p className="text-sm mb-8 text-center" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+            <p className="text-sm mb-8 text-center" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}>
               Como você serve na Igreja
             </p>
 
@@ -518,10 +518,10 @@ export default function OnboardingPage() {
                   onClick={() => setVocacao(v.value)}
                   className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm transition-all duration-200"
                   style={{
-                    fontFamily: 'Poppins, sans-serif',
-                    background: vocacao === v.value ? 'rgba(201,168,76,0.12)' : 'rgba(10,10,10,0.5)',
-                    border: vocacao === v.value ? '2px solid rgba(201,168,76,0.4)' : '2px solid rgba(201,168,76,0.08)',
-                    color: vocacao === v.value ? '#C9A84C' : '#7A7368',
+                    fontFamily: 'var(--font-body)',
+                    background: vocacao === v.value ? 'var(--accent-soft)' : 'var(--surface-inset)',
+                    border: vocacao === v.value ? '2px solid var(--accent)' : '2px solid var(--border-1)',
+                    color: vocacao === v.value ? 'var(--accent)' : 'var(--text-3)',
                   }}
                 >
                   <VocacaoIcon vocacao={v.value} size={22} />
@@ -537,16 +537,16 @@ export default function OnboardingPage() {
           <div>
             <h2
               className="text-xl font-bold tracking-wider uppercase mb-1 text-center"
-              style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
+              style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
             >
               Sua Fé
             </h2>
-            <p className="text-sm mb-6 text-center" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+            <p className="text-sm mb-6 text-center" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}>
               Sacramentos recebidos e paróquia
             </p>
 
             {/* Sacramentos */}
-            <label className="block text-xs mb-2 tracking-wider uppercase" style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}>
+            <label className="block text-xs mb-2 tracking-wider uppercase" style={{ fontFamily: 'var(--font-display)', color: 'var(--text-2)' }}>
               Sacramentos recebidos
             </label>
             <div className="grid grid-cols-2 gap-2 mb-6">
@@ -557,12 +557,12 @@ export default function OnboardingPage() {
                   onClick={() => toggleSacramento(s.value)}
                   className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs transition-all"
                   style={{
-                    fontFamily: 'Poppins, sans-serif',
-                    background: sacramentos.includes(s.value) ? 'rgba(201,168,76,0.12)' : 'rgba(10,10,10,0.5)',
+                    fontFamily: 'var(--font-body)',
+                    background: sacramentos.includes(s.value) ? 'var(--accent-soft)' : 'var(--surface-inset)',
                     border: sacramentos.includes(s.value)
-                      ? '1px solid rgba(201,168,76,0.3)'
-                      : '1px solid rgba(201,168,76,0.08)',
-                    color: sacramentos.includes(s.value) ? '#C9A84C' : '#7A7368',
+                      ? '1px solid var(--accent-soft)'
+                      : '1px solid var(--border-1)',
+                    color: sacramentos.includes(s.value) ? 'var(--accent)' : 'var(--text-3)',
                   }}
                 >
                   {sacramentos.includes(s.value) && <Check className="w-3.5 h-3.5 flex-shrink-0" />}
@@ -574,28 +574,28 @@ export default function OnboardingPage() {
             {/* Paróquia + Diocese */}
             <div className="space-y-4">
               <div>
-                <label className="block text-xs mb-2 tracking-wider uppercase" style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}>
+                <label className="block text-xs mb-2 tracking-wider uppercase" style={{ fontFamily: 'var(--font-display)', color: 'var(--text-2)' }}>
                   Paróquia
                 </label>
                 <div className="relative">
-                  <Church className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#7A7368' }} />
+                  <Church className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-3)' }} />
                   <input
                     type="text" value={paroquia} onChange={e => setParoquia(e.target.value)}
                     placeholder="Ex: Paróquia São José"
                     className="w-full pl-10 pr-4 py-3 rounded-xl text-sm"
-                    style={{ background: 'rgba(10,10,10,0.6)', border: '1px solid rgba(201,168,76,0.12)', color: '#F2EDE4', fontFamily: 'Poppins, sans-serif', outline: 'none' }}
+                    style={{ background: 'var(--surface-inset)', border: '1px solid var(--border-1)', color: 'var(--text-1)', fontFamily: 'var(--font-body)', outline: 'none' }}
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs mb-2 tracking-wider uppercase" style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}>
+                <label className="block text-xs mb-2 tracking-wider uppercase" style={{ fontFamily: 'var(--font-display)', color: 'var(--text-2)' }}>
                   Diocese
                 </label>
                 <input
                   type="text" value={diocese} onChange={e => setDiocese(e.target.value)}
                   placeholder="Ex: Arquidiocese de São Paulo"
                   className="w-full px-4 py-3 rounded-xl text-sm"
-                  style={{ background: 'rgba(10,10,10,0.6)', border: '1px solid rgba(201,168,76,0.12)', color: '#F2EDE4', fontFamily: 'Poppins, sans-serif', outline: 'none' }}
+                  style={{ background: 'var(--surface-inset)', border: '1px solid var(--border-1)', color: 'var(--text-1)', fontFamily: 'var(--font-body)', outline: 'none' }}
                 />
               </div>
             </div>
@@ -607,11 +607,11 @@ export default function OnboardingPage() {
           <div>
             <h2
               className="text-xl font-bold tracking-wider uppercase mb-1 text-center"
-              style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
+              style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
             >
               {perfilTipo === 'igreja' ? 'Cidade da Igreja' : 'Sua Localização'}
             </h2>
-            <p className="text-sm mb-8 text-center" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+            <p className="text-sm mb-8 text-center" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}>
               {perfilTipo === 'igreja'
                 ? 'Usamos para pré-preencher o cadastro da igreja no próximo passo'
                 : 'Para encontrar igrejas perto de você'}
@@ -619,27 +619,27 @@ export default function OnboardingPage() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs mb-2 tracking-wider uppercase" style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}>
+                <label className="block text-xs mb-2 tracking-wider uppercase" style={{ fontFamily: 'var(--font-display)', color: 'var(--text-2)' }}>
                   Cidade
                 </label>
                 <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#7A7368' }} />
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-3)' }} />
                   <input
                     type="text" value={cidade} onChange={e => setCidade(e.target.value)}
                     placeholder="Sua cidade"
                     className="w-full pl-10 pr-4 py-3 rounded-xl text-sm"
-                    style={{ background: 'rgba(10,10,10,0.6)', border: '1px solid rgba(201,168,76,0.12)', color: '#F2EDE4', fontFamily: 'Poppins, sans-serif', outline: 'none' }}
+                    style={{ background: 'var(--surface-inset)', border: '1px solid var(--border-1)', color: 'var(--text-1)', fontFamily: 'var(--font-body)', outline: 'none' }}
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs mb-2 tracking-wider uppercase" style={{ fontFamily: 'Cinzel, serif', color: '#B8AFA2' }}>
+                <label className="block text-xs mb-2 tracking-wider uppercase" style={{ fontFamily: 'var(--font-display)', color: 'var(--text-2)' }}>
                   Estado
                 </label>
                 <select
                   value={estado} onChange={e => setEstado(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl text-sm appearance-none cursor-pointer"
-                  style={{ background: 'rgba(10,10,10,0.6)', border: '1px solid rgba(201,168,76,0.12)', color: estado ? '#F2EDE4' : '#7A7368', fontFamily: 'Poppins, sans-serif', outline: 'none' }}
+                  style={{ background: 'var(--surface-inset)', border: '1px solid var(--border-1)', color: estado ? 'var(--text-1)' : 'var(--text-3)', fontFamily: 'var(--font-body)', outline: 'none' }}
                 >
                   <option value="">Selecione o estado</option>
                   {ESTADOS_BR.map(uf => (
@@ -659,10 +659,10 @@ export default function OnboardingPage() {
             onClick={goBack}
             className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm transition-all hover:opacity-80"
             style={{
-              fontFamily: 'Poppins, sans-serif',
-              background: 'rgba(201,168,76,0.08)',
-              border: '1px solid rgba(201,168,76,0.15)',
-              color: '#C9A84C',
+              fontFamily: 'var(--font-body)',
+              background: 'var(--accent-soft)',
+              border: '1px solid var(--border-1)',
+              color: 'var(--accent)',
             }}
           >
             <ArrowLeft className="w-4 h-4" />
@@ -678,11 +678,11 @@ export default function OnboardingPage() {
             disabled={nextDisabled}
             className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold tracking-wider uppercase transition-all hover:scale-[1.02]"
             style={{
-              fontFamily: 'Cinzel, serif',
+              fontFamily: 'var(--font-display)',
               background: nextDisabled
-                ? 'rgba(201,168,76,0.15)'
-                : 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
-              color: nextDisabled ? '#7A7368' : '#0A0A0A',
+                ? 'var(--accent-soft)'
+                : 'var(--accent)',
+              color: nextDisabled ? 'var(--text-3)' : 'var(--accent-contrast)',
               cursor: nextDisabled ? 'not-allowed' : 'pointer',
             }}
           >
@@ -695,13 +695,13 @@ export default function OnboardingPage() {
             disabled={saving}
             className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold tracking-wider uppercase transition-all hover:scale-[1.02]"
             style={{
-              fontFamily: 'Cinzel, serif',
-              background: saving ? 'rgba(201,168,76,0.15)' : 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
-              color: saving ? '#7A7368' : '#0A0A0A',
+              fontFamily: 'var(--font-display)',
+              background: saving ? 'var(--accent-soft)' : 'var(--accent)',
+              color: saving ? 'var(--text-3)' : 'var(--accent-contrast)',
             }}
           >
             {saving ? (
-              <div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: 'rgba(10,10,10,0.3)', borderTopColor: '#0A0A0A' }} />
+              <div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: 'color-mix(in srgb, var(--accent-contrast) 30%, transparent)', borderTopColor: 'var(--accent-contrast)' }} />
             ) : (
               <>
                 <Check className="w-4 h-4" />
@@ -717,7 +717,7 @@ export default function OnboardingPage() {
         <button
           onClick={goNext}
           className="relative z-10 mt-3 text-xs transition-colors hover:opacity-80"
-          style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+          style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
         >
           Pular esta etapa
         </button>
@@ -733,7 +733,7 @@ export default function OnboardingPage() {
             exit={{ opacity: 0 }}
             style={{
               background:
-                'radial-gradient(ellipse at center, rgba(201,168,76,0.1), rgba(15,14,12,0.98))',
+                'radial-gradient(ellipse at center, var(--accent-soft), var(--surface-1))',
               backdropFilter: 'blur(20px)',
             }}
           >
@@ -752,8 +752,8 @@ export default function OnboardingPage() {
               transition={{ delay: 0.15 }}
               className="text-3xl mb-2"
               style={{
-                fontFamily: 'Cormorant Garamond, serif',
-                color: '#F2EDE4',
+                fontFamily: 'var(--font-elegant)',
+                color: 'var(--text-1)',
               }}
             >
               Bem-vindo, {(name || 'Irmão').split(' ')[0]}
@@ -764,8 +764,8 @@ export default function OnboardingPage() {
               transition={{ delay: 0.3 }}
               className="text-sm"
               style={{
-                color: '#C9A84C',
-                fontFamily: 'Poppins, sans-serif',
+                color: 'var(--accent)',
+                fontFamily: 'var(--font-body)',
               }}
             >
               Que sua jornada seja fiel ao Magistério.

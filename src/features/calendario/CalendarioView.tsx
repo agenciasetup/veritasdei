@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { getLiturgicalDay, type LiturgicalDay } from '@/lib/liturgical-calendar'
+import Divider from '@/components/ui/Divider'
 
 const MONTH_NAMES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -114,16 +115,25 @@ export default function CalendarioView() {
 
   return (
     <div className="flex flex-col min-h-screen relative">
-      <div className="bg-glow" />
-
-      <section className="page-header relative z-10">
-        <h1>Calendário Litúrgico</h1>
-        <p className="subtitle">
+      <section className="relative z-10 text-center px-5 pt-8 pb-4">
+        <h1
+          className="text-2xl md:text-3xl tracking-[0.08em] uppercase"
+          style={{
+            fontFamily: 'var(--font-display)',
+            color: 'var(--text-1)',
+            fontWeight: 700,
+            lineHeight: 1.15,
+          }}
+        >
+          Calendário Litúrgico
+        </h1>
+        <p
+          className="mt-2 text-sm max-w-md mx-auto"
+          style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+        >
           Acompanhe os tempos litúrgicos, festas e santos do ano
         </p>
-        <div className="ornament-divider max-w-sm mx-auto mt-4">
-          <span>&#10022;</span>
-        </div>
+        <Divider variant="ornament" className="max-w-[180px] mx-auto" spacing="default" />
       </section>
 
       <main className="relative z-10 flex-1 pb-28 md:pb-16">
@@ -134,21 +144,21 @@ export default function CalendarioView() {
             <button
               onClick={prevMonth}
               className="p-2 rounded-lg transition-colors"
-              style={{ color: '#7A7368' }}
+              style={{ color: 'var(--text-3)' }}
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
             <div className="text-center">
               <h2
-                className="text-lg font-bold"
-                style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
+                className="text-lg font-bold tracking-[0.06em] uppercase"
+                style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
               >
                 {MONTH_NAMES[month]} {year}
               </h2>
               <button
                 onClick={goToToday}
                 className="text-[10px] tracking-wider uppercase mt-1"
-                style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
+                style={{ color: 'var(--accent)', fontFamily: 'var(--font-body)' }}
               >
                 Hoje
               </button>
@@ -156,7 +166,7 @@ export default function CalendarioView() {
             <button
               onClick={nextMonth}
               className="p-2 rounded-lg transition-colors"
-              style={{ color: '#7A7368' }}
+              style={{ color: 'var(--text-3)' }}
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -166,19 +176,19 @@ export default function CalendarioView() {
           <div
             className="rounded-2xl overflow-hidden mb-6"
             style={{
-              background: 'rgba(20,18,14,0.5)',
-              border: '1px solid rgba(201,168,76,0.08)',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border-1)',
             }}
           >
             {/* Day names header */}
-            <div className="grid grid-cols-7 border-b" style={{ borderColor: 'rgba(201,168,76,0.06)' }}>
+            <div className="grid grid-cols-7 border-b" style={{ borderColor: 'var(--border-2)' }}>
               {DAY_NAMES.map((name, i) => (
                 <div
                   key={name}
                   className="py-2 text-center text-[10px] tracking-wider uppercase"
                   style={{
-                    color: i === 0 ? '#D94F5C' : '#7A7368',
-                    fontFamily: 'Poppins, sans-serif',
+                    color: i === 0 ? 'var(--danger)' : 'var(--text-3)',
+                    fontFamily: 'var(--font-body)',
                   }}
                 >
                   {name}
@@ -198,13 +208,13 @@ export default function CalendarioView() {
                   <button
                     key={i}
                     onClick={() => setSelectedDay(day)}
-                    className="relative p-1 md:p-2 min-h-[48px] md:min-h-[64px] text-center transition-all duration-200 border-b border-r"
+                    className="relative p-1 md:p-2 min-h-[48px] md:min-h-[64px] text-center transition-colors border-b border-r"
                     style={{
-                      borderColor: 'rgba(201,168,76,0.04)',
+                      borderColor: 'var(--border-2)',
                       background: isSelected
-                        ? 'rgba(201,168,76,0.1)'
+                        ? 'var(--accent-soft)'
                         : day.isToday
-                          ? 'rgba(201,168,76,0.05)'
+                          ? 'color-mix(in srgb, var(--accent) 6%, transparent)'
                           : 'transparent',
                       opacity: day.isCurrentMonth ? 1 : 0.3,
                     }}
@@ -213,14 +223,14 @@ export default function CalendarioView() {
                     <span
                       className="text-sm font-medium block"
                       style={{
-                        fontFamily: 'Poppins, sans-serif',
+                        fontFamily: 'var(--font-body)',
                         color: day.isToday
-                          ? '#C9A84C'
+                          ? 'var(--accent)'
                           : isImportant
                             ? colors.text
                             : isSunday
-                              ? '#D94F5C'
-                              : '#B8AFA2',
+                              ? 'var(--danger)'
+                              : 'var(--text-2)',
                       }}
                     >
                       {day.date.getDate()}
@@ -236,7 +246,7 @@ export default function CalendarioView() {
                     {isImportant && day.isCurrentMonth && (
                       <span
                         className="text-[8px] leading-tight block mt-0.5 truncate hidden md:block"
-                        style={{ color: colors.text, fontFamily: 'Poppins, sans-serif' }}
+                        style={{ color: colors.text, fontFamily: 'var(--font-body)' }}
                       >
                         {day.liturgical.name.length > 20
                           ? day.liturgical.name.substring(0, 18) + '...'
@@ -248,7 +258,7 @@ export default function CalendarioView() {
                     {day.isToday && (
                       <span
                         className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full"
-                        style={{ background: '#C9A84C' }}
+                        style={{ background: 'var(--accent)' }}
                       />
                     )}
                   </button>
@@ -262,8 +272,8 @@ export default function CalendarioView() {
             <div
               className="rounded-2xl p-5 md:p-6 fade-in"
               style={{
-                background: 'rgba(20,18,14,0.6)',
-                border: `1px solid ${(LITURGICAL_COLORS[active.liturgical.color] ?? LITURGICAL_COLORS.verde).dot}20`,
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border-1)',
               }}
             >
               <div className="flex items-start gap-4">
@@ -288,7 +298,7 @@ export default function CalendarioView() {
                   {/* Date */}
                   <p
                     className="text-[10px] tracking-[0.15em] uppercase mb-1"
-                    style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+                    style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
                   >
                     {active.date.toLocaleDateString('pt-BR', {
                       weekday: 'long',
@@ -300,8 +310,8 @@ export default function CalendarioView() {
 
                   {/* Name */}
                   <h3
-                    className="text-lg font-bold mb-1"
-                    style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
+                    className="text-lg font-bold mb-1 tracking-[0.04em]"
+                    style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
                   >
                     {active.liturgical.name}
                   </h3>
@@ -310,7 +320,7 @@ export default function CalendarioView() {
                   {active.liturgical.title && (
                     <p
                       className="text-sm italic mb-3"
-                      style={{ fontFamily: 'Cormorant Garamond, serif', color: '#B8AFA2' }}
+                      style={{ fontFamily: 'var(--font-elegant)', color: 'var(--text-2)' }}
                     >
                       {active.liturgical.title}
                     </p>
@@ -324,7 +334,7 @@ export default function CalendarioView() {
                         background: (LITURGICAL_COLORS[active.liturgical.color] ?? LITURGICAL_COLORS.verde).bg,
                         border: `1px solid ${(LITURGICAL_COLORS[active.liturgical.color] ?? LITURGICAL_COLORS.verde).dot}25`,
                         color: (LITURGICAL_COLORS[active.liturgical.color] ?? LITURGICAL_COLORS.verde).text,
-                        fontFamily: 'Poppins, sans-serif',
+                        fontFamily: 'var(--font-body)',
                       }}
                     >
                       {GRADE_LABELS[active.liturgical.grade] ?? active.liturgical.grade}
@@ -332,10 +342,10 @@ export default function CalendarioView() {
                     <span
                       className="text-[10px] px-2.5 py-1 rounded-full tracking-wider uppercase"
                       style={{
-                        background: 'rgba(201,168,76,0.06)',
-                        border: '1px solid rgba(201,168,76,0.12)',
-                        color: '#C9A84C',
-                        fontFamily: 'Poppins, sans-serif',
+                        background: 'var(--accent-soft)',
+                        border: '1px solid var(--accent-soft)',
+                        color: 'var(--accent)',
+                        fontFamily: 'var(--font-body)',
                       }}
                     >
                       {active.liturgical.season}

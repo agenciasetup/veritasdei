@@ -10,7 +10,7 @@ export default function ReliquiasSection() {
       <SectionTitle icon={Gem} title="Reliquário" />
       <p
         className="text-sm mb-2"
-        style={{ color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}
+        style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}
       >
         Seus selos de fé. Cada um marca uma conquista na sua jornada de estudo,
         oração e comunhão. Toque numa relíquia desbloqueada para equipar —
