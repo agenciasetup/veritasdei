@@ -16,9 +16,9 @@
   --surface-3:      #1C1913; /* cards / sheets */
   --surface-inset:  rgba(0, 0, 0, 0.35); /* inputs inset */
 
-  --text-1:         #F2EDE4;
-  --text-2:         #B8AFA7;
-  --text-3:         #8A8378;
+  --text-1:         #F2EDE4; /* 18.3:1 vs surface-2 */
+  --text-2:         #C0B8B0; /* clareado de #B8AFA7 → 9.1:1 */
+  --text-3:         #938B80; /* clareado de #8A8378 → 5.3:1 (AA confortável) */
   --text-inverse:   #1C140C;
 
   --border-1:       rgba(242, 237, 228, 0.12);
@@ -112,9 +112,9 @@
   --surface-3:      #FBF6EC; /* cards / sheets */
   --surface-inset:  rgba(28, 20, 12, 0.04);
 
-  --text-1:         #1C140C; /* ink */
-  --text-2:         #4A3E30;
-  --text-3:         #7A6E5E;
+  --text-1:         #1C140C; /* ink  — 16.7:1 vs surface-2 */
+  --text-2:         #3A3022; /* escurecido de #4A3E30 para 12.8:1 vs surface-2 */
+  --text-3:         #635747; /* escurecido de #7A6E5E → 6.5:1 vs surface-2 (AA normal + large) */
   --text-inverse:   #F7F2E8;
 
   --border-1:       rgba(28, 20, 12, 0.12);
@@ -164,6 +164,39 @@
 }
 
 /* ═══════════════════════════════════════════════════════
+   LITURGICAL SEASON OVERRIDES (opt-in)
+   Em Quaresma e Advento, a Igreja usa paramentos roxos —
+   o app espelha isso no acento quando
+   `html[data-liturgical-season="quaresma|advento"]` está set
+   (controlado por LiturgicalThemeSync). Sutil o bastante para
+   não brigar com a identidade do tema.
+   ═══════════════════════════════════════════════════════ */
+:root[data-liturgical-season="quaresma"],
+:root[data-liturgical-season="advento"] {
+  --accent:         #7A4C82;
+  --accent-hover:   #8E5C96;
+  --accent-soft:    rgba(122, 76, 130, 0.15);
+}
+
+:root[data-theme="light"][data-liturgical-season="quaresma"],
+:root[data-theme="light"][data-liturgical-season="advento"] {
+  --accent:         #5E3A66;
+  --accent-hover:   #4E2F56;
+  --accent-contrast:#FFFFFF;
+  --accent-soft:    rgba(94, 58, 102, 0.10);
+}
+
+@media (prefers-color-scheme: light) {
+  :root[data-theme="system"][data-liturgical-season="quaresma"],
+  :root[data-theme="system"][data-liturgical-season="advento"] {
+    --accent:         #5E3A66;
+    --accent-hover:   #4E2F56;
+    --accent-contrast:#FFFFFF;
+    --accent-soft:    rgba(94, 58, 102, 0.10);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
    AUTO THEME (system preference, applied when data-theme="system")
    O ThemeProvider (Sprint 1.2) escreve `data-theme="system"` e
    deixa este media query decidir. Fallback caso JS falhe.
@@ -175,8 +208,8 @@
     --surface-3:      #FBF6EC;
     --surface-inset:  rgba(28, 20, 12, 0.04);
     --text-1:         #1C140C;
-    --text-2:         #4A3E30;
-    --text-3:         #7A6E5E;
+    --text-2:         #3A3022;
+    --text-3:         #635747;
     --text-inverse:   #F7F2E8;
     --border-1:       rgba(28, 20, 12, 0.12);
     --border-2:       rgba(28, 20, 12, 0.06);
@@ -569,9 +602,9 @@ body::after {
 .skeleton {
   background: linear-gradient(
     90deg,
-    rgba(201, 168, 76, 0.05) 25%,
-    rgba(201, 168, 76, 0.1) 50%,
-    rgba(201, 168, 76, 0.05) 75%
+    var(--surface-inset) 25%,
+    color-mix(in srgb, var(--accent) 12%, var(--surface-inset)) 50%,
+    var(--surface-inset) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.8s ease-in-out infinite;
@@ -944,7 +977,7 @@ section {
    ═══════════════════════════════════════════════════════ */
 
 :focus-visible {
-  outline: 2px solid var(--gold);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -965,9 +998,9 @@ section {
   transform: translateX(-50%);
   z-index: 10000;
   padding: 0.75rem 1.5rem;
-  background: var(--gold);
-  color: #0A0A0A;
-  font-family: 'Poppins', sans-serif;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-family: var(--font-body);
   font-size: 0.875rem;
   font-weight: 600;
   border-radius: 0 0 8px 8px;

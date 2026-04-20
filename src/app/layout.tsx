@@ -6,6 +6,7 @@ import { AuthProvider } from "@/contexts/AuthContext"
 import { ThemeProvider } from "@/contexts/ThemeContext"
 import ThemeScript from "@/components/ThemeScript"
 import ThemeSupabaseSync from "@/components/theme/ThemeSupabaseSync"
+import LiturgicalThemeSync from "@/components/theme/LiturgicalThemeSync"
 import PwaRegister from "@/components/layout/PwaRegister"
 import NoZoom from "@/components/layout/NoZoom"
 import GamificationEventsProvider from "@/components/gamification/GamificationEventsProvider"
@@ -24,7 +25,10 @@ const cormorant = Cormorant_Garamond({
   subsets: ['latin'],
   weight: ['400'],
   style: ['normal', 'italic'],
-  display: 'swap',
+  // optional: browser só aplica se carregar em <100ms — reduz CLS em
+  // conexões lentas. Fonte de acento (citações, welcome); fallback
+  // Georgia é aceitável se a custom não chegar a tempo.
+  display: 'optional',
   variable: '--font-elegant-loaded',
   fallback: ['Georgia', 'serif'],
 })
@@ -92,6 +96,7 @@ export default function RootLayout({
           Pular para o conteúdo
         </a>
         <ThemeProvider>
+          <LiturgicalThemeSync />
           <AuthProvider>
             <ThemeSupabaseSync />
             <GamificationEventsProvider>

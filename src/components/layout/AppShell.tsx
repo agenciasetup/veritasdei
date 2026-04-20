@@ -12,6 +12,18 @@ import { SubscriptionProvider } from '@/contexts/SubscriptionContext'
 import InstallPrompt from '@/components/pwa/InstallPrompt'
 import PageTransition from '@/components/mobile/PageTransition'
 import OfflineBanner from '@/components/mobile/OfflineBanner'
+import dynamic from 'next/dynamic'
+
+// CoachMarks só aparece na primeira sessão pós-onboarding (flag em
+// localStorage). Lazy-load para não pesar o bundle inicial.
+const CoachMarks = dynamic(() => import('@/components/onboarding/CoachMarks'), {
+  ssr: false,
+})
+
+// NovidadesModal aparece uma vez por versão (flag veritas-last-seen-version).
+const NovidadesModal = dynamic(() => import('@/components/NovidadesModal'), {
+  ssr: false,
+})
 
 const PUBLIC_PATHS = ['/login', '/auth', '/privacidade', '/termos', '/onboarding']
 const FULLSCREEN_PATHS = ['/verbum', '/rosario', '/liturgia/hoje']
@@ -56,6 +68,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {showChrome && <BottomNav />}
           {/* Install PWA prompt (Android + iOS fallback) */}
           {showChrome && <InstallPrompt />}
+          {/* CoachMarks — só primeira sessão pós-onboarding */}
+          {showChrome && <CoachMarks />}
+          {/* NovidadesModal — uma vez por versão */}
+          {showChrome && <NovidadesModal />}
         </PropositoSheetProvider>
       </PropositosProvider>
     </SubscriptionProvider>

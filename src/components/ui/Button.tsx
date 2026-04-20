@@ -1,6 +1,7 @@
 "use client"
 
-import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react"
+import { forwardRef, useCallback, type ButtonHTMLAttributes, type MouseEvent, type ReactNode } from "react"
+import { useHaptic, type HapticPattern } from "@/hooks/useHaptic"
 
 type Variant = "primary" | "ghost" | "destructive" | "gold"
 type Size = "sm" | "md" | "lg"
@@ -12,6 +13,12 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   leftIcon?: ReactNode
   rightIcon?: ReactNode
   fullWidth?: boolean
+  /**
+   * Padrão de haptic ao pressionar. Default depende da variante:
+   *   primary → 'tap', gold → 'medium' (ação sacra), destructive → 'warning'.
+   * Passe `haptic={null}` para desabilitar.
+   */
+  haptic?: HapticPattern | null
 }
 
 const SIZE: Record<Size, { h: string; px: string; text: string; icon: string; radius: string }> = {
@@ -59,6 +66,13 @@ function variantStyle(variant: Variant): React.CSSProperties {
   }
 }
 
+const DEFAULT_HAPTIC: Record<Variant, HapticPattern> = {
+  primary: "tap",
+  ghost: "tap",
+  destructive: "warning",
+  gold: "medium", // ação sacra — um pouco mais presente
+}
+
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   {
     variant = "primary",
@@ -68,16 +82,31 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     leftIcon,
     rightIcon,
     fullWidth,
+    haptic,
     className,
     children,
     type = "button",
     style,
+    onClick,
     ...rest
   },
   ref,
 ) {
   const s = SIZE[size]
   const isDisabled = disabled || loading
+  const hapticApi = useHaptic()
+
+  const handleClick = useCallback(
+    (e: MouseEvent<HTMLButtonElement>) => {
+      if (isDisabled) return
+      if (haptic !== null) {
+        const pattern = haptic ?? DEFAULT_HAPTIC[variant]
+        hapticApi.pulse(pattern)
+      }
+      onClick?.(e)
+    },
+    [haptic, hapticApi, isDisabled, onClick, variant],
+  )
 
   return (
     <button
@@ -85,6 +114,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       type={type}
       disabled={isDisabled}
       aria-busy={loading || undefined}
+      onClick={handleClick}
       className={[
         "inline-flex items-center justify-center gap-2 select-none",
         "transition-[transform,opacity,background-color,border-color] duration-150 ease-out",

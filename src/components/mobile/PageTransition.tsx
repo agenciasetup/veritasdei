@@ -13,7 +13,33 @@ import { type ReactNode, useState } from 'react'
  * "Profundidade" é estimada pelo número de segmentos da rota.
  */
 
-const TAB_HUBS = ['/', '/orar', '/liturgia', '/aprender', '/perfil']
+/**
+ * Hubs da bottom nav — slide horizontal entre eles (mesma profundidade,
+ * direção baseada na ordem do nav).
+ * Inclui aliases legacy (/orar → /rezar etc) para o período de redirects 301.
+ */
+const TAB_HUBS_ORDER = [
+  '/rezar',
+  '/formacao',
+  '/igrejas',
+  '/comunidade',
+  '/biblioteca',
+]
+
+const HUB_ALIASES: Record<string, string> = {
+  '/orar': '/rezar',
+  '/aprender': '/formacao',
+  '/paroquias': '/igrejas',
+}
+
+function canonicalizeHub(path: string): string {
+  return HUB_ALIASES[path] ?? path
+}
+
+function hubIndex(path: string): number {
+  const canonical = canonicalizeHub(path)
+  return TAB_HUBS_ORDER.indexOf(canonical)
+}
 
 function depthOf(path: string): number {
   if (path === '/') return 0
@@ -21,14 +47,21 @@ function depthOf(path: string): number {
 }
 
 function isTabHub(path: string): boolean {
-  if (path === '/') return true
-  return TAB_HUBS.some((p) => p !== '/' && path.startsWith(p) && path === p)
+  return hubIndex(path) >= 0 || path === '/'
 }
 
-type Direction = 'forward' | 'back' | 'fade'
+type Direction = 'forward' | 'back' | 'fade' | 'slide-left' | 'slide-right'
 
 function computeDirection(prev: string, next: string): Direction {
   if (prev === next) return 'fade'
+  const prevHub = hubIndex(prev)
+  const nextHub = hubIndex(next)
+  // Mesma profundidade + ambos são hubs da bottom nav: slide horizontal direcional.
+  if (prevHub >= 0 && nextHub >= 0) {
+    if (nextHub > prevHub) return 'slide-left'
+    if (nextHub < prevHub) return 'slide-right'
+    return 'fade'
+  }
   const prevDepth = depthOf(prev)
   const nextDepth = depthOf(next)
   if (isTabHub(prev) && isTabHub(next)) return 'fade'
@@ -49,24 +82,44 @@ export function PageTransition({ children }: { children: ReactNode }) {
     setPrevPath(pathname)
   }
 
-  const variants =
-    direction === 'fade'
-      ? {
+  const variants = (() => {
+    switch (direction) {
+      case 'fade':
+        return {
           initial: { opacity: 0 },
           animate: { opacity: 1 },
           exit: { opacity: 0 },
         }
-      : direction === 'forward'
-        ? {
-            initial: { opacity: 0, x: '8%' },
-            animate: { opacity: 1, x: 0 },
-            exit: { opacity: 0, x: '-4%' },
-          }
-        : {
-            initial: { opacity: 0, x: '-8%' },
-            animate: { opacity: 1, x: 0 },
-            exit: { opacity: 0, x: '4%' },
-          }
+      case 'forward':
+        return {
+          initial: { opacity: 0, x: '8%' },
+          animate: { opacity: 1, x: 0 },
+          exit: { opacity: 0, x: '-4%' },
+        }
+      case 'back':
+        return {
+          initial: { opacity: 0, x: '-8%' },
+          animate: { opacity: 1, x: 0 },
+          exit: { opacity: 0, x: '4%' },
+        }
+      case 'slide-left':
+        // Novo hub está mais à direita na nav — página entra da direita.
+        return {
+          initial: { opacity: 0, x: '12%' },
+          animate: { opacity: 1, x: 0 },
+          exit: { opacity: 0, x: '-6%' },
+        }
+      case 'slide-right':
+        // Novo hub está mais à esquerda — página entra da esquerda.
+        return {
+          initial: { opacity: 0, x: '-12%' },
+          animate: { opacity: 1, x: 0 },
+          exit: { opacity: 0, x: '6%' },
+        }
+    }
+  })()
+
+  const isSlide = direction === 'slide-left' || direction === 'slide-right'
 
   return (
     <AnimatePresence mode="wait" initial={false}>
@@ -76,7 +129,7 @@ export function PageTransition({ children }: { children: ReactNode }) {
         animate={variants.animate}
         exit={variants.exit}
         transition={{
-          duration: direction === 'fade' ? 0.10 : 0.16,
+          duration: direction === 'fade' ? 0.10 : isSlide ? 0.20 : 0.16,
           ease: [0.22, 1, 0.36, 1],
         }}
         style={{ willChange: 'transform, opacity' }}
