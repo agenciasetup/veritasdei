@@ -28,7 +28,8 @@ import { isValidCpf, maskCpf, stripCpf } from '@/lib/utils/cpf'
 import { useHaptic } from '@/hooks/useHaptic'
 import { FormInput, FormSelect } from './shared'
 import ThemeToggle from '@/components/theme/ThemeToggle'
-import { Palette } from 'lucide-react'
+import { Palette, Volume2 } from 'lucide-react'
+import { useSound } from '@/hooks/useSound'
 
 type Group = 'identidade' | 'endereco' | 'fe'
 
@@ -662,8 +663,69 @@ export default function ContaSection() {
           </div>
           <ThemeToggle />
         </div>
+
+        {/* Separador + toggle de som */}
+        <div
+          className="mt-4 pt-4 flex items-center justify-between gap-4 flex-wrap"
+          style={{ borderTop: '1px solid var(--border-2)' }}
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <Volume2 className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--accent)' }} />
+            <div className="min-w-0">
+              <div
+                className="text-sm font-medium"
+                style={{
+                  color: 'var(--text-1)',
+                  fontFamily: 'var(--font-display)',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                Sino sacro
+              </div>
+              <div
+                className="text-xs mt-0.5"
+                style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+              >
+                Toque sutil ao completar dezena do Terço e outras ações sacras.
+              </div>
+            </div>
+          </div>
+          <SoundToggle />
+        </div>
       </div>
     </div>
+  )
+}
+
+function SoundToggle() {
+  const { enabled, setEnabled, bell } = useSound()
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={enabled}
+      onClick={() => {
+        const next = !enabled
+        setEnabled(next)
+        if (next) bell()
+      }}
+      className="relative w-11 h-6 rounded-full transition-colors"
+      style={{
+        background: enabled
+          ? 'var(--accent)'
+          : 'color-mix(in srgb, var(--text-3) 30%, transparent)',
+      }}
+    >
+      <span
+        className="absolute top-0.5 w-5 h-5 rounded-full transition-transform"
+        style={{
+          left: 2,
+          background: '#FFFFFF',
+          transform: enabled ? 'translateX(20px)' : 'translateX(0)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+        }}
+      />
+    </button>
   )
 }
 
