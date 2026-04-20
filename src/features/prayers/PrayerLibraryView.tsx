@@ -5,6 +5,7 @@ import { resolvePrayerIcon } from './icon-map'
 import MyPrayersStrip from './MyPrayersStrip'
 import PrayerSearch from './PrayerSearch'
 import { fetchLibraryTree } from './queries'
+import Divider from '@/components/ui/Divider'
 
 /**
  * Index de /oracoes — Server Component.
@@ -25,12 +26,12 @@ export default async function PrayerLibraryView() {
       <section className="max-w-3xl mx-auto px-5 pt-8 pb-4 flex flex-col items-center text-center gap-3">
         <h1
           style={{
-            fontFamily: 'Cinzel, serif',
+            fontFamily: 'var(--font-display)',
             fontSize: 'clamp(1.75rem, 5vw, 2.5rem)',
             fontWeight: 700,
-            letterSpacing: '0.04em',
+            letterSpacing: '0.08em',
             textTransform: 'uppercase',
-            color: 'var(--text-primary)',
+            color: 'var(--text-1)',
             lineHeight: 1.1,
           }}
         >
@@ -38,16 +39,15 @@ export default async function PrayerLibraryView() {
         </h1>
         <p
           style={{
-            fontFamily: 'Poppins, sans-serif',
+            fontFamily: 'var(--font-body)',
             fontSize: '0.95rem',
-            color: 'var(--text-secondary)',
-            fontWeight: 300,
+            color: 'var(--text-3)',
             maxWidth: '34ch',
           }}
         >
           Para cada momento da vida cristã
         </p>
-        <div className="ornament-divider w-full max-w-sm" aria-hidden />
+        <Divider variant="ornament" className="max-w-[180px] w-full" spacing="default" />
       </section>
 
       <div className="max-w-3xl mx-auto px-5 flex flex-col gap-7">
@@ -60,11 +60,11 @@ export default async function PrayerLibraryView() {
           <h2
             className="px-1"
             style={{
-              fontFamily: 'Cinzel, serif',
+              fontFamily: 'var(--font-display)',
               fontSize: '0.75rem',
               letterSpacing: '0.16em',
               textTransform: 'uppercase',
-              color: 'var(--gold)',
+              color: 'var(--accent)',
               fontWeight: 600,
             }}
           >
@@ -83,9 +83,8 @@ export default async function PrayerLibraryView() {
                     href={`/oracoes/categoria/${topic.slug}`}
                     className="flex flex-col justify-between h-full rounded-2xl p-4 gap-4 transition-transform active:scale-[0.98]"
                     style={{
-                      background: 'rgba(20,18,14,0.55)',
-                      border: '1px solid rgba(201,168,76,0.18)',
-                      backdropFilter: 'blur(8px)',
+                      background: 'var(--surface-2)',
+                      border: '1px solid var(--border-1)',
                       minHeight: 140,
                     }}
                   >
@@ -94,9 +93,9 @@ export default async function PrayerLibraryView() {
                       style={{
                         width: 44,
                         height: 44,
-                        background: 'rgba(201,168,76,0.1)',
-                        border: '1px solid rgba(201,168,76,0.22)',
-                        color: 'var(--gold)',
+                        background: 'var(--accent-soft)',
+                        border: '1px solid var(--accent-soft)',
+                        color: 'var(--accent)',
                       }}
                     >
                       <Icon className="w-5 h-5" />
@@ -104,11 +103,11 @@ export default async function PrayerLibraryView() {
                     <div className="flex flex-col gap-1">
                       <h3
                         style={{
-                          fontFamily: 'Cinzel, serif',
+                          fontFamily: 'var(--font-display)',
                           fontSize: '1.05rem',
-                          color: 'var(--text-primary)',
+                          color: 'var(--text-1)',
                           fontWeight: 600,
-                          letterSpacing: '0.02em',
+                          letterSpacing: '0.04em',
                         }}
                       >
                         {topic.title}
@@ -117,9 +116,8 @@ export default async function PrayerLibraryView() {
                         <p
                           className="text-xs leading-snug"
                           style={{
-                            fontFamily: 'Poppins, sans-serif',
-                            color: 'var(--text-muted)',
-                            fontWeight: 300,
+                            fontFamily: 'var(--font-body)',
+                            color: 'var(--text-3)',
                           }}
                         >
                           {topic.subtitle}
@@ -129,9 +127,9 @@ export default async function PrayerLibraryView() {
                     <div
                       className="flex items-center justify-between mt-auto pt-1"
                       style={{
-                        fontFamily: 'Poppins, sans-serif',
+                        fontFamily: 'var(--font-body)',
                         fontSize: '0.7rem',
-                        color: 'var(--text-muted)',
+                        color: 'var(--text-3)',
                         letterSpacing: '0.06em',
                         textTransform: 'uppercase',
                       }}
@@ -141,7 +139,7 @@ export default async function PrayerLibraryView() {
                       </span>
                       <ChevronRight
                         className="w-3.5 h-3.5"
-                        style={{ color: 'var(--gold)' }}
+                        style={{ color: 'var(--accent)' }}
                       />
                     </div>
                   </Link>
