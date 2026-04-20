@@ -1,14 +1,16 @@
 /**
  * Theme palettes for the rosary UI. Two languages, two visual moods:
  *
- * - `pt`  — Gold on deep black. The usual devotional palette.
- * - `la`  — Wine / blood / rose on very dark burgundy. Lighter, rosier
- *           inside the prayer card and on text so it contrasts with the
- *           dark wine background. Reserved for the Latin rite mode.
+ * - `pt`  — Modo devocional padrão. Usa os tokens semânticos do app
+ *           (var(--surface-1), var(--text-1), var(--accent)), então
+ *           se adapta automaticamente ao tema claro/escuro/sistema.
+ * - `la`  — Rito latino: paleta vinho/sangue forçada sobre um fundo
+ *           bordô bem escuro, INDEPENDENTE do tema do app. Preserva
+ *           o mood litúrgico tradicional da Missa Tridentina.
  *
- * Components read from this object rather than hard-coding hex values so
- * that a single `language` flag in the session can re-skin the entire
- * rosary coherently.
+ * beadStops (cores dos SVG gradients das contas) são mantidos como
+ * hex porque SVG `stopColor` como atributo não aceita CSS vars.
+ * Visualmente funcionam em ambos os temas.
  */
 
 export type RosaryLanguage = 'pt' | 'la'
@@ -34,27 +36,31 @@ export interface RosaryTheme {
   readonly cordStroke: string
 }
 
+// Modo PT: usa CSS vars semânticas — responde ao tema do app.
 const GOLD: RosaryTheme = {
   language: 'pt',
-  pageBg: '#0F0E0C',
-  accent: '#C9A84C',
-  accentLight: '#D9C077',
-  accentDeep: '#A88437',
-  textPrimary: '#F2EDE4',
-  textSecondary: '#D9D2C4',
-  textMuted: '#7A7368',
-  border: 'rgba(201, 168, 76, 0.12)',
-  borderStrong: 'rgba(201, 168, 76, 0.3)',
-  cardBg: 'rgba(20, 18, 14, 0.6)',
-  cardBorder: 'rgba(201, 168, 76, 0.18)',
-  buttonGradient: ['#C9A84C', '#A88437'],
-  buttonText: '#0F0E0C',
+  pageBg: 'var(--surface-1)',
+  accent: 'var(--accent)',
+  accentLight: 'var(--accent-hover)',
+  accentDeep: 'var(--accent-hover)',
+  textPrimary: 'var(--text-1)',
+  textSecondary: 'var(--text-2)',
+  textMuted: 'var(--text-3)',
+  border: 'var(--border-1)',
+  borderStrong: 'var(--accent-soft)',
+  cardBg: 'var(--surface-2)',
+  cardBorder: 'var(--border-1)',
+  buttonGradient: ['var(--accent)', 'var(--accent-hover)'],
+  buttonText: 'var(--accent-contrast)',
+  // SVG gradient stops mantêm hex — funcionam bem em ambos os temas
+  // (ouro sobre claro ou escuro transmite o mesmo significado).
   beadCurrentStops: ['#F4E8B8', '#D9C077', '#C9A84C'],
   beadFutureStops: ['rgba(201,168,76,0.22)', 'rgba(201,168,76,0.08)'],
   beadCompletedStops: ['rgba(201,168,76,0.45)', 'rgba(201,168,76,0.18)'],
-  cordStroke: 'rgba(201, 168, 76, 0.22)',
+  cordStroke: 'var(--border-1)',
 }
 
+// Modo LA: paleta forçada — Missa Tridentina com mood específico.
 const WINE: RosaryTheme = {
   language: 'la',
   pageBg: '#13080A',
