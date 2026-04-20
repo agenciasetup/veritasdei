@@ -129,7 +129,7 @@ export function SharedRoomView({
   return (
     <main
       className="relative min-h-screen w-full px-4 py-10"
-      style={{ backgroundColor: '#0F0E0C', color: '#F2EDE4' }}
+      style={{ backgroundColor: 'var(--surface-1)', color: 'var(--text-1)' }}
     >
       <div className="bg-glow" aria-hidden />
 
@@ -137,11 +137,11 @@ export function SharedRoomView({
         <header className="mb-6 text-center">
           <h1
             className="font-serif text-2xl md:text-3xl"
-            style={{ color: '#F2EDE4', fontFamily: 'Cinzel, serif' }}
+            style={{ color: 'var(--text-1)', fontFamily: 'var(--font-display)' }}
           >
             {room.titulo ?? 'Terço compartilhado'}
           </h1>
-          <p className="mt-1 text-xs" style={{ color: '#7A7368' }}>
+          <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
             {mysteryGroup.name}
           </p>
         </header>
@@ -154,19 +154,19 @@ export function SharedRoomView({
           <section
             className="mb-6 rounded-2xl border p-5 text-center"
             style={{
-              borderColor: 'rgba(201, 168, 76, 0.22)',
+              borderColor: 'var(--accent-soft)',
               backgroundColor: 'rgba(20, 18, 14, 0.6)',
             }}
           >
             <div
               className="text-[10px] uppercase tracking-[0.2em]"
-              style={{ color: '#7A7368' }}
+              style={{ color: 'var(--text-3)' }}
             >
               Código de convite
             </div>
             <div
               className="mt-2 font-mono text-3xl tracking-[0.4em]"
-              style={{ color: '#D9C077' }}
+              style={{ color: 'var(--accent)' }}
             >
               {room.codigo}
             </div>
@@ -175,8 +175,8 @@ export function SharedRoomView({
               onClick={copyCode}
               className="mt-3 rounded-md border px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition"
               style={{
-                borderColor: 'rgba(201, 168, 76, 0.35)',
-                color: '#D9C077',
+                borderColor: 'var(--accent-soft)',
+                color: 'var(--accent)',
               }}
             >
               Copiar código
@@ -185,7 +185,7 @@ export function SharedRoomView({
         ) : (
           <div
             className="mb-4 text-center font-mono text-[11px] tracking-[0.3em]"
-            style={{ color: '#7A7368' }}
+            style={{ color: 'var(--text-3)' }}
           >
             Código {room.codigo}
           </div>
@@ -215,7 +215,7 @@ export function SharedRoomView({
             <div className="mb-4" aria-hidden>
               <div
                 className="h-1 w-full overflow-hidden rounded-full"
-                style={{ background: 'rgba(201,168,76,0.08)' }}
+                style={{ background: 'var(--accent-soft)' }}
               >
                 <div
                   className="rosary-progress-fill h-full"
@@ -229,7 +229,7 @@ export function SharedRoomView({
               </div>
               <div
                 className="mt-2 text-center font-mono text-[11px] uppercase tracking-[0.25em]"
-                style={{ color: '#7A7368' }}
+                style={{ color: 'var(--text-3)' }}
               >
                 Passo {currentIndex + 1} / {ROSARY_STEPS.length}
               </div>
@@ -248,8 +248,8 @@ export function SharedRoomView({
                 role="status"
                 aria-live="polite"
                 style={{
-                  borderColor: 'rgba(201, 168, 76, 0.22)',
-                  color: '#7A7368',
+                  borderColor: 'var(--accent-soft)',
+                  color: 'var(--text-3)',
                 }}
               >
                 O {room.co_host_user_id ? 'host ou co-líder' : 'host'} avança as contas.
@@ -264,8 +264,8 @@ export function SharedRoomView({
                   disabled={pending || currentIndex === 0}
                   className="flex-1 rounded-lg border px-4 py-2 text-sm transition disabled:opacity-30"
                   style={{
-                    borderColor: 'rgba(201, 168, 76, 0.35)',
-                    color: '#D9C077',
+                    borderColor: 'var(--accent-soft)',
+                    color: 'var(--accent)',
                   }}
                 >
                   Voltar
@@ -277,7 +277,7 @@ export function SharedRoomView({
                   className="flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-60"
                   style={{
                     background: 'linear-gradient(180deg, #C9A84C, #A88437)',
-                    color: '#0F0E0C',
+                    color: 'var(--accent-contrast)',
                   }}
                 >
                   Próximo
@@ -291,7 +291,7 @@ export function SharedRoomView({
         <section
           className="mt-6 rounded-2xl border p-5"
           style={{
-            borderColor: 'rgba(201, 168, 76, 0.22)',
+            borderColor: 'var(--accent-soft)',
             backgroundColor: 'rgba(20, 18, 14, 0.6)',
           }}
           aria-labelledby="participantes-titulo"
@@ -300,20 +300,20 @@ export function SharedRoomView({
             <h2
               id="participantes-titulo"
               className="text-[10px] uppercase tracking-[0.2em]"
-              style={{ color: '#7A7368' }}
+              style={{ color: 'var(--text-3)' }}
             >
               Na sala ({participants.length})
             </h2>
             <span
               className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em]"
-              style={{ color: '#D9C077' }}
+              style={{ color: 'var(--accent)' }}
               aria-label={`${onlineCount} online agora`}
             >
               <span
                 aria-hidden
                 className="inline-block h-1.5 w-1.5 rounded-full"
                 style={{
-                  backgroundColor: '#D9C077',
+                  backgroundColor: 'var(--accent)',
                   boxShadow: '0 0 6px rgba(217,192,119,0.6)',
                 }}
               />
@@ -331,7 +331,7 @@ export function SharedRoomView({
                   key={p.id}
                   className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm"
                   style={{
-                    borderColor: 'rgba(201, 168, 76, 0.12)',
+                    borderColor: 'var(--accent-soft)',
                     backgroundColor: 'rgba(15, 14, 12, 0.6)',
                   }}
                 >
@@ -341,8 +341,8 @@ export function SharedRoomView({
                         aria-hidden
                         className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px]"
                         style={{
-                          backgroundColor: 'rgba(201, 168, 76, 0.15)',
-                          color: '#D9C077',
+                          backgroundColor: 'var(--accent-soft)',
+                          color: 'var(--accent)',
                           opacity: isOnline ? 1 : 0.5,
                         }}
                       >
@@ -353,7 +353,7 @@ export function SharedRoomView({
                           aria-hidden
                           className="absolute -bottom-0 -right-0 h-1.5 w-1.5 rounded-full"
                           style={{
-                            backgroundColor: '#7CC28A',
+                            backgroundColor: 'var(--success)',
                             boxShadow: '0 0 0 1.5px #0F0E0C',
                           }}
                         />
@@ -361,7 +361,7 @@ export function SharedRoomView({
                     </span>
                     <span
                       className="truncate"
-                      style={{ color: isOnline ? '#F2EDE4' : '#7A7368' }}
+                      style={{ color: isOnline ? 'var(--text-1)' : 'var(--text-3)' }}
                     >
                       {p.display_name ?? 'Anônimo'}
                       {isViewer ? ' (você)' : ''}
@@ -372,8 +372,8 @@ export function SharedRoomView({
                       <span
                         className="rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.15em]"
                         style={{
-                          borderColor: 'rgba(201, 168, 76, 0.35)',
-                          color: '#D9C077',
+                          borderColor: 'var(--accent-soft)',
+                          color: 'var(--accent)',
                         }}
                       >
                         Host
@@ -383,8 +383,8 @@ export function SharedRoomView({
                       <span
                         className="rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.15em]"
                         style={{
-                          borderColor: 'rgba(201, 168, 76, 0.35)',
-                          color: '#D9C077',
+                          borderColor: 'var(--accent-soft)',
+                          color: 'var(--accent)',
                         }}
                       >
                         Co-líder
@@ -402,7 +402,7 @@ export function SharedRoomView({
                           className="rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.15em] transition disabled:opacity-40"
                           style={{
                             borderColor: 'rgba(122, 115, 104, 0.4)',
-                            color: '#7A7368',
+                            color: 'var(--text-3)',
                           }}
                           aria-label={`Promover ${p.display_name ?? 'participante'} a co-líder`}
                         >
@@ -417,7 +417,7 @@ export function SharedRoomView({
                         className="rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.15em] transition disabled:opacity-40"
                         style={{
                           borderColor: 'rgba(122, 115, 104, 0.4)',
-                          color: '#7A7368',
+                          color: 'var(--text-3)',
                         }}
                       >
                         Rebaixar
@@ -435,8 +435,8 @@ export function SharedRoomView({
             className="mt-4 rounded-md border px-3 py-2 text-xs"
             role="alert"
             style={{
-              borderColor: 'rgba(201, 100, 100, 0.45)',
-              color: '#F2EDE4',
+              borderColor: 'color-mix(in srgb, var(--danger) 45%, transparent)',
+              color: 'var(--text-1)',
               backgroundColor: 'rgba(70, 20, 20, 0.4)',
             }}
           >
@@ -454,7 +454,7 @@ export function SharedRoomView({
               className="flex-1 rounded-lg px-5 py-2.5 text-sm font-semibold transition disabled:opacity-60"
               style={{
                 background: 'linear-gradient(180deg, #C9A84C, #A88437)',
-                color: '#0F0E0C',
+                color: 'var(--accent-contrast)',
               }}
             >
               {pending ? 'Iniciando…' : 'Iniciar terço'}
@@ -464,8 +464,8 @@ export function SharedRoomView({
             <div
               className="flex-1 rounded-lg border px-5 py-2.5 text-center text-sm"
               style={{
-                borderColor: 'rgba(201, 168, 76, 0.22)',
-                color: '#7A7368',
+                borderColor: 'var(--accent-soft)',
+                color: 'var(--text-3)',
               }}
               role="status"
               aria-live="polite"
@@ -478,8 +478,8 @@ export function SharedRoomView({
               href="/rosario/juntos"
               className="flex-1 rounded-lg border px-5 py-2.5 text-center text-sm transition"
               style={{
-                borderColor: 'rgba(201, 168, 76, 0.35)',
-                color: '#D9C077',
+                borderColor: 'var(--accent-soft)',
+                color: 'var(--accent)',
               }}
             >
               Voltar
@@ -492,7 +492,7 @@ export function SharedRoomView({
             className="rounded-lg border px-5 py-2.5 text-sm transition disabled:opacity-60"
             style={{
               borderColor: 'rgba(122, 115, 104, 0.4)',
-              color: '#7A7368',
+              color: 'var(--text-3)',
             }}
           >
             Sair
@@ -527,12 +527,12 @@ function RoomStateBanner({
   }
   const info = map[state]
   const color =
-    info.tone === 'active' ? '#D9C077' : info.tone === 'ended' ? '#7A7368' : '#7A7368'
+    info.tone === 'active' ? 'var(--accent)' : info.tone === 'ended' ? 'var(--text-3)' : 'var(--text-3)'
   return (
     <div
       className="mb-4 rounded-full border px-4 py-2 text-center text-[10px] uppercase tracking-[0.2em]"
       style={{
-        borderColor: 'rgba(201, 168, 76, 0.22)',
+        borderColor: 'var(--accent-soft)',
         color,
       }}
       role="status"

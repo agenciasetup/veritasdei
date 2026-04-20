@@ -372,8 +372,8 @@ function SalmoTexto({ text, fontScale, accent }: { text: string; fontScale: numb
             key={`${idx}-${line.slice(0, 16)}`}
             className="tracking-[0.01em]"
             style={{
-              color: isRefrain ? '#F2EDE4' : '#ECE6DA',
-              fontFamily: 'Poppins, sans-serif',
+              color: isRefrain ? 'var(--text-1)' : 'var(--text-2)',
+              fontFamily: 'var(--font-body)',
               fontWeight: isRefrain ? 700 : 400,
               fontSize: `${1.08 * fontScale}rem`,
               lineHeight: 1.85,
@@ -415,7 +415,7 @@ function LeituraTexto({
           <div key={idx} className="space-y-2">
             {segments.map((segment, segmentIndex) => {
               const baseStyle = {
-                fontFamily: 'Poppins, sans-serif',
+                fontFamily: 'var(--font-body)',
                 fontSize: `${1.08 * fontScale}rem`,
                 lineHeight: 1.95,
               }
@@ -425,7 +425,7 @@ function LeituraTexto({
                   <p
                     key={`${idx}-call-${segmentIndex}`}
                     className="tracking-[0.01em] font-semibold"
-                    style={{ ...baseStyle, color: '#F2EDE4' }}
+                    style={{ ...baseStyle, color: 'var(--text-1)' }}
                   >
                     {renderVerseNumbers(segment.content, accent)}
                   </p>
@@ -437,7 +437,7 @@ function LeituraTexto({
                   <p
                     key={`${idx}-response-${segmentIndex}`}
                     className="tracking-[0.01em] italic"
-                    style={{ ...baseStyle, color: '#E3D8C6', fontWeight: 500 }}
+                    style={{ ...baseStyle, color: 'var(--text-2)', fontWeight: 500 }}
                   >
                     {renderVerseNumbers(segment.content, accent)}
                   </p>
@@ -449,7 +449,7 @@ function LeituraTexto({
                   <p
                     key={`${idx}-rubric-${segmentIndex}`}
                     className="tracking-[0.01em]"
-                    style={{ ...baseStyle, color: '#F2EDE4', fontWeight: 600 }}
+                    style={{ ...baseStyle, color: 'var(--text-1)', fontWeight: 600 }}
                   >
                     {renderVerseNumbers(segment.content, accent)}
                   </p>
@@ -460,7 +460,7 @@ function LeituraTexto({
                 <p
                   key={`${idx}-text-${segmentIndex}`}
                   className="tracking-[0.01em]"
-                  style={{ ...baseStyle, color: '#ECE6DA', fontWeight: 350 }}
+                  style={{ ...baseStyle, color: 'var(--text-1)', fontWeight: 350 }}
                 >
                   {renderVerseNumbers(segment.content, accent)}
                 </p>
@@ -696,7 +696,7 @@ export default function LiturgiaReaderClient({
             <Link
               href="/"
               className="inline-flex items-center gap-2 text-xs"
-              style={{ color: '#A8A096', fontFamily: 'Poppins, sans-serif' }}
+              style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               Voltar
@@ -707,7 +707,7 @@ export default function LiturgiaReaderClient({
                 type="button"
                 onClick={() => adjustFont(-FONT_STEP)}
                 className="px-2.5 py-1 rounded-lg text-xs transition-colors"
-                style={{ color: '#D4CCBE', fontFamily: 'Poppins, sans-serif' }}
+                style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}
                 aria-label="Diminuir tamanho da fonte"
               >
                 A-
@@ -716,7 +716,7 @@ export default function LiturgiaReaderClient({
                 type="button"
                 onClick={() => adjustFont(FONT_STEP)}
                 className="px-2.5 py-1 rounded-lg text-xs transition-colors"
-                style={{ color: '#D4CCBE', fontFamily: 'Poppins, sans-serif' }}
+                style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}
                 aria-label="Aumentar tamanho da fonte"
               >
                 A+
@@ -731,7 +731,7 @@ export default function LiturgiaReaderClient({
             />
             <span
               className="text-[10px] uppercase tracking-[0.18em]"
-              style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
             >
               Liturgia de hoje · {season}
             </span>
@@ -739,13 +739,13 @@ export default function LiturgiaReaderClient({
 
           <h1
             className="text-[1.6rem] sm:text-3xl leading-tight"
-            style={{ color: '#F2EDE4', fontFamily: 'Cormorant Garamond, serif' }}
+            style={{ color: 'var(--text-1)', fontFamily: 'var(--font-display)' }}
           >
             {titulo}
           </h1>
           <p
             className="text-sm capitalize mt-1"
-            style={{ color: '#A8A096', fontFamily: 'Poppins, sans-serif' }}
+            style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}
           >
             {hoje}
           </p>
@@ -753,7 +753,7 @@ export default function LiturgiaReaderClient({
           {liturgia?.stale && (
             <p
               className="mt-2 text-[10px]"
-              style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
             >
               Conteúdo em cache — atualização indisponível no momento
             </p>
@@ -767,8 +767,8 @@ export default function LiturgiaReaderClient({
               aria-label="Leituras da liturgia diária"
               className="flex gap-2 overflow-x-auto no-scrollbar p-1 rounded-2xl"
               style={{
-                background: 'rgba(10,10,10,0.55)',
-                border: '1px solid rgba(201,168,76,0.12)',
+                background: 'var(--surface-inset)',
+                border: '1px solid var(--border-1)',
               }}
             >
               {tabs.map((tab, index) => {
@@ -792,10 +792,10 @@ export default function LiturgiaReaderClient({
                     onKeyDown={(event) => onTabsKeyDown(event, index)}
                     className="inline-flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-xl text-xs transition-all"
                     style={{
-                      fontFamily: 'Poppins, sans-serif',
-                      background: active ? 'rgba(201,168,76,0.16)' : 'transparent',
-                      border: active ? '1px solid rgba(201,168,76,0.3)' : '1px solid transparent',
-                      color: active ? '#D9C077' : '#A8A096',
+                      fontFamily: 'var(--font-body)',
+                      background: active ? 'var(--accent-soft)' : 'transparent',
+                      border: active ? '1px solid var(--accent-soft)' : '1px solid transparent',
+                      color: active ? 'var(--accent)' : 'var(--text-2)',
                     }}
                   >
                     <span aria-hidden="true">{tab.icon}</span>
@@ -813,19 +813,19 @@ export default function LiturgiaReaderClient({
           <div
             className="rounded-2xl p-5 text-center"
             style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.06)',
+              background: 'var(--surface-inset)',
+              border: '1px solid var(--border-2)',
             }}
           >
             <p
               className="text-sm"
-              style={{ color: '#A8A096', fontFamily: 'Poppins, sans-serif' }}
+              style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}
             >
               Não foi possível carregar as leituras agora. Tente novamente em instantes.
             </p>
             <p
               className="mt-2 text-xs"
-              style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
             >
               Fonte: Liturgia Diária — Canção Nova
             </p>
@@ -837,19 +837,19 @@ export default function LiturgiaReaderClient({
             aria-labelledby="liturgia-tab-reflexao"
             className="rounded-2xl p-5 sm:p-6 md:p-7"
             style={{
-              background: 'rgba(20,18,14,0.7)',
-              border: '1px solid rgba(201,168,76,0.14)',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border-1)',
               boxShadow: '0 10px 32px rgba(0,0,0,0.25)',
             }}
           >
             {!reflection && isReflectionLoading && (
               <div className="space-y-3">
-                <p style={{ color: '#D4CCBE', fontFamily: 'Poppins, sans-serif' }}>
+                <p style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}>
                   Gerando reflexão do dia...
                 </p>
-                <div className="h-3 rounded" style={{ background: 'rgba(201,168,76,0.18)' }} />
-                <div className="h-3 rounded w-11/12" style={{ background: 'rgba(201,168,76,0.14)' }} />
-                <div className="h-3 rounded w-10/12" style={{ background: 'rgba(201,168,76,0.1)' }} />
+                <div className="h-3 rounded" style={{ background: 'var(--accent-soft)' }} />
+                <div className="h-3 rounded w-11/12" style={{ background: 'var(--accent-soft)' }} />
+                <div className="h-3 rounded w-10/12" style={{ background: 'var(--accent-soft)' }} />
               </div>
             )}
 
@@ -857,11 +857,11 @@ export default function LiturgiaReaderClient({
               <div
                 className="rounded-xl p-4"
                 style={{
-                  background: 'rgba(217,79,92,0.08)',
-                  border: '1px solid rgba(217,79,92,0.2)',
+                  background: 'color-mix(in srgb, var(--danger) 10%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--danger) 30%, transparent)',
                 }}
               >
-                <p style={{ color: '#F2D7DA', fontFamily: 'Poppins, sans-serif' }}>
+                <p style={{ color: 'var(--danger)', fontFamily: 'var(--font-body)' }}>
                   {reflectionError}
                 </p>
               </div>
@@ -876,9 +876,9 @@ export default function LiturgiaReaderClient({
                     className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors"
                     style={{
                       border: `1px solid ${accent}44`,
-                      color: reflectionCopied ? '#F2EDE4' : '#D4CCBE',
-                      background: reflectionCopied ? `${accent}22` : 'rgba(20,18,14,0.45)',
-                      fontFamily: 'Poppins, sans-serif',
+                      color: reflectionCopied ? 'var(--text-1)' : 'var(--text-2)',
+                      background: reflectionCopied ? `${accent}22` : 'var(--surface-inset)',
+                      fontFamily: 'var(--font-body)',
                     }}
                   >
                     {reflectionCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
@@ -888,12 +888,12 @@ export default function LiturgiaReaderClient({
 
                 <h3
                   className="text-xl sm:text-2xl"
-                  style={{ color: '#F2EDE4', fontFamily: 'Cormorant Garamond, serif' }}
+                  style={{ color: 'var(--text-1)', fontFamily: 'var(--font-display)' }}
                 >
                   {reflection.titulo}
                 </h3>
 
-                <p style={{ color: '#ECE6DA', fontFamily: 'Poppins, sans-serif', lineHeight: 1.9 }}>
+                <p style={{ color: 'var(--text-1)', fontFamily: 'var(--font-body)', lineHeight: 1.9 }}>
                   {reflection.conexao}
                 </p>
 
@@ -904,9 +904,9 @@ export default function LiturgiaReaderClient({
                         key={`${idx}-${ponto.slice(0, 12)}`}
                         className="pl-3"
                         style={{
-                          color: '#ECE6DA',
+                          color: 'var(--text-1)',
                           borderLeft: `2px solid ${accent}`,
-                          fontFamily: 'Poppins, sans-serif',
+                          fontFamily: 'var(--font-body)',
                           lineHeight: 1.8,
                         }}
                       >
@@ -916,18 +916,18 @@ export default function LiturgiaReaderClient({
                   </div>
                 )}
 
-                <p style={{ color: '#ECE6DA', fontFamily: 'Poppins, sans-serif', lineHeight: 1.9 }}>
-                  <strong style={{ color: '#F2EDE4' }}>Mensagem do dia:</strong> {reflection.mensagem}
+                <p style={{ color: 'var(--text-1)', fontFamily: 'var(--font-body)', lineHeight: 1.9 }}>
+                  <strong style={{ color: 'var(--text-1)' }}>Mensagem do dia:</strong> {reflection.mensagem}
                 </p>
 
-                <p style={{ color: '#ECE6DA', fontFamily: 'Poppins, sans-serif', lineHeight: 1.9 }}>
-                  <strong style={{ color: '#F2EDE4' }}>Aplicação prática:</strong> {reflection.aplicacao}
+                <p style={{ color: 'var(--text-1)', fontFamily: 'var(--font-body)', lineHeight: 1.9 }}>
+                  <strong style={{ color: 'var(--text-1)' }}>Aplicação prática:</strong> {reflection.aplicacao}
                 </p>
 
                 <p
                   style={{
-                    color: '#F2EDE4',
-                    fontFamily: 'Cormorant Garamond, serif',
+                    color: 'var(--text-1)',
+                    fontFamily: 'var(--font-display)',
                     fontStyle: 'italic',
                     fontSize: '1.1rem',
                     lineHeight: 1.8,
@@ -942,13 +942,13 @@ export default function LiturgiaReaderClient({
           <div
             className="rounded-2xl p-5 text-center"
             style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.06)',
+              background: 'var(--surface-inset)',
+              border: '1px solid var(--border-2)',
             }}
           >
             <p
               className="text-sm"
-              style={{ color: '#A8A096', fontFamily: 'Poppins, sans-serif' }}
+              style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}
             >
               Leituras indisponíveis para esta data.
             </p>
@@ -960,8 +960,8 @@ export default function LiturgiaReaderClient({
             aria-labelledby={`liturgia-tab-${activeSection.key}`}
             className="rounded-2xl p-5 sm:p-6 md:p-7"
             style={{
-              background: 'rgba(20,18,14,0.7)',
-              border: '1px solid rgba(201,168,76,0.14)',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border-1)',
               boxShadow: '0 10px 32px rgba(0,0,0,0.25)',
             }}
           >
@@ -976,7 +976,7 @@ export default function LiturgiaReaderClient({
               <div className="flex flex-col gap-1">
                 <p
                   className="text-[10px] uppercase tracking-[0.18em]"
-                  style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+                  style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
                 >
                   {activeSection.label}
                 </p>
@@ -984,9 +984,9 @@ export default function LiturgiaReaderClient({
                   <p
                     className="text-[0.95rem] font-semibold inline-block w-fit px-2.5 py-1 rounded-full"
                     style={{
-                      color: '#0F0E0C',
+                      color: 'var(--accent-contrast)',
                       background: `${accent}E6`,
-                      fontFamily: 'Poppins, sans-serif',
+                      fontFamily: 'var(--font-body)',
                     }}
                   >
                     {activeSection.referencia}
@@ -1008,11 +1008,11 @@ export default function LiturgiaReaderClient({
 
         <footer
           className="mt-10 pt-6 border-t text-center"
-          style={{ borderColor: 'rgba(201,168,76,0.12)' }}
+          style={{ borderColor: 'var(--border-1)' }}
         >
           <p
             className="text-[11px] tracking-wider"
-            style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+            style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
           >
             Leituras extraídas da Liturgia Diária — Canção Nova
           </p>

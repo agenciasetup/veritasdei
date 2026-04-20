@@ -64,7 +64,7 @@ export function RosaryDashboard({ onStartIndividual }: Props) {
       <Link
         href="/orar"
         className="inline-flex items-center gap-2 text-sm mb-4 relative z-10"
-        style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+        style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
       >
         <ArrowLeft className="w-4 h-4" /> Voltar
       </Link>
@@ -72,11 +72,11 @@ export function RosaryDashboard({ onStartIndividual }: Props) {
       <header className="mb-8 text-center relative z-10">
         <h1
           className="text-3xl md:text-4xl"
-          style={{ color: '#F2EDE4', fontFamily: 'Cinzel, serif' }}
+          style={{ color: 'var(--text-1)', fontFamily: 'var(--font-display)' }}
         >
           Santo Rosário
         </h1>
-        <p className="mt-2 text-xs md:text-sm" style={{ color: '#7A7368' }}>
+        <p className="mt-2 text-xs md:text-sm" style={{ color: 'var(--text-3)' }}>
           Medite os mistérios da vida de Cristo com Nossa Senhora
         </p>
         <div className="ornament-divider max-w-xs mx-auto mt-4">
@@ -89,7 +89,7 @@ export function RosaryDashboard({ onStartIndividual }: Props) {
         <section>
           <h2
             className="text-[10px] uppercase tracking-[0.2em] mb-3"
-            style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+            style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
           >
             1. Como deseja rezar?
           </h2>
@@ -115,21 +115,21 @@ export function RosaryDashboard({ onStartIndividual }: Props) {
             className="w-full mt-2 rounded-xl px-4 py-3 text-left transition active:scale-[0.98]"
             style={{
               background: mode === 'entrar'
-                ? 'rgba(201, 168, 76, 0.1)'
+                ? 'var(--accent-soft)'
                 : 'rgba(255, 255, 255, 0.02)',
-              border: `1px solid ${mode === 'entrar' ? 'rgba(201, 168, 76, 0.3)' : 'rgba(201, 168, 76, 0.08)'}`,
+              border: `1px solid ${mode === 'entrar' ? 'var(--accent-soft)' : 'var(--border-1)'}`,
             }}
           >
             <span className="flex items-center gap-3">
-              <Link2 size={20} strokeWidth={1.5} style={{ color: mode === 'entrar' ? '#C9A84C' : '#7A7368' }} />
+              <Link2 size={20} strokeWidth={1.5} style={{ color: mode === 'entrar' ? 'var(--accent)' : 'var(--text-3)' }} />
               <span>
                 <span
                   className="block text-sm"
-                  style={{ color: mode === 'entrar' ? '#F2EDE4' : '#B8AFA2' }}
+                  style={{ color: mode === 'entrar' ? 'var(--text-1)' : 'var(--text-2)' }}
                 >
                   Entrar numa sala
                 </span>
-                <span className="block text-[11px]" style={{ color: '#7A7368' }}>
+                <span className="block text-[11px]" style={{ color: 'var(--text-3)' }}>
                   Use um código ou link de convite
                 </span>
               </span>
@@ -142,7 +142,7 @@ export function RosaryDashboard({ onStartIndividual }: Props) {
           <section>
             <h2
               className="text-[10px] uppercase tracking-[0.2em] mb-3"
-              style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
             >
               2. O que deseja rezar?
             </h2>
@@ -170,7 +170,7 @@ export function RosaryDashboard({ onStartIndividual }: Props) {
           <section>
             <h2
               className="text-[10px] uppercase tracking-[0.2em] mb-3"
-              style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
             >
               Código da sala
             </h2>
@@ -184,15 +184,15 @@ export function RosaryDashboard({ onStartIndividual }: Props) {
               style={{
                 background: 'rgba(20, 18, 14, 0.6)',
                 border: '1px solid rgba(201, 168, 76, 0.2)',
-                color: '#F2EDE4',
+                color: 'var(--text-1)',
               }}
               aria-label="Código da sala"
             />
-            <p className="mt-2 text-[11px] text-center" style={{ color: '#7A7368' }}>
+            <p className="mt-2 text-[11px] text-center" style={{ color: 'var(--text-3)' }}>
               Ou cole o link completo da sala
             </p>
             {joinError && (
-              <p className="mt-2 text-xs text-center" role="alert" style={{ color: '#E57373' }}>
+              <p className="mt-2 text-xs text-center" role="alert" style={{ color: 'var(--danger)' }}>
                 {joinError}
               </p>
             )}
@@ -207,7 +207,7 @@ export function RosaryDashboard({ onStartIndividual }: Props) {
           className="w-full rounded-xl py-4 text-base font-semibold transition active:scale-[0.97] disabled:opacity-40"
           style={{
             background: 'linear-gradient(180deg, #C9A84C, #A88437)',
-            color: '#0F0E0C',
+            color: 'var(--accent-contrast)',
           }}
         >
           {mode === 'entrar'
@@ -222,15 +222,15 @@ export function RosaryDashboard({ onStartIndividual }: Props) {
           <Link
             href="/rosario/historico"
             className="text-xs transition"
-            style={{ color: '#7A7368' }}
+            style={{ color: 'var(--text-3)' }}
           >
             Histórico
           </Link>
-          <span style={{ color: '#3A3632' }}>·</span>
+          <span style={{ color: 'var(--border-1)' }}>·</span>
           <Link
             href="/rosario/juntos"
             className="text-xs transition"
-            style={{ color: '#7A7368' }}
+            style={{ color: 'var(--text-3)' }}
           >
             Minhas salas
           </Link>
@@ -260,21 +260,21 @@ function ModeButton({
       className="rounded-xl px-4 py-4 text-left transition active:scale-[0.97]"
       style={{
         background: selected
-          ? 'rgba(201, 168, 76, 0.1)'
+          ? 'var(--accent-soft)'
           : 'rgba(255, 255, 255, 0.02)',
-        border: `1px solid ${selected ? 'rgba(201, 168, 76, 0.3)' : 'rgba(201, 168, 76, 0.08)'}`,
+        border: `1px solid ${selected ? 'var(--accent-soft)' : 'var(--border-1)'}`,
       }}
     >
-      <span className="block mb-2" style={{ color: selected ? '#C9A84C' : '#7A7368' }}>
+      <span className="block mb-2" style={{ color: selected ? 'var(--accent)' : 'var(--text-3)' }}>
         {icon}
       </span>
       <span
         className="block text-sm font-medium"
-        style={{ color: selected ? '#F2EDE4' : '#B8AFA2' }}
+        style={{ color: selected ? 'var(--text-1)' : 'var(--text-2)' }}
       >
         {label}
       </span>
-      <span className="block text-[11px] mt-0.5" style={{ color: '#7A7368' }}>
+      <span className="block text-[11px] mt-0.5" style={{ color: 'var(--text-3)' }}>
         {description}
       </span>
     </button>

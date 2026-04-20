@@ -60,19 +60,19 @@ const STEPS: ReadonlyArray<OnboardingStep> = [
         </p>
         <ul className="mt-2 space-y-1">
           <li>
-            <span style={{ color: '#D9C077' }}>Gozosos</span> — segunda e sábado
+            <span style={{ color: 'var(--accent)' }}>Gozosos</span> — segunda e sábado
           </li>
           <li>
-            <span style={{ color: '#D9C077' }}>Luminosos</span> — quinta
+            <span style={{ color: 'var(--accent)' }}>Luminosos</span> — quinta
           </li>
           <li>
-            <span style={{ color: '#D9C077' }}>Dolorosos</span> — terça e sexta
+            <span style={{ color: 'var(--accent)' }}>Dolorosos</span> — terça e sexta
           </li>
           <li>
-            <span style={{ color: '#D9C077' }}>Gloriosos</span> — quarta e domingo
+            <span style={{ color: 'var(--accent)' }}>Gloriosos</span> — quarta e domingo
           </li>
         </ul>
-        <p className="mt-2 text-xs" style={{ color: '#7A7368' }}>
+        <p className="mt-2 text-xs" style={{ color: 'var(--text-3)' }}>
           O app já sugere o mistério do dia. Você pode trocar a qualquer hora
           pelo seletor no topo.
         </p>
@@ -114,7 +114,7 @@ const STEPS: ReadonlyArray<OnboardingStep> = [
           interface) e <strong>vibração discreta</strong> no celular ao cruzar
           cada dezena. Tudo opcional, no rodapé.
         </p>
-        <p className="mt-3" style={{ color: '#D9C077' }}>
+        <p className="mt-3" style={{ color: 'var(--accent)' }}>
           Que a paz esteja convosco. Boa oração.
         </p>
       </>
@@ -184,8 +184,8 @@ export function OnboardingOverlay({ onDismiss }: OnboardingOverlayProps) {
       <div
         className="relative w-full max-w-md rounded-2xl border p-6 md:p-8"
         style={{
-          borderColor: 'rgba(201, 168, 76, 0.25)',
-          backgroundColor: '#141210',
+          borderColor: 'var(--accent-soft)',
+          backgroundColor: 'var(--surface-2)',
           boxShadow: '0 20px 60px -10px rgba(0,0,0,0.6), 0 0 0 1px rgba(201,168,76,0.05)',
         }}
       >
@@ -195,7 +195,7 @@ export function OnboardingOverlay({ onDismiss }: OnboardingOverlayProps) {
           onClick={onDismiss}
           className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full text-xl transition"
           style={{
-            color: '#7A7368',
+            color: 'var(--text-3)',
           }}
           aria-label="Fechar tutorial"
         >
@@ -206,8 +206,8 @@ export function OnboardingOverlay({ onDismiss }: OnboardingOverlayProps) {
         <div
           className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full border text-2xl"
           style={{
-            borderColor: 'rgba(201, 168, 76, 0.35)',
-            color: '#D9C077',
+            borderColor: 'var(--accent-soft)',
+            color: 'var(--accent)',
           }}
           aria-hidden
         >
@@ -217,13 +217,13 @@ export function OnboardingOverlay({ onDismiss }: OnboardingOverlayProps) {
         <h2
           id="onboarding-title"
           className="text-center text-2xl md:text-3xl"
-          style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
+          style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
         >
           {step.title}
         </h2>
         <p
           className="mt-1 text-center text-xs italic"
-          style={{ color: '#D9C077', fontFamily: 'Cormorant Garamond, serif' }}
+          style={{ color: 'var(--accent)', fontFamily: 'var(--font-display)' }}
         >
           {step.subtitle}
         </p>
@@ -231,8 +231,8 @@ export function OnboardingOverlay({ onDismiss }: OnboardingOverlayProps) {
         <div
           className="mt-5 space-y-3 text-sm leading-relaxed"
           style={{
-            color: '#F2EDE4',
-            fontFamily: 'Poppins, sans-serif',
+            color: 'var(--text-1)',
+            fontFamily: 'var(--font-body)',
           }}
         >
           {step.body}
@@ -256,7 +256,7 @@ export function OnboardingOverlay({ onDismiss }: OnboardingOverlayProps) {
               style={{
                 width: i === stepIndex ? '24px' : '8px',
                 backgroundColor:
-                  i === stepIndex ? '#C9A84C' : 'rgba(201,168,76,0.2)',
+                  i === stepIndex ? 'var(--accent)' : 'var(--accent-soft)',
               }}
             />
           ))}
@@ -270,8 +270,8 @@ export function OnboardingOverlay({ onDismiss }: OnboardingOverlayProps) {
             disabled={isFirst}
             className="flex-1 rounded-lg border px-4 py-2.5 text-sm transition disabled:opacity-30"
             style={{
-              borderColor: 'rgba(201, 168, 76, 0.35)',
-              color: '#D9C077',
+              borderColor: 'var(--accent-soft)',
+              color: 'var(--accent)',
             }}
           >
             Voltar
@@ -283,7 +283,7 @@ export function OnboardingOverlay({ onDismiss }: OnboardingOverlayProps) {
             className="flex-[1.4] rounded-lg px-4 py-2.5 text-sm font-semibold transition"
             style={{
               background: 'linear-gradient(180deg, #C9A84C, #A88437)',
-              color: '#0F0E0C',
+              color: 'var(--accent-contrast)',
               boxShadow: '0 6px 20px -8px rgba(201,168,76,0.6)',
             }}
             autoFocus
@@ -297,7 +297,7 @@ export function OnboardingOverlay({ onDismiss }: OnboardingOverlayProps) {
             type="button"
             onClick={onDismiss}
             className="mt-3 block w-full text-center text-[11px] uppercase tracking-[0.2em] transition"
-            style={{ color: '#7A7368' }}
+            style={{ color: 'var(--text-3)' }}
           >
             Pular tutorial
           </button>

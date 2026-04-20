@@ -111,11 +111,11 @@ export function JuntosLanding() {
           }}
         >
           <div className="flex justify-center mb-3" aria-hidden>
-            <Users size={32} strokeWidth={1.5} style={{ color: '#C9A84C' }} />
+            <Users size={32} strokeWidth={1.5} style={{ color: 'var(--accent)' }} />
           </div>
           <h2
             className="text-lg mb-2"
-            style={{ color: '#D9C077', fontFamily: 'Cinzel, serif' }}
+            style={{ color: 'var(--accent)', fontFamily: 'var(--font-display)' }}
           >
             Sala criada!
           </h2>
@@ -126,7 +126,7 @@ export function JuntosLanding() {
             style={{
               background: 'rgba(201, 168, 76, 0.08)',
               border: '1px solid rgba(201, 168, 76, 0.2)',
-              color: '#F2EDE4',
+              color: 'var(--text-1)',
             }}
           >
             {createdRoom.codigo}
@@ -134,7 +134,7 @@ export function JuntosLanding() {
 
           {/* Shareable link */}
           <div className="mb-4">
-            <p className="text-[11px] mb-2" style={{ color: '#7A7368' }}>
+            <p className="text-[11px] mb-2" style={{ color: 'var(--text-3)' }}>
               Compartilhe o link — quem clicar entra direto:
             </p>
             <div
@@ -146,7 +146,7 @@ export function JuntosLanding() {
             >
               <span
                 className="flex-1 text-xs truncate font-mono"
-                style={{ color: '#B8AFA2' }}
+                style={{ color: 'var(--text-2)' }}
               >
                 {shareLink}
               </span>
@@ -171,7 +171,7 @@ export function JuntosLanding() {
             className="w-full rounded-xl py-3 text-sm font-semibold transition active:scale-[0.97]"
             style={{
               background: 'linear-gradient(180deg, #C9A84C, #A88437)',
-              color: '#0F0E0C',
+              color: 'var(--accent-contrast)',
             }}
           >
             Entrar na sala
@@ -195,15 +195,15 @@ export function JuntosLanding() {
         <h2
           id="juntos-criar-titulo"
           className="text-sm font-semibold uppercase tracking-[0.2em]"
-          style={{ color: '#D9C077', fontFamily: 'Cinzel, serif' }}
+          style={{ color: 'var(--accent)', fontFamily: 'var(--font-display)' }}
         >
           Criar uma sala
         </h2>
-        <p className="mt-1 text-xs" style={{ color: '#7A7368' }}>
+        <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
           Você vira o host e pode convidar outros pelo código ou link.
         </p>
 
-        <label className="mt-4 block text-[10px] uppercase tracking-[0.2em]" style={{ color: '#7A7368' }}>
+        <label className="mt-4 block text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--text-3)' }}>
           Mistérios
         </label>
         <div
@@ -211,8 +211,8 @@ export function JuntosLanding() {
           role="radiogroup"
           aria-label="Mistérios da sala"
           style={{
-            background: 'rgba(20,18,14,0.6)',
-            border: '1px solid rgba(201,168,76,0.08)',
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border-1)',
           }}
         >
           {MYSTERY_GROUPS.map((g) => {
@@ -233,7 +233,7 @@ export function JuntosLanding() {
                 <span
                   className="block text-[11px] font-semibold tracking-wide"
                   style={{
-                    fontFamily: 'Cinzel, serif',
+                    fontFamily: 'var(--font-display)',
                     color: active ? '#C9A84C' : '#7A7368',
                   }}
                 >
@@ -244,7 +244,7 @@ export function JuntosLanding() {
           })}
         </div>
 
-        <label className="mt-4 block text-[10px] uppercase tracking-[0.2em]" style={{ color: '#7A7368' }}>
+        <label className="mt-4 block text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--text-3)' }}>
           Título (opcional)
         </label>
         <input
@@ -257,11 +257,11 @@ export function JuntosLanding() {
           style={{
             borderColor: 'rgba(201, 168, 76, 0.22)',
             backgroundColor: 'rgba(20, 18, 14, 0.8)',
-            color: '#F2EDE4',
+            color: 'var(--text-1)',
           }}
         />
 
-        <label className="mt-3 block text-[10px] uppercase tracking-[0.2em]" style={{ color: '#7A7368' }}>
+        <label className="mt-3 block text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--text-3)' }}>
           Intenção (opcional)
         </label>
         <input
@@ -274,11 +274,11 @@ export function JuntosLanding() {
           style={{
             borderColor: 'rgba(201, 168, 76, 0.22)',
             backgroundColor: 'rgba(20, 18, 14, 0.8)',
-            color: '#F2EDE4',
+            color: 'var(--text-1)',
           }}
         />
 
-        <label className="mt-3 block text-[10px] uppercase tracking-[0.2em]" style={{ color: '#7A7368' }}>
+        <label className="mt-3 block text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--text-3)' }}>
           Período (opcional)
         </label>
         <input
@@ -291,7 +291,7 @@ export function JuntosLanding() {
           style={{
             borderColor: 'rgba(201, 168, 76, 0.22)',
             backgroundColor: 'rgba(20, 18, 14, 0.8)',
-            color: '#F2EDE4',
+            color: 'var(--text-1)',
           }}
         />
 
@@ -301,7 +301,7 @@ export function JuntosLanding() {
             role="alert"
             style={{
               borderColor: 'rgba(201, 100, 100, 0.45)',
-              color: '#F2EDE4',
+              color: 'var(--text-1)',
               backgroundColor: 'rgba(70, 20, 20, 0.4)',
             }}
           >
@@ -316,7 +316,7 @@ export function JuntosLanding() {
           className="mt-4 w-full rounded-lg px-5 py-2.5 text-sm font-semibold transition disabled:opacity-60 active:scale-[0.97]"
           style={{
             background: 'linear-gradient(180deg, #C9A84C, #A88437)',
-            color: '#0F0E0C',
+            color: 'var(--accent-contrast)',
           }}
         >
           {creating ? 'Criando…' : 'Criar sala'}
@@ -335,11 +335,11 @@ export function JuntosLanding() {
         <h2
           id="juntos-entrar-titulo"
           className="text-sm font-semibold uppercase tracking-[0.2em]"
-          style={{ color: '#D9C077', fontFamily: 'Cinzel, serif' }}
+          style={{ color: 'var(--accent)', fontFamily: 'var(--font-display)' }}
         >
           Entrar em uma sala
         </h2>
-        <p className="mt-1 text-xs" style={{ color: '#7A7368' }}>
+        <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
           Digite o código de 6 caracteres que o host compartilhou.
         </p>
 
@@ -355,7 +355,7 @@ export function JuntosLanding() {
           style={{
             borderColor: 'rgba(201, 168, 76, 0.22)',
             backgroundColor: 'rgba(20, 18, 14, 0.8)',
-            color: '#F2EDE4',
+            color: 'var(--text-1)',
           }}
           aria-label="Código da sala"
         />
@@ -366,7 +366,7 @@ export function JuntosLanding() {
             role="alert"
             style={{
               borderColor: 'rgba(201, 100, 100, 0.45)',
-              color: '#F2EDE4',
+              color: 'var(--text-1)',
               backgroundColor: 'rgba(70, 20, 20, 0.4)',
             }}
           >
@@ -381,7 +381,7 @@ export function JuntosLanding() {
           className="mt-4 w-full rounded-lg border px-5 py-2.5 text-sm font-semibold transition disabled:opacity-40 active:scale-[0.97]"
           style={{
             borderColor: 'rgba(201, 168, 76, 0.35)',
-            color: '#D9C077',
+            color: 'var(--accent)',
           }}
         >
           {joining ? 'Entrando…' : 'Entrar'}

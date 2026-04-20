@@ -92,11 +92,11 @@ export function HistoryList({ sessions }: HistoryListProps) {
       >
         <p
           className="font-serif text-base md:text-lg"
-          style={{ color: '#F2EDE4', fontFamily: 'Cinzel, serif' }}
+          style={{ color: 'var(--text-1)', fontFamily: 'var(--font-display)' }}
         >
           Ainda não há terços registrados
         </p>
-        <p className="mt-2 text-sm" style={{ color: '#7A7368' }}>
+        <p className="mt-2 text-sm" style={{ color: 'var(--text-3)' }}>
           Complete uma sessão e ela aparecerá aqui.
         </p>
       </div>
@@ -111,7 +111,7 @@ export function HistoryList({ sessions }: HistoryListProps) {
         <li key={group.label}>
           <h2
             className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em]"
-            style={{ color: '#D9C077' }}
+            style={{ color: 'var(--accent)' }}
           >
             {group.label}
           </h2>
@@ -132,7 +132,7 @@ export function HistoryList({ sessions }: HistoryListProps) {
                     <div>
                       <h3
                         className="font-serif text-sm md:text-base"
-                        style={{ color: '#F2EDE4' }}
+                        style={{ color: 'var(--text-1)' }}
                       >
                         Mistérios {mysteryLabel}
                         {session.sala_id && (
@@ -140,7 +140,7 @@ export function HistoryList({ sessions }: HistoryListProps) {
                             className="ml-2 align-middle rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.15em]"
                             style={{
                               borderColor: 'rgba(201, 168, 76, 0.35)',
-                              color: '#D9C077',
+                              color: 'var(--accent)',
                             }}
                           >
                             Em grupo
@@ -151,8 +151,8 @@ export function HistoryList({ sessions }: HistoryListProps) {
                         <p
                           className="mt-0.5 text-xs italic"
                           style={{
-                            color: '#D9C077',
-                            fontFamily: 'Cormorant Garamond, serif',
+                            color: 'var(--accent)',
+                            fontFamily: 'var(--font-display)',
                           }}
                         >
                           Por: {session.intention.titulo}
@@ -162,11 +162,11 @@ export function HistoryList({ sessions }: HistoryListProps) {
                     <div className="text-right">
                       <div
                         className="font-mono text-[11px] uppercase tracking-[0.2em]"
-                        style={{ color: '#7A7368' }}
+                        style={{ color: 'var(--text-3)' }}
                       >
                         {TIME_FORMATTER.format(completed)}
                       </div>
-                      <div className="mt-0.5 text-[11px]" style={{ color: '#7A7368' }}>
+                      <div className="mt-0.5 text-[11px]" style={{ color: 'var(--text-3)' }}>
                         {formatDuration(session.duration_seconds)}
                       </div>
                     </div>

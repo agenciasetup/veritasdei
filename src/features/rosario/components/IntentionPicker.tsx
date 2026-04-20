@@ -115,8 +115,8 @@ export function IntentionPicker({
       <div
         className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border p-6 md:p-7"
         style={{
-          borderColor: 'rgba(201, 168, 76, 0.25)',
-          backgroundColor: '#141210',
+          borderColor: 'var(--accent-soft)',
+          backgroundColor: 'var(--surface-2)',
           boxShadow: '0 20px 60px -10px rgba(0,0,0,0.6), 0 0 0 1px rgba(201,168,76,0.05)',
         }}
       >
@@ -124,7 +124,7 @@ export function IntentionPicker({
           type="button"
           onClick={onClose}
           className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full text-xl"
-          style={{ color: '#7A7368' }}
+          style={{ color: 'var(--text-3)' }}
           aria-label="Fechar seletor de intenção"
         >
           ×
@@ -133,13 +133,13 @@ export function IntentionPicker({
         <h2
           id="intention-picker-title"
           className="text-center text-xl md:text-2xl"
-          style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
+          style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
         >
           Rezar este terço por
         </h2>
         <p
           className="mt-1 text-center text-xs italic"
-          style={{ color: '#D9C077', fontFamily: 'Cormorant Garamond, serif' }}
+          style={{ color: 'var(--accent)', fontFamily: 'var(--font-display)' }}
         >
           Ofereça sua oração a uma intenção específica
         </p>
@@ -171,7 +171,7 @@ export function IntentionPicker({
             <div>
               <label
                 className="mb-1 block text-[10px] uppercase tracking-[0.2em]"
-                style={{ color: '#7A7368' }}
+                style={{ color: 'var(--text-3)' }}
               >
                 Título
               </label>
@@ -184,8 +184,8 @@ export function IntentionPicker({
                 maxLength={120}
                 className="w-full rounded-lg border bg-transparent px-3 py-2 text-sm"
                 style={{
-                  borderColor: 'rgba(201,168,76,0.25)',
-                  color: '#F2EDE4',
+                  borderColor: 'var(--accent-soft)',
+                  color: 'var(--text-1)',
                 }}
                 disabled={submitting}
               />
@@ -193,7 +193,7 @@ export function IntentionPicker({
             <div>
               <label
                 className="mb-1 block text-[10px] uppercase tracking-[0.2em]"
-                style={{ color: '#7A7368' }}
+                style={{ color: 'var(--text-3)' }}
               >
                 Descrição (opcional)
               </label>
@@ -205,14 +205,14 @@ export function IntentionPicker({
                 maxLength={1000}
                 className="w-full rounded-lg border bg-transparent px-3 py-2 text-sm leading-relaxed"
                 style={{
-                  borderColor: 'rgba(201,168,76,0.25)',
-                  color: '#F2EDE4',
+                  borderColor: 'var(--accent-soft)',
+                  color: 'var(--text-1)',
                 }}
                 disabled={submitting}
               />
             </div>
             {formError && (
-              <p className="text-xs" style={{ color: '#E57373' }}>
+              <p className="text-xs" style={{ color: 'var(--danger)' }}>
                 {formError}
               </p>
             )}
@@ -227,7 +227,7 @@ export function IntentionPicker({
                 className="flex-1 rounded-lg border px-3 py-2 text-xs uppercase tracking-[0.2em] transition"
                 style={{
                   borderColor: 'rgba(122,115,104,0.35)',
-                  color: '#7A7368',
+                  color: 'var(--text-3)',
                 }}
               >
                 Cancelar
@@ -238,7 +238,7 @@ export function IntentionPicker({
                 className="flex-[1.4] rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition disabled:opacity-50"
                 style={{
                   background: 'linear-gradient(180deg, #C9A84C, #A88437)',
-                  color: '#0F0E0C',
+                  color: 'var(--accent-contrast)',
                 }}
               >
                 {submitting ? 'Salvando…' : 'Criar'}
@@ -251,8 +251,8 @@ export function IntentionPicker({
             onClick={() => setShowForm(true)}
             className="mt-4 w-full rounded-lg border border-dashed px-4 py-2.5 text-xs uppercase tracking-[0.2em] transition"
             style={{
-              borderColor: 'rgba(201,168,76,0.35)',
-              color: '#D9C077',
+              borderColor: 'var(--accent-soft)',
+              color: 'var(--accent)',
             }}
           >
             + Nova intenção
@@ -265,7 +265,7 @@ export function IntentionPicker({
           className="mt-5 w-full rounded-lg px-4 py-2.5 text-sm font-semibold transition"
           style={{
             background: 'linear-gradient(180deg, #C9A84C, #A88437)',
-            color: '#0F0E0C',
+            color: 'var(--accent-contrast)',
             boxShadow: '0 6px 20px -8px rgba(201,168,76,0.6)',
           }}
         >
@@ -297,8 +297,8 @@ function IntentionOption({
     <div
       className="flex items-start gap-2 rounded-xl border p-3 transition"
       style={{
-        borderColor: selected ? 'rgba(201,168,76,0.45)' : 'rgba(201,168,76,0.12)',
-        backgroundColor: selected ? 'rgba(201,168,76,0.08)' : 'rgba(20,18,14,0.5)',
+        borderColor: selected ? 'var(--accent)' : 'var(--accent-soft)',
+        backgroundColor: selected ? 'var(--border-1)' : 'var(--surface-2)',
       }}
     >
       <button
@@ -312,27 +312,27 @@ function IntentionOption({
           aria-hidden
           className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border"
           style={{
-            borderColor: selected ? '#C9A84C' : 'rgba(122,115,104,0.5)',
+            borderColor: selected ? 'var(--accent)' : 'var(--border-1)',
           }}
         >
           {selected && (
             <span
               className="h-2 w-2 rounded-full"
-              style={{ backgroundColor: '#C9A84C' }}
+              style={{ backgroundColor: 'var(--accent)' }}
             />
           )}
         </span>
         <span className="min-w-0 flex-1">
           <span
             className="block text-sm font-medium"
-            style={{ color: selected ? '#F2EDE4' : '#F2EDE4' }}
+            style={{ color: selected ? 'var(--text-1)' : 'var(--text-1)' }}
           >
             {label}
           </span>
           {description && (
             <span
               className="mt-0.5 block text-xs"
-              style={{ color: '#7A7368' }}
+              style={{ color: 'var(--text-3)' }}
             >
               {description}
             </span>
@@ -344,7 +344,7 @@ function IntentionOption({
           type="button"
           onClick={onArchive}
           className="shrink-0 rounded px-2 py-1 text-[9px] uppercase tracking-[0.2em] transition"
-          style={{ color: '#7A7368' }}
+          style={{ color: 'var(--text-3)' }}
           aria-label={`Arquivar intenção "${label}"`}
         >
           Arquivar

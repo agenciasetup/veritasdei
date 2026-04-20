@@ -27,7 +27,7 @@ export function RosarioPageClient() {
   return (
     <main
       className="min-h-screen"
-      style={{ backgroundColor: '#0F0E0C', color: '#F2EDE4' }}
+      style={{ backgroundColor: 'var(--surface-1)', color: 'var(--text-1)' }}
     >
       <RosaryDashboard onStartIndividual={handleStart} />
     </main>
