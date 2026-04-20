@@ -12,13 +12,19 @@ import {
 import { useContentProgress } from '@/lib/content/useContentProgress'
 import { useAuth } from '@/contexts/AuthContext'
 import ImmersiveReader from './ImmersiveReader'
+import Divider from '@/components/ui/Divider'
 
 // ─── Loading spinner ───
 function Loader() {
   return (
     <div className="flex items-center justify-center py-20">
-      <div className="w-8 h-8 border-2 rounded-full animate-spin"
-        style={{ borderColor: 'rgba(201,168,76,0.2)', borderTopColor: '#C9A84C' }} />
+      <div
+        className="w-8 h-8 border-2 rounded-full animate-spin"
+        style={{
+          borderColor: 'var(--border-1)',
+          borderTopColor: 'var(--accent)',
+        }}
+      />
     </div>
   )
 }
@@ -26,11 +32,17 @@ function Loader() {
 // ─── Empty state ───
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <p className="text-lg mb-2" style={{ fontFamily: 'Cinzel, serif', color: '#7A7368' }}>
+    <div className="flex flex-col items-center justify-center py-20 text-center px-5">
+      <p
+        className="text-lg mb-2 tracking-[0.06em] uppercase"
+        style={{ fontFamily: 'var(--font-display)', color: 'var(--text-2)' }}
+      >
         Conteúdo não disponível
       </p>
-      <p className="text-sm" style={{ color: '#7A736870', fontFamily: 'Poppins, sans-serif' }}>
+      <p
+        className="text-sm"
+        style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+      >
         O administrador precisa importar o conteúdo no painel admin.
       </p>
     </div>
@@ -67,17 +79,33 @@ export default function DynamicContentView({ groupSlug }: { groupSlug: string })
   if (groupLoading) return <Loader />
   if (!group) return <EmptyState />
 
+  const headerTitle = currentSubtopic
+    ? currentSubtopic.title
+    : selectedTopic
+      ? selectedTopic.title
+      : group.title
+  const headerSubtitle = !currentSubtopic
+    ? (selectedTopic
+      ? selectedTopic.description || `${subtopics.length} itens — toque para explorar`
+      : group.description || group.subtitle || '')
+    : null
+
   return (
     <div className="flex flex-col min-h-screen relative">
-      <div className="bg-glow" />
-
       {/* Back button */}
       {(selectedTopic || selectedSubtopic) && (
-        <header className="relative z-10 w-full pt-8 pb-2 px-4 md:px-8">
+        <header className="relative z-10 w-full pt-6 pb-2 px-4 md:px-8">
           <div className="max-w-7xl mx-auto">
             <button
               onClick={handleBack}
-              className="theme-chip inline-flex items-center gap-2 !px-5 !py-2.5"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs tracking-[0.08em] uppercase active:scale-[0.97] transition-transform"
+              style={{
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border-1)',
+                color: 'var(--text-2)',
+                fontFamily: 'var(--font-body)',
+                fontWeight: 500,
+              }}
             >
               <ArrowLeft className="w-4 h-4" />
               <span>
@@ -91,56 +119,63 @@ export default function DynamicContentView({ groupSlug }: { groupSlug: string })
       )}
 
       {/* Page header */}
-      <section className="page-header relative z-10">
-        <h1>
-          {currentSubtopic
-            ? currentSubtopic.title
-            : selectedTopic
-              ? selectedTopic.title
-              : group.title}
+      <section className="relative z-10 text-center px-5 pt-8 pb-4">
+        <h1
+          className="text-2xl md:text-3xl tracking-[0.08em] uppercase"
+          style={{
+            fontFamily: 'var(--font-display)',
+            color: 'var(--text-1)',
+            fontWeight: 700,
+            lineHeight: 1.15,
+          }}
+        >
+          {headerTitle}
         </h1>
-        {!currentSubtopic && (
-          <p className="subtitle">
-            {selectedTopic
-              ? selectedTopic.description || `${subtopics.length} itens — toque para explorar`
-              : group.description || group.subtitle || ''}
+        {headerSubtitle && (
+          <p
+            className="mt-2 text-sm max-w-xl mx-auto"
+            style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+          >
+            {headerSubtitle}
           </p>
         )}
-        <div className="ornament-divider max-w-sm mx-auto mt-4">
-          <span>&#10022;</span>
-        </div>
+        <Divider variant="ornament" className="max-w-[180px] mx-auto" spacing="default" />
       </section>
 
       {/* Content */}
       <main className="relative z-10 flex-1 pb-16">
         {/* Level 1: Topic grid */}
         {!selectedTopic && !currentSubtopic && (
-          <div className="max-w-6xl mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+          <div className="max-w-6xl mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             {topics.map((topic, i) => (
               <button
                 key={topic.id}
                 onClick={() => setSelectedTopic(topic)}
-                className="feature-card text-left fade-in"
-                style={{ animationDelay: `${i * 0.06}s` }}
+                className="text-left p-5 rounded-2xl fade-in active:scale-[0.99] transition-transform"
+                style={{
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border-1)',
+                  animationDelay: `${i * 0.06}s`,
+                }}
               >
                 {topic.sort_order > 0 && (
                   <span
                     className="text-xs tracking-[0.15em] uppercase block mb-3"
-                    style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
+                    style={{ color: 'var(--accent)', fontFamily: 'var(--font-body)' }}
                   >
                     {topic.subtitle || `#${topic.sort_order}`}
                   </span>
                 )}
                 <h3
-                  className="text-lg font-semibold leading-snug mb-2"
-                  style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
+                  className="text-base font-semibold leading-snug mb-2 tracking-[0.04em]"
+                  style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
                 >
                   {topic.title}
                 </h3>
                 {topic.description && (
                   <p
                     className="text-sm leading-relaxed line-clamp-2"
-                    style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+                    style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
                   >
                     {topic.description}
                   </p>
@@ -152,32 +187,36 @@ export default function DynamicContentView({ groupSlug }: { groupSlug: string })
 
         {/* Level 2: Subtopic grid (only if topic has multiple subtopics) */}
         {selectedTopic && !currentSubtopic && !topicLoading && subtopics.length > 1 && (
-          <div className="max-w-6xl mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+          <div className="max-w-6xl mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             {subtopics.map((sub, i) => (
               <button
                 key={sub.id}
                 onClick={() => setSelectedSubtopic(sub)}
-                className="feature-card text-left fade-in"
-                style={{ animationDelay: `${i * 0.06}s` }}
+                className="text-left p-5 rounded-2xl fade-in active:scale-[0.99] transition-transform"
+                style={{
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border-1)',
+                  animationDelay: `${i * 0.06}s`,
+                }}
               >
                 {sub.subtitle && (
                   <span
                     className="text-xs tracking-[0.15em] uppercase block mb-3"
-                    style={{ color: '#C9A84C', fontFamily: 'Poppins, sans-serif' }}
+                    style={{ color: 'var(--accent)', fontFamily: 'var(--font-body)' }}
                   >
                     {sub.subtitle}
                   </span>
                 )}
                 <h3
-                  className="text-lg font-semibold leading-snug mb-2"
-                  style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
+                  className="text-base font-semibold leading-snug mb-2 tracking-[0.04em]"
+                  style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
                 >
                   {sub.title}
                 </h3>
                 {sub.description && (
                   <p
                     className="text-sm leading-relaxed line-clamp-2"
-                    style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+                    style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
                   >
                     {sub.description}
                   </p>

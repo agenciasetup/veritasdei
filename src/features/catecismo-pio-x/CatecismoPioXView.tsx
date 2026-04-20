@@ -6,6 +6,7 @@ import { CATECISMO_PIO_X } from './data/catecismo'
 import type { CatechismSection, CatechismQuestion } from './data/types'
 import SectionAccordion from './components/SectionAccordion'
 import QuestionCard from './components/QuestionCard'
+import Divider from '@/components/ui/Divider'
 
 interface FlatQuestion {
   sectionPath: string[]
@@ -52,17 +53,26 @@ export default function CatecismoPioXView() {
 
   return (
     <div className="flex flex-col min-h-screen relative">
-      <div className="bg-glow" />
-
       {/* ── Header ── */}
-      <section className="page-header relative z-10">
-        <h1>Catecismo de São Pio X</h1>
-        <p className="subtitle">
+      <section className="relative z-10 text-center px-5 pt-8 pb-4">
+        <h1
+          className="text-2xl md:text-3xl tracking-[0.08em] uppercase"
+          style={{
+            fontFamily: 'var(--font-display)',
+            color: 'var(--text-1)',
+            fontWeight: 700,
+            lineHeight: 1.15,
+          }}
+        >
+          Catecismo de São Pio X
+        </h1>
+        <p
+          className="mt-2 text-sm max-w-md mx-auto"
+          style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+        >
           A doutrina cristã em perguntas e respostas
         </p>
-        <div className="ornament-divider max-w-sm mx-auto mt-4">
-          <span>&#10022;</span>
-        </div>
+        <Divider variant="ornament" className="max-w-[180px] mx-auto" spacing="default" />
       </section>
 
       {/* ── Search & controls ── */}
@@ -72,11 +82,11 @@ export default function CatecismoPioXView() {
           <div
             className="flex items-center gap-3 px-4 py-3 rounded-xl"
             style={{
-              background: 'rgba(20,18,14,0.6)',
-              border: '1px solid rgba(201,168,76,0.1)',
+              background: 'var(--surface-inset)',
+              border: '1px solid var(--border-1)',
             }}
           >
-            <Search className="w-4 h-4 flex-shrink-0" style={{ color: '#7A7368' }} />
+            <Search className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--text-3)' }} />
             <input
               type="text"
               value={searchTerm}
@@ -84,12 +94,16 @@ export default function CatecismoPioXView() {
               placeholder="Buscar no Catecismo..."
               className="flex-1 bg-transparent text-sm outline-none"
               style={{
-                color: '#F2EDE4',
-                fontFamily: 'Poppins, sans-serif',
+                color: 'var(--text-1)',
+                fontFamily: 'var(--font-body)',
               }}
             />
             {searchTerm && (
-              <button onClick={() => setSearchTerm('')} className="text-xs" style={{ color: '#7A7368' }}>
+              <button
+                onClick={() => setSearchTerm('')}
+                className="text-xs"
+                style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+              >
                 Limpar
               </button>
             )}
@@ -97,7 +111,10 @@ export default function CatecismoPioXView() {
 
           {/* Controls */}
           <div className="flex items-center justify-between">
-            <p className="text-[11px]" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+            <p
+              className="text-[11px]"
+              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+            >
               {isSearching
                 ? `${filtered!.length} resultado${filtered!.length !== 1 ? 's' : ''} encontrado${filtered!.length !== 1 ? 's' : ''}`
                 : `${allQuestions.length} perguntas em ${CATECISMO_PIO_X.sections.length} seções`}
@@ -107,10 +124,10 @@ export default function CatecismoPioXView() {
                 onClick={() => setAllExpanded(!allExpanded)}
                 className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg transition-colors"
                 style={{
-                  color: '#C9A84C',
-                  background: 'rgba(201,168,76,0.08)',
-                  border: '1px solid rgba(201,168,76,0.15)',
-                  fontFamily: 'Poppins, sans-serif',
+                  color: 'var(--accent)',
+                  background: 'var(--accent-soft)',
+                  border: '1px solid var(--accent-soft)',
+                  fontFamily: 'var(--font-body)',
                 }}
               >
                 {allExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -129,8 +146,8 @@ export default function CatecismoPioXView() {
             <div className="space-y-3">
               {filtered!.length === 0 ? (
                 <div className="text-center py-12">
-                  <BookOpen className="w-10 h-10 mx-auto mb-3" style={{ color: '#7A736840' }} />
-                  <p className="text-sm" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+                  <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-40" style={{ color: 'var(--text-3)' }} />
+                  <p className="text-sm" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}>
                     Nenhum resultado para "{searchTerm}"
                   </p>
                 </div>
@@ -139,7 +156,7 @@ export default function CatecismoPioXView() {
                   <div key={i}>
                     <p
                       className="text-[10px] tracking-[0.15em] uppercase mb-1.5 px-1"
-                      style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+                      style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
                     >
                       {fq.sectionPath.join(' › ')}
                     </p>
