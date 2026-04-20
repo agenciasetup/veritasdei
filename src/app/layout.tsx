@@ -3,6 +3,8 @@ import { Cinzel, Cormorant_Garamond, Poppins } from "next/font/google"
 import "./globals.css"
 import AppShell from "@/components/layout/AppShell"
 import { AuthProvider } from "@/contexts/AuthContext"
+import { ThemeProvider } from "@/contexts/ThemeContext"
+import ThemeScript from "@/components/ThemeScript"
 import PwaRegister from "@/components/layout/PwaRegister"
 import NoZoom from "@/components/layout/NoZoom"
 import GamificationEventsProvider from "@/components/gamification/GamificationEventsProvider"
@@ -84,14 +86,17 @@ export default function RootLayout({
       className={`h-full antialiased ${cinzel.variable} ${cormorant.variable} ${poppins.variable}`}
     >
       <body className="min-h-full flex flex-col">
+        <ThemeScript />
         <a href="#main-content" className="skip-link">
           Pular para o conteúdo
         </a>
-        <AuthProvider>
-          <GamificationEventsProvider>
-            <AppShell>{children}</AppShell>
-          </GamificationEventsProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <GamificationEventsProvider>
+              <AppShell>{children}</AppShell>
+            </GamificationEventsProvider>
+          </AuthProvider>
+        </ThemeProvider>
         <PwaRegister />
         <NoZoom />
       </body>
