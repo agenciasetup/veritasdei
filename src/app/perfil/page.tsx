@@ -3,6 +3,7 @@
 import { Suspense, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import {
   User,
   Target,
@@ -22,7 +23,13 @@ import { useAuth } from '@/contexts/AuthContext'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { useHaptic } from '@/hooks/useHaptic'
 import ProfileHeaderCard from '@/components/perfil/ProfileHeaderCard'
-import EditProfileSheet from '@/components/perfil/EditProfileSheet'
+
+// EditProfileSheet é pesado (form + upload de avatar/capa) e só
+// abre sob demanda. Lazy-load tira do bundle inicial de /perfil.
+const EditProfileSheet = dynamic(
+  () => import('@/components/perfil/EditProfileSheet'),
+  { ssr: false },
+)
 
 import ContaSection from './sections/ContaSection'
 import PropositosSection from './sections/PropositosSection'
