@@ -10,17 +10,21 @@ function CommunityDisabledPlaceholder() {
       <div
         className="max-w-md w-full rounded-2xl p-8 text-center"
         style={{
-          background: 'rgba(16,16,16,0.7)',
-          border: '1px solid rgba(201,168,76,0.15)',
+          background: 'var(--surface-2)',
+          border: '1px solid var(--border-1)',
         }}
       >
         <h1
-          className="text-2xl mb-2"
-          style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
+          className="text-2xl mb-2 tracking-[0.08em] uppercase"
+          style={{
+            fontFamily: 'var(--font-display)',
+            color: 'var(--text-1)',
+            fontWeight: 700,
+          }}
         >
           Comunidade Veritas
         </h1>
-        <p style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}>
+        <p style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}>
           A comunidade está temporariamente desativada para manutenção.
         </p>
       </div>
