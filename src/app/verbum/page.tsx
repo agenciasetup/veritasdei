@@ -36,7 +36,6 @@ import {
 import type { VerbumFlow, VerbumFlowShare } from '@/verbum/types/verbum.types'
 
 const GOLD = '#C9A84C'
-const BG_DEEP = '#0A0806'
 
 export default function VerbumDashboard() {
   const router = useRouter()
@@ -115,50 +114,45 @@ export default function VerbumDashboard() {
   }, [])
 
   return (
-    <div className="min-h-screen" style={{ background: BG_DEEP, fontFamily: 'Poppins, sans-serif' }}>
-      {/* Background glow */}
-      <div
-        className="fixed inset-0 pointer-events-none"
-        style={{
-          background: `
-            radial-gradient(ellipse 60% 40% at 50% 0%, rgba(201,168,76,0.06) 0%, transparent 70%),
-            radial-gradient(ellipse 50% 60% at 50% 100%, rgba(107,29,42,0.04) 0%, transparent 60%)
-          `,
-        }}
-      />
-
+    <div
+      className="min-h-screen"
+      style={{ background: 'var(--surface-1)', fontFamily: 'var(--font-body)' }}
+    >
       <div className="relative z-10 max-w-5xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => router.push('/')}
-              className="p-2 rounded-lg transition-colors hover:bg-white/5"
-              style={{ color: '#5C4A2A' }}
-              title="Voltar para Home"
+              onClick={() => router.push('/rezar')}
+              className="p-2 rounded-lg transition-colors"
+              style={{ color: 'var(--text-3)' }}
+              title="Voltar"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
               <h1
-                className="text-2xl font-bold"
-                style={{ fontFamily: 'Cinzel, serif', color: GOLD, letterSpacing: '0.08em' }}
+                className="text-2xl font-bold tracking-[0.12em]"
+                style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
               >
                 VERBUM
               </h1>
-              <p className="text-xs mt-1" style={{ color: '#5C4A2A' }}>
+              <p
+                className="text-xs mt-1"
+                style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+              >
                 Mappa Fidei — Seus grafos teológicos
               </p>
             </div>
           </div>
           <button
             onClick={() => setShowNewModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
             style={{
-              background: `linear-gradient(135deg, rgba(201,168,76,0.15) 0%, rgba(201,168,76,0.08) 100%)`,
-              border: `1px solid ${GOLD}`,
-              color: GOLD,
-              fontFamily: 'Poppins, sans-serif',
+              background: 'var(--accent)',
+              color: 'var(--accent-contrast)',
+              fontFamily: 'var(--font-body)',
+              fontWeight: 600,
             }}
           >
             <Plus className="w-4 h-4" />
@@ -167,33 +161,48 @@ export default function VerbumDashboard() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 p-1 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)' }}>
+        <div
+          className="flex gap-1 mb-6 p-1 rounded-xl"
+          style={{
+            background: 'var(--surface-inset)',
+            border: '1px solid var(--border-2)',
+          }}
+        >
           {[
             { key: 'my' as const, label: 'Meus Fluxos', icon: Network },
             { key: 'shared' as const, label: 'Compartilhados', icon: Users, badge: sharedFlows.filter(s => !s.accepted).length },
             { key: 'explore' as const, label: 'Explorar', icon: Compass },
-          ].map((t) => (
-            <button
-              key={t.key}
-              onClick={() => t.key === 'explore' ? router.push('/verbum/explorar') : setTab(t.key)}
-              className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium transition-all"
-              style={{
-                background: tab === t.key ? 'rgba(201,168,76,0.1)' : 'transparent',
-                color: tab === t.key ? GOLD : '#5C4A2A',
-              }}
-            >
-              <t.icon className="w-3.5 h-3.5" />
-              {t.label}
-              {t.badge ? (
-                <span
-                  className="text-[9px] px-1.5 py-0.5 rounded-full"
-                  style={{ background: 'rgba(212,136,74,0.2)', color: '#D4884A' }}
-                >
-                  {t.badge}
-                </span>
-              ) : null}
-            </button>
-          ))}
+          ].map((t) => {
+            const active = tab === t.key
+            return (
+              <button
+                key={t.key}
+                onClick={() => t.key === 'explore' ? router.push('/verbum/explorar') : setTab(t.key)}
+                className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium transition-colors"
+                style={{
+                  background: active ? 'var(--surface-2)' : 'transparent',
+                  color: active ? 'var(--text-1)' : 'var(--text-3)',
+                  boxShadow: active
+                    ? '0 1px 2px rgba(0,0,0,0.08), 0 0 0 1px var(--border-1)'
+                    : undefined,
+                }}
+              >
+                <t.icon className="w-3.5 h-3.5" />
+                {t.label}
+                {t.badge ? (
+                  <span
+                    className="text-[9px] px-1.5 py-0.5 rounded-full"
+                    style={{
+                      background: 'var(--accent-soft)',
+                      color: 'var(--accent)',
+                    }}
+                  >
+                    {t.badge}
+                  </span>
+                ) : null}
+              </button>
+            )
+          })}
         </div>
 
         {/* Content */}

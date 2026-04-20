@@ -624,14 +624,18 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
         <header className="mb-4 hidden md:flex items-start justify-between gap-4">
           <div>
             <h1
-              className="text-2xl md:text-3xl mb-2"
-              style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
+              className="text-2xl md:text-3xl mb-2 tracking-[0.08em] uppercase"
+              style={{
+                fontFamily: 'var(--font-display)',
+                color: 'var(--text-1)',
+                fontWeight: 700,
+              }}
             >
               Comunidade Veritas
             </h1>
             <p
               className="text-sm"
-              style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}
+              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
             >
               Publicações católicas para formar, partilhar e fortalecer a fé.
             </p>
@@ -641,9 +645,10 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
         <div
           className="sticky top-0 z-20 -mx-4 md:-mx-8 mb-3"
           style={{
-            background: 'rgba(15,14,12,0.88)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
+            background: 'color-mix(in srgb, var(--surface-1) 92%, transparent)',
+            backdropFilter: 'saturate(130%) blur(8px)',
+            WebkitBackdropFilter: 'saturate(130%) blur(8px)',
+            borderBottom: '1px solid var(--border-2)',
           }}
         >
           <div className="flex items-center gap-1 px-2 md:px-4">
@@ -652,8 +657,8 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
               onClick={() => ensureFeedLoaded('for_you')}
               className="relative px-3 md:px-4 py-3 text-[13px] uppercase tracking-[0.14em]"
               style={{
-                color: tab === 'for_you' ? '#F2EDE4' : '#8A8378',
-                fontFamily: 'Poppins, sans-serif',
+                color: tab === 'for_you' ? 'var(--text-1)' : 'var(--text-3)',
+                fontFamily: 'var(--font-body)',
                 background: 'transparent',
                 border: 'none',
               }}
@@ -662,7 +667,7 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
               {tab === 'for_you' && (
                 <span
                   className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full"
-                  style={{ background: '#C9A84C' }}
+                  style={{ background: 'var(--accent)' }}
                 />
               )}
             </button>
@@ -671,8 +676,8 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
               onClick={() => ensureFeedLoaded('following')}
               className="relative px-3 md:px-4 py-3 text-[13px] uppercase tracking-[0.14em]"
               style={{
-                color: tab === 'following' ? '#F2EDE4' : '#8A8378',
-                fontFamily: 'Poppins, sans-serif',
+                color: tab === 'following' ? 'var(--text-1)' : 'var(--text-3)',
+                fontFamily: 'var(--font-body)',
                 background: 'transparent',
                 border: 'none',
               }}
@@ -681,7 +686,7 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
               {tab === 'following' && (
                 <span
                   className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full"
-                  style={{ background: '#C9A84C' }}
+                  style={{ background: 'var(--accent)' }}
                 />
               )}
             </button>
@@ -690,8 +695,8 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
               onClick={() => ensureFeedLoaded('nearby')}
               className="relative px-3 md:px-4 py-3 text-[13px] uppercase tracking-[0.14em] inline-flex items-center gap-1.5"
               style={{
-                color: tab === 'nearby' ? '#F2EDE4' : '#8A8378',
-                fontFamily: 'Poppins, sans-serif',
+                color: tab === 'nearby' ? 'var(--text-1)' : 'var(--text-3)',
+                fontFamily: 'var(--font-body)',
                 background: 'transparent',
                 border: 'none',
               }}
@@ -701,7 +706,7 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
               {tab === 'nearby' && (
                 <span
                   className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full"
-                  style={{ background: '#C9A84C' }}
+                  style={{ background: 'var(--accent)' }}
                 />
               )}
             </button>
@@ -713,7 +718,7 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
                   aria-label="Moderação"
                   title="Moderação"
                   className="p-2 rounded-full"
-                  style={{ color: '#D94F5C' }}
+                  style={{ color: 'var(--danger)' }}
                 >
                   <Shield className="w-[18px] h-[18px]" strokeWidth={1.5} />
                 </Link>
@@ -723,7 +728,7 @@ export default function CommunityFeedClient({ initialFeed = null }: CommunityFee
                 href="/comunidade/buscar"
                 aria-label="Buscar"
                 className="p-2 rounded-full"
-                style={{ color: '#8A8378' }}
+                style={{ color: 'var(--text-3)' }}
               >
                 <Search className="w-[18px] h-[18px]" strokeWidth={1.5} />
               </Link>

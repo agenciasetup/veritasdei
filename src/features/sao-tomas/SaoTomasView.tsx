@@ -5,6 +5,7 @@ import { Search, X, BookOpen, ChevronDown, Sparkles } from 'lucide-react'
 import { SUMA_PARTS } from './data/suma'
 import type { FlatArticle } from './data/types'
 import ArticleView from './components/ArticleView'
+import Divider from '@/components/ui/Divider'
 
 /** Flatten all articles into a searchable index */
 function buildIndex(): FlatArticle[] {
@@ -73,17 +74,26 @@ export default function SaoTomasView() {
 
   return (
     <div className="flex flex-col min-h-screen relative">
-      <div className="bg-glow" />
-
       {/* Header */}
-      <section className="page-header relative z-10">
-        <h1>São Tomás de Aquino</h1>
-        <p className="subtitle">
+      <section className="relative z-10 text-center px-5 pt-8 pb-4">
+        <h1
+          className="text-2xl md:text-3xl tracking-[0.08em] uppercase"
+          style={{
+            fontFamily: 'var(--font-display)',
+            color: 'var(--text-1)',
+            fontWeight: 700,
+            lineHeight: 1.15,
+          }}
+        >
+          São Tomás de Aquino
+        </h1>
+        <p
+          className="mt-2 text-sm max-w-md mx-auto"
+          style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+        >
           Estude a Suma Teológica — a obra-prima do Doutor Angélico
         </p>
-        <div className="ornament-divider max-w-sm mx-auto mt-4">
-          <span>&#10022;</span>
-        </div>
+        <Divider variant="ornament" className="max-w-[180px] mx-auto" spacing="default" />
       </section>
 
       {/* Search bar */}
@@ -92,7 +102,7 @@ export default function SaoTomasView() {
           <div className="relative">
             <Search
               className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4"
-              style={{ color: '#7A7368' }}
+              style={{ color: 'var(--text-3)' }}
             />
             <input
               ref={searchRef}
@@ -100,14 +110,19 @@ export default function SaoTomasView() {
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               placeholder="Buscar na Suma... (ex: existência de Deus, felicidade, Encarnação)"
-              className="search-input w-full pl-11 pr-10 py-3.5 rounded-xl text-sm"
-              style={{ fontFamily: 'Poppins, sans-serif' }}
+              className="w-full pl-11 pr-10 py-3.5 rounded-xl text-sm outline-none"
+              style={{
+                background: 'var(--surface-inset)',
+                border: '1px solid var(--border-1)',
+                color: 'var(--text-1)',
+                fontFamily: 'var(--font-body)',
+              }}
             />
             {searchTerm && (
               <button
                 onClick={clearSearch}
                 className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full transition-colors"
-                style={{ color: '#7A7368' }}
+                style={{ color: 'var(--text-3)' }}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -117,7 +132,7 @@ export default function SaoTomasView() {
           {isSearching && (
             <p
               className="text-xs mt-2 ml-1"
-              style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
             >
               {filtered.length === 0
                 ? 'Nenhum artigo encontrado.'

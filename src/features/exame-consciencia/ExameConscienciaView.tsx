@@ -8,6 +8,7 @@ import ExamineStepper from './components/ExamineStepper'
 import ReviewList from './components/ReviewList'
 import ConfessionWalkthrough from './components/ConfessionWalkthrough'
 import { clearAllNotes } from './notesStorage'
+import Divider from '@/components/ui/Divider'
 
 const STORAGE_KEY = 'veritasdei_exame'
 
@@ -109,15 +110,26 @@ export default function ExameConscienciaView() {
 
   return (
     <div className="flex flex-col min-h-screen relative">
-      <div className="bg-glow" />
-
       {/* ── Header ── */}
-      <section className="page-header relative z-10">
-        <h1>Exame de Consciência</h1>
-        <p className="subtitle">Prepare-se para o Sacramento da Confissão</p>
-        <div className="ornament-divider max-w-sm mx-auto mt-4">
-          <span>&#10022;</span>
-        </div>
+      <section className="relative z-10 text-center px-5 pt-10 pb-4">
+        <h1
+          className="text-2xl md:text-3xl tracking-[0.08em] uppercase"
+          style={{
+            fontFamily: 'var(--font-display)',
+            color: 'var(--text-1)',
+            fontWeight: 700,
+            lineHeight: 1.15,
+          }}
+        >
+          Exame de Consciência
+        </h1>
+        <p
+          className="mt-2 text-sm max-w-md mx-auto"
+          style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+        >
+          Prepare-se para o Sacramento da Confissão
+        </p>
+        <Divider variant="ornament" className="max-w-[180px] mx-auto" spacing="default" />
       </section>
 
       {/* ── Step indicator ── */}
@@ -126,8 +138,8 @@ export default function ExameConscienciaView() {
           <div
             className="flex gap-1 p-1.5 rounded-xl"
             style={{
-              background: 'rgba(20,18,14,0.6)',
-              border: '1px solid rgba(201,168,76,0.08)',
+              background: 'var(--surface-inset)',
+              border: '1px solid var(--border-2)',
             }}
           >
             {STEPS.map((s, i) => {
@@ -139,21 +151,29 @@ export default function ExameConscienciaView() {
                   onClick={() => setStep(s.id)}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg transition-all duration-200"
                   style={{
-                    background: isActive ? 'rgba(201,168,76,0.12)' : 'transparent',
-                    border: isActive ? '1px solid rgba(201,168,76,0.2)' : '1px solid transparent',
+                    background: isActive ? 'var(--surface-2)' : 'transparent',
+                    boxShadow: isActive
+                      ? '0 1px 2px rgba(0,0,0,0.08), 0 0 0 1px var(--border-1)'
+                      : undefined,
                   }}
                 >
-                  <Icon className="w-4 h-4" style={{ color: isActive ? '#C9A84C' : '#7A7368' }} />
+                  <Icon className="w-4 h-4" style={{ color: isActive ? 'var(--accent)' : 'var(--text-3)' }} />
                   <span
                     className="text-[11px] font-medium tracking-wide hidden sm:block"
-                    style={{ fontFamily: 'Poppins, sans-serif', color: isActive ? '#C9A84C' : '#7A7368' }}
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      color: isActive ? 'var(--text-1)' : 'var(--text-3)',
+                    }}
                   >
                     {s.label}
                   </span>
                   {/* Step number on mobile */}
                   <span
                     className="text-[11px] sm:hidden"
-                    style={{ fontFamily: 'Poppins, sans-serif', color: isActive ? '#C9A84C' : '#7A7368' }}
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      color: isActive ? 'var(--text-1)' : 'var(--text-3)',
+                    }}
                   >
                     {i + 1}
                   </span>
@@ -168,28 +188,34 @@ export default function ExameConscienciaView() {
       {step === 'examinar' && (
         <div className="relative z-10 w-full px-4 md:px-8 mb-4">
           <div className="max-w-3xl mx-auto flex items-center gap-2 justify-center">
-            <span className="text-[10px] tracking-wider uppercase mr-2" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+            <span
+              className="text-[10px] tracking-wider uppercase mr-2"
+              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+            >
               Estado:
             </span>
             {([
               { id: 'adulto' as LifeState, label: 'Adulto' },
               { id: 'jovem' as LifeState, label: 'Jovem' },
               { id: 'casado' as LifeState, label: 'Casado(a)' },
-            ]).map(opt => (
-              <button
-                key={opt.id}
-                onClick={() => setLifeState(opt.id)}
-                className="px-3 py-1.5 rounded-lg text-[11px] transition-all duration-200"
-                style={{
-                  fontFamily: 'Poppins, sans-serif',
-                  background: lifeState === opt.id ? 'rgba(201,168,76,0.12)' : 'transparent',
-                  border: `1px solid ${lifeState === opt.id ? 'rgba(201,168,76,0.2)' : 'rgba(201,168,76,0.06)'}`,
-                  color: lifeState === opt.id ? '#C9A84C' : '#7A7368',
-                }}
-              >
-                {opt.label}
-              </button>
-            ))}
+            ]).map(opt => {
+              const active = lifeState === opt.id
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => setLifeState(opt.id)}
+                  className="px-3 py-1.5 rounded-lg text-[11px] transition-colors"
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    background: active ? 'var(--accent-soft)' : 'transparent',
+                    border: `1px solid ${active ? 'var(--accent-soft)' : 'var(--border-2)'}`,
+                    color: active ? 'var(--accent)' : 'var(--text-3)',
+                  }}
+                >
+                  {opt.label}
+                </button>
+              )
+            })}
           </div>
         </div>
       )}

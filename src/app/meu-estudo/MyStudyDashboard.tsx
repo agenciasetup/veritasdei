@@ -43,8 +43,8 @@ export default function MyStudyDashboard() {
       <section
         className="rounded-2xl p-6"
         style={{
-          background: 'rgba(20,18,14,0.5)',
-          border: '1px solid rgba(201,168,76,0.1)',
+          background: 'var(--surface-2)',
+          border: '1px solid var(--border-1)',
         }}
       >
         <div className="flex items-baseline justify-between mb-3">
@@ -103,8 +103,8 @@ export default function MyStudyDashboard() {
                   href={`/estudo/${p.slug}`}
                   className="rounded-xl p-4 transition-colors"
                   style={{
-                    background: 'rgba(20,18,14,0.5)',
-                    border: '1px solid rgba(201,168,76,0.1)',
+                    background: 'var(--surface-2)',
+                    border: '1px solid var(--border-1)',
                   }}
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -164,8 +164,8 @@ function RecentNotes({
               key={n.id}
               className="rounded-lg p-3 text-sm"
               style={{
-                background: 'rgba(20,18,14,0.5)',
-                border: '1px solid rgba(201,168,76,0.08)',
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border-1)',
               }}
             >
               <p
@@ -230,7 +230,7 @@ function RecentQuizzes({
               key={a.id}
               className="rounded-lg p-3 text-sm flex items-center justify-between"
               style={{
-                background: 'rgba(20,18,14,0.5)',
+                background: 'var(--surface-2)',
                 border: `1px solid ${a.passed ? 'rgba(34,197,94,0.2)' : 'rgba(127,29,29,0.2)'}`,
               }}
             >
