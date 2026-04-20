@@ -372,7 +372,7 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
         <div className="text-center min-w-0 flex-1">
           <h1
             className="text-sm font-medium truncate"
-            style={{ color: theme.textPrimary, fontFamily: 'Cinzel, serif' }}
+            style={{ color: theme.textPrimary, fontFamily: 'var(--font-display)' }}
           >
             {headerTitle}
           </h1>
@@ -392,17 +392,17 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
             style={{
               background: isLatin
                 ? 'linear-gradient(180deg, rgba(234,184,192,0.14), rgba(201,117,132,0.08))'
-                : 'rgba(255,255,255,0.02)',
-              border: `1px solid ${isLatin ? theme.borderStrong : 'rgba(122, 115, 104, 0.25)'}`,
-              color: isLatin ? theme.accentLight : '#7A7368',
-              fontFamily: 'Cinzel, serif',
+                : 'var(--surface-inset)',
+              border: `1px solid ${isLatin ? theme.borderStrong : 'var(--border-1)'}`,
+              color: isLatin ? theme.accentLight : 'var(--text-3)',
+              fontFamily: 'var(--font-display)',
               fontSize: '10px',
               letterSpacing: '0.3em',
               textTransform: 'uppercase',
               fontWeight: 600,
               textShadow: isLatin
-                ? `0 0 10px ${theme.accentLight}55`
-                : '0 1px 0 rgba(0,0,0,0.4)',
+                ? `0 0 10px color-mix(in srgb, ${theme.accentLight} 33%, transparent)`
+                : 'none',
             }}
             aria-pressed={isLatin}
             aria-label={isLatin ? 'Desativar latim' : 'Ativar latim'}
@@ -555,7 +555,7 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
             <div className="mb-3">
               <h2
                 className="text-base leading-snug md:text-lg"
-                style={{ color: theme.textPrimary, fontFamily: 'Cinzel, serif' }}
+                style={{ color: theme.textPrimary, fontFamily: 'var(--font-display)' }}
               >
                 {mysteryDisplayTitle}
               </h2>
@@ -573,7 +573,7 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
             <div>
               <h3
                 className="text-base mb-2 md:text-lg"
-                style={{ color: theme.accentLight, fontFamily: 'Cinzel, serif' }}
+                style={{ color: theme.accentLight, fontFamily: 'var(--font-display)' }}
               >
                 {mysteryDisplayTitle}
               </h3>
@@ -595,7 +595,7 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
             <div>
               <h3
                 className="text-base mb-2 md:text-lg"
-                style={{ color: theme.accentLight, fontFamily: 'Cinzel, serif', fontWeight: 500 }}
+                style={{ color: theme.accentLight, fontFamily: 'var(--font-display)', fontWeight: 500 }}
               >
                 {prayerDisplayName}
               </h3>
@@ -632,13 +632,13 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
       {showTransition && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ backgroundColor: `${theme.pageBg}F2` }}
+          style={{ backgroundColor: `color-mix(in srgb, ${theme.pageBg} 95%, transparent)` }}
         >
           <div className="text-center px-6 max-w-md">
             <div className="text-4xl mb-4" aria-hidden>✦</div>
             <h2
               className="text-xl mb-2"
-              style={{ color: theme.accentLight, fontFamily: 'Cinzel, serif' }}
+              style={{ color: theme.accentLight, fontFamily: 'var(--font-display)' }}
             >
               Mistérios {mysteryShortNamePt} concluídos
             </h2>
@@ -672,7 +672,7 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
           style={{
             height: '72px',
             borderTop: `1px solid ${theme.border}`,
-            background: `${theme.pageBg}F2`,
+            background: `color-mix(in srgb, ${theme.pageBg} 95%, transparent)`,
             backdropFilter: 'blur(12px)',
           }}
         >
@@ -719,13 +719,13 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
           className="flex-shrink-0 px-4 py-6 text-center safe-bottom"
           style={{
             borderTop: `1px solid ${theme.borderStrong}`,
-            background: `${theme.pageBg}F2`,
+            background: `color-mix(in srgb, ${theme.pageBg} 95%, transparent)`,
           }}
         >
           <div className="text-3xl mb-2" aria-hidden>✦</div>
           <h2
             className="text-xl mb-1"
-            style={{ color: theme.accentLight, fontFamily: 'Cinzel, serif' }}
+            style={{ color: theme.accentLight, fontFamily: 'var(--font-display)' }}
           >
             {rosarioFullyComplete ? 'Rosário completo' : 'Terço completo'}
           </h2>
