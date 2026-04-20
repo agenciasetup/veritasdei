@@ -244,9 +244,9 @@ export function BottomSheet({
               y,
               height: sheetHeight,
               marginBottom: keyboardOffset > 0 ? -keyboardOffset : 0,
-              background: 'rgba(15,14,12,0.98)',
-              borderTop: '1px solid rgba(201,168,76,0.18)',
-              boxShadow: '0 -16px 64px rgba(0,0,0,0.55)',
+              background: 'var(--surface-2)',
+              borderTop: '1px solid var(--border-1)',
+              boxShadow: '0 -16px 64px rgba(0,0,0,0.35)',
               touchAction: 'none',
             }}
             initial={{ y: vh }}
@@ -269,7 +269,7 @@ export function BottomSheet({
               {handle && (
                 <div
                   className="w-10 h-1 rounded-full"
-                  style={{ background: 'rgba(201,168,76,0.35)' }}
+                  style={{ background: 'var(--border-1)' }}
                   aria-hidden="true"
                 />
               )}
