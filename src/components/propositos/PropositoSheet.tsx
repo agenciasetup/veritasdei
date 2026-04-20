@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Trash2, Check, Cross, HandHeart, Church, Wheat, BookOpen, Sparkles, Star } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePropositos } from '@/contexts/PropositosContext'
@@ -104,7 +105,12 @@ export function PropositoSheetProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={value}>
       {children}
-      {mode.kind !== 'closed' && <PropositoSheet mode={mode} onClose={close} />}
+      {mode.kind !== 'closed' && typeof document !== 'undefined'
+        ? createPortal(
+            <PropositoSheet mode={mode} onClose={close} />,
+            document.body,
+          )
+        : null}
     </Ctx.Provider>
   )
 }
@@ -202,7 +208,7 @@ function PropositoSheet({ mode, onClose }: { mode: Mode; onClose: () => void }) 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-center">
+    <div className="fixed inset-0 z-[200] flex items-end sm:items-center sm:justify-center">
       {/* Overlay */}
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
@@ -215,27 +221,28 @@ function PropositoSheet({ mode, onClose }: { mode: Mode; onClose: () => void }) 
         role="dialog"
         aria-modal
         aria-labelledby="proposito-sheet-title"
-        className="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl max-h-[90vh] overflow-y-auto"
+        className="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl flex flex-col"
         style={{
-          background: '#0F0E0C',
-          border: '1px solid rgba(201,168,76,0.2)',
+          background: 'var(--surface-1)',
+          border: '1px solid color-mix(in srgb, var(--accent) 20%, transparent)',
           boxShadow: '0 -20px 60px rgba(0,0,0,0.6)',
+          maxHeight: '92vh',
         }}
       >
         {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-2 sm:hidden">
+        <div className="flex justify-center pt-3 pb-2 sm:hidden flex-shrink-0">
           <div
             className="w-10 h-1 rounded-full"
-            style={{ background: 'rgba(201,168,76,0.3)' }}
+            style={{ background: 'color-mix(in srgb, var(--accent) 35%, transparent)' }}
           />
         </div>
 
         {/* Header */}
-        <header className="flex items-center justify-between px-5 pt-2 pb-4">
+        <header className="flex items-center justify-between px-5 pt-2 pb-4 flex-shrink-0">
           <h2
             id="proposito-sheet-title"
             className="text-xl"
-            style={{ color: '#F2EDE4', fontFamily: 'Cormorant Garamond, serif' }}
+            style={{ color: 'var(--text-1)', fontFamily: 'var(--font-elegant)' }}
           >
             {mode.kind === 'edit' ? 'Editar propósito' : 'Novo propósito'}
           </h2>
@@ -244,13 +251,13 @@ function PropositoSheet({ mode, onClose }: { mode: Mode; onClose: () => void }) 
             onClick={onClose}
             aria-label="Fechar"
             className="w-9 h-9 rounded-full flex items-center justify-center"
-            style={{ background: 'rgba(255,255,255,0.04)', color: '#A8A096' }}
+            style={{ background: 'var(--surface-3)', color: 'var(--text-3)' }}
           >
             <X className="w-4 h-4" />
           </button>
         </header>
 
-        <div className="px-5 pb-6 space-y-5">
+        <div className="px-5 pb-4 space-y-5 overflow-y-auto flex-1 min-h-0">
           {/* Tipo */}
           <div>
             <p
@@ -492,17 +499,26 @@ function PropositoSheet({ mode, onClose }: { mode: Mode; onClose: () => void }) 
             </button>
           </div>
 
+        </div>
+
+        {/* Footer fixo — sempre visível, acima da bottom nav */}
+        <footer
+          className="flex-shrink-0 px-5 pt-3 border-t"
+          style={{
+            borderColor: 'var(--border-1)',
+            background: 'var(--surface-1)',
+            paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 1rem)',
+          }}
+        >
           {erro && (
             <p
-              className="text-xs"
-              style={{ color: '#D94F5C', fontFamily: 'Poppins, sans-serif' }}
+              className="text-xs mb-2"
+              style={{ color: 'var(--danger)', fontFamily: 'var(--font-body)' }}
             >
               {erro}
             </p>
           )}
-
-          {/* Actions */}
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-2">
             {mode.kind === 'edit' && (
               <button
                 type="button"
@@ -510,9 +526,9 @@ function PropositoSheet({ mode, onClose }: { mode: Mode; onClose: () => void }) 
                 disabled={saving}
                 className="w-11 h-11 rounded-xl flex items-center justify-center"
                 style={{
-                  background: 'rgba(217,79,92,0.08)',
-                  border: '1px solid rgba(217,79,92,0.3)',
-                  color: '#D94F5C',
+                  background: 'color-mix(in srgb, var(--danger) 10%, transparent)',
+                  border: '1px solid color-mix(in srgb, var(--danger) 30%, transparent)',
+                  color: 'var(--danger)',
                 }}
                 aria-label="Apagar propósito"
               >
@@ -523,11 +539,11 @@ function PropositoSheet({ mode, onClose }: { mode: Mode; onClose: () => void }) 
               type="button"
               onClick={salvar}
               disabled={saving}
-              className="flex-1 h-11 rounded-xl flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+              className="flex-1 h-11 rounded-xl flex items-center justify-center gap-2 text-sm disabled:opacity-50 active:scale-[0.98] transition-transform"
               style={{
-                background: 'linear-gradient(135deg, #C9A84C, #A88B3A)',
-                color: '#0F0E0C',
-                fontFamily: 'Poppins, sans-serif',
+                background: 'var(--accent)',
+                color: 'var(--accent-contrast)',
+                fontFamily: 'var(--font-body)',
                 fontWeight: 600,
               }}
             >
@@ -535,7 +551,7 @@ function PropositoSheet({ mode, onClose }: { mode: Mode; onClose: () => void }) 
               {saving ? 'Salvando…' : mode.kind === 'edit' ? 'Salvar' : 'Criar propósito'}
             </button>
           </div>
-        </div>
+        </footer>
       </div>
     </div>
   )

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { usePropositos } from '@/contexts/PropositosContext'
 import {
   periodoKey,
@@ -126,12 +127,14 @@ export default function PropositoCheckInGate() {
   }, [pendentes, today, userKey])
 
   if (!open || pendentes.length === 0) return null
+  if (typeof document === 'undefined') return null
 
-  return (
+  return createPortal(
     <PropositoCheckInModal
       pendentes={pendentes}
       onResponder={handleResponder}
       onClose={handleClose}
-    />
+    />,
+    document.body,
   )
 }
