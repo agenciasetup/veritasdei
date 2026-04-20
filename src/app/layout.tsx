@@ -24,7 +24,10 @@ const cormorant = Cormorant_Garamond({
   subsets: ['latin'],
   weight: ['400'],
   style: ['normal', 'italic'],
-  display: 'swap',
+  // optional: browser só aplica se carregar em <100ms — reduz CLS em
+  // conexões lentas. Fonte de acento (citações, welcome); fallback
+  // Georgia é aceitável se a custom não chegar a tempo.
+  display: 'optional',
   variable: '--font-elegant-loaded',
   fallback: ['Georgia', 'serif'],
 })
