@@ -5,6 +5,7 @@ import AppShell from "@/components/layout/AppShell"
 import { AuthProvider } from "@/contexts/AuthContext"
 import { ThemeProvider } from "@/contexts/ThemeContext"
 import ThemeScript from "@/components/ThemeScript"
+import ThemeSupabaseSync from "@/components/theme/ThemeSupabaseSync"
 import PwaRegister from "@/components/layout/PwaRegister"
 import NoZoom from "@/components/layout/NoZoom"
 import GamificationEventsProvider from "@/components/gamification/GamificationEventsProvider"
@@ -92,6 +93,7 @@ export default function RootLayout({
         </a>
         <ThemeProvider>
           <AuthProvider>
+            <ThemeSupabaseSync />
             <GamificationEventsProvider>
               <AppShell>{children}</AppShell>
             </GamificationEventsProvider>
