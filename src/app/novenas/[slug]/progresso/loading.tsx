@@ -2,7 +2,7 @@ export default function NovenaProgressoLoading() {
   return (
     <main
       className="relative min-h-screen w-full px-4 py-10 md:py-14"
-      style={{ backgroundColor: '#0F0E0C', color: '#F2EDE4' }}
+      style={{ backgroundColor: 'var(--surface-1)', color: 'var(--text-1)' }}
     >
       <div className="bg-glow" aria-hidden />
 

@@ -94,7 +94,7 @@ export default function PlanosClient({ plans }: { plans: Plan[] }) {
   if (!plan) {
     return (
       <main className="min-h-screen flex items-center justify-center">
-        <p style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+        <p style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}>
           Nenhum plano disponível no momento.
         </p>
       </main>
@@ -108,22 +108,22 @@ export default function PlanosClient({ plans }: { plans: Plan[] }) {
           <div
             className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4"
             style={{
-              background: 'linear-gradient(135deg, rgba(201,168,76,0.2), rgba(201,168,76,0.05))',
-              border: '1px solid rgba(201,168,76,0.3)',
+              background: 'var(--accent-soft)',
+              border: '1px solid var(--border-1)',
             }}
           >
-            <Sparkles className="w-6 h-6" style={{ color: '#C9A84C' }} />
+            <Sparkles className="w-6 h-6" style={{ color: 'var(--accent)' }} />
           </div>
           <h1
             className="text-3xl md:text-4xl mb-2"
-            style={{ fontFamily: 'Cormorant Garamond, serif', color: '#F2EDE4' }}
+            style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
           >
             {plan.nome}
           </h1>
           {plan.descricao && (
             <p
               className="text-sm max-w-md mx-auto"
-              style={{ color: '#A8A096', fontFamily: 'Poppins, sans-serif' }}
+              style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}
             >
               {plan.descricao}
             </p>
@@ -134,10 +134,10 @@ export default function PlanosClient({ plans }: { plans: Plan[] }) {
           <div
             className="mb-6 p-4 rounded-2xl text-center"
             style={{
-              background: 'rgba(102,187,106,0.1)',
-              border: '1px solid rgba(102,187,106,0.3)',
-              color: '#66BB6A',
-              fontFamily: 'Poppins, sans-serif',
+              background: 'color-mix(in srgb, var(--success) 12%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--success) 30%, transparent)',
+              color: 'var(--success)',
+              fontFamily: 'var(--font-body)',
             }}
           >
             Você já tem acesso Premium. Gerencie sua assinatura em{' '}
@@ -152,10 +152,10 @@ export default function PlanosClient({ plans }: { plans: Plan[] }) {
           <div
             className="mb-6 p-4 rounded-2xl text-sm"
             style={{
-              background: 'rgba(230,126,34,0.1)',
-              border: '1px solid rgba(230,126,34,0.3)',
-              color: '#E67E22',
-              fontFamily: 'Poppins, sans-serif',
+              background: 'color-mix(in srgb, var(--warning) 12%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--warning) 30%, transparent)',
+              color: 'var(--warning)',
+              fontFamily: 'var(--font-body)',
             }}
           >
             {error}
@@ -166,8 +166,8 @@ export default function PlanosClient({ plans }: { plans: Plan[] }) {
           className="p-6 md:p-8 rounded-3xl mb-6"
           style={{
             background:
-              'linear-gradient(160deg, rgba(201,168,76,0.08), rgba(255,255,255,0.02))',
-            border: '1px solid rgba(201,168,76,0.25)',
+              'var(--surface-2)',
+            border: '1px solid var(--border-1)',
           }}
         >
           <ul className="flex flex-col gap-3 mb-8">
@@ -175,9 +175,9 @@ export default function PlanosClient({ plans }: { plans: Plan[] }) {
               <li
                 key={i}
                 className="flex items-start gap-2 text-sm"
-                style={{ color: '#F2EDE4', fontFamily: 'Poppins, sans-serif' }}
+                style={{ color: 'var(--text-1)', fontFamily: 'var(--font-body)' }}
               >
-                <Check className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#C9A84C' }} />
+                <Check className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--accent)' }} />
                 {b}
               </li>
             ))}
@@ -195,10 +195,10 @@ export default function PlanosClient({ plans }: { plans: Plan[] }) {
                   disabled={loading || isPremium}
                   className="p-4 rounded-2xl flex items-center justify-between gap-3 text-left transition-all disabled:opacity-60"
                   style={{
-                    background: 'rgba(0,0,0,0.25)',
-                    border: '1px solid rgba(201,168,76,0.25)',
-                    color: '#F2EDE4',
-                    fontFamily: 'Poppins, sans-serif',
+                    background: 'var(--surface-inset)',
+                    border: '1px solid var(--border-1)',
+                    color: 'var(--text-1)',
+                    fontFamily: 'var(--font-body)',
                   }}
                 >
                   <div className="min-w-0">
@@ -208,16 +208,16 @@ export default function PlanosClient({ plans }: { plans: Plan[] }) {
                         <span
                           className="text-[10px] px-2 py-0.5 rounded-full"
                           style={{
-                            background: 'rgba(102,187,106,0.15)',
-                            color: '#66BB6A',
-                            border: '1px solid rgba(102,187,106,0.3)',
+                            background: 'color-mix(in srgb, var(--success) 18%, transparent)',
+                            color: 'var(--success)',
+                            border: '1px solid color-mix(in srgb, var(--success) 30%, transparent)',
                           }}
                         >
                           -{desc}%
                         </span>
                       )}
                     </div>
-                    <div className="text-xs" style={{ color: '#7A7368' }}>
+                    <div className="text-xs" style={{ color: 'var(--text-3)' }}>
                       {formatBRL(price.amount_cents)}
                       {price.intervalo === 'mensal' && ' /mês'}
                       {price.intervalo === 'semestral' && ' a cada 6 meses'}
@@ -227,8 +227,8 @@ export default function PlanosClient({ plans }: { plans: Plan[] }) {
                   <div
                     className="flex-shrink-0 px-4 py-2 rounded-xl text-xs"
                     style={{
-                      background: 'linear-gradient(135deg, #C9A84C, #A88B3A)',
-                      color: '#0F0E0C',
+                      background: 'var(--accent)',
+                      color: 'var(--accent-contrast)',
                       fontWeight: 600,
                     }}
                   >
@@ -248,7 +248,7 @@ export default function PlanosClient({ plans }: { plans: Plan[] }) {
 
         <p
           className="text-[11px] text-center"
-          style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+          style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
         >
           Pagamento processado com segurança. Cancele quando quiser.
         </p>

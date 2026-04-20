@@ -71,13 +71,13 @@ interface Props extends VeritasCardCallbacks {
   repliesExpanded?: boolean
 }
 
-const TEXT_PRIMARY = '#F2EDE4'
-const TEXT_MUTED = '#8A8378'
-const TEXT_SUBTLE = '#7A7368'
-const GOLD = '#C9A84C'
-const HAIRLINE = 'rgba(242,237,228,0.08)'
-const LIKE_COLOR = '#D94F5C'
-const REPOST_COLOR = '#66BB6A'
+const TEXT_PRIMARY = 'var(--text-1)'
+const TEXT_MUTED = 'var(--text-2)'
+const TEXT_SUBTLE = 'var(--text-3)'
+const GOLD = 'var(--accent)'
+const HAIRLINE = 'var(--border-2)'
+const LIKE_COLOR = 'var(--danger)'
+const REPOST_COLOR = 'var(--success)'
 
 function formatRelative(dateIso: string): string {
   const now = Date.now()
@@ -125,7 +125,7 @@ function ActionIcon({
         color: active ? activeColor : TEXT_MUTED,
         background: 'transparent',
         border: 'none',
-        fontFamily: 'Poppins, sans-serif',
+        fontFamily: 'var(--font-body)',
         minHeight: 44,
       }}
       data-active={active ? 'true' : 'false'}
@@ -247,9 +247,7 @@ export default function VeritasCard({
         padding: '16px 20px',
         paddingLeft: `${20 + indentPx}px`,
         borderBottom: `0.5px solid ${HAIRLINE}`,
-        background: isReflection
-          ? 'linear-gradient(180deg, rgba(201,168,76,0.05) 0%, rgba(15,14,12,0) 55%)'
-          : 'transparent',
+        background: isReflection ? 'var(--accent-soft)' : 'transparent',
         borderLeft: isReflection ? `2px solid ${GOLD}` : undefined,
         contentVisibility: 'auto',
         containIntrinsicSize: '260px',
@@ -265,7 +263,7 @@ export default function VeritasCard({
             top: 0,
             bottom: 0,
             width: 1,
-            background: 'linear-gradient(180deg, rgba(201,168,76,0.25) 0%, rgba(201,168,76,0.08) 100%)',
+            background: 'linear-gradient(180deg, var(--accent-soft) 0%, transparent 100%)',
           }}
         />
       )}
@@ -282,7 +280,7 @@ export default function VeritasCard({
             width: 56,
             height: 56,
             opacity: 0.05,
-            color: '#C9A84C',
+            color: 'var(--accent)',
             pointerEvents: 'none',
           }}
         >
@@ -297,8 +295,8 @@ export default function VeritasCard({
         <div
           className="inline-flex items-center gap-1.5 mb-2 text-[10px] uppercase tracking-[0.14em]"
           style={{
-            color: '#E9C46A',
-            fontFamily: 'Cinzel, serif',
+            color: 'var(--accent)',
+            fontFamily: 'var(--font-display)',
           }}
         >
           <BookOpenText className="w-3 h-3" strokeWidth={1.5} />
@@ -314,7 +312,7 @@ export default function VeritasCard({
           style={{
             width: 36,
             height: 36,
-            background: post.author.profile_image_url ? 'transparent' : 'rgba(201,168,76,0.10)',
+            background: post.author.profile_image_url ? 'transparent' : 'var(--accent-soft)',
             boxShadow: post.author.verified ? `0 0 0 1.5px rgba(233,196,106,0.55)` : undefined,
           }}
         >
@@ -342,14 +340,14 @@ export default function VeritasCard({
               <Link
                 href={profileHref}
                 className="text-[15px] font-medium hover:underline truncate"
-                style={{ color: TEXT_PRIMARY, fontFamily: 'Poppins, sans-serif' }}
+                style={{ color: TEXT_PRIMARY, fontFamily: 'var(--font-body)' }}
               >
                 {post.author.name ?? 'Membro Veritas'}
               </Link>
             ) : (
               <span
                 className="text-[15px] font-medium truncate"
-                style={{ color: TEXT_PRIMARY, fontFamily: 'Poppins, sans-serif' }}
+                style={{ color: TEXT_PRIMARY, fontFamily: 'var(--font-body)' }}
               >
                 {post.author.name ?? 'Membro Veritas'}
               </span>
@@ -359,14 +357,14 @@ export default function VeritasCard({
             <RoleBadge role={post.author.community_role} size="sm" />
             <span
               className="text-[13px] flex-shrink-0"
-              style={{ color: TEXT_SUBTLE, fontFamily: 'Poppins, sans-serif' }}
+              style={{ color: TEXT_SUBTLE, fontFamily: 'var(--font-body)' }}
             >
               · {formatRelative(post.created_at)}
             </span>
             {post.city && (
               <span
                 className="text-[12px] flex-shrink-0 inline-flex items-center gap-0.5 ml-1"
-                style={{ color: TEXT_SUBTLE, fontFamily: 'Poppins, sans-serif' }}
+                style={{ color: TEXT_SUBTLE, fontFamily: 'var(--font-body)' }}
                 title={post.state ? `${post.city}, ${post.state}` : post.city}
               >
                 <MapPin className="w-3 h-3" strokeWidth={1.6} />
@@ -383,7 +381,7 @@ export default function VeritasCard({
                   className="p-1.5 rounded-full"
                   style={{
                     color: TEXT_MUTED,
-                    background: menuOpen ? 'rgba(201,168,76,0.08)' : 'transparent',
+                    background: menuOpen ? 'var(--accent-soft)' : 'transparent',
                   }}
                 >
                   <MoreHorizontal className="w-[18px] h-[18px]" strokeWidth={1.5} />
@@ -407,7 +405,7 @@ export default function VeritasCard({
                         className="flex items-center gap-2 w-full px-3 py-2.5 text-[13px] text-left hover:bg-[rgba(201,168,76,0.08)]"
                         style={{
                           color: post.viewer.follows_author ? TEXT_MUTED : GOLD,
-                          fontFamily: 'Poppins, sans-serif',
+                          fontFamily: 'var(--font-body)',
                         }}
                       >
                         {post.viewer.follows_author
@@ -426,8 +424,8 @@ export default function VeritasCard({
                         }}
                         className="flex items-center gap-2 w-full px-3 py-2.5 text-[13px] text-left hover:bg-[rgba(201,168,76,0.08)]"
                         style={{
-                          color: post.viewer.muted_author ? '#B6B9C4' : TEXT_MUTED,
-                          fontFamily: 'Poppins, sans-serif',
+                          color: post.viewer.muted_author ? 'var(--text-2)' : TEXT_MUTED,
+                          fontFamily: 'var(--font-body)',
                           borderTop: onToggleFollow ? '1px solid rgba(201,168,76,0.08)' : undefined,
                         }}
                       >
@@ -443,7 +441,7 @@ export default function VeritasCard({
                         type="button"
                         onClick={() => { setMenuOpen(false); setEditing(true) }}
                         className="flex items-center gap-2 w-full px-3 py-2.5 text-[13px] text-left hover:bg-[rgba(201,168,76,0.08)]"
-                        style={{ color: TEXT_PRIMARY, fontFamily: 'Poppins, sans-serif' }}
+                        style={{ color: TEXT_PRIMARY, fontFamily: 'var(--font-body)' }}
                       >
                         <Pencil className="w-4 h-4" strokeWidth={1.5} /> Editar
                       </button>
@@ -460,7 +458,7 @@ export default function VeritasCard({
                         className="flex items-center gap-2 w-full px-3 py-2.5 text-[13px] text-left hover:bg-[rgba(217,79,92,0.08)]"
                         style={{
                           color: LIKE_COLOR,
-                          fontFamily: 'Poppins, sans-serif',
+                          fontFamily: 'var(--font-body)',
                           borderTop: onEditSubmit ? '1px solid rgba(201,168,76,0.08)' : undefined,
                         }}
                       >
@@ -476,7 +474,7 @@ export default function VeritasCard({
           {/* Handle secundário */}
           <p
             className="text-[13px] truncate -mt-0.5"
-            style={{ color: TEXT_SUBTLE, fontFamily: 'Poppins, sans-serif' }}
+            style={{ color: TEXT_SUBTLE, fontFamily: 'var(--font-body)' }}
           >
             {handleLabel}
           </p>
@@ -493,7 +491,7 @@ export default function VeritasCard({
                   background: 'rgba(10,10,10,0.6)',
                   border: '1px solid rgba(201,168,76,0.25)',
                   color: TEXT_PRIMARY,
-                  fontFamily: 'Poppins, sans-serif',
+                  fontFamily: 'var(--font-body)',
                   outline: 'none',
                 }}
                 onKeyDown={(e) => {
@@ -516,7 +514,7 @@ export default function VeritasCard({
                     className="text-[11px] tabular-nums"
                     style={{
                       color: editBody.trim().length > VERITAS_MAX_BODY ? LIKE_COLOR : TEXT_SUBTLE,
-                      fontFamily: 'Poppins, sans-serif',
+                      fontFamily: 'var(--font-body)',
                     }}
                   >
                     {editBody.trim().length}/{VERITAS_MAX_BODY}
@@ -528,7 +526,7 @@ export default function VeritasCard({
                     style={{
                       color: TEXT_MUTED,
                       background: 'transparent',
-                      fontFamily: 'Poppins, sans-serif',
+                      fontFamily: 'var(--font-body)',
                     }}
                   >
                     Cancelar
@@ -545,8 +543,8 @@ export default function VeritasCard({
                     className="px-3 py-1.5 rounded-lg text-xs uppercase tracking-[0.12em] disabled:opacity-50"
                     style={{
                       background: 'linear-gradient(135deg, #C9A84C 0%, #A88B3A 100%)',
-                      color: '#0A0A0A',
-                      fontFamily: 'Cinzel, serif',
+                      color: 'var(--accent-contrast)',
+                      fontFamily: 'var(--font-display)',
                     }}
                   >
                     {editSaving ? 'Salvando…' : 'Salvar'}
@@ -556,7 +554,7 @@ export default function VeritasCard({
               {editError && (
                 <p
                   className="mt-2 text-[12px]"
-                  style={{ color: LIKE_COLOR, fontFamily: 'Poppins, sans-serif' }}
+                  style={{ color: LIKE_COLOR, fontFamily: 'var(--font-body)' }}
                 >
                   {editError}
                 </p>
@@ -567,7 +565,7 @@ export default function VeritasCard({
             <Link
               href={`/comunidade/veritas/${post.id}`}
               className="block mt-1.5"
-              style={{ color: TEXT_PRIMARY, fontFamily: 'Poppins, sans-serif' }}
+              style={{ color: TEXT_PRIMARY, fontFamily: 'var(--font-body)' }}
             >
               <p className="text-[15px] leading-[22px] whitespace-pre-line">
                 {renderVeritasBody(post.body)}
@@ -595,7 +593,7 @@ export default function VeritasCard({
             >
               <div
                 className="flex items-center gap-2 mb-1 text-[13px]"
-                style={{ fontFamily: 'Poppins, sans-serif' }}
+                style={{ fontFamily: 'var(--font-body)' }}
               >
                 <div
                   className="rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
@@ -604,7 +602,7 @@ export default function VeritasCard({
                     height: 20,
                     background: post.parent.author.profile_image_url
                       ? 'transparent'
-                      : 'rgba(201,168,76,0.10)',
+                      : 'var(--accent-soft)',
                   }}
                 >
                   {post.parent.author.profile_image_url ? (
@@ -631,7 +629,7 @@ export default function VeritasCard({
               </div>
               <p
                 className="text-[14px] leading-[20px] whitespace-pre-line line-clamp-6"
-                style={{ color: '#B8B0A2', fontFamily: 'Poppins, sans-serif' }}
+                style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}
               >
                 {renderVeritasBody(post.parent.body)}
               </p>
@@ -716,7 +714,7 @@ export default function VeritasCard({
               <Link
                 href={`/comunidade/veritas/${post.id}`}
                 className="inline-flex items-center gap-1.5 text-[13px]"
-                style={{ color: TEXT_MUTED, fontFamily: 'Poppins, sans-serif', minHeight: 44 }}
+                style={{ color: TEXT_MUTED, fontFamily: 'var(--font-body)', minHeight: 44 }}
                 aria-label="Responder"
               >
                 <MessageCircle className="w-5 h-5" strokeWidth={1.5} />
@@ -789,7 +787,7 @@ export default function VeritasCard({
               className="mt-2 inline-flex items-center gap-1.5 text-[13px]"
               style={{
                 color: GOLD,
-                fontFamily: 'Poppins, sans-serif',
+                fontFamily: 'var(--font-body)',
                 background: 'transparent',
                 border: 'none',
                 padding: 0,
@@ -801,7 +799,7 @@ export default function VeritasCard({
                   display: 'inline-block',
                   width: 24,
                   height: 1,
-                  background: 'rgba(201,168,76,0.35)',
+                  background: 'var(--accent)',
                 }}
               />
               {repliesExpanded ? 'Ocultar respostas' : expandRepliesLabel}
@@ -819,7 +817,7 @@ export default function VeritasCard({
                 className="flex-1 bg-transparent text-[14px] py-2"
                 style={{
                   color: TEXT_PRIMARY,
-                  fontFamily: 'Poppins, sans-serif',
+                  fontFamily: 'var(--font-body)',
                   outline: 'none',
                   borderBottom: `1px solid ${HAIRLINE}`,
                 }}
