@@ -31,15 +31,15 @@ export default function MapaPage() {
           <div
             className="rounded-2xl p-4 mb-5 md:mb-6 fade-in"
             style={{
-              background: 'rgba(20,18,14,0.55)',
-              border: '1px solid rgba(242,237,228,0.06)',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border-1)',
               animationDelay: '0.15s',
             }}
           >
             <div className="flex items-center justify-between mb-3">
               <span
                 className="text-[10px] uppercase tracking-[0.2em]"
-                style={{ fontFamily: 'Cinzel, serif', color: 'var(--gold)' }}
+                style={{ fontFamily: 'var(--font-display)', color: 'var(--accent)' }}
               >
                 Últimos 7 dias
               </span>
