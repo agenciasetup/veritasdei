@@ -122,6 +122,22 @@ const nextConfig: NextConfig = {
       },
     ]
   },
+  async redirects() {
+    // Migração UX Fase 1: rotas antigas redirecionam para as canônicas.
+    // Mantemos 301 (permanent) para que SEO e PWA respeitem as novas URLs.
+    //
+    // Nota: só redirecionamos as raízes dos hubs. Subrotas de /paroquias
+    // (cadastrar, buscar, [id], etc) continuam servindo em /paroquias/*
+    // até a Fase 2 migrar o CRUD para /igrejas/*.
+    return [
+      // Hub: Rezar
+      { source: '/orar', destination: '/rezar', permanent: true },
+      // Hub: Formação (premium)
+      { source: '/aprender', destination: '/formacao', permanent: true },
+      // Hub: Igrejas (renome de Paróquias)
+      { source: '/paroquias', destination: '/igrejas', permanent: true },
+    ]
+  },
 }
 
 export default nextConfig

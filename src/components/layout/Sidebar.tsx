@@ -9,7 +9,7 @@ import CrossIcon from '@/components/icons/CrossIcon'
 import LevelBadge from '@/components/gamification/LevelBadge'
 import { useUserLevel } from '@/lib/gamification/useUserLevel'
 import {
-  ChevronLeft, ChevronRight, Home, Church, Droplets, ScrollText,
+  ChevronLeft, ChevronRight, Church, Droplets, ScrollText,
   Tablets, BookOpen, Scale, Heart, GraduationCap, MapPin, Map,
   LogIn, User, LogOut, Shield, Users, Cross, ClipboardCheck, BookMarked,
   Calendar, Library, Network, CalendarHeart,
@@ -33,15 +33,16 @@ interface NavGroup {
  * abaixo para descoberta no desktop.
  */
 const NAV_MAIN: NavItem[] = [
-  { href: '/',         icon: Home,          label: 'Hoje' },
-  { href: '/orar',     icon: Cross,         label: 'Orar' },
-  { href: '/liturgia', icon: CalendarHeart, label: 'Liturgia' },
-  { href: '/aprender', icon: BookOpen,      label: 'Aprender' },
+  { href: '/rezar',      icon: Cross,         label: 'Rezar' },
+  { href: '/formacao',   icon: GraduationCap, label: 'Formação' },
+  { href: '/igrejas',    icon: Church,        label: 'Igrejas' },
+  { href: '/comunidade', icon: Users,         label: 'Comunidade' },
+  { href: '/biblioteca', icon: Library,       label: 'Biblioteca' },
 ]
 
 const NAV_GROUPS: NavGroup[] = [
   {
-    label: 'Oração',
+    label: 'Rezar',
     items: [
       { href: '/rosario', icon: Cross, label: 'Santo Rosário' },
       { href: '/novenas', icon: CalendarHeart, label: 'Novenas' },
@@ -50,15 +51,7 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: 'Liturgia',
-    items: [
-      { href: '/calendario', icon: Calendar, label: 'Calendário Litúrgico' },
-      { href: '/paroquias/buscar', icon: MapPin, label: 'Igrejas perto de mim' },
-      { href: '/comunidade', icon: Users, label: 'Comunidade' },
-    ],
-  },
-  {
-    label: 'Aprender',
+    label: 'Formação',
     items: [
       { href: '/trilhas', icon: GraduationCap, label: 'Trilhas de Estudo' },
       { href: '/mapa', icon: Map, label: 'Mapa da Fé' },
@@ -70,12 +63,20 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: 'Referência',
+    label: 'Biblioteca',
     items: [
+      { href: '/liturgia', icon: CalendarHeart, label: 'Leituras do dia' },
+      { href: '/calendario', icon: Calendar, label: 'Calendário Litúrgico' },
       { href: '/mandamentos', icon: Tablets, label: 'Mandamentos' },
       { href: '/preceitos', icon: ScrollText, label: 'Preceitos' },
       { href: '/virtudes-pecados', icon: Scale, label: 'Virtudes e Pecados' },
       { href: '/obras-misericordia', icon: Heart, label: 'Misericórdia' },
+    ],
+  },
+  {
+    label: 'Igrejas',
+    items: [
+      { href: '/paroquias/buscar', icon: MapPin, label: 'Igrejas perto de mim' },
     ],
   },
 ]
@@ -94,10 +95,8 @@ export default function Sidebar() {
       className="fixed top-0 left-0 z-[100] h-full flex flex-col transition-all duration-300 ease-out"
       style={{
         width: expanded ? '220px' : '64px',
-        background: 'rgba(10,10,10,0.92)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
-        borderRight: '1px solid rgba(201,168,76,0.08)',
+        background: 'var(--surface-2)',
+        borderRight: '1px solid var(--border-1)',
       }}
     >
       {/* Logo */}

@@ -27,6 +27,8 @@ import { VocacaoIcon } from '@/components/icons/VocacaoIcons'
 import { isValidCpf, maskCpf, stripCpf } from '@/lib/utils/cpf'
 import { useHaptic } from '@/hooks/useHaptic'
 import { FormInput, FormSelect } from './shared'
+import ThemeToggle from '@/components/theme/ThemeToggle'
+import { Palette } from 'lucide-react'
 
 type Group = 'identidade' | 'endereco' | 'fe'
 
@@ -625,6 +627,40 @@ export default function ContaSection() {
           )}
           {renderGroup(group)}
           {SaveButton}
+        </div>
+      </div>
+
+      {/* Aparência — preferência local (persistida automaticamente, sem Salvar) */}
+      <div
+        className="mt-6 rounded-2xl p-5"
+        style={{
+          background: 'var(--surface-2)',
+          border: '1px solid var(--border-1)',
+        }}
+      >
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <Palette className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--accent)' }} />
+            <div className="min-w-0">
+              <div
+                className="text-sm font-medium"
+                style={{
+                  color: 'var(--text-1)',
+                  fontFamily: 'var(--font-display)',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                Aparência
+              </div>
+              <div
+                className="text-xs mt-0.5"
+                style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+              >
+                Tema do app. "Sistema" segue o tema do seu celular.
+              </div>
+            </div>
+          </div>
+          <ThemeToggle />
         </div>
       </div>
     </div>
