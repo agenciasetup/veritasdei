@@ -34,9 +34,9 @@ interface NavGroup {
  */
 const NAV_MAIN: NavItem[] = [
   { href: '/rezar',      icon: Cross,         label: 'Rezar' },
+  { href: '/comunidade', icon: Users,         label: 'Comunidade' },
   { href: '/formacao',   icon: GraduationCap, label: 'Formação' },
   { href: '/igrejas',    icon: Church,        label: 'Igrejas' },
-  { href: '/comunidade', icon: Users,         label: 'Comunidade' },
   { href: '/biblioteca', icon: Library,       label: 'Biblioteca' },
 ]
 

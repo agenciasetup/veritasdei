@@ -7,6 +7,7 @@ import HubTile from '@/components/hubs/HubTile'
 import AuthGuard from '@/components/auth/AuthGuard'
 import PullToRefresh from '@/components/mobile/PullToRefresh'
 import LiturgiaHojeCard from '@/components/dashboard/today/LiturgiaHojeCard'
+import PropositosBoard from '@/components/propositos/PropositosBoard'
 
 /**
  * `/rezar` — hub canônico de oração.
@@ -21,13 +22,16 @@ export default function RezarPage() {
       <main className="min-h-screen pb-24">
         <HubHeader
           title="Rezar"
-          subtitle="Momentos de oração para fortalecer sua fé"
+          subtitle="Sua casa de oração — propósitos, liturgia e devoções"
         />
 
         <PullToRefresh onRefresh={() => router.refresh()}>
-          <div className="px-4 flex flex-col gap-4 max-w-2xl mx-auto stagger-in">
-            {/* Liturgia do dia — contexto antes dos atalhos */}
+          <div className="px-4 flex flex-col gap-5 max-w-2xl mx-auto stagger-in">
+            {/* Liturgia do dia — contexto antes dos propósitos */}
             <LiturgiaHojeCard />
+
+            {/* Propósitos — coração da home */}
+            <PropositosBoard />
 
             <div className="flex flex-col gap-3">
               <HubTile

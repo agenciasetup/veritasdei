@@ -25,6 +25,13 @@ const NovidadesModal = dynamic(() => import('@/components/NovidadesModal'), {
   ssr: false,
 })
 
+// Modal de check-in de propósitos — pergunta sobre os pendentes do período
+// na primeira abertura do dia.
+const PropositoCheckInGate = dynamic(
+  () => import('@/components/propositos/PropositoCheckInGate'),
+  { ssr: false },
+)
+
 const PUBLIC_PATHS = ['/login', '/auth', '/privacidade', '/termos', '/onboarding']
 const FULLSCREEN_PATHS = ['/verbum', '/rosario', '/liturgia/hoje']
 const FULLSCREEN_EXACT: string[] = []
@@ -72,6 +79,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {showChrome && <CoachMarks />}
           {/* NovidadesModal — uma vez por versão */}
           {showChrome && <NovidadesModal />}
+          {/* Check-in de propósitos — pergunta uma vez por dia */}
+          {showChrome && <PropositoCheckInGate />}
         </PropositoSheetProvider>
       </PropositosProvider>
     </SubscriptionProvider>

@@ -26,11 +26,12 @@ import { useEffect, useRef, useState } from 'react'
  * - Se a rota é "imersiva" (terço, verbum, leituras), nem renderiza
  */
 
+// Rezar fica no centro (3ª posição) — é a HOME do app.
 const NAV_ITEMS = [
-  { href: '/rezar',      icon: Cross,          label: 'Rezar' },
   { href: '/formacao',   icon: GraduationCap,  label: 'Formação' },
-  { href: '/igrejas',    icon: Church,         label: 'Igrejas' },
   { href: '/comunidade', icon: Users,          label: 'Comunidade' },
+  { href: '/rezar',      icon: Cross,          label: 'Rezar' },
+  { href: '/igrejas',    icon: Church,         label: 'Igrejas' },
   { href: '/biblioteca', icon: Library,        label: 'Biblioteca' },
 ] as const
 
