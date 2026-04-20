@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { compressImage } from '@/lib/image/compress'
 import { VOCACOES, SACRAMENTOS, type Vocacao, type Sacramento } from '@/types/auth'
 import { VocacaoIcon } from '@/components/icons/VocacaoIcons'
+import CrossIcon from '@/components/icons/CrossIcon'
 import { motion, AnimatePresence, type PanInfo } from 'framer-motion'
 import { useHaptic } from '@/hooks/useHaptic'
 import {
@@ -741,19 +742,20 @@ export default function OnboardingPage() {
               initial={{ scale: 0.5, rotate: -10 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: 'spring', damping: 12, stiffness: 200 }}
-              className="text-6xl mb-6"
+              className="mb-6 animate-success-bounce"
               aria-hidden
             >
-              ✦
+              <CrossIcon size="lg" />
             </motion.div>
             <motion.h2
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.15 }}
-              className="text-3xl mb-2"
+              className="text-2xl md:text-3xl mb-2 tracking-[0.08em] uppercase"
               style={{
-                fontFamily: 'var(--font-elegant)',
+                fontFamily: 'var(--font-display)',
                 color: 'var(--text-1)',
+                fontWeight: 700,
               }}
             >
               Bem-vindo, {(name || 'Irmão').split(' ')[0]}
@@ -762,10 +764,11 @@ export default function OnboardingPage() {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.3 }}
-              className="text-sm"
+              className="text-sm max-w-xs"
               style={{
-                color: 'var(--accent)',
+                color: 'var(--text-2)',
                 fontFamily: 'var(--font-body)',
+                fontStyle: 'italic',
               }}
             >
               Que sua jornada seja fiel ao Magistério.
