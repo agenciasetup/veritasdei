@@ -23,13 +23,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'missing_url' }, { status: 400 })
   }
 
-  let allowedBase: string
-  try {
-    allowedBase = getR2PublicBaseUrl()
-  } catch {
-    return NextResponse.json({ error: 'cdn_not_configured' }, { status: 503 })
-  }
-
   // Normaliza e valida pra evitar SSRF.
   let parsed: URL
   try {
@@ -37,13 +30,20 @@ export async function GET(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: 'invalid_url' }, { status: 400 })
   }
-  let base: URL
-  try {
-    base = new URL(allowedBase)
-  } catch {
+
+  // Monta allowlist: R2 público (variants das mídias do feed) +
+  // Supabase Storage (profile_image_url, covers, reliquias).
+  const allowedOrigins = new Set<string>()
+  try { allowedOrigins.add(new URL(getR2PublicBaseUrl()).origin) } catch { /* noop */ }
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (supabaseUrl) {
+    try { allowedOrigins.add(new URL(supabaseUrl).origin) } catch { /* noop */ }
+  }
+  if (allowedOrigins.size === 0) {
     return NextResponse.json({ error: 'cdn_not_configured' }, { status: 503 })
   }
-  if (parsed.origin !== base.origin) {
+
+  if (!allowedOrigins.has(parsed.origin)) {
     return NextResponse.json({ error: 'forbidden_host' }, { status: 403 })
   }
 
