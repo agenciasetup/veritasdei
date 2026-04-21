@@ -10,6 +10,7 @@ interface UpdateProfilePayload {
   profile_image_url?: string | null
   external_links?: Array<{ label: string; url: string }>
   show_likes_public?: boolean
+  santo_devocao_id?: string | null
 }
 
 function sanitizeExternalLinks(input: unknown): Array<{ label: string; url: string }> | null {
@@ -157,6 +158,27 @@ export async function PUT(req: NextRequest) {
 
   if (payload.show_likes_public !== undefined) {
     patch.show_likes_public = Boolean(payload.show_likes_public)
+  }
+
+  if (payload.santo_devocao_id !== undefined) {
+    const raw = payload.santo_devocao_id
+    if (raw === null) {
+      patch.santo_devocao_id = null
+      patch.santo_devocao_escolhido_em = null
+    } else if (typeof raw === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw)) {
+      const { data: santoExists } = await supabase
+        .from('santos')
+        .select('id')
+        .eq('id', raw)
+        .maybeSingle()
+      if (!santoExists) {
+        return NextResponse.json({ error: 'santo_not_found' }, { status: 400 })
+      }
+      patch.santo_devocao_id = raw
+      patch.santo_devocao_escolhido_em = new Date().toISOString()
+    } else {
+      return NextResponse.json({ error: 'invalid_santo_id' }, { status: 400 })
+    }
   }
 
   if (Object.keys(patch).length === 0) {

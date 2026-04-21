@@ -107,6 +107,10 @@ export interface Profile {
   religiao_anterior: string | null
   comunidade: string | null
 
+  // Santo de devoção (capa do perfil é derivada da imagem do santo)
+  santo_devocao_id: string | null
+  santo_devocao_escolhido_em: string | null
+
   // Metadados
   created_at: string
   updated_at: string
