@@ -68,10 +68,10 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/liturgia', icon: CalendarHeart, label: 'Leituras do dia' },
       { href: '/calendario', icon: Calendar, label: 'Calendário Litúrgico' },
-      { href: '/mandamentos', icon: Tablets, label: 'Mandamentos' },
-      { href: '/preceitos', icon: ScrollText, label: 'Preceitos' },
-      { href: '/virtudes-pecados', icon: Scale, label: 'Virtudes e Pecados' },
-      { href: '/obras-misericordia', icon: Heart, label: 'Misericórdia' },
+      { href: '/estudo/mandamentos', icon: Tablets, label: 'Mandamentos' },
+      { href: '/estudo/preceitos', icon: ScrollText, label: 'Preceitos' },
+      { href: '/estudo/virtudes-pecados', icon: Scale, label: 'Virtudes e Pecados' },
+      { href: '/estudo/obras-misericordia', icon: Heart, label: 'Misericórdia' },
     ],
   },
   {
