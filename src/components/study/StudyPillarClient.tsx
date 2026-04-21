@@ -14,6 +14,7 @@ import StudyReader from './StudyReader'
 import StudyLayout from './StudyLayout'
 import StudyLessonsSidebar from './StudyLessonsSidebar'
 import StudyMobileChip from './StudyMobileChip'
+import StudyNavBar from './StudyNavBar'
 import { usePillarTree, type PillarTreeNode } from '@/lib/study/usePillarTree'
 import { useStudyNavigation } from '@/lib/study/useStudyNavigation'
 import type { StudyPillarContext } from '@/lib/study/types'
@@ -213,6 +214,13 @@ function PillarTopicView({
 
   const [tocOpen, setTocOpen] = useState(false)
 
+  // Scroll-to-top coordenado ao trocar de subtópico — previne "page jump"
+  // e garante que o usuário comece a nova lição do topo.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
+  }, [effectiveSubtopicSlug])
+
   if (!topic) {
     if (topics.length > 0) return <EmptyTopic pillarSlug={pillarSlug} />
     return <Loader />
@@ -260,7 +268,10 @@ function PillarTopicView({
             total={nav.totalInPillar}
             onOpen={() => setTocOpen(true)}
           />
-          <main className="relative z-10 flex-1 pb-16">
+          <main
+            key={targetSubtopic.slug}
+            className="relative z-10 flex-1 pb-[calc(var(--bottom-nav-h,72px)+env(safe-area-inset-bottom,0px)+88px)] lg:pb-8 fade-in"
+          >
             <StudyReader
               contentType={pillarSlug}
               contentRef={targetSubtopic.id}
@@ -279,8 +290,8 @@ function PillarTopicView({
                   : () => markStudied(targetSubtopic.id)
               }
               isStudied={isStudied(targetSubtopic.id)}
-              next={nav.next}
             />
+            <StudyNavBar prev={nav.prev} next={nav.next} />
           </main>
         </StudyLayout>
 
