@@ -14,6 +14,7 @@ import {
 import { useContentProgress } from '@/lib/content/useContentProgress'
 import { useAuth } from '@/contexts/AuthContext'
 import StudyReader from './StudyReader'
+import StudyLayout from './StudyLayout'
 import { computeNext, type PillarSequenceEntry } from '@/lib/study/navigation'
 import type { StudyPillarContext } from '@/lib/study/types'
 import Divider from '@/components/ui/Divider'
@@ -137,7 +138,7 @@ function PillarTopicGrid({
     <div className="flex flex-col min-h-screen relative">
       <PillarHero title={group.title} subtitle={group.description || group.subtitle || ''} />
       <main className="relative z-10 flex-1 pb-16">
-        <div className="max-w-6xl mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+        <div className="max-w-[1200px] mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
           {topics.map((topic, i) => (
             <Link
               key={topic.id}
@@ -231,40 +232,42 @@ function PillarTopicView({
     const next = computeNext(sequence, targetSubtopic.slug, `/estudo/${pillarSlug}`)
     return (
       <div className="flex flex-col min-h-screen relative">
-        <header className="relative z-10 w-full pt-6 pb-2 px-4 md:px-8">
-          <div className="max-w-7xl mx-auto">
-            <BackChip
-              href={
-                subtopics.length > 1
-                  ? `/estudo/${pillarSlug}/${topicSlug}`
-                  : `/estudo/${pillarSlug}`
+        <StudyLayout>
+          <header className="relative z-10 w-full pt-6 pb-2 px-4 md:px-8">
+            <div className="max-w-[1200px] mx-auto">
+              <BackChip
+                href={
+                  subtopics.length > 1
+                    ? `/estudo/${pillarSlug}/${topicSlug}`
+                    : `/estudo/${pillarSlug}`
+                }
+                label={subtopics.length > 1 ? topic.title : group.title}
+              />
+            </div>
+          </header>
+          <main className="relative z-10 flex-1 pb-16">
+            <StudyReader
+              contentType={pillarSlug}
+              contentRef={targetSubtopic.id}
+              pillar={pillar}
+              topic={{
+                title: topic.title,
+                href: `/estudo/${pillarSlug}/${topicSlug}`,
+              }}
+              title={targetSubtopic.title}
+              subtitle={targetSubtopic.subtitle || undefined}
+              description={targetSubtopic.description || undefined}
+              items={targetSubtopic.items}
+              onMarkStudied={
+                isStudied(targetSubtopic.id)
+                  ? undefined
+                  : () => markStudied(targetSubtopic.id)
               }
-              label={subtopics.length > 1 ? topic.title : group.title}
+              isStudied={isStudied(targetSubtopic.id)}
+              next={next}
             />
-          </div>
-        </header>
-        <main className="relative z-10 flex-1 pb-16">
-          <StudyReader
-            contentType={pillarSlug}
-            contentRef={targetSubtopic.id}
-            pillar={pillar}
-            topic={{
-              title: topic.title,
-              href: `/estudo/${pillarSlug}/${topicSlug}`,
-            }}
-            title={targetSubtopic.title}
-            subtitle={targetSubtopic.subtitle || undefined}
-            description={targetSubtopic.description || undefined}
-            items={targetSubtopic.items}
-            onMarkStudied={
-              isStudied(targetSubtopic.id)
-                ? undefined
-                : () => markStudied(targetSubtopic.id)
-            }
-            isStudied={isStudied(targetSubtopic.id)}
-            next={next}
-          />
-        </main>
+          </main>
+        </StudyLayout>
       </div>
     )
   }
@@ -279,7 +282,7 @@ function PillarTopicView({
       </header>
       <PillarHero title={topic.title} subtitle={topic.description} />
       <main className="relative z-10 flex-1 pb-16">
-        <div className="max-w-6xl mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+        <div className="max-w-[1200px] mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
           {subtopics.map((sub, i) => (
             <Link
               key={sub.id}

@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Copy, Check, BookOpen, Quote, Scroll, List, Type } from 'lucide-react'
+import { Copy, Check, BookOpen, Quote, Scroll, List } from 'lucide-react'
 import type { ContentItem } from '@/lib/content/useContentGroup'
+import ReaderToolbar, { type FontScale } from './ReaderToolbar'
 
 const FONT_KEY = 'veritasdei:reader:font-scale'
-type FontScale = 'sm' | 'md' | 'lg'
 const FONT_RATIO: Record<FontScale, number> = { sm: 0.92, md: 1.0, lg: 1.15 }
 function loadFontScale(): FontScale {
   if (typeof window === 'undefined') return 'md'
@@ -39,6 +39,19 @@ interface ImmersiveReaderProps {
   afterItems?: React.ReactNode
   /** Content rendered after the mark-as-studied button (e.g. next button) */
   footerSlot?: React.ReactNode
+  /**
+   * Coluna de leitura.
+   * - `reading` (default) = 740px, legibilidade editorial (~75ch)
+   * - `wide`             = 900px, quando o conteúdo tem muitas definições/2-col internos
+   * - `full`             = ocupa 100% do container pai (para layouts customizados)
+   */
+  contentWidth?: 'reading' | 'wide' | 'full'
+}
+
+const WIDTH_CLASS: Record<NonNullable<ImmersiveReaderProps['contentWidth']>, string> = {
+  reading: 'max-w-[740px]',
+  wide: 'max-w-[900px]',
+  full: 'max-w-none',
 }
 
 export default function ImmersiveReader({
@@ -52,6 +65,7 @@ export default function ImmersiveReader({
   headerSlot,
   afterItems,
   footerSlot,
+  contentWidth = 'reading',
 }: ImmersiveReaderProps) {
   const [fontScale, setFontScale] = useState<FontScale>(() => loadFontScale())
   const [scrollPct, setScrollPct] = useState(0)
@@ -87,46 +101,15 @@ export default function ImmersiveReader({
   return (
     <article
       ref={articleRef}
-      className="max-w-3xl mx-auto px-4 md:px-6 pb-16"
+      className={`${WIDTH_CLASS[contentWidth]} mx-auto px-4 md:px-6 pb-16`}
       style={{ fontSize: `${FONT_RATIO[fontScale]}rem` }}
     >
-      {/* Progress + Aa controls */}
-      <div className="sticky top-0 z-20 -mx-4 md:-mx-6 px-4 md:px-6 py-2 mb-2 backdrop-blur-md"
-        style={{ background: 'rgba(15,14,12,0.7)', borderBottom: '1px solid rgba(201,168,76,0.08)' }}
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className="flex-1 h-1 rounded-full overflow-hidden"
-            style={{ background: 'rgba(201,168,76,0.12)' }}
-          >
-            <div
-              className="h-full rounded-full transition-all duration-150"
-              style={{
-                width: `${scrollPct}%`,
-                background: 'linear-gradient(90deg, #C9A84C, #D9C077)',
-              }}
-            />
-          </div>
-          <button
-            type="button"
-            onClick={cycleFont}
-            aria-label={`Tamanho da fonte: ${fontScale === 'sm' ? 'pequeno' : fontScale === 'md' ? 'médio' : 'grande'}`}
-            className="flex items-center justify-center w-9 h-9 rounded-lg active:scale-95 touch-target"
-            style={{
-              background: 'rgba(201,168,76,0.08)',
-              border: '1px solid rgba(201,168,76,0.18)',
-              color: 'var(--gold)',
-            }}
-          >
-            <Type
-              className={
-                fontScale === 'sm' ? 'w-3.5 h-3.5' : fontScale === 'md' ? 'w-4 h-4' : 'w-5 h-5'
-              }
-            />
-          </button>
-        </div>
-        {topSlot ? <div className="mt-2">{topSlot}</div> : null}
-      </div>
+      <ReaderToolbar
+        scrollPct={scrollPct}
+        fontScale={fontScale}
+        onCycleFont={cycleFont}
+        topSlot={topSlot}
+      />
       {headerSlot ? <div className="mb-2">{headerSlot}</div> : null}
       {/* ── Title section ── */}
       <header className="text-center py-10 md:py-14 fade-in">
