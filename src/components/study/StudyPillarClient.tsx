@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import {
@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import StudyReader from './StudyReader'
 import StudyLayout from './StudyLayout'
 import StudyLessonsSidebar from './StudyLessonsSidebar'
+import StudyMobileChip from './StudyMobileChip'
 import { usePillarTree, type PillarTreeNode } from '@/lib/study/usePillarTree'
 import { useStudyNavigation } from '@/lib/study/useStudyNavigation'
 import type { StudyPillarContext } from '@/lib/study/types'
@@ -210,6 +211,8 @@ function PillarTopicView({
 
   const { items, loading: itemsLoading } = useContentItems(targetSubtopic?.id ?? null)
 
+  const [tocOpen, setTocOpen] = useState(false)
+
   if (!topic) {
     if (topics.length > 0) return <EmptyTopic pillarSlug={pillarSlug} />
     return <Loader />
@@ -252,6 +255,11 @@ function PillarTopicView({
               />
             </div>
           </header>
+          <StudyMobileChip
+            currentIndex={nav.currentIndex}
+            total={nav.totalInPillar}
+            onOpen={() => setTocOpen(true)}
+          />
           <main className="relative z-10 flex-1 pb-16">
             <StudyReader
               contentType={pillarSlug}
@@ -275,6 +283,18 @@ function PillarTopicView({
             />
           </main>
         </StudyLayout>
+
+        <StudyLessonsSidebar
+          variant="drawer"
+          open={tocOpen}
+          onClose={() => setTocOpen(false)}
+          pillarSlug={pillarSlug}
+          pillarTitle={group.title}
+          topics={topics}
+          activeTopicSlug={topicSlug}
+          activeSubtopicSlug={targetSubtopic.slug}
+          studiedIds={studiedIds}
+        />
       </div>
     )
   }
