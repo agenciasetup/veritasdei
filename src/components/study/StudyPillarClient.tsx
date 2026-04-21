@@ -12,6 +12,7 @@ import { useContentProgress } from '@/lib/content/useContentProgress'
 import { useAuth } from '@/contexts/AuthContext'
 import StudyReader from './StudyReader'
 import StudyLayout from './StudyLayout'
+import StudyLessonsSidebar from './StudyLessonsSidebar'
 import { usePillarTree, type PillarTreeNode } from '@/lib/study/usePillarTree'
 import { useStudyNavigation } from '@/lib/study/useStudyNavigation'
 import type { StudyPillarContext } from '@/lib/study/types'
@@ -227,7 +228,18 @@ function PillarTopicView({
     if (itemsLoading) return <Loader />
     return (
       <div className="flex flex-col min-h-screen relative">
-        <StudyLayout>
+        <StudyLayout
+          sidebar={
+            <StudyLessonsSidebar
+              pillarSlug={pillarSlug}
+              pillarTitle={group.title}
+              topics={topics}
+              activeTopicSlug={topicSlug}
+              activeSubtopicSlug={targetSubtopic.slug}
+              studiedIds={studiedIds}
+            />
+          }
+        >
           <header className="relative z-10 w-full pt-6 pb-2 px-4 md:px-8">
             <div className="max-w-[1200px] mx-auto">
               <BackChip
