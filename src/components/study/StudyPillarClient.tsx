@@ -1,20 +1,22 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import {
-  useContentGroup,
-  useContentTopicSubtopics,
-  useTopicFullContent,
+  useContentItems,
   type ContentSubtopic,
-  type ContentTopic,
 } from '@/lib/content/useContentGroup'
 import { useContentProgress } from '@/lib/content/useContentProgress'
 import { useAuth } from '@/contexts/AuthContext'
 import StudyReader from './StudyReader'
-import { computeNext, type PillarSequenceEntry } from '@/lib/study/navigation'
+import StudyLayout from './StudyLayout'
+import StudyLessonsSidebar from './StudyLessonsSidebar'
+import StudyMobileChip from './StudyMobileChip'
+import StudyNavBar from './StudyNavBar'
+import { usePillarTree, type PillarTreeNode } from '@/lib/study/usePillarTree'
+import { useStudyNavigation } from '@/lib/study/useStudyNavigation'
 import type { StudyPillarContext } from '@/lib/study/types'
 import Divider from '@/components/ui/Divider'
 
@@ -88,15 +90,11 @@ const CARD_STYLE: React.CSSProperties = {
 
 export default function StudyPillarClient({ pillarSlug, topicSlug, subtopicSlug }: Props) {
   const { user } = useAuth()
-  const { group, topics, loading: groupLoading } = useContentGroup(pillarSlug)
+  const { group, topics, totalSubtopics, loading } = usePillarTree(pillarSlug)
   const { isStudied, markStudied, studiedIds } = useContentProgress(user?.id, pillarSlug)
 
-  if (groupLoading) return <Loader />
-  if (!group) {
-    return (
-      <EmptyPillar pillarSlug={pillarSlug} />
-    )
-  }
+  if (loading) return <Loader />
+  if (!group) return <EmptyPillar pillarSlug={pillarSlug} />
 
   if (!topicSlug) {
     return <PillarTopicGrid pillarSlug={pillarSlug} group={group} topics={topics} />
@@ -109,6 +107,7 @@ export default function StudyPillarClient({ pillarSlug, topicSlug, subtopicSlug 
       topics={topics}
       topicSlug={topicSlug}
       subtopicSlug={subtopicSlug}
+      totalSubtopics={totalSubtopics}
       studiedIds={studiedIds}
       isStudied={isStudied}
       markStudied={markStudied}
@@ -131,13 +130,13 @@ function PillarTopicGrid({
 }: {
   pillarSlug: string
   group: { title: string; subtitle: string | null; description: string | null }
-  topics: ContentTopic[]
+  topics: PillarTreeNode[]
 }) {
   return (
     <div className="flex flex-col min-h-screen relative">
       <PillarHero title={group.title} subtitle={group.description || group.subtitle || ''} />
       <main className="relative z-10 flex-1 pb-16">
-        <div className="max-w-6xl mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+        <div className="max-w-[1200px] mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
           {topics.map((topic, i) => (
             <Link
               key={topic.id}
@@ -181,45 +180,54 @@ function PillarTopicView({
   topics,
   topicSlug,
   subtopicSlug,
+  totalSubtopics,
   studiedIds,
   isStudied,
   markStudied,
 }: {
   pillarSlug: string
   group: { id: string; title: string }
-  topics: ContentTopic[]
+  topics: PillarTreeNode[]
   topicSlug: string
   subtopicSlug?: string
+  totalSubtopics: number
   studiedIds: Set<string>
   isStudied: (id: string) => boolean
   markStudied: (id: string) => Promise<void>
 }) {
   const topic = topics.find((t) => t.slug === topicSlug) || null
-  const { subtopics, loading } = useTopicFullContent(topic?.id ?? null)
+  const subtopics = topic?.subtopics ?? []
 
-  if (!topic) {
-    if (topics.length > 0) return <EmptyTopic pillarSlug={pillarSlug} />
-    return <Loader />
-  }
-  if (loading) return <Loader />
-  if (!subtopics.length) return <EmptyTopic pillarSlug={pillarSlug} />
-
-  // Build pillar sequence across all topics in the pillar — used to compute "next".
-  // Para simplificar, sequência = apenas subtopics deste tópico (Fase 2 expande).
-  const sequence: PillarSequenceEntry[] = subtopics.map((s) => ({
-    ref: s.slug,
-    title: s.title,
-    href: `/estudo/${pillarSlug}/${topicSlug}/${s.slug}`,
-  }))
-
-  // If there's a subtopic in URL, render reader. If single-subtopic topic, auto-open.
+  // Auto-abrir único subtópico quando o tópico só tem um.
   const targetSubtopic = subtopicSlug
     ? subtopics.find((s) => s.slug === subtopicSlug) || null
     : subtopics.length === 1
       ? subtopics[0]
       : null
 
-  const totalSubtopics = countTotalSubtopicsInPillar(topics)
+  // Navegação é sempre no contexto do pilar inteiro — atravessa fronteiras
+  // de tópico. O slug efetivo é `subtopicSlug` da URL OU o do único-auto-aberto.
+  const effectiveSubtopicSlug = subtopicSlug ?? targetSubtopic?.slug
+  const nav = useStudyNavigation(pillarSlug, topics, topicSlug, effectiveSubtopicSlug)
+
+  const { items, loading: itemsLoading } = useContentItems(targetSubtopic?.id ?? null)
+
+  const [tocOpen, setTocOpen] = useState(false)
+
+  // Scroll-to-top coordenado ao trocar de subtópico — previne "page jump"
+  // e garante que o usuário comece a nova lição do topo.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
+  }, [effectiveSubtopicSlug])
+
+  if (!topic) {
+    if (topics.length > 0) return <EmptyTopic pillarSlug={pillarSlug} />
+    return <Loader />
+  }
+
+  if (!subtopics.length) return <EmptyTopic pillarSlug={pillarSlug} />
+
   const pillar: StudyPillarContext = {
     slug: pillarSlug,
     title: group.title,
@@ -228,43 +236,76 @@ function PillarTopicView({
   }
 
   if (targetSubtopic) {
-    const next = computeNext(sequence, targetSubtopic.slug, `/estudo/${pillarSlug}`)
+    if (itemsLoading) return <Loader />
     return (
       <div className="flex flex-col min-h-screen relative">
-        <header className="relative z-10 w-full pt-6 pb-2 px-4 md:px-8">
-          <div className="max-w-7xl mx-auto">
-            <BackChip
-              href={
-                subtopics.length > 1
-                  ? `/estudo/${pillarSlug}/${topicSlug}`
-                  : `/estudo/${pillarSlug}`
-              }
-              label={subtopics.length > 1 ? topic.title : group.title}
+        <StudyLayout
+          sidebar={
+            <StudyLessonsSidebar
+              pillarSlug={pillarSlug}
+              pillarTitle={group.title}
+              topics={topics}
+              activeTopicSlug={topicSlug}
+              activeSubtopicSlug={targetSubtopic.slug}
+              studiedIds={studiedIds}
             />
-          </div>
-        </header>
-        <main className="relative z-10 flex-1 pb-16">
-          <StudyReader
-            contentType={pillarSlug}
-            contentRef={targetSubtopic.id}
-            pillar={pillar}
-            topic={{
-              title: topic.title,
-              href: `/estudo/${pillarSlug}/${topicSlug}`,
-            }}
-            title={targetSubtopic.title}
-            subtitle={targetSubtopic.subtitle || undefined}
-            description={targetSubtopic.description || undefined}
-            items={targetSubtopic.items}
-            onMarkStudied={
-              isStudied(targetSubtopic.id)
-                ? undefined
-                : () => markStudied(targetSubtopic.id)
-            }
-            isStudied={isStudied(targetSubtopic.id)}
-            next={next}
+          }
+        >
+          <header className="relative z-10 w-full pt-6 pb-2 px-4 md:px-8">
+            <div className="max-w-[1200px] mx-auto">
+              <BackChip
+                href={
+                  subtopics.length > 1
+                    ? `/estudo/${pillarSlug}/${topicSlug}`
+                    : `/estudo/${pillarSlug}`
+                }
+                label={subtopics.length > 1 ? topic.title : group.title}
+              />
+            </div>
+          </header>
+          <StudyMobileChip
+            currentIndex={nav.currentIndex}
+            total={nav.totalInPillar}
+            onOpen={() => setTocOpen(true)}
           />
-        </main>
+          <main
+            key={targetSubtopic.slug}
+            className="relative z-10 flex-1 pb-[calc(var(--bottom-nav-h,72px)+env(safe-area-inset-bottom,0px)+88px)] lg:pb-8 fade-in"
+          >
+            <StudyReader
+              contentType={pillarSlug}
+              contentRef={targetSubtopic.id}
+              pillar={pillar}
+              topic={{
+                title: topic.title,
+                href: `/estudo/${pillarSlug}/${topicSlug}`,
+              }}
+              title={targetSubtopic.title}
+              subtitle={targetSubtopic.subtitle || undefined}
+              description={targetSubtopic.description || undefined}
+              items={items}
+              onMarkStudied={
+                isStudied(targetSubtopic.id)
+                  ? undefined
+                  : () => markStudied(targetSubtopic.id)
+              }
+              isStudied={isStudied(targetSubtopic.id)}
+            />
+            <StudyNavBar prev={nav.prev} next={nav.next} />
+          </main>
+        </StudyLayout>
+
+        <StudyLessonsSidebar
+          variant="drawer"
+          open={tocOpen}
+          onClose={() => setTocOpen(false)}
+          pillarSlug={pillarSlug}
+          pillarTitle={group.title}
+          topics={topics}
+          activeTopicSlug={topicSlug}
+          activeSubtopicSlug={targetSubtopic.slug}
+          studiedIds={studiedIds}
+        />
       </div>
     )
   }
@@ -279,13 +320,22 @@ function PillarTopicView({
       </header>
       <PillarHero title={topic.title} subtitle={topic.description} />
       <main className="relative z-10 flex-1 pb-16">
-        <div className="max-w-6xl mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-          {subtopics.map((sub, i) => (
+        <div className="max-w-[1200px] mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+          {subtopics.map((sub, i) => {
+            const studied = isStudied(sub.id)
+            return (
             <Link
               key={sub.id}
               href={`/estudo/${pillarSlug}/${topicSlug}/${sub.slug}`}
-              className="text-left p-5 rounded-2xl fade-in active:scale-[0.99] transition-transform"
-              style={{ ...CARD_STYLE, animationDelay: `${i * 0.06}s` }}
+              className="text-left p-5 rounded-2xl fade-in active:scale-[0.99] transition-transform relative"
+              style={{
+                ...CARD_STYLE,
+                animationDelay: `${i * 0.06}s`,
+                borderColor: studied ? 'rgba(201,168,76,0.35)' : undefined,
+                background: studied
+                  ? 'linear-gradient(135deg, rgba(201,168,76,0.06), var(--surface-2))'
+                  : CARD_STYLE.background,
+              }}
             >
               {sub.subtitle ? (
                 <span
@@ -312,14 +362,15 @@ function PillarTopicView({
               <span
                 className="mt-3 inline-block text-[11px]"
                 style={{
-                  color: isStudied(sub.id) ? 'var(--accent)' : 'var(--text-3)',
+                  color: studied ? 'var(--accent)' : 'var(--text-3)',
                   fontFamily: 'var(--font-body)',
                 }}
               >
-                {isStudied(sub.id) ? '✓ estudado' : 'Abrir'}
+                {studied ? '✓ estudado' : 'Abrir'}
               </span>
             </Link>
-          ))}
+            )
+          })}
         </div>
       </main>
     </div>
@@ -345,12 +396,6 @@ function EmptyTopic({ pillarSlug }: { pillarSlug: string }) {
       </Link>
     </div>
   )
-}
-
-function countTotalSubtopicsInPillar(_topics: ContentTopic[]): number {
-  // Placeholder — idealmente buscamos count agregado do Supabase.
-  // Usar 0 faz StudyReader usar length do tópico atual.
-  return 0
 }
 
 export type { ContentSubtopic }
