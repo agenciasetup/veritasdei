@@ -13,11 +13,15 @@ import {
   AtSign,
   Sparkles,
   Minus,
+  Heart,
+  ChevronRight,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import { createClient } from '@/lib/supabase/client'
+import SelecaoSantoDevocao from '@/components/devocao/SelecaoSantoDevocao'
+import type { SantoResumo } from '@/types/santo'
 
 /**
  * Sheet "Editar perfil" — dados PÚBLICOS (exibidos na comunidade).
@@ -56,6 +60,9 @@ export default function EditProfileSheet({
   const [bio, setBio] = useState('')
   const [links, setLinks] = useState<Array<{ label: string; url: string }>>([])
   const [showLikesPublic, setShowLikesPublic] = useState(false)
+  const [santoDevocaoId, setSantoDevocaoId] = useState<string | null>(null)
+  const [santoDevocaoResumo, setSantoDevocaoResumo] = useState<SantoResumo | null>(null)
+  const [showSantoPicker, setShowSantoPicker] = useState(false)
 
   // Hidrata o form a partir do profile atual sempre que abrir.
   useEffect(() => {
@@ -65,9 +72,28 @@ export default function EditProfileSheet({
     setBio(profile.bio_short ?? '')
     setLinks(profile.external_links ?? [])
     setShowLikesPublic(Boolean(profile.show_likes_public))
+    setSantoDevocaoId(profile.santo_devocao_id ?? null)
     setError(null)
     setLoaded(true)
   }, [open, profile])
+
+  // Busca dados do santo atual pra exibir o preview (nome, imagem, invocação).
+  useEffect(() => {
+    if (!santoDevocaoId || !supabase) {
+      setSantoDevocaoResumo(null)
+      return
+    }
+    let cancelled = false
+    void (async () => {
+      const { data } = await supabase
+        .from('santos')
+        .select('id, slug, nome, invocacao, patronatos, imagem_url, popularidade_rank, festa_texto, tipo_culto')
+        .eq('id', santoDevocaoId)
+        .maybeSingle()
+      if (!cancelled && data) setSantoDevocaoResumo(data as SantoResumo)
+    })()
+    return () => { cancelled = true }
+  }, [santoDevocaoId, supabase])
 
   // Fecha com Escape + trava scroll do body enquanto aberto.
   useEffect(() => {
@@ -99,6 +125,35 @@ export default function EditProfileSheet({
         .update({ name: trimmedName || null })
         .eq('id', user.id)
       if (nameErr) throw nameErr
+
+      // Santo de devoção é aberto a todos (faz parte do perfil, não premium).
+      if (santoDevocaoId !== (profile?.santo_devocao_id ?? null)) {
+        const res = await fetch('/api/comunidade/perfil', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ santo_devocao_id: santoDevocaoId }),
+        })
+        if (!res.ok) {
+          const data = (await res.json().catch(() => null)) as { error?: string } | null
+          throw new Error(translateError(data?.error))
+        }
+        // Auto-favoritar oração do novo santo (reversível depois)
+        if (santoDevocaoId) {
+          const { data: santo } = await supabase
+            .from('santos')
+            .select('oracao_principal_item_id')
+            .eq('id', santoDevocaoId)
+            .maybeSingle()
+          if (santo?.oracao_principal_item_id) {
+            await supabase
+              .from('prayer_favorites')
+              .upsert(
+                { user_id: user.id, item_id: santo.oracao_principal_item_id },
+                { onConflict: 'user_id,item_id', ignoreDuplicates: true },
+              )
+          }
+        }
+      }
 
       // Campos Premium — só envia se for premium E houver mudança.
       if (isPremium) {
@@ -245,6 +300,89 @@ export default function EditProfileSheet({
                     className="w-full px-3 py-3 rounded-xl text-sm"
                     style={fieldStyle}
                   />
+                </FieldBlock>
+
+                <FieldBlock
+                  label="Santo de devoção"
+                  hint="A capa do seu perfil será a imagem do santo escolhido."
+                >
+                  {showSantoPicker ? (
+                    <div
+                      className="rounded-xl p-3 space-y-3"
+                      style={{
+                        background: 'rgba(10,10,10,0.4)',
+                        border: '1px solid rgba(201,168,76,0.2)',
+                      }}
+                    >
+                      <SelecaoSantoDevocao
+                        value={santoDevocaoId}
+                        onChange={(id, resumo) => {
+                          setSantoDevocaoId(id)
+                          setSantoDevocaoResumo(resumo)
+                        }}
+                      />
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowSantoPicker(false)}
+                          className="px-3 py-1.5 rounded-lg text-xs"
+                          style={{
+                            background: 'rgba(242,237,228,0.08)',
+                            color: '#E7DED1',
+                            fontFamily: 'Poppins, sans-serif',
+                          }}
+                        >
+                          Fechar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowSantoPicker(true)}
+                      className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-left transition-all active:scale-[0.99]"
+                      style={{
+                        ...fieldStyle,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden"
+                        style={{
+                          background: 'rgba(201,168,76,0.12)',
+                          border: '1px solid rgba(201,168,76,0.22)',
+                        }}
+                      >
+                        {santoDevocaoResumo?.imagem_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={santoDevocaoResumo.imagem_url}
+                            alt={santoDevocaoResumo.nome}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Heart className="w-4 h-4" style={{ color: '#C9A84C' }} />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        {santoDevocaoResumo ? (
+                          <>
+                            <div className="truncate" style={{ color: '#F2EDE4', fontWeight: 500 }}>
+                              {santoDevocaoResumo.nome}
+                            </div>
+                            {santoDevocaoResumo.invocacao && (
+                              <div className="text-xs truncate" style={{ color: '#8A8378' }}>
+                                «{santoDevocaoResumo.invocacao}»
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div style={{ color: '#8A8378' }}>Escolher santo de devoção…</div>
+                        )}
+                      </div>
+                      <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: '#8A8378' }} />
+                    </button>
+                  )}
                 </FieldBlock>
 
                 <FieldBlock

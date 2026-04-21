@@ -6,13 +6,13 @@ import Link from 'next/link'
 import Image from 'next/image'
 import {
   Camera,
-  ImageIcon,
   Loader2,
   MapPin,
   Church,
   Pencil,
   Share2,
   ShieldCheck,
+  Heart,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
@@ -25,6 +25,8 @@ import LevelBadge from '@/components/gamification/LevelBadge'
 import XpBar from '@/components/gamification/XpBar'
 import EquippedReliquiaChip from '@/components/gamification/EquippedReliquiaChip'
 import { useGamification } from '@/lib/gamification/useGamification'
+import SantoCoverFallback from '@/components/devocao/SantoCoverFallback'
+import type { SantoResumo } from '@/types/santo'
 
 /**
  * Header estilo Instagram: capa + avatar + nome/handle/bio + stats + botão
@@ -50,7 +52,7 @@ export default function ProfileHeaderCard({
     veritas: number
   } | null>(null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
-  const [uploadingCover, setUploadingCover] = useState(false)
+  const [santoDevocao, setSantoDevocao] = useState<SantoResumo | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const publicUrl =
@@ -143,34 +145,23 @@ export default function ProfileHeaderCard({
     }
   }
 
-  async function handleCover(file: File) {
-    if (!user) return
-    if (!isPremium) {
-      setError('Capa faz parte do plano Estudos.')
+  // Capa do perfil = imagem do santo de devoção (mesmo asset para todos os devotos).
+  useEffect(() => {
+    if (!profile?.santo_devocao_id || !supabase) {
+      setSantoDevocao(null)
       return
     }
-    if (!file.type.startsWith('image/')) return
-    if (file.size > 8 * 1024 * 1024) {
-      setError('Capa muito grande (máximo 8MB).')
-      return
-    }
-    setUploadingCover(true)
-    setError(null)
-    try {
-      const url = await uploadProfileImage(file)
-      const res = await fetch('/api/comunidade/perfil', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cover_image_url: url }),
-      })
-      if (!res.ok) throw new Error('Falha ao salvar capa.')
-      await refreshProfile()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Falha ao enviar capa.')
-    } finally {
-      setUploadingCover(false)
-    }
-  }
+    let cancelled = false
+    void (async () => {
+      const { data } = await supabase
+        .from('santos')
+        .select('id, slug, nome, invocacao, patronatos, imagem_url, popularidade_rank, festa_texto, tipo_culto')
+        .eq('id', profile.santo_devocao_id!)
+        .maybeSingle()
+      if (!cancelled && data) setSantoDevocao(data as SantoResumo)
+    })()
+    return () => { cancelled = true }
+  }, [profile?.santo_devocao_id, supabase])
 
   if (!profile) {
     return (
@@ -178,59 +169,65 @@ export default function ProfileHeaderCard({
     )
   }
 
-  const hasCover = Boolean(profile.cover_image_url)
+  const coverUrl = santoDevocao?.imagem_url ?? null
   const vocacaoMeta = VOCACOES.find(v => v.value === profile.vocacao)
   const location = [profile.cidade, profile.estado].filter(Boolean).join(', ')
 
   return (
     <div>
-      {/* Capa */}
+      {/* Capa — sempre derivada do santo de devoção */}
       <div
         className="relative overflow-hidden rounded-2xl"
         style={{
           aspectRatio: '3 / 1',
-          background: hasCover
+          background: coverUrl
             ? undefined
             : 'linear-gradient(135deg, rgba(201,168,76,0.18) 0%, rgba(60,30,10,0.5) 55%, rgba(201,168,76,0.06) 100%)',
         }}
       >
-        {hasCover && profile.cover_image_url && (
+        {coverUrl ? (
           <Image
-            src={profile.cover_image_url}
-            alt=""
+            src={coverUrl}
+            alt={santoDevocao?.nome ?? ''}
             fill
             sizes="(max-width: 768px) 100vw, 768px"
             className="object-cover"
             priority
           />
-        )}
-        <label
-          className="absolute right-3 bottom-3 inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs cursor-pointer touch-target-lg active:scale-95"
-          style={{
-            background: 'rgba(10,10,10,0.7)',
-            backdropFilter: 'blur(8px)',
-            color: '#F2EDE4',
-            fontFamily: 'Poppins, sans-serif',
-            border: '1px solid rgba(242,237,228,0.14)',
-          }}
-        >
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/avif"
-            className="hidden"
-            disabled={uploadingCover || !isPremium}
-            onChange={e => {
-              const f = e.target.files?.[0]
-              if (f) void handleCover(f)
+        ) : santoDevocao ? (
+          <SantoCoverFallback nome={santoDevocao.nome} invocacao={santoDevocao.invocacao} />
+        ) : profile.santo_devocao_id ? null : (
+          <Link
+            href="/perfil?section=editar"
+            className="absolute right-3 bottom-3 inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs touch-target-lg active:scale-95"
+            style={{
+              background: 'rgba(10,10,10,0.7)',
+              backdropFilter: 'blur(8px)',
+              color: '#F2EDE4',
+              fontFamily: 'Poppins, sans-serif',
+              border: '1px solid rgba(242,237,228,0.14)',
             }}
-          />
-          {uploadingCover ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <ImageIcon className="w-3.5 h-3.5" />
-          )}
-          {isPremium ? 'Mudar capa' : 'Capa · Estudos'}
-        </label>
+          >
+            <Heart className="w-3.5 h-3.5" />
+            Escolher santo de devoção
+          </Link>
+        )}
+        {santoDevocao && (
+          <Link
+            href={`/santos/${santoDevocao.slug}`}
+            className="absolute right-3 bottom-3 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] touch-target active:scale-95"
+            style={{
+              background: 'rgba(10,10,10,0.65)',
+              backdropFilter: 'blur(8px)',
+              color: '#F2EDE4',
+              fontFamily: 'Poppins, sans-serif',
+              border: '1px solid rgba(242,237,228,0.14)',
+            }}
+          >
+            <Heart className="w-3 h-3" style={{ color: 'rgb(201,168,76)' }} />
+            Devoto de <strong style={{ fontWeight: 600 }}>{santoDevocao.nome}</strong>
+          </Link>
+        )}
       </div>
 
       {/* Linha avatar + ações */}

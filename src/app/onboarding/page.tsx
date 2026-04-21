@@ -6,8 +6,10 @@ import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
 import { compressImage } from '@/lib/image/compress'
 import { VOCACOES, SACRAMENTOS, type Vocacao, type Sacramento } from '@/types/auth'
+import type { SantoResumo } from '@/types/santo'
 import { VocacaoIcon } from '@/components/icons/VocacaoIcons'
 import CrossIcon from '@/components/icons/CrossIcon'
+import SelecaoSantoDevocao from '@/components/devocao/SelecaoSantoDevocao'
 import { motion, AnimatePresence, type PanInfo } from 'framer-motion'
 import { useHaptic } from '@/hooks/useHaptic'
 import {
@@ -20,6 +22,7 @@ const STEPS = [
   { label: 'Tipo', desc: 'Fiel ou Igreja' },
   { label: 'Perfil', desc: 'Foto e nome' },
   { label: 'Vocação', desc: 'Sua vocação' },
+  { label: 'Devoção', desc: 'Seu santo' },
   { label: 'Fé', desc: 'Sacramentos' },
   { label: 'Local', desc: 'Onde você está' },
 ]
@@ -48,6 +51,8 @@ export default function OnboardingPage() {
   const [name, setName] = useState('')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [vocacao, setVocacao] = useState<Vocacao>('leigo')
+  const [santoDevocaoId, setSantoDevocaoId] = useState<string | null>(null)
+  const [santoDevocaoResumo, setSantoDevocaoResumo] = useState<SantoResumo | null>(null)
   const [sacramentos, setSacramentos] = useState<Sacramento[]>([])
   const [paroquia, setParoquia] = useState('')
   const [diocese, setDiocese] = useState('')
@@ -70,6 +75,7 @@ export default function OnboardingPage() {
       setName(profile.name ?? user?.user_metadata?.name ?? '')
       setAvatarUrl(profile.profile_image_url)
       setVocacao(profile.vocacao ?? 'leigo')
+      setSantoDevocaoId(profile.santo_devocao_id ?? null)
       setSacramentos(profile.sacramentos ?? [])
       setParoquia(profile.paroquia ?? '')
       setDiocese(profile.diocese ?? '')
@@ -135,20 +141,43 @@ export default function OnboardingPage() {
       return
     }
 
+    const profileUpdate: Record<string, unknown> = {
+      name: name || null,
+      profile_image_url: avatarUrl,
+      vocacao,
+      sacramentos,
+      paroquia: paroquia || null,
+      diocese: diocese || null,
+      cidade: cidade || null,
+      estado: estado || null,
+      onboarding_completed: true,
+    }
+    if (santoDevocaoId) {
+      profileUpdate.santo_devocao_id = santoDevocaoId
+      profileUpdate.santo_devocao_escolhido_em = new Date().toISOString()
+    }
+
     await supabase
       .from('profiles')
-      .update({
-        name: name || null,
-        profile_image_url: avatarUrl,
-        vocacao,
-        sacramentos,
-        paroquia: paroquia || null,
-        diocese: diocese || null,
-        cidade: cidade || null,
-        estado: estado || null,
-        onboarding_completed: true,
-      })
+      .update(profileUpdate)
       .eq('id', user.id)
+
+    // Auto-favorita a oração principal do santo escolhido
+    if (santoDevocaoId) {
+      const { data: santo } = await supabase
+        .from('santos')
+        .select('oracao_principal_item_id')
+        .eq('id', santoDevocaoId)
+        .maybeSingle()
+      if (santo?.oracao_principal_item_id) {
+        await supabase
+          .from('prayer_favorites')
+          .upsert(
+            { user_id: user.id, item_id: santo.oracao_principal_item_id },
+            { onConflict: 'user_id,item_id', ignoreDuplicates: true },
+          )
+      }
+    }
 
     await refreshProfile()
     setSaving(false)
@@ -168,21 +197,21 @@ export default function OnboardingPage() {
     router.push('/')
   }
 
-  // Steps visíveis: para fiel usa todos; para igreja pula vocação e fé.
+  // Steps visíveis: para fiel usa todos (0..5); para igreja pula vocação/devoção/fé.
+  // Novo fluxo fiel: 0=tipo, 1=perfil, 2=vocação, 3=devoção, 4=fé, 5=local.
   const visibleSteps = perfilTipo === 'igreja'
-    ? [STEPS[0], STEPS[1], STEPS[4]]
+    ? [STEPS[0], STEPS[1], STEPS[5]]
     : STEPS
   const currentStepIdx = (() => {
     if (perfilTipo !== 'igreja') return step
-    // step armazenado: 0=tipo, 1=perfil, 4=local
     if (step === 0) return 0
     if (step === 1) return 1
-    if (step === 4) return 2
+    if (step === 5) return 2
     return step
   })()
   const totalVisible = visibleSteps.length
   const canGoNext = (() => {
-    if (perfilTipo === 'igreja') return step !== 4
+    if (perfilTipo === 'igreja') return step !== 5
     return step < STEPS.length - 1
   })()
   const canGoBack = step > 0
@@ -193,7 +222,7 @@ export default function OnboardingPage() {
     let next: number
     if (perfilTipo === 'igreja') {
       if (step === 0) next = 1
-      else if (step === 1) next = 4
+      else if (step === 1) next = 5
       else next = step
     } else {
       next = Math.min(step + 1, STEPS.length - 1)
@@ -205,7 +234,7 @@ export default function OnboardingPage() {
     setDirection(-1)
     haptic.pulse('tap')
     if (perfilTipo === 'igreja') {
-      if (step === 4) setStep(1)
+      if (step === 5) setStep(1)
       else if (step === 1) setStep(0)
       return
     }
@@ -266,7 +295,7 @@ export default function OnboardingPage() {
             // Recupera o step real da lista visível para gotoStep
             const realStep =
               perfilTipo === 'igreja'
-                ? i === 0 ? 0 : i === 1 ? 1 : 4
+                ? i === 0 ? 0 : i === 1 ? 1 : 5
                 : i
             const reached = realStep <= maxStepReached
             return (
@@ -533,8 +562,43 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* ═══ STEP 3: Fé ═══ */}
+        {/* ═══ STEP 3: Devoção ═══ */}
         {step === 3 && perfilTipo !== 'igreja' && (
+          <div>
+            <h2
+              className="text-xl font-bold tracking-wider uppercase mb-1 text-center"
+              style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
+            >
+              Santo de Devoção
+            </h2>
+            <p className="text-sm mb-6 text-center" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}>
+              Escolha um santo para acompanhar sua caminhada. A capa do seu perfil será a imagem dele.
+            </p>
+            <SelecaoSantoDevocao
+              value={santoDevocaoId}
+              onChange={(id, resumo) => {
+                setSantoDevocaoId(id)
+                setSantoDevocaoResumo(resumo)
+              }}
+            />
+            {santoDevocaoResumo && (
+              <div
+                className="mt-4 px-3 py-2.5 rounded-xl text-xs text-center"
+                style={{
+                  background: 'var(--accent-soft)',
+                  border: '1px solid var(--accent-soft)',
+                  color: 'var(--accent)',
+                  fontFamily: 'var(--font-body)',
+                }}
+              >
+                «{santoDevocaoResumo.invocacao ?? `${santoDevocaoResumo.nome}, rogai por nós`}»
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ═══ STEP 4: Fé ═══ */}
+        {step === 4 && perfilTipo !== 'igreja' && (
           <div>
             <h2
               className="text-xl font-bold tracking-wider uppercase mb-1 text-center"
@@ -603,8 +667,8 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* ═══ STEP 4: Localização ═══ */}
-        {step === 4 && (
+        {/* ═══ STEP 5: Localização ═══ */}
+        {step === 5 && (
           <div>
             <h2
               className="text-xl font-bold tracking-wider uppercase mb-1 text-center"
