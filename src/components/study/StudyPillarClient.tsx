@@ -1,21 +1,19 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo } from 'react'
+import { useEffect } from 'react'
 import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import {
-  useContentGroup,
-  useContentTopicSubtopics,
-  useTopicFullContent,
+  useContentItems,
   type ContentSubtopic,
-  type ContentTopic,
 } from '@/lib/content/useContentGroup'
 import { useContentProgress } from '@/lib/content/useContentProgress'
 import { useAuth } from '@/contexts/AuthContext'
 import StudyReader from './StudyReader'
 import StudyLayout from './StudyLayout'
-import { computeNext, type PillarSequenceEntry } from '@/lib/study/navigation'
+import { usePillarTree, type PillarTreeNode } from '@/lib/study/usePillarTree'
+import { useStudyNavigation } from '@/lib/study/useStudyNavigation'
 import type { StudyPillarContext } from '@/lib/study/types'
 import Divider from '@/components/ui/Divider'
 
@@ -89,15 +87,11 @@ const CARD_STYLE: React.CSSProperties = {
 
 export default function StudyPillarClient({ pillarSlug, topicSlug, subtopicSlug }: Props) {
   const { user } = useAuth()
-  const { group, topics, loading: groupLoading } = useContentGroup(pillarSlug)
+  const { group, topics, totalSubtopics, loading } = usePillarTree(pillarSlug)
   const { isStudied, markStudied, studiedIds } = useContentProgress(user?.id, pillarSlug)
 
-  if (groupLoading) return <Loader />
-  if (!group) {
-    return (
-      <EmptyPillar pillarSlug={pillarSlug} />
-    )
-  }
+  if (loading) return <Loader />
+  if (!group) return <EmptyPillar pillarSlug={pillarSlug} />
 
   if (!topicSlug) {
     return <PillarTopicGrid pillarSlug={pillarSlug} group={group} topics={topics} />
@@ -110,6 +104,7 @@ export default function StudyPillarClient({ pillarSlug, topicSlug, subtopicSlug 
       topics={topics}
       topicSlug={topicSlug}
       subtopicSlug={subtopicSlug}
+      totalSubtopics={totalSubtopics}
       studiedIds={studiedIds}
       isStudied={isStudied}
       markStudied={markStudied}
@@ -132,7 +127,7 @@ function PillarTopicGrid({
 }: {
   pillarSlug: string
   group: { title: string; subtitle: string | null; description: string | null }
-  topics: ContentTopic[]
+  topics: PillarTreeNode[]
 }) {
   return (
     <div className="flex flex-col min-h-screen relative">
@@ -182,45 +177,45 @@ function PillarTopicView({
   topics,
   topicSlug,
   subtopicSlug,
+  totalSubtopics,
   studiedIds,
   isStudied,
   markStudied,
 }: {
   pillarSlug: string
   group: { id: string; title: string }
-  topics: ContentTopic[]
+  topics: PillarTreeNode[]
   topicSlug: string
   subtopicSlug?: string
+  totalSubtopics: number
   studiedIds: Set<string>
   isStudied: (id: string) => boolean
   markStudied: (id: string) => Promise<void>
 }) {
   const topic = topics.find((t) => t.slug === topicSlug) || null
-  const { subtopics, loading } = useTopicFullContent(topic?.id ?? null)
+  const subtopics = topic?.subtopics ?? []
 
-  if (!topic) {
-    if (topics.length > 0) return <EmptyTopic pillarSlug={pillarSlug} />
-    return <Loader />
-  }
-  if (loading) return <Loader />
-  if (!subtopics.length) return <EmptyTopic pillarSlug={pillarSlug} />
-
-  // Build pillar sequence across all topics in the pillar — used to compute "next".
-  // Para simplificar, sequência = apenas subtopics deste tópico (Fase 2 expande).
-  const sequence: PillarSequenceEntry[] = subtopics.map((s) => ({
-    ref: s.slug,
-    title: s.title,
-    href: `/estudo/${pillarSlug}/${topicSlug}/${s.slug}`,
-  }))
-
-  // If there's a subtopic in URL, render reader. If single-subtopic topic, auto-open.
+  // Auto-abrir único subtópico quando o tópico só tem um.
   const targetSubtopic = subtopicSlug
     ? subtopics.find((s) => s.slug === subtopicSlug) || null
     : subtopics.length === 1
       ? subtopics[0]
       : null
 
-  const totalSubtopics = countTotalSubtopicsInPillar(topics)
+  // Navegação é sempre no contexto do pilar inteiro — atravessa fronteiras
+  // de tópico. O slug efetivo é `subtopicSlug` da URL OU o do único-auto-aberto.
+  const effectiveSubtopicSlug = subtopicSlug ?? targetSubtopic?.slug
+  const nav = useStudyNavigation(pillarSlug, topics, topicSlug, effectiveSubtopicSlug)
+
+  const { items, loading: itemsLoading } = useContentItems(targetSubtopic?.id ?? null)
+
+  if (!topic) {
+    if (topics.length > 0) return <EmptyTopic pillarSlug={pillarSlug} />
+    return <Loader />
+  }
+
+  if (!subtopics.length) return <EmptyTopic pillarSlug={pillarSlug} />
+
   const pillar: StudyPillarContext = {
     slug: pillarSlug,
     title: group.title,
@@ -229,7 +224,7 @@ function PillarTopicView({
   }
 
   if (targetSubtopic) {
-    const next = computeNext(sequence, targetSubtopic.slug, `/estudo/${pillarSlug}`)
+    if (itemsLoading) return <Loader />
     return (
       <div className="flex flex-col min-h-screen relative">
         <StudyLayout>
@@ -257,14 +252,14 @@ function PillarTopicView({
               title={targetSubtopic.title}
               subtitle={targetSubtopic.subtitle || undefined}
               description={targetSubtopic.description || undefined}
-              items={targetSubtopic.items}
+              items={items}
               onMarkStudied={
                 isStudied(targetSubtopic.id)
                   ? undefined
                   : () => markStudied(targetSubtopic.id)
               }
               isStudied={isStudied(targetSubtopic.id)}
-              next={next}
+              next={nav.next}
             />
           </main>
         </StudyLayout>
@@ -348,12 +343,6 @@ function EmptyTopic({ pillarSlug }: { pillarSlug: string }) {
       </Link>
     </div>
   )
-}
-
-function countTotalSubtopicsInPillar(_topics: ContentTopic[]): number {
-  // Placeholder — idealmente buscamos count agregado do Supabase.
-  // Usar 0 faz StudyReader usar length do tópico atual.
-  return 0
 }
 
 export type { ContentSubtopic }
