@@ -68,45 +68,54 @@ const BODY_LINE_RATIO = 44 / 30
 /** Imagem carregada pronta pra `ctx.drawImage` com width/height. */
 type DrawableImage = (CanvasImageSource & { width: number; height: number })
 
-/** Adiciona um query param pra forçar request novo e evitar cache de response sem CORS. */
-function withCorsBust(url: string): string {
-  const sep = url.includes('?') ? '&' : '?'
-  return `${url}${sep}_vdcors=1`
+/**
+ * Reescreve URLs do CDN externo pra passarem pelo proxy same-origin.
+ * O CDN (`media.veritasdei.com.br/cdn-cgi/image/...`) não retorna
+ * `Access-Control-Allow-Origin`, então o canvas não consegue
+ * desenhar e o `toBlob` falha. Via proxy, a imagem vem do mesmo
+ * origin da app e o CORS deixa de ser problema.
+ *
+ * URLs já same-origin (ou sem protocolo http/https) passam inalteradas.
+ */
+function proxiedUrl(url: string): string {
+  try {
+    const parsed = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
+    if (typeof window !== 'undefined' && parsed.origin === window.location.origin) {
+      return url
+    }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return url
+    }
+    return `/api/comunidade/media/proxy?url=${encodeURIComponent(parsed.toString())}`
+  } catch {
+    return url
+  }
 }
 
 /**
- * Carrega uma imagem pronta pra desenhar no canvas.
- *
- * Estratégia em camadas pra contornar o bug clássico: quando o
- * browser cacheia a imagem via `<img>` normal (sem Origin header), o
- * response entra no cache sem `Access-Control-Allow-Origin`. Uma
- * request posterior com `crossOrigin='anonymous'` falha no CORS
- * check mesmo quando o CDN enviaria os headers normalmente.
- *
- * Solução: 1) adiciona `?_vdcors=1` pra bypassar o cache existente;
- * 2) usa `<img crossOrigin='anonymous'>` — caminho direto e
- * compatível com AVIF/WebP; 3) se falhar, cai no fetch+
- * createImageBitmap; 4) por último, fetch+blob URL via `<img>`.
+ * Carrega uma imagem pronta pra desenhar no canvas. Usa o proxy
+ * same-origin pra imagens do CDN — assim o canvas não fica tainted e
+ * `toBlob` funciona. Três camadas de fallback pra robustez:
+ *  1. `<img>` direto (mais compatível com AVIF/WebP do format=auto);
+ *  2. fetch + `createImageBitmap`;
+ *  3. fetch + blob URL + `<img>`.
  */
 async function loadImage(url: string): Promise<DrawableImage> {
-  const bustedUrl = withCorsBust(url)
+  const target = proxiedUrl(url)
 
-  // Tentativa 1: <img crossOrigin='anonymous'> com cache-bust.
   try {
     return await new Promise<HTMLImageElement>((resolve, reject) => {
       const img = new Image()
-      img.crossOrigin = 'anonymous'
       img.onload = () => resolve(img)
-      img.onerror = () => reject(new Error('crossorigin_img_failed'))
-      img.src = bustedUrl
+      img.onerror = () => reject(new Error('img_load_failed'))
+      img.src = target
     })
   } catch (e1) {
-    if (typeof console !== 'undefined') console.warn('[share-card] crossOrigin img falhou, tentando fetch', bustedUrl, e1)
+    if (typeof console !== 'undefined') console.warn('[share-card] <img> falhou, tentando fetch', target, e1)
   }
 
-  // Tentativa 2: fetch + createImageBitmap.
   try {
-    const res = await fetch(bustedUrl, { mode: 'cors', credentials: 'omit' })
+    const res = await fetch(target, { credentials: 'omit' })
     if (!res.ok) throw new Error(`http_${res.status}`)
     const blob = await res.blob()
     if (typeof createImageBitmap === 'function') {
@@ -116,7 +125,6 @@ async function loadImage(url: string): Promise<DrawableImage> {
         if (typeof console !== 'undefined') console.warn('[share-card] createImageBitmap falhou, tentando blob URL', bmpErr)
       }
     }
-    // Tentativa 3: blob URL via <img>.
     const objUrl = URL.createObjectURL(blob)
     try {
       return await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -129,7 +137,7 @@ async function loadImage(url: string): Promise<DrawableImage> {
       setTimeout(() => URL.revokeObjectURL(objUrl), 2000)
     }
   } catch (e2) {
-    if (typeof console !== 'undefined') console.warn('[share-card] todas as tentativas falharam', bustedUrl, e2)
+    if (typeof console !== 'undefined') console.warn('[share-card] todas as tentativas falharam', target, e2)
     throw e2
   }
 }
@@ -808,7 +816,7 @@ export async function renderShareCard({ post, format = 'post' }: RenderShareCard
   ctx.textAlign = 'center'
   ctx.font = '400 15px Poppins, system-ui, sans-serif'
   ctx.fillStyle = 'rgba(201,168,76,0.55)'
-  ctx.fillText('veritasdei.com', SHARE_IMAGE_WIDTH / 2, footerY + 42)
+  ctx.fillText('veritasdei.com.br', SHARE_IMAGE_WIDTH / 2, footerY + 42)
 
   // ── 11. Export ──────────────────────────────────────────────────
   return new Promise<Blob>((resolve, reject) => {
