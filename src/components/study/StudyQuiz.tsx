@@ -202,12 +202,21 @@ function Intro({
 
       <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
         <Chip label={`${totalQuestions} questões`} />
-        <Chip label={`Passa com ${quiz.passing_score}%`} />
-        <Chip label={`+${quiz.xp_bonus} XP ao passar`} />
+        <Chip label={quiz.passing_score >= 100 ? 'Só vale com 100%' : `Aprovado com ${quiz.passing_score}%`} highlight />
+        <Chip label={`+${quiz.xp_bonus} XP`} />
         {quiz.reliquia_slug_on_master ? (
-          <Chip label="Relíquia ao gabaritar" highlight />
+          <Chip label="Relíquia ao gabaritar" />
         ) : null}
       </div>
+
+      <p
+        className="text-xs mb-6 max-w-md mx-auto"
+        style={{ color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}
+      >
+        {quiz.passing_score >= 100
+          ? 'Errou uma? Tenta de novo. A prova só conta no seu progresso quando você acertar tudo.'
+          : 'Você pode tentar quantas vezes quiser. A maior nota é que conta.'}
+      </p>
 
       {bestScore > 0 ? (
         <p
@@ -382,10 +391,12 @@ function Result({
           }}
         >
           {passed
-            ? score === 100
+            ? quiz.reliquia_slug_on_master
               ? `Gabaritou! +${quiz.xp_bonus} XP · relíquia conquistada`
-              : `Aprovado — +${quiz.xp_bonus} XP`
-            : `Não atingiu ${quiz.passing_score}% desta vez`}
+              : `Gabaritou! +${quiz.xp_bonus} XP`
+            : quiz.passing_score >= 100
+              ? 'Não foi dessa vez — revisa e tenta de novo'
+              : `Não atingiu ${quiz.passing_score}% desta vez`}
         </p>
       </div>
 

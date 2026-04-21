@@ -2,14 +2,12 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ChevronRight, NotebookPen, GraduationCap, ArrowRight } from 'lucide-react'
+import { ChevronRight, NotebookPen, ArrowRight } from 'lucide-react'
 import ImmersiveReader from '@/components/content/ImmersiveReader'
 import StudyDeepdive from './StudyDeepdive'
 import StudyNotesPanel from './StudyNotesPanel'
-import StudyQuiz from './StudyQuiz'
 import ProgressTrack from './ProgressTrack'
 import { useStudyDeepdive } from '@/lib/study/useStudyDeepdive'
-import { useStudyQuizSummary } from '@/lib/study/useStudyQuizSummary'
 import type {
   ContentItem,
   StudyNextHint,
@@ -44,9 +42,7 @@ export default function StudyReader({
   next,
 }: StudyReaderProps) {
   const { deepdive } = useStudyDeepdive(contentType, contentRef)
-  const { quiz } = useStudyQuizSummary(contentType, contentRef)
   const [notesOpen, setNotesOpen] = useState(false)
-  const [quizOpen, setQuizOpen] = useState(false)
 
   const pillarPercent = useMemo(() => {
     if (!pillar.total) return 0
@@ -74,10 +70,7 @@ export default function StudyReader({
         afterItems={
           <>
             {deepdive ? <StudyDeepdive deepdive={deepdive} /> : null}
-            <ActionBar
-              onOpenNotes={() => setNotesOpen(true)}
-              onOpenQuiz={quiz ? () => setQuizOpen(true) : null}
-            />
+            <ActionBar onOpenNotes={() => setNotesOpen(true)} />
           </>
         }
         footerSlot={next ? <NextCallout next={next} /> : null}
@@ -90,14 +83,6 @@ export default function StudyReader({
         contentRef={contentRef}
         contentTitle={title}
       />
-
-      {quiz ? (
-        <StudyQuiz
-          open={quizOpen}
-          onClose={() => setQuizOpen(false)}
-          quiz={quiz}
-        />
-      ) : null}
     </>
   )
 }
@@ -146,13 +131,7 @@ function Breadcrumb({
   )
 }
 
-function ActionBar({
-  onOpenNotes,
-  onOpenQuiz,
-}: {
-  onOpenNotes: () => void
-  onOpenQuiz: (() => void) | null
-}) {
+function ActionBar({ onOpenNotes }: { onOpenNotes: () => void }) {
   return (
     <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
       <button
@@ -169,22 +148,6 @@ function ActionBar({
         <NotebookPen className="w-4 h-4" />
         Minhas anotações
       </button>
-      {onOpenQuiz ? (
-        <button
-          type="button"
-          onClick={onOpenQuiz}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm transition-all duration-200"
-          style={{
-            background: 'rgba(127,29,29,0.15)',
-            border: '1px solid rgba(127,29,29,0.3)',
-            color: 'var(--wine-light)',
-            fontFamily: 'Poppins, sans-serif',
-          }}
-        >
-          <GraduationCap className="w-4 h-4" />
-          Fazer prova
-        </button>
-      ) : null}
     </div>
   )
 }
