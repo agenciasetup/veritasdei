@@ -69,77 +69,22 @@ const BODY_LINE_RATIO = 44 / 30
 type DrawableImage = (CanvasImageSource & { width: number; height: number })
 
 /**
- * Reescreve URLs do CDN externo pra passarem pelo proxy same-origin.
- * O CDN (`media.veritasdei.com.br/cdn-cgi/image/...`) não retorna
- * `Access-Control-Allow-Origin`, então o canvas não consegue
- * desenhar e o `toBlob` falha. Via proxy, a imagem vem do mesmo
- * origin da app e o CORS deixa de ser problema.
+ * Carrega uma imagem pronta pra desenhar no canvas sem taintar.
  *
- * URLs já same-origin (ou sem protocolo http/https) passam inalteradas.
- */
-function proxiedUrl(url: string): string {
-  try {
-    const parsed = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
-    if (typeof window !== 'undefined' && parsed.origin === window.location.origin) {
-      return url
-    }
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      return url
-    }
-    return `/api/comunidade/media/proxy?url=${encodeURIComponent(parsed.toString())}`
-  } catch {
-    return url
-  }
-}
-
-/**
- * Carrega uma imagem pronta pra desenhar no canvas. Usa o proxy
- * same-origin pra imagens do CDN — assim o canvas não fica tainted e
- * `toBlob` funciona. Três camadas de fallback pra robustez:
- *  1. `<img>` direto (mais compatível com AVIF/WebP do format=auto);
- *  2. fetch + `createImageBitmap`;
- *  3. fetch + blob URL + `<img>`.
+ * O R2 CDN (media.veritasdei.com.br) está configurado com
+ * Transform Rule que adiciona `Access-Control-Allow-Origin: *` em
+ * `/cdn-cgi/image/*`. Supabase Storage público já retorna CORS
+ * aberto por default. Então `<img crossOrigin='anonymous'>` direto
+ * funciona e é o caminho mais rápido (sem hop extra).
  */
 async function loadImage(url: string): Promise<DrawableImage> {
-  const target = proxiedUrl(url)
-
-  try {
-    return await new Promise<HTMLImageElement>((resolve, reject) => {
-      const img = new Image()
-      img.onload = () => resolve(img)
-      img.onerror = () => reject(new Error('img_load_failed'))
-      img.src = target
-    })
-  } catch (e1) {
-    if (typeof console !== 'undefined') console.warn('[share-card] <img> falhou, tentando fetch', target, e1)
-  }
-
-  try {
-    const res = await fetch(target, { credentials: 'omit' })
-    if (!res.ok) throw new Error(`http_${res.status}`)
-    const blob = await res.blob()
-    if (typeof createImageBitmap === 'function') {
-      try {
-        return await createImageBitmap(blob)
-      } catch (bmpErr) {
-        if (typeof console !== 'undefined') console.warn('[share-card] createImageBitmap falhou, tentando blob URL', bmpErr)
-      }
-    }
-    const objUrl = URL.createObjectURL(blob)
-    try {
-      return await new Promise<HTMLImageElement>((resolve, reject) => {
-        const img = new Image()
-        img.onload = () => resolve(img)
-        img.onerror = () => reject(new Error('blob_image_failed'))
-        img.src = objUrl
-      })
-    } finally {
-      setTimeout(() => URL.revokeObjectURL(objUrl), 2000)
-    }
-  } catch (e2) {
-    if (typeof console !== 'undefined') console.warn('[share-card] todas as tentativas falharam', target, e2)
-    throw e2
-  }
+  return await new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => resolve(img)
+    img.onerror = () => reject(new Error('image_load_failed'))
+    img.src = url
+  })
 }
 
 function roundedRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
