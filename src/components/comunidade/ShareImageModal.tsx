@@ -3,9 +3,14 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Copy, Download, Share2, Check, Loader2 } from 'lucide-react'
+import { X, Copy, Download, Share2, Check, Loader2, Square, Smartphone } from 'lucide-react'
 import type { VeritasPost } from '@/lib/community/types'
-import { renderShareCard, SHARE_IMAGE_WIDTH, SHARE_IMAGE_HEIGHT } from '@/lib/image/share-card'
+import {
+  renderShareCard,
+  SHARE_IMAGE_WIDTH,
+  getShareImageHeight,
+  type ShareCardFormat,
+} from '@/lib/image/share-card'
 
 interface Props {
   post: VeritasPost | null
@@ -23,9 +28,15 @@ export default function ShareImageModal({ post, open, onClose, onAction }: Props
   const [blob, setBlob] = useState<Blob | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<ActionFeedback>(null)
+  const [format, setFormat] = useState<ShareCardFormat>('post')
   const imgRef = useRef<HTMLImageElement | null>(null)
 
-  // Gera a imagem ao abrir. Libera a URL ao fechar.
+  // Reseta pro formato post sempre que reabre.
+  useEffect(() => {
+    if (open) setFormat('post')
+  }, [open])
+
+  // (Re)gera a imagem ao abrir ou trocar de formato. Libera a URL ao trocar/fechar.
   useEffect(() => {
     if (!open || !post) return
     let url: string | null = null
@@ -36,7 +47,7 @@ export default function ShareImageModal({ post, open, onClose, onAction }: Props
     setPreviewUrl(null)
     setFeedback(null)
 
-    void renderShareCard({ post })
+    void renderShareCard({ post, format })
       .then(b => {
         if (cancelled) return
         url = URL.createObjectURL(b)
@@ -52,7 +63,7 @@ export default function ShareImageModal({ post, open, onClose, onAction }: Props
       cancelled = true
       if (url) URL.revokeObjectURL(url)
     }
-  }, [open, post])
+  }, [open, post, format])
 
   // Esc fecha.
   useEffect(() => {
@@ -89,7 +100,8 @@ export default function ShareImageModal({ post, open, onClose, onAction }: Props
   function handleSave() {
     if (!blob || !post) return
     const handle = post.author.public_handle ?? post.author.user_number ?? 'veritas'
-    const filename = `veritas-${handle}-${post.id.slice(0, 8)}.png`
+    const suffix = format === 'story' ? '-story' : ''
+    const filename = `veritas-${handle}-${post.id.slice(0, 8)}${suffix}.png`
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -107,7 +119,8 @@ export default function ShareImageModal({ post, open, onClose, onAction }: Props
   async function handleShare() {
     if (!blob || !post) return
     const handle = post.author.public_handle ?? post.author.user_number ?? 'veritas'
-    const filename = `veritas-${handle}.png`
+    const suffix = format === 'story' ? '-story' : ''
+    const filename = `veritas-${handle}${suffix}.png`
     const file = new File([blob], filename, { type: blob.type })
 
     const shareData: ShareData = {
@@ -172,10 +185,33 @@ export default function ShareImageModal({ post, open, onClose, onAction }: Props
         </div>
 
         <div
+          role="tablist"
+          aria-label="Formato"
+          className="flex items-center gap-2 px-4 py-2.5"
+          style={{ borderBottom: '1px solid rgba(201,168,76,0.08)' }}
+        >
+          <FormatTab
+            active={format === 'post'}
+            onClick={() => setFormat('post')}
+            icon={<Square className="w-4 h-4" strokeWidth={1.5} />}
+            label="Post"
+            hint="1080×1350"
+          />
+          <FormatTab
+            active={format === 'story'}
+            onClick={() => setFormat('story')}
+            icon={<Smartphone className="w-4 h-4" strokeWidth={1.5} />}
+            label="Story"
+            hint="1080×1920"
+          />
+        </div>
+
+        <div
           className="relative flex items-center justify-center"
           style={{
-            aspectRatio: `${SHARE_IMAGE_WIDTH} / ${SHARE_IMAGE_HEIGHT}`,
+            aspectRatio: `${SHARE_IMAGE_WIDTH} / ${getShareImageHeight(format)}`,
             background: '#0F0E0C',
+            maxHeight: '62vh',
           }}
         >
           {status === 'rendering' && (
@@ -240,6 +276,36 @@ interface ActionButtonProps {
   disabled?: boolean
   primary?: boolean
   flash?: boolean
+}
+
+interface FormatTabProps {
+  active: boolean
+  onClick: () => void
+  icon: React.ReactNode
+  label: string
+  hint: string
+}
+
+function FormatTab({ active, onClick, icon, label, hint }: FormatTabProps) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[11px] uppercase tracking-[0.12em] transition-colors"
+      style={{
+        background: active ? 'rgba(201,168,76,0.14)' : 'rgba(16,16,16,0.45)',
+        border: active ? '1px solid rgba(201,168,76,0.45)' : '1px solid rgba(201,168,76,0.12)',
+        color: active ? '#F2EDE4' : '#8A8378',
+        fontFamily: 'Poppins, sans-serif',
+      }}
+    >
+      <span style={{ color: active ? '#C9A84C' : '#8A8378' }}>{icon}</span>
+      <span className="font-medium">{label}</span>
+      <span className="opacity-60 normal-case tracking-normal text-[10px]">{hint}</span>
+    </button>
+  )
 }
 
 function ActionButton({ label, icon, onClick, disabled, primary, flash }: ActionButtonProps) {

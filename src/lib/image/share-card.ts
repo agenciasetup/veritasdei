@@ -1,7 +1,7 @@
 /**
- * Renderiza um card de compartilhamento 1080×1350 (formato story/post
- * vertical) a partir de um VeritasPost. Roda 100% no cliente via Canvas
- * 2D — sem round-trip de servidor, sem dependências novas.
+ * Renderiza um card de compartilhamento vertical (post 1080×1350 ou
+ * story 1080×1920) a partir de um VeritasPost. Roda 100% no cliente
+ * via Canvas 2D — sem round-trip de servidor, sem dependências novas.
  *
  * Visual: fundo preto profundo (`#0F0E0C`) com dois glows vinho em
  * gradiente radial (topo-esquerdo e base-direita), cruz dourada
@@ -9,13 +9,25 @@
  * ações, e "VERITAS DEI" em Cinzel no rodapé.
  *
  * Layout adaptativo: o card cresce conforme o conteúdo (corpo + mídia).
- * Textos curtos geram cards compactos; textos longos exibem até 14 linhas.
+ * A fonte do corpo diminui em thresholds (500/700/900 chars) e ainda
+ * cai um extra se não couber no espaço disponível — o texto sempre
+ * aparece inteiro.
  */
 
 import type { VeritasPost } from '@/lib/community/types'
 
+export type ShareCardFormat = 'post' | 'story'
+
 export const SHARE_IMAGE_WIDTH = 1080
-export const SHARE_IMAGE_HEIGHT = 1350
+export const SHARE_IMAGE_POST_HEIGHT = 1350
+export const SHARE_IMAGE_STORY_HEIGHT = 1920
+
+/** Mantido por compatibilidade — altura padrão do formato post. */
+export const SHARE_IMAGE_HEIGHT = SHARE_IMAGE_POST_HEIGHT
+
+export function getShareImageHeight(format: ShareCardFormat): number {
+  return format === 'story' ? SHARE_IMAGE_STORY_HEIGHT : SHARE_IMAGE_POST_HEIGHT
+}
 
 const BG = '#0F0E0C'
 const WINE = '107,29,42'
@@ -41,21 +53,57 @@ const CARD_PAD_X = 44
 const CARD_PAD_Y = 44
 const AVATAR_SIZE = 80
 const HEADER_BOTTOM_GAP = 32
-const BODY_LINE_HEIGHT = 44
-const BODY_MAX_LINES = 14
 const ACTIONS_HEIGHT = 44
 const BODY_ACTIONS_GAP = 32
 const MEDIA_BODY_GAP = 24
 const MEDIA_HEIGHT = 420
 
-function loadImage(url: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-    img.onload = () => resolve(img)
-    img.onerror = () => reject(new Error('image load failed'))
-    img.src = url
-  })
+// Tipografia do corpo — base 30px, diminui 1px a cada threshold de
+// tamanho e pode cair mais via auto-fit se ainda não couber.
+const BODY_BASE_SIZE = 30
+const BODY_MIN_SIZE = 18
+/** Razão altura-da-linha / tamanho da fonte (44/30 ≈ 1.467). */
+const BODY_LINE_RATIO = 44 / 30
+
+/** Imagem carregada pronta pra `ctx.drawImage` com width/height. */
+type DrawableImage = (CanvasImageSource & { width: number; height: number })
+
+/**
+ * Carrega uma imagem pronta pra desenhar no canvas. Usa fetch+blob+
+ * ImageBitmap primeiro — isso contorna o bug conhecido em que o
+ * browser cacheia a imagem sem headers CORS quando ela foi vista
+ * antes em um `<img>` normal (e rejeita o load quando se seta
+ * `crossOrigin='anonymous'` depois).
+ */
+async function loadImage(url: string): Promise<DrawableImage> {
+  try {
+    const res = await fetch(url, { mode: 'cors', credentials: 'omit', cache: 'reload' })
+    if (!res.ok) throw new Error(`http_${res.status}`)
+    const blob = await res.blob()
+    if (typeof createImageBitmap === 'function') {
+      return await createImageBitmap(blob)
+    }
+    const objUrl = URL.createObjectURL(blob)
+    try {
+      return await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image()
+        img.onload = () => resolve(img)
+        img.onerror = () => reject(new Error('blob_image_failed'))
+        img.src = objUrl
+      })
+    } finally {
+      setTimeout(() => URL.revokeObjectURL(objUrl), 1000)
+    }
+  } catch {
+    // Fallback: <img crossOrigin> direto.
+    return await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => resolve(img)
+      img.onerror = () => reject(new Error('image_load_failed'))
+      img.src = url
+    })
+  }
 }
 
 function roundedRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
@@ -274,40 +322,58 @@ async function drawMediaGrid(
 
 export interface RenderShareCardOptions {
   post: VeritasPost
+  /** 'post' = 1080×1350 (default), 'story' = 1080×1920. */
+  format?: ShareCardFormat
 }
 
-export async function renderShareCard({ post }: RenderShareCardOptions): Promise<Blob> {
+/**
+ * Descobre fonte e altura-de-linha do corpo a partir do tamanho do
+ * texto. Regra: base 30px; −1px em 500, 700 e 900 chars.
+ * O auto-fit depois pode reduzir ainda mais até caber.
+ */
+function initialBodySize(textLength: number): number {
+  let size = BODY_BASE_SIZE
+  if (textLength >= 500) size -= 1
+  if (textLength >= 700) size -= 1
+  if (textLength >= 900) size -= 1
+  return size
+}
+
+export async function renderShareCard({ post, format = 'post' }: RenderShareCardOptions): Promise<Blob> {
   await ensureFontsReady()
+
+  const height = getShareImageHeight(format)
 
   const canvas = document.createElement('canvas')
   canvas.width = SHARE_IMAGE_WIDTH
-  canvas.height = SHARE_IMAGE_HEIGHT
+  canvas.height = height
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('canvas_unsupported')
 
   // ── 1. Fundo base + glows vinho ─────────────────────────────────
   ctx.fillStyle = BG
-  ctx.fillRect(0, 0, SHARE_IMAGE_WIDTH, SHARE_IMAGE_HEIGHT)
+  ctx.fillRect(0, 0, SHARE_IMAGE_WIDTH, height)
 
-  const g1 = ctx.createRadialGradient(-100, -100, 40, -100, -100, 900)
+  const g1 = ctx.createRadialGradient(-100, -100, 40, -100, -100, 1100)
   g1.addColorStop(0, `rgba(${WINE},0.45)`)
   g1.addColorStop(0.6, `rgba(${WINE},0.10)`)
   g1.addColorStop(1, `rgba(${WINE},0)`)
   ctx.fillStyle = g1
-  ctx.fillRect(0, 0, SHARE_IMAGE_WIDTH, SHARE_IMAGE_HEIGHT)
+  ctx.fillRect(0, 0, SHARE_IMAGE_WIDTH, height)
 
   const g2 = ctx.createRadialGradient(
-    SHARE_IMAGE_WIDTH + 100, SHARE_IMAGE_HEIGHT + 80, 40,
-    SHARE_IMAGE_WIDTH + 100, SHARE_IMAGE_HEIGHT + 80, 950,
+    SHARE_IMAGE_WIDTH + 100, height + 80, 40,
+    SHARE_IMAGE_WIDTH + 100, height + 80, 1150,
   )
   g2.addColorStop(0, `rgba(${WINE},0.40)`)
   g2.addColorStop(0.6, `rgba(${WINE},0.08)`)
   g2.addColorStop(1, `rgba(${WINE},0)`)
   ctx.fillStyle = g2
-  ctx.fillRect(0, 0, SHARE_IMAGE_WIDTH, SHARE_IMAGE_HEIGHT)
+  ctx.fillRect(0, 0, SHARE_IMAGE_WIDTH, height)
 
   // ── 2. Cruz discreta no topo ────────────────────────────────────
-  drawCross(ctx, SHARE_IMAGE_WIDTH / 2, 110, 56)
+  const crossY = format === 'story' ? 150 : 110
+  drawCross(ctx, SHARE_IMAGE_WIDTH / 2, crossY, 56)
 
   // ── 3. Medições pra altura adaptativa do card ──────────────────
   const bodyMaxW = CARD_W - CARD_PAD_X * 2
@@ -317,14 +383,57 @@ export async function renderShareCard({ post }: RenderShareCardOptions): Promise
     .replace(/~~(.+?)~~/g, '$1')
     .replace(/(?<![*\w])\*([^\n*]+?)\*(?!\w)/g, '$1')
 
-  const bodyFont = '400 30px Poppins, system-ui, sans-serif'
-  const bodyLines = plainBody.trim()
-    ? measureLines(ctx, plainBody, bodyFont, bodyMaxW, BODY_MAX_LINES)
-    : []
-
   const hasMedia = post.media.length > 0
-  const bodyHeight = bodyLines.length * BODY_LINE_HEIGHT
   const mediaHeight = hasMedia ? MEDIA_HEIGHT : 0
+
+  // Espaço vertical útil pro card dentro do quadro (entre cruz e rodapé).
+  const topBound = format === 'story' ? 260 : 180
+  const bottomBound = height - (format === 'story' ? 160 : 140)
+  const available = bottomBound - topBound
+
+  // Espaço máximo que o corpo pode ocupar dentro do card.
+  const nonBodyHeight =
+    CARD_PAD_Y * 2
+    + AVATAR_SIZE
+    + HEADER_BOTTOM_GAP
+    + (hasMedia ? MEDIA_BODY_GAP + mediaHeight : 0)
+    + BODY_ACTIONS_GAP
+    + ACTIONS_HEIGHT
+  const maxBodyHeight = Math.max(0, available - nonBodyHeight)
+
+  // Descobre fonte/altura-de-linha + nº de linhas, encolhendo até caber.
+  let bodySize = initialBodySize(plainBody.length)
+  let bodyLineHeight = Math.round(bodySize * BODY_LINE_RATIO)
+  let bodyFont = `400 ${bodySize}px Poppins, system-ui, sans-serif`
+  let bodyLines: string[] = []
+
+  if (plainBody.trim()) {
+    // Conta total de linhas necessárias (sem truncar).
+    const measureAll = (size: number): string[] => {
+      const font = `400 ${size}px Poppins, system-ui, sans-serif`
+      return measureLines(ctx, plainBody, font, bodyMaxW, 9999)
+    }
+
+    bodyLines = measureAll(bodySize)
+    // Se não cabe no espaço reservado, diminui 1px até caber (ou min).
+    while (
+      bodyLines.length * Math.round(bodySize * BODY_LINE_RATIO) > maxBodyHeight
+      && bodySize > BODY_MIN_SIZE
+    ) {
+      bodySize -= 1
+      bodyLines = measureAll(bodySize)
+    }
+    bodyLineHeight = Math.round(bodySize * BODY_LINE_RATIO)
+    bodyFont = `400 ${bodySize}px Poppins, system-ui, sans-serif`
+
+    // Salvaguarda: se mesmo no mínimo excedeu, limita com reticências.
+    const maxLinesAtMin = Math.max(1, Math.floor(maxBodyHeight / bodyLineHeight))
+    if (bodyLines.length > maxLinesAtMin) {
+      bodyLines = measureLines(ctx, plainBody, bodyFont, bodyMaxW, maxLinesAtMin)
+    }
+  }
+
+  const bodyHeight = bodyLines.length * bodyLineHeight
   const mediaSpacing = hasMedia && bodyLines.length > 0 ? MEDIA_BODY_GAP : 0
 
   const cardH =
@@ -338,10 +447,6 @@ export async function renderShareCard({ post }: RenderShareCardOptions): Promise
     + ACTIONS_HEIGHT
 
   const cardX = (SHARE_IMAGE_WIDTH - CARD_W) / 2
-  // Centraliza verticalmente entre cruz e rodapé.
-  const topBound = 180
-  const bottomBound = SHARE_IMAGE_HEIGHT - 140
-  const available = bottomBound - topBound
   const cardY = topBound + Math.max(0, (available - cardH) / 2)
 
   // ── 4. Card base ────────────────────────────────────────────────
@@ -422,7 +527,7 @@ export async function renderShareCard({ post }: RenderShareCardOptions): Promise
       x: bodyX,
       y: bodyY,
       maxWidth: bodyMaxW,
-      lineHeight: BODY_LINE_HEIGHT,
+      lineHeight: bodyLineHeight,
       font: bodyFont,
       color: TEXT_PRIMARY,
     })
@@ -463,7 +568,7 @@ export async function renderShareCard({ post }: RenderShareCardOptions): Promise
   }
 
   // ── 10. Rodapé ──────────────────────────────────────────────────
-  const footerY = SHARE_IMAGE_HEIGHT - 70
+  const footerY = height - 70
   const lineY = footerY - 30
   const lineWidth = 280
   const lineX = (SHARE_IMAGE_WIDTH - lineWidth) / 2
