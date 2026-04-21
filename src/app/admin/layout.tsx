@@ -24,6 +24,7 @@ const ADMIN_NAV = [
   { href: '/admin/conteudos',    icon: FileText,       label: 'Conteúdos' },
   { href: '/admin/oracoes',      icon: BookOpenText,   label: 'Orações' },
   { href: '/admin/trilhas',      icon: GraduationCap,  label: 'Trilhas' },
+  { href: '/admin/provas',       icon: GraduationCap,  label: 'Provas' },
   { href: '/admin/aprovacoes',   icon: CheckSquare,    label: 'Aprovações' },
   { href: '/admin/ia-knowledge', icon: Brain,          label: 'Base IA' },
   { href: '/admin/embeddings',   icon: Database,       label: 'Embeddings' },
