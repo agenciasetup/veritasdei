@@ -1,5 +1,7 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import StudyLessonsTree from './StudyLessonsTree'
 import type { PillarTreeNode } from '@/lib/study/usePillarTree'
@@ -36,11 +38,24 @@ export default function StudyLessonsSidebar({
   open,
   onClose,
 }: Props) {
+  const [mounted, setMounted] = useState(false)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setMounted(true), [])
+
+  useEffect(() => {
+    if (variant !== 'drawer' || !open) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [variant, open])
+
   if (variant === 'drawer') {
-    if (!open) return null
-    return (
+    if (!open || !mounted) return null
+    const drawer = (
       <div
-        className="fixed inset-0 z-[60] flex"
+        className="fixed inset-0 z-[200] flex"
         role="dialog"
         aria-modal="true"
         aria-label="Índice de lições"
@@ -96,6 +111,7 @@ export default function StudyLessonsSidebar({
         </aside>
       </div>
     )
+    return createPortal(drawer, document.body)
   }
 
   // inline

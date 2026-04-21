@@ -1,5 +1,7 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Crown } from 'lucide-react'
 import { useStudyGroupMembers, type StudyGroup } from '@/lib/study/useStudyGroups'
 
@@ -10,10 +12,22 @@ interface Props {
 
 export default function StudyGroupMembersDrawer({ group, onClose }: Props) {
   const { members, loading } = useStudyGroupMembers(group.id)
+  const [mounted, setMounted] = useState(false)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setMounted(true), [])
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [])
 
-  return (
+  if (!mounted) return null
+
+  const overlay = (
     <div
-      className="fixed inset-0 z-[60] flex"
+      className="fixed inset-0 z-[200] flex"
       role="dialog"
       aria-modal="true"
       aria-label={`Membros de ${group.name}`}
@@ -145,4 +159,6 @@ export default function StudyGroupMembersDrawer({ group, onClose }: Props) {
       </aside>
     </div>
   )
+
+  return createPortal(overlay, document.body)
 }

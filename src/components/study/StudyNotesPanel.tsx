@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   X,
   Send,
@@ -50,6 +51,10 @@ export default function StudyNotesPanel({
   )
   const { groups } = useMyStudyGroups()
 
+  const [mounted, setMounted] = useState(false)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setMounted(true), [])
+
   const [draft, setDraft] = useState('')
   const [draftVisibility, setDraftVisibility] = useState<NoteVisibility>('private')
   const [draftGroupId, setDraftGroupId] = useState<string | null>(null)
@@ -70,14 +75,19 @@ export default function StudyNotesPanel({
     }
   }, [open])
 
-  // Escape fecha o modal.
+  // Escape fecha o modal + lock scroll enquanto aberto.
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+    }
   }, [open, onClose])
 
   const firstGroupId = groups[0]?.id ?? null
@@ -88,7 +98,7 @@ export default function StudyNotesPanel({
     }
   }, [draftVisibility, draftGroupId, firstGroupId])
 
-  if (!open) return null
+  if (!open || !mounted) return null
 
   async function handleCreate() {
     if (!draft.trim()) return
@@ -126,9 +136,9 @@ export default function StudyNotesPanel({
 
   const canUseGroup = groups.length > 0
 
-  return (
+  const overlay = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 z-[200] flex items-center justify-center p-0 sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-label="Anotações e discussão"
@@ -295,6 +305,8 @@ export default function StudyNotesPanel({
       </div>
     </div>
   )
+
+  return createPortal(overlay, document.body)
 }
 
 /* ────────────────────────────────────────────────────────────────────── */
