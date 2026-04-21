@@ -15,10 +15,10 @@ import PullToRefresh from '@/components/mobile/PullToRefresh'
 /**
  * Hub de aprendizado.
  *
- * Todos os tiles doutrinais agora apontam para `/estudo/[pilar]` —
- * rota canônica do StudyReader com deepdive + anotações + quiz.
- * As rotas antigas (`/dogmas`, etc.) continuam funcionando como
- * listagem simples, mas o hub promove a nova experiência.
+ * Todos os tiles doutrinais apontam para `/estudo/[pilar]` — rota
+ * canônica do StudyReader com deepdive + anotações + quiz. Rotas
+ * antigas (`/dogmas`, etc.) passam por 308 permanent redirect em
+ * next.config.
  */
 export default function AprenderContent() {
   const router = useRouter()
