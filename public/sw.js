@@ -13,7 +13,7 @@
  * cache antigo são limpas no `activate`.
  */
 
-const CACHE_VERSION = 'v3'
+const CACHE_VERSION = 'v4'
 const CACHE_NAME = `veritasdei-app-${CACHE_VERSION}`
 const LITURGIA_CACHE = `veritasdei-liturgia-${CACHE_VERSION}`
 
@@ -135,11 +135,21 @@ async function cacheFirst(request) {
       .catch(() => {})
     return cached
   }
-  const response = await fetch(request)
-  if (response && response.ok) {
-    cache.put(request, response.clone())
+  // Nunca rejeita — se a rede falhar, devolve um 503 discreto para o
+  // navegador não estourar "uncaught in promise" e não quebrar o
+  // event.respondWith() do SW.
+  try {
+    const response = await fetch(request)
+    if (response && response.ok) {
+      cache.put(request, response.clone())
+    }
+    return response
+  } catch {
+    return new Response('', {
+      status: 503,
+      statusText: 'Offline and asset not cached',
+    })
   }
-  return response
 }
 
 async function staleWhileRevalidate(request) {
