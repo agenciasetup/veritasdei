@@ -136,6 +136,24 @@ const nextConfig: NextConfig = {
       { source: '/aprender', destination: '/formacao', permanent: true },
       // Hub: Igrejas (renome de Paróquias)
       { source: '/paroquias', destination: '/igrejas', permanent: true },
+
+      // Pilares doutrinais: rota canônica é /estudo/[pilar] (StudyReader
+      // com deepdive + anotações + quiz). As rotas estáticas antigas
+      // eram wrappers de DynamicContentView puxando dos MESMOS
+      // content_groups — mesma fonte, UX inferior. 308 preserva método
+      // e cache de PWA/bookmarks.
+      { source: '/dogmas', destination: '/estudo/dogmas', permanent: true },
+      { source: '/dogmas/:path*', destination: '/estudo/dogmas/:path*', permanent: true },
+      { source: '/sacramentos', destination: '/estudo/sacramentos', permanent: true },
+      { source: '/sacramentos/:path*', destination: '/estudo/sacramentos/:path*', permanent: true },
+      { source: '/mandamentos', destination: '/estudo/mandamentos', permanent: true },
+      { source: '/mandamentos/:path*', destination: '/estudo/mandamentos/:path*', permanent: true },
+      { source: '/preceitos', destination: '/estudo/preceitos', permanent: true },
+      { source: '/preceitos/:path*', destination: '/estudo/preceitos/:path*', permanent: true },
+      { source: '/obras-misericordia', destination: '/estudo/obras-misericordia', permanent: true },
+      { source: '/obras-misericordia/:path*', destination: '/estudo/obras-misericordia/:path*', permanent: true },
+      { source: '/virtudes-pecados', destination: '/estudo/virtudes-pecados', permanent: true },
+      { source: '/virtudes-pecados/:path*', destination: '/estudo/virtudes-pecados/:path*', permanent: true },
     ]
   },
 }

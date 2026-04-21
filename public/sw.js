@@ -47,12 +47,7 @@ const NETWORK_FIRST_PATTERNS = [
 const CACHE_FIRST_PATTERNS = [
   /^\/oracoes(\/|$)/,
   /^\/exame-consciencia(\/|$)/,
-  /^\/mandamentos(\/|$)/,
-  /^\/preceitos(\/|$)/,
-  /^\/virtudes-pecados(\/|$)/,
-  /^\/obras-misericordia(\/|$)/,
-  /^\/dogmas(\/|$)/,
-  /^\/sacramentos(\/|$)/,
+  /^\/estudo\/(dogmas|sacramentos|mandamentos|preceitos|virtudes-pecados|obras-misericordia)(\/|$)/,
   /^\/catecismo-pio-x(\/|$)/,
   /^\/sao-tomas(\/|$)/,
 ]

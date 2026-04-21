@@ -64,25 +64,25 @@ export default function BibliotecaPage() {
               subtitle="Perguntas e respostas da doutrina"
             />
             <HubTile
-              href="/mandamentos"
+              href="/estudo/mandamentos"
               icon={<Scale className="w-6 h-6" />}
               title="Dez Mandamentos"
               subtitle="A lei de Deus em detalhe"
             />
             <HubTile
-              href="/preceitos"
+              href="/estudo/preceitos"
               icon={<Shield className="w-6 h-6" />}
               title="Preceitos da Igreja"
               subtitle="Obrigações do fiel católico"
             />
             <HubTile
-              href="/virtudes-pecados"
+              href="/estudo/virtudes-pecados"
               icon={<Heart className="w-6 h-6" />}
               title="Virtudes e pecados"
               subtitle="Teologais, cardeais, capitais"
             />
             <HubTile
-              href="/obras-misericordia"
+              href="/estudo/obras-misericordia"
               icon={<HandHeart className="w-6 h-6" />}
               title="Obras de Misericórdia"
               subtitle="Corporais e espirituais"
