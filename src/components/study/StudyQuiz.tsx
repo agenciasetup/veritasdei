@@ -277,6 +277,31 @@ function Taking({
   answeredCount: number
   onFinish: () => void
 }) {
+  function handleSubmitClick() {
+    if (!allAnswered) {
+      // Localiza a primeira não-respondida e rola pra ela em vez de deixar
+      // o usuário tentando descobrir por que o botão "não funciona".
+      const unanswered = questions.find(
+        (q) => !(answers[q.id] && answers[q.id].length > 0),
+      )
+      if (unanswered) {
+        const el = document.getElementById(`quiz-q-${unanswered.id}`)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          el.animate(
+            [
+              { boxShadow: '0 0 0 2px rgba(200,139,124,0.6)' },
+              { boxShadow: '0 0 0 2px rgba(200,139,124,0)' },
+            ],
+            { duration: 1400, iterations: 1 },
+          )
+        }
+      }
+      return
+    }
+    onFinish()
+  }
+
   return (
     <div className="space-y-6">
       <div className="text-xs tracking-[0.15em] uppercase text-center" style={{ color: 'var(--text-muted)' }}>
@@ -285,13 +310,15 @@ function Taking({
 
       {questions.map((q, idx) => {
         const selected = answers[q.id] || []
+        const isAnswered = selected.length > 0
         return (
           <div
             key={q.id}
+            id={`quiz-q-${q.id}`}
             className="rounded-xl p-5"
             style={{
               background: 'rgba(20,18,14,0.5)',
-              border: '1px solid rgba(201,168,76,0.1)',
+              border: `1px solid ${isAnswered ? 'rgba(201,168,76,0.1)' : 'rgba(200,139,124,0.25)'}`,
             }}
           >
             <p
@@ -302,7 +329,7 @@ function Taking({
                 fontWeight: 500,
               }}
             >
-              <span style={{ color: 'var(--gold)' }}>{idx + 1}.</span> {q.prompt}
+              <span style={{ color: isAnswered ? 'var(--gold)' : '#C88B7C' }}>{idx + 1}.</span> {q.prompt}
             </p>
             <div className="space-y-2">
               {q.options.map((opt) => {
@@ -334,20 +361,41 @@ function Taking({
         )
       })}
 
-      <button
-        type="button"
-        onClick={onFinish}
-        disabled={!allAnswered}
-        className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl disabled:opacity-40"
+      <div className="sticky bottom-0 -mx-6 px-6 py-3 backdrop-blur-md"
         style={{
-          background: 'linear-gradient(135deg, #C9A84C, #A88B3A)',
-          color: '#0F0E0C',
-          fontFamily: 'Cinzel, serif',
-          fontWeight: 600,
+          background: 'rgba(15,14,12,0.9)',
+          borderTop: '1px solid rgba(201,168,76,0.12)',
         }}
       >
-        Enviar respostas
-      </button>
+        <div className="flex items-center justify-between gap-3">
+          <span
+            className="text-xs"
+            style={{
+              color: allAnswered ? 'var(--gold)' : 'var(--text-muted)',
+              fontFamily: 'Poppins, sans-serif',
+            }}
+          >
+            {allAnswered
+              ? 'Tudo respondido — pode enviar'
+              : `Faltam ${questions.length - answeredCount} ${questions.length - answeredCount === 1 ? 'questão' : 'questões'}`}
+          </span>
+          <button
+            type="button"
+            onClick={handleSubmitClick}
+            aria-disabled={!allAnswered}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs tracking-wider uppercase transition-opacity"
+            style={{
+              background: 'linear-gradient(135deg, #C9A84C, #A88B3A)',
+              color: '#0F0E0C',
+              fontFamily: 'Cinzel, serif',
+              fontWeight: 600,
+              opacity: allAnswered ? 1 : 0.55,
+            }}
+          >
+            {allAnswered ? 'Enviar respostas' : 'Ir para pendentes'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
