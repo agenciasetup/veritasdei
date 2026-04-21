@@ -30,6 +30,7 @@ const ROUTE_TITLES: Array<{ prefix: string; title: string }> = [
   { prefix: '/mapa', title: 'Mapa' },
   { prefix: '/verbum', title: 'Verbum' },
   { prefix: '/meu-estudo', title: 'Meu Estudo' },
+  { prefix: '/estudo/grupos', title: 'Grupos' },
   { prefix: '/igrejas', title: 'Igrejas' },
   { prefix: '/paroquias', title: 'Igrejas' },
   { prefix: '/comunidade', title: 'Comunidade' },

@@ -56,6 +56,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/trilhas', icon: GraduationCap, label: 'Trilhas de Estudo' },
       { href: '/mapa', icon: Map, label: 'Mapa da Fé' },
       { href: '/verbum', icon: Network, label: 'Verbum' },
+      { href: '/estudo/grupos', icon: Users, label: 'Grupos de estudo' },
       { href: '/dogmas', icon: Church, label: 'Dogmas' },
       { href: '/sacramentos', icon: Droplets, label: 'Sacramentos' },
       { href: '/catecismo-pio-x', icon: BookMarked, label: 'Catecismo Pio X' },
