@@ -321,12 +321,21 @@ function PillarTopicView({
       <PillarHero title={topic.title} subtitle={topic.description} />
       <main className="relative z-10 flex-1 pb-16">
         <div className="max-w-[1200px] mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
-          {subtopics.map((sub, i) => (
+          {subtopics.map((sub, i) => {
+            const studied = isStudied(sub.id)
+            return (
             <Link
               key={sub.id}
               href={`/estudo/${pillarSlug}/${topicSlug}/${sub.slug}`}
-              className="text-left p-5 rounded-2xl fade-in active:scale-[0.99] transition-transform"
-              style={{ ...CARD_STYLE, animationDelay: `${i * 0.06}s` }}
+              className="text-left p-5 rounded-2xl fade-in active:scale-[0.99] transition-transform relative"
+              style={{
+                ...CARD_STYLE,
+                animationDelay: `${i * 0.06}s`,
+                borderColor: studied ? 'rgba(201,168,76,0.35)' : undefined,
+                background: studied
+                  ? 'linear-gradient(135deg, rgba(201,168,76,0.06), var(--surface-2))'
+                  : CARD_STYLE.background,
+              }}
             >
               {sub.subtitle ? (
                 <span
@@ -353,14 +362,15 @@ function PillarTopicView({
               <span
                 className="mt-3 inline-block text-[11px]"
                 style={{
-                  color: isStudied(sub.id) ? 'var(--accent)' : 'var(--text-3)',
+                  color: studied ? 'var(--accent)' : 'var(--text-3)',
                   fontFamily: 'var(--font-body)',
                 }}
               >
-                {isStudied(sub.id) ? '✓ estudado' : 'Abrir'}
+                {studied ? '✓ estudado' : 'Abrir'}
               </span>
             </Link>
-          ))}
+            )
+          })}
         </div>
       </main>
     </div>

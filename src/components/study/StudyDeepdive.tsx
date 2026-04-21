@@ -15,12 +15,25 @@ function meta(slug: string) {
   return SECTION_META[slug] || { icon: BookOpenCheck, label: slug.replace(/_/g, ' ') }
 }
 
-export default function StudyDeepdive({ deepdive }: { deepdive: Deepdive }) {
+interface StudyDeepdiveProps {
+  deepdive: Deepdive
+  /**
+   * Quando `2`, seções principais são renderizadas em grid 2x em lg+.
+   * Fontes (SourcesBlock) sempre span-full.
+   */
+  columns?: 1 | 2
+}
+
+export default function StudyDeepdive({ deepdive, columns = 1 }: StudyDeepdiveProps) {
   const sections = [...deepdive.sections].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+  const gridClass =
+    columns === 2
+      ? 'grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-10'
+      : 'space-y-10'
 
   return (
-    <section className="mt-12 space-y-10 fade-in">
-      <div className="text-center">
+    <section className="mt-12 fade-in">
+      <div className="text-center mb-8">
         <span
           className="inline-block px-4 py-1.5 rounded-full text-xs tracking-[0.2em] uppercase"
           style={{
@@ -34,13 +47,17 @@ export default function StudyDeepdive({ deepdive }: { deepdive: Deepdive }) {
         </span>
       </div>
 
-      {sections.map((section) => (
-        <DeepdiveBlock key={section.slug} section={section} />
-      ))}
+      <div className={gridClass}>
+        {sections.map((section) => (
+          <DeepdiveBlock key={section.slug} section={section} />
+        ))}
+      </div>
 
-      {deepdive.sources && deepdive.sources.length > 0 && (
-        <SourcesBlock sources={deepdive.sources} />
-      )}
+      {deepdive.sources && deepdive.sources.length > 0 ? (
+        <div className="mt-10">
+          <SourcesBlock sources={deepdive.sources} />
+        </div>
+      ) : null}
     </section>
   )
 }

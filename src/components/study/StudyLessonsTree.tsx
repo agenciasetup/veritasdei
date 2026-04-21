@@ -40,17 +40,20 @@ export default function StudyLessonsTree({
       const raw = window.localStorage.getItem(STORAGE_KEY(pillarSlug))
       if (raw) {
         const arr = JSON.parse(raw)
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         if (Array.isArray(arr)) setOpenTopics(new Set(arr))
       }
     } catch {
       /* ok */
     }
+     
     setHydrated(true)
   }, [pillarSlug])
 
   // Auto-expande o tópico ativo. Não fecha outros — respeita preferência do usuário.
   useEffect(() => {
     if (!activeTopicSlug) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOpenTopics((prev) => {
       if (prev.has(activeTopicSlug)) return prev
       const next = new Set(prev)

@@ -37,18 +37,22 @@ export function usePillarTree(pillarSlug: string): PillarTree {
   useEffect(() => {
     const cached = cache.get(pillarSlug)
     if (cached) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setData(cached)
+       
       setLoading(false)
       return
     }
 
     const supabase = createClient()
     if (!supabase) {
+       
       setLoading(false)
       return
     }
 
     let cancelled = false
+     
     setLoading(true)
     ;(async () => {
       const { data: groupRow } = await supabase
@@ -98,7 +102,9 @@ export function usePillarTree(pillarSlug: string): PillarTree {
       const payload = { group: groupRow as ContentGroup, topics: tree }
       cache.set(pillarSlug, payload)
       if (!cancelled) {
+         
         setData(payload)
+         
         setLoading(false)
       }
     })()
