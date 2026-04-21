@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Copy, Download, Share2, Check, Loader2, Square, Smartphone } from 'lucide-react'
+import { X, Copy, Download, Share2, Check, Loader2, Square, Smartphone, Link2 } from 'lucide-react'
 import type { VeritasPost } from '@/lib/community/types'
 import {
   renderShareCard,
@@ -21,7 +21,7 @@ interface Props {
 }
 
 type Status = 'idle' | 'rendering' | 'ready' | 'error'
-type ActionFeedback = 'copy-ok' | 'save-ok' | 'share-ok' | 'copy-err' | null
+type ActionFeedback = 'copy-ok' | 'save-ok' | 'share-ok' | 'copy-err' | 'link-ok' | 'link-err' | null
 
 export default function ShareImageModal({ post, open, onClose, onAction }: Props) {
   const [status, setStatus] = useState<Status>('idle')
@@ -93,6 +93,22 @@ export default function ShareImageModal({ post, open, onClose, onAction }: Props
       }
     } catch {
       setFeedback('copy-err')
+    }
+    setTimeout(() => setFeedback(null), 2400)
+  }
+
+  async function handleCopyLink() {
+    if (!post) return
+    const url = new URL(`/comunidade/veritas/${post.id}`, window.location.origin).toString()
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url)
+        setFeedback('link-ok')
+      } else {
+        setFeedback('link-err')
+      }
+    } catch {
+      setFeedback('link-err')
     }
     setTimeout(() => setFeedback(null), 2400)
   }
@@ -235,6 +251,23 @@ export default function ShareImageModal({ post, open, onClose, onAction }: Props
               className="w-full h-full object-contain"
             />
           )}
+        </div>
+
+        <div
+          className="px-4 pt-3 flex items-center justify-center"
+        >
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.12em] px-2 py-1 rounded-md transition-colors"
+            style={{
+              color: feedback === 'link-ok' ? '#66BB6A' : feedback === 'link-err' ? '#D94F5C' : '#8A8378',
+              fontFamily: 'Poppins, sans-serif',
+            }}
+          >
+            {feedback === 'link-ok' ? <Check className="w-3.5 h-3.5" strokeWidth={1.75} /> : <Link2 className="w-3.5 h-3.5" strokeWidth={1.5} />}
+            {feedback === 'link-ok' ? 'Link copiado' : feedback === 'link-err' ? 'Sem suporte' : 'Copiar link do post'}
+          </button>
         </div>
 
         <div

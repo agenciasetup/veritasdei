@@ -68,21 +68,55 @@ const BODY_LINE_RATIO = 44 / 30
 /** Imagem carregada pronta pra `ctx.drawImage` com width/height. */
 type DrawableImage = (CanvasImageSource & { width: number; height: number })
 
+/** Adiciona um query param pra forçar request novo e evitar cache de response sem CORS. */
+function withCorsBust(url: string): string {
+  const sep = url.includes('?') ? '&' : '?'
+  return `${url}${sep}_vdcors=1`
+}
+
 /**
- * Carrega uma imagem pronta pra desenhar no canvas. Usa fetch+blob+
- * ImageBitmap primeiro — isso contorna o bug conhecido em que o
- * browser cacheia a imagem sem headers CORS quando ela foi vista
- * antes em um `<img>` normal (e rejeita o load quando se seta
- * `crossOrigin='anonymous'` depois).
+ * Carrega uma imagem pronta pra desenhar no canvas.
+ *
+ * Estratégia em camadas pra contornar o bug clássico: quando o
+ * browser cacheia a imagem via `<img>` normal (sem Origin header), o
+ * response entra no cache sem `Access-Control-Allow-Origin`. Uma
+ * request posterior com `crossOrigin='anonymous'` falha no CORS
+ * check mesmo quando o CDN enviaria os headers normalmente.
+ *
+ * Solução: 1) adiciona `?_vdcors=1` pra bypassar o cache existente;
+ * 2) usa `<img crossOrigin='anonymous'>` — caminho direto e
+ * compatível com AVIF/WebP; 3) se falhar, cai no fetch+
+ * createImageBitmap; 4) por último, fetch+blob URL via `<img>`.
  */
 async function loadImage(url: string): Promise<DrawableImage> {
+  const bustedUrl = withCorsBust(url)
+
+  // Tentativa 1: <img crossOrigin='anonymous'> com cache-bust.
   try {
-    const res = await fetch(url, { mode: 'cors', credentials: 'omit', cache: 'reload' })
+    return await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => resolve(img)
+      img.onerror = () => reject(new Error('crossorigin_img_failed'))
+      img.src = bustedUrl
+    })
+  } catch (e1) {
+    if (typeof console !== 'undefined') console.warn('[share-card] crossOrigin img falhou, tentando fetch', bustedUrl, e1)
+  }
+
+  // Tentativa 2: fetch + createImageBitmap.
+  try {
+    const res = await fetch(bustedUrl, { mode: 'cors', credentials: 'omit' })
     if (!res.ok) throw new Error(`http_${res.status}`)
     const blob = await res.blob()
     if (typeof createImageBitmap === 'function') {
-      return await createImageBitmap(blob)
+      try {
+        return await createImageBitmap(blob)
+      } catch (bmpErr) {
+        if (typeof console !== 'undefined') console.warn('[share-card] createImageBitmap falhou, tentando blob URL', bmpErr)
+      }
     }
+    // Tentativa 3: blob URL via <img>.
     const objUrl = URL.createObjectURL(blob)
     try {
       return await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -92,17 +126,11 @@ async function loadImage(url: string): Promise<DrawableImage> {
         img.src = objUrl
       })
     } finally {
-      setTimeout(() => URL.revokeObjectURL(objUrl), 1000)
+      setTimeout(() => URL.revokeObjectURL(objUrl), 2000)
     }
-  } catch {
-    // Fallback: <img crossOrigin> direto.
-    return await new Promise<HTMLImageElement>((resolve, reject) => {
-      const img = new Image()
-      img.crossOrigin = 'anonymous'
-      img.onload = () => resolve(img)
-      img.onerror = () => reject(new Error('image_load_failed'))
-      img.src = url
-    })
+  } catch (e2) {
+    if (typeof console !== 'undefined') console.warn('[share-card] todas as tentativas falharam', bustedUrl, e2)
+    throw e2
   }
 }
 
@@ -272,10 +300,48 @@ async function ensureFontsReady(): Promise<void> {
   }
 }
 
+/** Retângulo pra uma célula do grid em coordenadas absolutas. */
+interface GridCell { x: number; y: number; w: number; h: number }
+
 /**
- * Desenha até 2 imagens de mídia no grid dentro do card. Carrega em
- * paralelo com crossOrigin anônimo; se uma falhar, desenha um retângulo
- * translúcido no lugar pra manter o layout.
+ * Divide um retângulo w×h em até 4 células com gap de 12px. Layouts:
+ * 1 = full · 2 = 2 col · 3 = big left + 2 stacked right · 4 = 2×2.
+ */
+function computeMediaCells(x: number, y: number, w: number, h: number, count: number): GridCell[] {
+  const gap = 12
+  if (count <= 1) return [{ x, y, w, h }]
+  if (count === 2) {
+    const cellW = (w - gap) / 2
+    return [
+      { x, y, w: cellW, h },
+      { x: x + cellW + gap, y, w: cellW, h },
+    ]
+  }
+  if (count === 3) {
+    const leftW = (w - gap) / 2
+    const rightW = w - gap - leftW
+    const rightH = (h - gap) / 2
+    return [
+      { x, y, w: leftW, h },
+      { x: x + leftW + gap, y, w: rightW, h: rightH },
+      { x: x + leftW + gap, y: y + rightH + gap, w: rightW, h: rightH },
+    ]
+  }
+  // 4+
+  const cellW = (w - gap) / 2
+  const cellH = (h - gap) / 2
+  return [
+    { x, y, w: cellW, h: cellH },
+    { x: x + cellW + gap, y, w: cellW, h: cellH },
+    { x, y: y + cellH + gap, w: cellW, h: cellH },
+    { x: x + cellW + gap, y: y + cellH + gap, w: cellW, h: cellH },
+  ]
+}
+
+/**
+ * Desenha até 4 imagens de mídia no grid dentro do card. Carrega em
+ * paralelo; se uma falhar, desenha um retângulo translúcido no lugar
+ * pra manter o layout.
  */
 async function drawMediaGrid(
   ctx: CanvasRenderingContext2D,
@@ -285,38 +351,159 @@ async function drawMediaGrid(
   width: number,
   height: number,
 ) {
-  const gap = 12
-  const count = Math.min(urls.length, 2)
+  const count = Math.min(urls.length, 4)
   if (count === 0) return
 
-  const cellW = count === 1 ? width : (width - gap) / 2
-  const cellH = height
-
+  const cells = computeMediaCells(x, y, width, height, count)
   const images = await Promise.all(urls.slice(0, count).map(url => loadImage(url).catch(() => null)))
 
   for (let i = 0; i < count; i++) {
-    const cx = x + i * (cellW + gap)
+    const cell = cells[i]
     ctx.save()
-    roundedRectPath(ctx, cx, y, cellW, cellH, 16)
+    roundedRectPath(ctx, cell.x, cell.y, cell.w, cell.h, 16)
     ctx.clip()
     const img = images[i]
     if (img) {
-      // Cover: escalona pra preencher cellW×cellH preservando aspect.
-      const scale = Math.max(cellW / img.width, cellH / img.height)
+      // Cover: escalona pra preencher cell.w×cell.h preservando aspect.
+      const scale = Math.max(cell.w / img.width, cell.h / img.height)
       const drawW = img.width * scale
       const drawH = img.height * scale
-      const dx = cx + (cellW - drawW) / 2
-      const dy = y + (cellH - drawH) / 2
+      const dx = cell.x + (cell.w - drawW) / 2
+      const dy = cell.y + (cell.h - drawH) / 2
       ctx.drawImage(img, dx, dy, drawW, drawH)
     } else {
       ctx.fillStyle = 'rgba(201,168,76,0.08)'
-      ctx.fillRect(cx, y, cellW, cellH)
+      ctx.fillRect(cell.x, cell.y, cell.w, cell.h)
     }
     ctx.restore()
     ctx.strokeStyle = 'rgba(201,168,76,0.14)'
     ctx.lineWidth = 1
-    roundedRectPath(ctx, cx, y, cellW, cellH, 16)
+    roundedRectPath(ctx, cell.x, cell.y, cell.w, cell.h, 16)
     ctx.stroke()
+  }
+}
+
+// ── Parent compacto (quote/repost) ──────────────────────────────
+const PARENT_PAD_X = 24
+const PARENT_PAD_Y = 20
+const PARENT_AVATAR = 44
+const PARENT_HEADER_BOTTOM = 14
+const PARENT_BODY_SIZE = 22
+const PARENT_LINE_HEIGHT = 32
+const PARENT_MAX_LINES = 4
+
+interface ParentMiniDimensions {
+  width: number
+  height: number
+}
+
+function measureParentMini(
+  ctx: CanvasRenderingContext2D,
+  parent: NonNullable<VeritasPost['parent']>,
+  width: number,
+): ParentMiniDimensions {
+  const textMaxW = width - PARENT_PAD_X * 2
+  const plain = parent.body
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/__(.+?)__/g, '$1')
+    .replace(/~~(.+?)~~/g, '$1')
+    .replace(/(?<![*\w])\*([^\n*]+?)\*(?!\w)/g, '$1')
+  const font = `400 ${PARENT_BODY_SIZE}px Poppins, system-ui, sans-serif`
+  const lines = plain.trim()
+    ? measureLines(ctx, plain, font, textMaxW, PARENT_MAX_LINES)
+    : []
+  const hasMedia = parent.media.length > 0
+  const mediaHint = hasMedia ? 20 : 0
+  const height =
+    PARENT_PAD_Y * 2
+    + PARENT_AVATAR
+    + PARENT_HEADER_BOTTOM
+    + lines.length * PARENT_LINE_HEIGHT
+    + mediaHint
+  return { width, height }
+}
+
+function drawParentMini(
+  ctx: CanvasRenderingContext2D,
+  parent: NonNullable<VeritasPost['parent']>,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  avatar: DrawableImage | null,
+) {
+  // Moldura do mini-card.
+  ctx.fillStyle = 'rgba(14,12,10,0.55)'
+  roundedRectPath(ctx, x, y, width, height, 18)
+  ctx.fill()
+  ctx.strokeStyle = 'rgba(201,168,76,0.22)'
+  ctx.lineWidth = 1
+  ctx.stroke()
+
+  // Avatar do autor do parent.
+  const avX = x + PARENT_PAD_X
+  const avY = y + PARENT_PAD_Y
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(avX + PARENT_AVATAR / 2, avY + PARENT_AVATAR / 2, PARENT_AVATAR / 2, 0, Math.PI * 2)
+  ctx.clip()
+  if (avatar) {
+    const scale = Math.max(PARENT_AVATAR / avatar.width, PARENT_AVATAR / avatar.height)
+    const drawW = avatar.width * scale
+    const drawH = avatar.height * scale
+    ctx.drawImage(avatar, avX + (PARENT_AVATAR - drawW) / 2, avY + (PARENT_AVATAR - drawH) / 2, drawW, drawH)
+  } else {
+    ctx.fillStyle = 'rgba(201,168,76,0.12)'
+    ctx.fillRect(avX, avY, PARENT_AVATAR, PARENT_AVATAR)
+  }
+  ctx.restore()
+
+  // Nome + handle inline.
+  const nameX = avX + PARENT_AVATAR + 14
+  const name = parent.author.name ?? 'Membro Veritas'
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'top'
+  ctx.font = '600 22px Poppins, system-ui, sans-serif'
+  ctx.fillStyle = TEXT_PRIMARY
+  ctx.fillText(name, nameX, avY + 2)
+
+  const nameWidth = ctx.measureText(name).width
+  const handle = parent.author.public_handle
+    ? `@${parent.author.public_handle}`
+    : `#${parent.author.user_number ?? ''}`
+  ctx.font = '400 18px Poppins, system-ui, sans-serif'
+  ctx.fillStyle = TEXT_MUTED
+  ctx.fillText(handle, nameX + nameWidth + 10, avY + 6)
+
+  // Corpo.
+  const textMaxW = width - PARENT_PAD_X * 2
+  const plain = parent.body
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/__(.+?)__/g, '$1')
+    .replace(/~~(.+?)~~/g, '$1')
+    .replace(/(?<![*\w])\*([^\n*]+?)\*(?!\w)/g, '$1')
+  const font = `400 ${PARENT_BODY_SIZE}px Poppins, system-ui, sans-serif`
+  const lines = plain.trim()
+    ? measureLines(ctx, plain, font, textMaxW, PARENT_MAX_LINES)
+    : []
+  if (lines.length > 0) {
+    drawLines(ctx, lines, {
+      x: x + PARENT_PAD_X,
+      y: avY + PARENT_AVATAR + PARENT_HEADER_BOTTOM,
+      maxWidth: textMaxW,
+      lineHeight: PARENT_LINE_HEIGHT,
+      font,
+      color: 'rgba(242,237,228,0.88)',
+    })
+  }
+
+  // Indicador de mídia no parent (se houver).
+  if (parent.media.length > 0) {
+    const hintY = avY + PARENT_AVATAR + PARENT_HEADER_BOTTOM + lines.length * PARENT_LINE_HEIGHT + 2
+    ctx.font = '500 16px Poppins, system-ui, sans-serif'
+    ctx.fillStyle = 'rgba(201,168,76,0.75)'
+    const label = parent.media.length === 1 ? '[ imagem ]' : `[ ${parent.media.length} imagens ]`
+    ctx.fillText(label, x + PARENT_PAD_X, hintY)
   }
 }
 
@@ -385,10 +572,15 @@ export async function renderShareCard({ post, format = 'post' }: RenderShareCard
 
   const hasMedia = post.media.length > 0
   const mediaHeight = hasMedia ? MEDIA_HEIGHT : 0
+  const hasParent = post.kind === 'quote' && post.parent != null
+  const parentDims = hasParent
+    ? measureParentMini(ctx, post.parent!, CARD_W - CARD_PAD_X * 2)
+    : null
+  const parentGap = hasParent ? 20 : 0
 
   // Espaço vertical útil pro card dentro do quadro (entre cruz e rodapé).
   const topBound = format === 'story' ? 260 : 180
-  const bottomBound = height - (format === 'story' ? 160 : 140)
+  const bottomBound = height - (format === 'story' ? 190 : 170)
   const available = bottomBound - topBound
 
   // Espaço máximo que o corpo pode ocupar dentro do card.
@@ -397,6 +589,7 @@ export async function renderShareCard({ post, format = 'post' }: RenderShareCard
     + AVATAR_SIZE
     + HEADER_BOTTOM_GAP
     + (hasMedia ? MEDIA_BODY_GAP + mediaHeight : 0)
+    + (parentDims ? parentGap + parentDims.height : 0)
     + BODY_ACTIONS_GAP
     + ACTIONS_HEIGHT
   const maxBodyHeight = Math.max(0, available - nonBodyHeight)
@@ -435,12 +628,16 @@ export async function renderShareCard({ post, format = 'post' }: RenderShareCard
 
   const bodyHeight = bodyLines.length * bodyLineHeight
   const mediaSpacing = hasMedia && bodyLines.length > 0 ? MEDIA_BODY_GAP : 0
+  const parentBlockSpacing = parentDims ? parentGap : 0
+  const parentBlockHeight = parentDims ? parentDims.height : 0
 
   const cardH =
     CARD_PAD_Y * 2
     + AVATAR_SIZE
     + HEADER_BOTTOM_GAP
     + bodyHeight
+    + parentBlockSpacing
+    + parentBlockHeight
     + mediaSpacing
     + mediaHeight
     + BODY_ACTIONS_GAP
@@ -533,10 +730,24 @@ export async function renderShareCard({ post, format = 'post' }: RenderShareCard
     })
   }
 
+  // ── 7b. Parent compacto (quote) ─────────────────────────────────
+  const parentY = bodyY + bodyHeight + parentBlockSpacing
+  if (parentDims && post.parent) {
+    let parentAvatar: DrawableImage | null = null
+    if (post.parent.author.profile_image_url) {
+      try {
+        parentAvatar = await loadImage(post.parent.author.profile_image_url)
+      } catch {
+        parentAvatar = null
+      }
+    }
+    drawParentMini(ctx, post.parent, bodyX, parentY, bodyMaxW, parentDims.height, parentAvatar)
+  }
+
   // ── 8. Mídia (quando houver) ────────────────────────────────────
-  const mediaY = bodyY + bodyHeight + mediaSpacing
+  const mediaY = parentY + parentBlockHeight + mediaSpacing
   if (hasMedia) {
-    const mediaUrls = post.media.slice(0, 2).map(m => m.variants.feed)
+    const mediaUrls = post.media.slice(0, 4).map(m => m.variants.feed)
     await drawMediaGrid(ctx, mediaUrls, bodyX, mediaY, bodyMaxW, MEDIA_HEIGHT)
   }
 
@@ -592,6 +803,12 @@ export async function renderShareCard({ post, format = 'post' }: RenderShareCard
   ctx.fillText(veritas, startX, footerY)
   ctx.fillStyle = 'rgba(242,237,228,0.72)'
   ctx.fillText(dei, startX + veritasW / 2 + deiW / 2, footerY)
+
+  // Watermark discreto com o domínio (canto inferior central, sob "VERITAS DEI").
+  ctx.textAlign = 'center'
+  ctx.font = '400 15px Poppins, system-ui, sans-serif'
+  ctx.fillStyle = 'rgba(201,168,76,0.55)'
+  ctx.fillText('veritasdei.com', SHARE_IMAGE_WIDTH / 2, footerY + 42)
 
   // ── 11. Export ──────────────────────────────────────────────────
   return new Promise<Blob>((resolve, reject) => {
