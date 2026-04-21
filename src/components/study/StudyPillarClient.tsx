@@ -15,6 +15,7 @@ import StudyLayout from './StudyLayout'
 import StudyLessonsSidebar from './StudyLessonsSidebar'
 import StudyMobileChip from './StudyMobileChip'
 import StudyNavBar from './StudyNavBar'
+import StudyTopicQuizCard from './StudyTopicQuizCard'
 import { usePillarTree, type PillarTreeNode } from '@/lib/study/usePillarTree'
 import { useStudyNavigation } from '@/lib/study/useStudyNavigation'
 import type { StudyPillarContext } from '@/lib/study/types'
@@ -320,6 +321,13 @@ function PillarTopicView({
       </header>
       <PillarHero title={topic.title} subtitle={topic.description} />
       <main className="relative z-10 flex-1 pb-16">
+        <div className="max-w-[1200px] mx-auto px-4 md:px-8 mb-6">
+          <StudyTopicQuizCard
+            pillarSlug={pillarSlug}
+            topicSlug={topicSlug}
+            topicTitle={topic.title}
+          />
+        </div>
         <div className="max-w-[1200px] mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
           {subtopics.map((sub, i) => {
             const studied = isStudied(sub.id)
