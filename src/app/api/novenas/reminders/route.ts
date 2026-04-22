@@ -1,32 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { sendPushToUsers } from '@/lib/push/send'
+import { novena } from '@/lib/push/templates'
 
 /**
  * POST /api/novenas/reminders
  *
- * Endpoint chamado por um cron job (ex: Vercel Cron, Supabase pg_cron)
- * para enviar lembretes push de novena diária a todos os usuários
- * que possuem novenas ativas e push habilitado.
+ * Cron diário (vercel.json: 0 8 * * * UTC = 5h BRT).
+ * Envia lembrete aos usuários com novenas ativas + push habilitado + pref_novenas=true.
+ * Filtro de pref + envio HTTP ficam na lib `sendPushToUsers` (web-push).
  *
- * Protegido por CRON_SECRET no header Authorization.
- *
- * Fluxo:
- *   1. Busca todos os progress com completed_at IS NULL
- *   2. Para cada usuário distinto, verifica se tem push habilitado
- *   3. Envia push via Edge Function send-push
- *   4. Registra no feed in-app com dedupe diário
+ * Protegido por CRON_SECRET.
  */
 
 export async function POST(req: NextRequest) {
   const authHeader = req.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
-
-  // CRON_SECRET é obrigatório. Antes o check era opcional ("se definido,
-  // valida") — em ambiente sem a env setada, qualquer POST disparava o
-  // job. Logs no Vercel mostrariam o erro; em produção isso é
-  // misconfig perigoso.
   if (!cronSecret) {
-    console.error('[novenas/reminders] CRON_SECRET não configurado — rejeitando')
+    console.error('[novenas/reminders] CRON_SECRET não configurado')
     return NextResponse.json({ error: 'server_misconfigured' }, { status: 500 })
   }
   if (authHeader !== `Bearer ${cronSecret}`) {
@@ -39,13 +30,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'server_misconfigured' }, { status: 500 })
   }
 
-  // Admin client (bypassa RLS)
-  const supabase = createClient(supabaseUrl, serviceKey)
+  const supabase = createClient(supabaseUrl, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
 
-  // Buscar todos os user_ids com novenas ativas
   const { data: activeProgress, error: progressErr } = await supabase
     .from('novenas_progress')
-    .select('user_id, builtin_slug, custom_novena_id, current_day')
+    .select('user_id, builtin_slug, current_day')
     .is('completed_at', null)
 
   if (progressErr) {
@@ -53,92 +44,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: progressErr.message }, { status: 500 })
   }
 
-  if (!activeProgress || activeProgress.length === 0) {
+  if (!activeProgress?.length) {
     return NextResponse.json({ sent: 0, message: 'no_active_novenas' })
   }
 
-  // Agrupar por user_id (um lembrete por usuário, não por novena)
-  const userNovenas = new Map<string, { slug: string | null; day: number }>()
-  for (const p of activeProgress) {
-    if (!userNovenas.has(p.user_id)) {
-      userNovenas.set(p.user_id, {
-        slug: p.builtin_slug,
-        day: p.current_day,
-      })
-    }
+  // Agrupa por user (1 lembrete por pessoa, mesmo com N novenas ativas)
+  const userMap = new Map<string, { slug: string | null; dia: number }>()
+  for (const row of activeProgress) {
+    if (userMap.has(row.user_id)) continue
+    userMap.set(row.user_id, { slug: row.builtin_slug, dia: row.current_day })
   }
 
-  const userIds = Array.from(userNovenas.keys())
+  const userIds = Array.from(userMap.keys())
 
-  // Buscar quais desses usuários têm push habilitado
-  const { data: pushUsers } = await supabase
-    .from('user_notificacoes_prefs')
-    .select('user_id')
-    .in('user_id', userIds)
-    .eq('push_enabled', true)
-    .not('push_endpoint', 'is', null)
-
-  const pushUserIds = (pushUsers ?? []).map(u => u.user_id)
-
-  let pushSent = 0
-
-  // Enviar push em lotes de 10
-  for (let i = 0; i < pushUserIds.length; i += 10) {
-    const batch = pushUserIds.slice(i, i + 10)
-
-    try {
-      await fetch(`${supabaseUrl}/functions/v1/send-push`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${serviceKey}`,
-          apikey: serviceKey,
-        },
-        body: JSON.stringify({
-          user_ids: batch,
-          payload: {
-            title: 'Hora da Novena',
-            body: 'Não esqueça de rezar sua novena hoje. A perseverança é o caminho da graça.',
-            url: '/novenas/minhas',
-            tag: 'novena-daily',
-          },
-        }),
-      })
-      pushSent += batch.length
-    } catch (err) {
-      console.error('[novenas/reminders] push batch error', err)
-    }
-  }
-
-  // Registrar no feed in-app para todos os usuários com novenas ativas
-  const dayKey = new Date().toISOString().slice(0, 10)
-  const feedRows = userIds.map(userId => {
-    const info = userNovenas.get(userId)!
-    return {
-      user_id: userId,
-      type: 'novena_reminder',
-      title: 'Hora da Novena',
-      body: `Dia ${info.day} de 9 — continue sua novena hoje.`,
-      target_url: '/novenas/minhas',
-      source: 'novena_cron',
-      payload: { slug: info.slug, day: info.day },
-      dedupe_key: `novena-reminder:${dayKey}`,
-    }
+  // Template pega detalhes (dia/slug) do primeiro usuário; para personalização
+  // por-usuário seria necessário 1 chamada por usuário. Mantemos template
+  // genérico — detalhes específicos (dia X de 9) não cabem num push só.
+  const payload = novena({
+    dia: userMap.get(userIds[0])?.dia,
+    slug: userMap.get(userIds[0])?.slug,
   })
 
-  if (feedRows.length > 0) {
-    const { error: feedErr } = await supabase
-      .from('user_notificacoes_feed')
-      .upsert(feedRows, { onConflict: 'user_id,dedupe_key' })
-
-    if (feedErr) {
-      console.error('[novenas/reminders] feed upsert error', feedErr)
-    }
-  }
+  const result = await sendPushToUsers(userIds, payload, {
+    categoria: 'novena',
+    admin: supabase,
+  })
 
   return NextResponse.json({
-    sent: pushSent,
-    feed_notified: userIds.length,
     total_active_users: userIds.length,
+    ...result,
   })
 }
