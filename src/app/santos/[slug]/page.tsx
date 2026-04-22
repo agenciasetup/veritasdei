@@ -9,8 +9,12 @@ import {
 } from '@/lib/santos/queries'
 import { createAdminClient } from '@/lib/supabase/admin'
 import SantoCoverFallback from '@/components/devocao/SantoCoverFallback'
+import CapaViva from '@/components/devocao/CapaViva'
+import FamiliaReligiosaChip from '@/components/devocao/FamiliaReligiosaChip'
 import EscolherDevocaoButton from './EscolherDevocaoButton'
 import AcoesDevocaoCliente from './AcoesDevocaoCliente'
+import PedidosDoSantoSection from './PedidosDoSantoSection'
+import GracasDoSantoSection from './GracasDoSantoSection'
 
 export const revalidate = 3600
 
@@ -90,6 +94,7 @@ export default async function SantoDetalhePage({ params }: { params: Promise<{ s
         ) : (
           <SantoCoverFallback nome={santo.nome} invocacao={santo.invocacao} fullName />
         )}
+        <CapaViva />
         <div
           aria-hidden
           className="absolute inset-x-0 bottom-0 h-2/3"
@@ -143,6 +148,13 @@ export default async function SantoDetalhePage({ params }: { params: Promise<{ s
           )}
           {santo.martir && <Chip label="Mártir" highlight />}
         </div>
+
+        {/* Família espiritual */}
+        {santo.familia_religiosa && (
+          <section className="flex justify-center">
+            <FamiliaReligiosaChip familia={santo.familia_religiosa} />
+          </section>
+        )}
 
         {/* Patronatos */}
         {santo.patronatos && santo.patronatos.length > 0 && (
@@ -324,6 +336,18 @@ export default async function SantoDetalhePage({ params }: { params: Promise<{ s
           <div className="mt-4">
             <AcoesDevocaoCliente santoId={santo.id} santoNome={santo.nome} />
           </div>
+        </section>
+
+        {/* Pedidos de oração pela intercessão deste santo */}
+        <section>
+          <SectionTitle>Pedidos de oração</SectionTitle>
+          <PedidosDoSantoSection santoId={santo.id} santoNome={santo.nome} />
+        </section>
+
+        {/* Graças recebidas pela intercessão deste santo */}
+        <section>
+          <SectionTitle>Graças recebidas</SectionTitle>
+          <GracasDoSantoSection santoId={santo.id} />
         </section>
       </div>
     </div>

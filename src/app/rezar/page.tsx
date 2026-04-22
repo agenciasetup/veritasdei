@@ -10,6 +10,8 @@ import LiturgiaHojeCard from '@/components/dashboard/today/LiturgiaHojeCard'
 import PropositosBoard from '@/components/propositos/PropositosBoard'
 import FestaDoDiaBanner from '@/components/devocao/FestaDoDiaBanner'
 import NovenaCard from '@/components/devocao/NovenaCard'
+import InvocacaoDoDia from '@/components/devocao/InvocacaoDoDia'
+import OracaoDaNoiteCard from '@/components/devocao/OracaoDaNoiteCard'
 
 /**
  * `/rezar` — hub canônico de oração.
@@ -32,8 +34,14 @@ export default function RezarPage() {
             {/* Festa do santo de devoção — visível apenas no dia */}
             <FestaDoDiaBanner />
 
+            {/* Invocação do santo — banner discreto quando não é dia da festa */}
+            <InvocacaoDoDia hideWhenFesta />
+
             {/* Novena em curso — visível apenas quando há novena ativa */}
             <NovenaCard />
+
+            {/* Oração da noite — aparece apenas entre 22h e 5h */}
+            <OracaoDaNoiteCard />
 
             {/* Liturgia do dia — contexto antes dos propósitos */}
             <LiturgiaHojeCard />

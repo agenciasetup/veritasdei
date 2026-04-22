@@ -18,6 +18,7 @@ export interface SantoDetalhe extends SantoResumo {
   biografia_curta: string | null
   descricao: string | null
   martir: boolean
+  familia_religiosa: string | null
   nascimento_local: string | null
   nascimento_pais: string | null
   nascimento_data: string | null
