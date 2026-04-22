@@ -9,6 +9,8 @@ import {
 } from '@/lib/santos/queries'
 import { createAdminClient } from '@/lib/supabase/admin'
 import SantoCoverFallback from '@/components/devocao/SantoCoverFallback'
+import CapaViva from '@/components/devocao/CapaViva'
+import FamiliaReligiosaChip from '@/components/devocao/FamiliaReligiosaChip'
 import EscolherDevocaoButton from './EscolherDevocaoButton'
 import AcoesDevocaoCliente from './AcoesDevocaoCliente'
 
@@ -90,6 +92,7 @@ export default async function SantoDetalhePage({ params }: { params: Promise<{ s
         ) : (
           <SantoCoverFallback nome={santo.nome} invocacao={santo.invocacao} fullName />
         )}
+        <CapaViva />
         <div
           aria-hidden
           className="absolute inset-x-0 bottom-0 h-2/3"
@@ -143,6 +146,13 @@ export default async function SantoDetalhePage({ params }: { params: Promise<{ s
           )}
           {santo.martir && <Chip label="Mártir" highlight />}
         </div>
+
+        {/* Família espiritual */}
+        {santo.familia_religiosa && (
+          <section className="flex justify-center">
+            <FamiliaReligiosaChip familia={santo.familia_religiosa} />
+          </section>
+        )}
 
         {/* Patronatos */}
         {santo.patronatos && santo.patronatos.length > 0 && (
