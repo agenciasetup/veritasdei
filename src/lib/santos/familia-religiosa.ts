@@ -9,8 +9,19 @@ export type FamiliaReligiosa =
   | 'cristologico'
   | 'arcanjo'
   | 'apostolo'
+  | 'doutor'
+  | 'patriarca'
+  | 'virgem_martir'
+  | 'martir'
   | 'secular'
   | 'leigo'
+
+/**
+ * Categorias "genéricas" que não agregam valor ao ser exibidas como chip
+ * de tradição na UI. Para estes santos, o chip de família simplesmente
+ * não aparece.
+ */
+const FAMILIA_GENERICA: Set<FamiliaReligiosa> = new Set(['secular', 'leigo'])
 
 interface FamiliaMeta {
   label: string
@@ -93,6 +104,30 @@ export const FAMILIA_META: Record<FamiliaReligiosa, FamiliaMeta> = {
     acento: '#8B3A3A',      // vermelho martírio
     acentoSoft: 'rgba(139,58,58,0.2)',
   },
+  doutor: {
+    label: 'Doutor da Igreja',
+    lema: '"A fé busca a inteligência."',
+    acento: '#7D5A9E',      // roxo episcopal/teológico
+    acentoSoft: 'rgba(125,90,158,0.22)',
+  },
+  patriarca: {
+    label: 'Patriarca',
+    lema: '"Homem justo" (Mt 1,19) — Padroeiro Universal da Igreja.',
+    acento: '#8B6F47',      // marrom nobre
+    acentoSoft: 'rgba(139,111,71,0.22)',
+  },
+  virgem_martir: {
+    label: 'Virgem e Mártir',
+    lema: '"Venceram pelo sangue do Cordeiro." (Ap 12,11)',
+    acento: '#C89595',      // rosa/branco mártir
+    acentoSoft: 'rgba(200,149,149,0.22)',
+  },
+  martir: {
+    label: 'Mártir',
+    lema: '"Venceram pelo sangue do Cordeiro e pela palavra do seu testemunho." (Ap 12,11)',
+    acento: '#A8453E',      // vermelho martírio
+    acentoSoft: 'rgba(168,69,62,0.2)',
+  },
   secular: {
     label: 'Clero / Consagração secular',
     lema: '"Não tenhais medo!"',
@@ -110,4 +145,14 @@ export const FAMILIA_META: Record<FamiliaReligiosa, FamiliaMeta> = {
 export function getFamiliaMeta(familia: string | null | undefined): FamiliaMeta | null {
   if (!familia) return null
   return FAMILIA_META[familia as FamiliaReligiosa] ?? null
+}
+
+/**
+ * Indica se a família é específica o bastante pra valer um chip na UI.
+ * Genéricas (leigo/secular) retornam false — para esses santos, não
+ * renderizamos o chip e deixamos o espaço livre pra conteúdo mais útil.
+ */
+export function familiaEhEspecifica(familia: string | null | undefined): boolean {
+  if (!familia) return false
+  return !FAMILIA_GENERICA.has(familia as FamiliaReligiosa)
 }

@@ -19,6 +19,9 @@ export interface SantoDetalhe extends SantoResumo {
   descricao: string | null
   martir: boolean
   familia_religiosa: string | null
+  festa_mes: number | null
+  festa_dia: number | null
+  festa_movel: string | null
   nascimento_local: string | null
   nascimento_pais: string | null
   nascimento_data: string | null
