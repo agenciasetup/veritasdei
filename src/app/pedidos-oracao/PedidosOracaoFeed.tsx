@@ -44,15 +44,16 @@ export default function PedidosOracaoFeed({ santoId, santoNome }: { santoId?: st
       <button
         type="button"
         onClick={handlePedir}
-        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold tracking-wider uppercase mb-5 active:scale-[0.99] transition-transform"
+        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium mb-4 active:scale-[0.99] transition-transform"
         style={{
-          background: '#C9A84C',
-          color: '#0A0A0A',
-          fontFamily: 'Cinzel, Georgia, serif',
+          background: 'rgba(201,168,76,0.14)',
+          color: '#C9A84C',
+          fontFamily: 'Poppins, sans-serif',
+          border: '1px solid rgba(201,168,76,0.35)',
         }}
       >
         <Plus className="w-4 h-4" />
-        {santoNome ? `Pedir oração pela intercessão de ${santoNome.split(' ').slice(0, 3).join(' ')}` : 'Pedir oração'}
+        Pedir oração
       </button>
 
       {loading && (

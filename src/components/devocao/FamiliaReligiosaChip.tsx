@@ -1,12 +1,17 @@
 'use client'
 
-import { getFamiliaMeta } from '@/lib/santos/familia-religiosa'
+import { getFamiliaMeta, familiaEhEspecifica } from '@/lib/santos/familia-religiosa'
 
 /**
  * Chip mostrando a família espiritual do santo (ex.: "Franciscano").
  * Usado em /santos/[slug] como contexto sem forçar paleta global.
+ *
+ * NÃO renderiza para categorias genéricas (leigo/secular) — o chip só
+ * agrega quando a tradição é específica o bastante pra dar contexto
+ * ao devoto (uma ordem religiosa, um estado canônico distintivo).
  */
 export default function FamiliaReligiosaChip({ familia }: { familia: string | null | undefined }) {
+  if (!familiaEhEspecifica(familia)) return null
   const meta = getFamiliaMeta(familia)
   if (!meta) return null
 

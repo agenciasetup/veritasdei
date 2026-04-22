@@ -8,6 +8,7 @@ import {
   getSantoOracoes,
 } from '@/lib/santos/queries'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { formatarFesta } from '@/lib/santos/festa'
 import SantoCoverFallback from '@/components/devocao/SantoCoverFallback'
 import CapaViva from '@/components/devocao/CapaViva'
 import FamiliaReligiosaChip from '@/components/devocao/FamiliaReligiosaChip'
@@ -76,6 +77,12 @@ export default async function SantoDetalhePage({ params }: { params: Promise<{ s
   const invocacaoFallback = santo.invocacao ?? `${santo.nome}, rogai por nós`
   const oracaoPrincipal = oracoes.find(o => o.tipo === 'devocao_principal') ?? oracoes[0]
   const oracoesOutras = oracoes.filter(o => o !== oracaoPrincipal)
+  const festaFormatada = formatarFesta({
+    festa_mes: santo.festa_mes,
+    festa_dia: santo.festa_dia,
+    festa_movel: santo.festa_movel,
+    festa_texto: santo.festa_texto,
+  })
 
   return (
     <div className="min-h-screen pb-24 md:pb-12">
@@ -92,7 +99,7 @@ export default async function SantoDetalhePage({ params }: { params: Promise<{ s
             className="absolute inset-0 w-full h-full object-cover"
           />
         ) : (
-          <SantoCoverFallback nome={santo.nome} invocacao={santo.invocacao} fullName />
+          <SantoCoverFallback nome={santo.nome} invocacao={santo.invocacao} silent />
         )}
         <CapaViva />
         <div
@@ -131,22 +138,21 @@ export default async function SantoDetalhePage({ params }: { params: Promise<{ s
       <div className="max-w-3xl mx-auto px-4 mt-6 space-y-8">
         {/* Metadata chips */}
         <div className="flex flex-wrap items-center gap-2 justify-center">
-          {santo.festa_texto && (
-            <Chip icon={<Calendar className="w-3.5 h-3.5" />} label={`Festa: ${santo.festa_texto}`} />
+          {festaFormatada && (
+            <Chip icon={<Calendar className="w-3.5 h-3.5" />} label={festaFormatada} />
           )}
           {santo.nascimento_local && (
             <Chip
               icon={<MapPin className="w-3.5 h-3.5" />}
-              label={`Nasc.: ${santo.nascimento_local}`}
+              label={santo.nascimento_local}
             />
           )}
           {santo.morte_data && (
             <Chip label={`† ${formatYear(santo.morte_data)}`} />
           )}
-          {santo.canonizado_por && (
-            <Chip label={`Canonizado por ${santo.canonizado_por}`} />
+          {santo.martir && santo.familia_religiosa !== 'martir' && santo.familia_religiosa !== 'virgem_martir' && (
+            <Chip label="Mártir" highlight />
           )}
-          {santo.martir && <Chip label="Mártir" highlight />}
         </div>
 
         {/* Família espiritual */}
@@ -315,42 +321,62 @@ export default async function SantoDetalhePage({ params }: { params: Promise<{ s
           </section>
         )}
 
-        {/* Devotos count + CTA */}
+        {/* CTA primário + ações secundárias em pills */}
         <section
-          className="rounded-xl p-5 text-center"
+          className="rounded-2xl p-5"
           style={{
-            background: 'rgba(16,16,16,0.5)',
-            border: '1px solid rgba(242,237,228,0.1)',
+            background: 'rgba(201,168,76,0.05)',
+            border: '1px solid rgba(201,168,76,0.22)',
           }}
         >
-          {devotosCount > 0 && (
+          <div className="flex justify-center mb-3">
+            <EscolherDevocaoButton santoId={santo.id} santoNome={santo.nome} />
+          </div>
+          <AcoesDevocaoCliente santoId={santo.id} santoNome={santo.nome} />
+          {devotosCount >= 10 && (
             <p
-              className="mb-4 text-sm"
-              style={{ color: 'rgba(242,237,228,0.75)', fontFamily: 'Poppins, sans-serif' }}
+              className="mt-4 text-center text-xs"
+              style={{ color: 'rgba(242,237,228,0.5)', fontFamily: 'Poppins, sans-serif' }}
             >
-              <strong style={{ color: '#C9A84C' }}>{devotosCount}</strong>{' '}
-              {devotosCount === 1 ? 'devoto escolheu' : 'devotos escolheram'} este santo no Veritas Dei.
+              {devotosCount} devotos escolheram este santo no Veritas Dei.
             </p>
           )}
-          <EscolherDevocaoButton santoId={santo.id} santoNome={santo.nome} />
-          <div className="mt-4">
-            <AcoesDevocaoCliente santoId={santo.id} santoNome={santo.nome} />
+        </section>
+
+        {/* Comunhão — Pedidos + Graças */}
+        <section>
+          <SectionTitle>Comunhão</SectionTitle>
+          <div className="space-y-6">
+            <div>
+              <SubSectionTitle>Pedidos de oração</SubSectionTitle>
+              <PedidosDoSantoSection santoId={santo.id} santoNome={santo.nome} />
+            </div>
+            <div>
+              <SubSectionTitle>Graças recebidas</SubSectionTitle>
+              <GracasDoSantoSection santoId={santo.id} />
+            </div>
           </div>
-        </section>
-
-        {/* Pedidos de oração pela intercessão deste santo */}
-        <section>
-          <SectionTitle>Pedidos de oração</SectionTitle>
-          <PedidosDoSantoSection santoId={santo.id} santoNome={santo.nome} />
-        </section>
-
-        {/* Graças recebidas pela intercessão deste santo */}
-        <section>
-          <SectionTitle>Graças recebidas</SectionTitle>
-          <GracasDoSantoSection santoId={santo.id} />
         </section>
       </div>
     </div>
+  )
+}
+
+function SubSectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h3
+      className="mb-2"
+      style={{
+        fontFamily: 'Poppins, sans-serif',
+        color: 'rgba(242,237,228,0.65)',
+        fontSize: '0.75rem',
+        letterSpacing: '0.12em',
+        textTransform: 'uppercase',
+        fontWeight: 500,
+      }}
+    >
+      {children}
+    </h3>
   )
 }
 

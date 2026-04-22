@@ -1,6 +1,40 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import type { FestaHojeInfo } from '@/types/devocao'
 
+const MESES_PT = [
+  'janeiro', 'fevereiro', 'março', 'abril',
+  'maio', 'junho', 'julho', 'agosto',
+  'setembro', 'outubro', 'novembro', 'dezembro',
+]
+
+/**
+ * Converte festa_mes + festa_dia em texto pt-BR legível.
+ * "19 de março" (em vez de "03.19" formato GCatholic original).
+ * Se festa for móvel, usa festa_movel direto.
+ */
+export function formatarFesta({
+  festa_mes,
+  festa_dia,
+  festa_movel,
+  festa_texto,
+}: {
+  festa_mes?: number | null
+  festa_dia?: number | null
+  festa_movel?: string | null
+  festa_texto?: string | null
+}): string | null {
+  if (festa_mes && festa_dia) {
+    const mes = MESES_PT[festa_mes - 1]
+    if (!mes) return null
+    return `${festa_dia} de ${mes}`
+  }
+  if (festa_movel) return festa_movel
+  // Fallback: se festa_texto está em formato "DD de MES" já legível, usar
+  if (festa_texto && /^\d{1,2}\s+de\s+/i.test(festa_texto)) return festa_texto
+  if (festa_texto && !/^\d{2}\.\d{2}$/.test(festa_texto)) return festa_texto
+  return null
+}
+
 export function diasEntre(hojeMes: number, hojeDia: number, festaMes: number, festaDia: number): number {
   // Usa ano corrente — suficiente para "está próximo" em janela de dias
   const ano = new Date().getUTCFullYear()

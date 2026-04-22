@@ -3,7 +3,8 @@ import type { SantoDetalhe, SantoOracao, SantoResumo } from '@/types/santo'
 
 const RESUMO_COLUMNS = 'id, slug, nome, invocacao, patronatos, imagem_url, popularidade_rank, festa_texto, tipo_culto'
 const DETALHE_COLUMNS = `
-  id, slug, nome, invocacao, patronatos, imagem_url, popularidade_rank, festa_texto, tipo_culto,
+  id, slug, nome, invocacao, patronatos, imagem_url, popularidade_rank,
+  festa_texto, festa_mes, festa_dia, festa_movel, tipo_culto,
   nomes_alternativos, oracao_curta, biografia_curta, descricao, martir, familia_religiosa,
   nascimento_local, nascimento_pais, nascimento_data,
   morte_local, morte_pais, morte_data,
