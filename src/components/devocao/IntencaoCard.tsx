@@ -2,8 +2,11 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Check, Archive, Heart, Loader2, Sparkles } from 'lucide-react'
+import { Check, Archive, Heart, Loader2, Sparkles, Share2, EyeOff } from 'lucide-react'
 import type { IntencaoComSanto } from '@/types/devocao'
+
+// A intenção pode vir do banco com `compartilhada_publicamente` — o tipo
+// base não inclui ainda, mas fazemos cast abaixo quando necessário.
 
 export default function IntencaoCard({
   intencao,
@@ -119,6 +122,8 @@ export default function IntencaoCard({
         </div>
       )}
 
+      {isGraca && <CompartilharToggle intencao={intencao} onUpdate={onUpdate} />}
+
       <div
         className="flex items-center justify-between mt-3 pt-2 text-[10px]"
         style={{
@@ -203,6 +208,84 @@ export default function IntencaoCard({
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+function CompartilharToggle({
+  intencao,
+  onUpdate,
+}: {
+  intencao: IntencaoComSanto
+  onUpdate?: () => void
+}) {
+  const compartilhada = Boolean(
+    (intencao as IntencaoComSanto & { compartilhada_publicamente?: boolean }).compartilhada_publicamente,
+  )
+  const [working, setWorking] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function toggle() {
+    if (working) return
+    setWorking(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/gracas', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          intencao_id: intencao.id,
+          compartilhada_publicamente: !compartilhada,
+        }),
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => null) as { error?: string } | null
+        throw new Error(j?.error ?? String(res.status))
+      }
+      onUpdate?.()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Erro'
+      if (msg === 'reflexao_required') {
+        setError('Escreva uma reflexão antes de compartilhar.')
+      } else {
+        setError('Não foi possível compartilhar.')
+      }
+    } finally {
+      setWorking(false)
+    }
+  }
+
+  return (
+    <div className="mt-3">
+      <button
+        type="button"
+        onClick={toggle}
+        disabled={working}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] transition-colors"
+        style={{
+          background: compartilhada ? 'rgba(201,168,76,0.18)' : 'rgba(242,237,228,0.05)',
+          border: `1px solid ${compartilhada ? 'rgba(201,168,76,0.4)' : 'rgba(242,237,228,0.1)'}`,
+          color: compartilhada ? '#C9A84C' : 'rgba(242,237,228,0.75)',
+          fontFamily: 'Poppins, sans-serif',
+        }}
+      >
+        {working ? (
+          <Loader2 className="w-3 h-3 animate-spin" />
+        ) : compartilhada ? (
+          <EyeOff className="w-3 h-3" />
+        ) : (
+          <Share2 className="w-3 h-3" />
+        )}
+        {compartilhada ? 'Compartilhada · tornar privada' : 'Compartilhar com a comunidade'}
+      </button>
+      {error && (
+        <div
+          className="mt-1 text-[11px]"
+          style={{ color: 'rgb(220,140,140)', fontFamily: 'Poppins, sans-serif' }}
+        >
+          {error}
+        </div>
+      )}
     </div>
   )
 }
