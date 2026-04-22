@@ -8,6 +8,7 @@ import ThemeScript from "@/components/ThemeScript"
 import ThemeSupabaseSync from "@/components/theme/ThemeSupabaseSync"
 import LiturgicalThemeSync from "@/components/theme/LiturgicalThemeSync"
 import PwaRegister from "@/components/layout/PwaRegister"
+import InstallPrompt from "@/components/pwa/InstallPrompt"
 import NoZoom from "@/components/layout/NoZoom"
 import GamificationEventsProvider from "@/components/gamification/GamificationEventsProvider"
 
@@ -63,10 +64,10 @@ export const metadata: Metadata = {
     type: "website",
   },
   // Favicon e icon principal vêm de src/app/favicon.ico + src/app/icon.svg
-  // (convenção de arquivo do Next). Apple touch icon usa o SVG maskable de
-  // public/icon.svg (quadrado arredondado, melhor para home-screen iOS).
+  // (convenção de arquivo do Next). Apple touch icon obrigatoriamente PNG
+  // 180×180 — iOS usa pra home screen (e é requisito pra Web Push em PWA).
   icons: {
-    apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
 }
 
@@ -105,6 +106,7 @@ export default function RootLayout({
           </AuthProvider>
         </ThemeProvider>
         <PwaRegister />
+        <InstallPrompt />
         <NoZoom />
       </body>
     </html>

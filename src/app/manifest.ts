@@ -3,8 +3,13 @@ import type { MetadataRoute } from 'next'
 /**
  * Web App Manifest para instalação como PWA.
  *
- * Esta é a base para notificações push futuras (Fase 2).
- * No iOS Safari, push só funciona após "Adicionar à Tela de Início".
+ * iOS Safari 16.4+ só habilita Web Push após "Adicionar à Tela de Início",
+ * por isso o manifest + apple-touch-icon 180×180 são obrigatórios para
+ * notificações funcionarem no iPhone.
+ *
+ * SVG maskable isolado não passa em todos os devices Android antigos →
+ * incluímos PNGs 192/512 e um 512 maskable. Gerados por
+ * `node scripts/gen-pwa-icons.mjs`.
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -20,18 +25,10 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: 'pt-BR',
     categories: ['lifestyle', 'education', 'books'],
     icons: [
-      {
-        src: '/icon.svg',
-        sizes: 'any',
-        type: 'image/svg+xml',
-        purpose: 'any',
-      },
-      {
-        src: '/icon.svg',
-        sizes: 'any',
-        type: 'image/svg+xml',
-        purpose: 'maskable',
-      },
+      { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
     ],
   }
 }

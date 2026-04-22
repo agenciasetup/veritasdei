@@ -13,7 +13,7 @@
  * cache antigo são limpas no `activate`.
  */
 
-const CACHE_VERSION = 'v4'
+const CACHE_VERSION = 'v5'
 const CACHE_NAME = `veritasdei-app-${CACHE_VERSION}`
 const LITURGIA_CACHE = `veritasdei-liturgia-${CACHE_VERSION}`
 
@@ -269,33 +269,56 @@ self.addEventListener('fetch', (event) => {
   // default: passa pra rede
 })
 
-// ─── push notifications (inalterado) ──────────────────────────────
+// ─── push notifications ───────────────────────────────────────────
+// Payload do servidor (lib/push/send.ts): { title, body, url, tag }.
+// Actions variam por tag — iOS ignora actions silenciosamente, Android mostra.
+
+const ACTIONS_BY_TAG = {
+  'liturgia-hoje': [
+    { action: 'ler', title: 'Ler agora' },
+    { action: 'depois', title: 'Mais tarde' },
+  ],
+  'novena-daily': [
+    { action: 'rezar', title: 'Rezar agora' },
+  ],
+  'exame': [
+    { action: 'examinar', title: 'Examinar' },
+  ],
+  'angelus': [
+    { action: 'rezar', title: 'Rezar' },
+  ],
+}
 
 self.addEventListener('push', (event) => {
-  let payload = { title: 'Veritas Dei', body: 'Você tem um lembrete.', url: '/' }
+  let payload = { title: 'Veritas Dei', body: 'Você tem um lembrete.', url: '/', tag: 'veritasdei' }
   try {
     if (event.data) {
-      const data = event.data.json()
-      payload = { ...payload, ...data }
+      payload = { ...payload, ...event.data.json() }
     }
   } catch (err) {
     // payload padrão
   }
 
+  const actions = ACTIONS_BY_TAG[payload.tag] || []
+
   event.waitUntil(
     self.registration.showNotification(payload.title, {
       body: payload.body,
-      icon: '/icon.svg',
-      badge: '/icon.svg',
-      data: { url: payload.url },
-      tag: payload.tag || 'veritasdei',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/badge-72.png',
+      data: { url: payload.url, tag: payload.tag },
+      tag: payload.tag,
+      renotify: true,
+      vibrate: [180, 80, 180],
+      actions,
     }),
   )
 })
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const targetUrl = (event.notification.data && event.notification.data.url) || '/'
+  const data = event.notification.data || {}
+  const targetUrl = data.url || '/'
 
   event.waitUntil(
     self.clients
