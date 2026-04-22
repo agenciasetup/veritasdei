@@ -8,6 +8,8 @@ import AuthGuard from '@/components/auth/AuthGuard'
 import PullToRefresh from '@/components/mobile/PullToRefresh'
 import LiturgiaHojeCard from '@/components/dashboard/today/LiturgiaHojeCard'
 import PropositosBoard from '@/components/propositos/PropositosBoard'
+import FestaDoDiaBanner from '@/components/devocao/FestaDoDiaBanner'
+import NovenaCard from '@/components/devocao/NovenaCard'
 
 /**
  * `/rezar` — hub canônico de oração.
@@ -27,6 +29,12 @@ export default function RezarPage() {
 
         <PullToRefresh onRefresh={() => router.refresh()}>
           <div className="px-4 flex flex-col gap-5 max-w-2xl mx-auto stagger-in">
+            {/* Festa do santo de devoção — visível apenas no dia */}
+            <FestaDoDiaBanner />
+
+            {/* Novena em curso — visível apenas quando há novena ativa */}
+            <NovenaCard />
+
             {/* Liturgia do dia — contexto antes dos propósitos */}
             <LiturgiaHojeCard />
 

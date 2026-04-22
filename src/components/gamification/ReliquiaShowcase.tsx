@@ -47,7 +47,7 @@ export default function ReliquiaShowcase() {
   if (catalog.length === 0) {
     return (
       <p className="text-center py-8 text-sm" style={{ color: 'var(--text-muted)' }}>
-        Nenhuma relíquia disponível ainda.
+        Nenhum selo disponível ainda.
       </p>
     )
   }
@@ -66,7 +66,7 @@ export default function ReliquiaShowcase() {
           className="text-xs tracking-[0.18em] uppercase"
           style={{ fontFamily: 'Cinzel, serif', color: 'var(--gold)' }}
         >
-          Reliquário
+          Selos de Devoção
         </h3>
         <span
           className="text-xs"

@@ -10,6 +10,7 @@ import {
 import { createAdminClient } from '@/lib/supabase/admin'
 import SantoCoverFallback from '@/components/devocao/SantoCoverFallback'
 import EscolherDevocaoButton from './EscolherDevocaoButton'
+import AcoesDevocaoCliente from './AcoesDevocaoCliente'
 
 export const revalidate = 3600
 
@@ -320,6 +321,9 @@ export default async function SantoDetalhePage({ params }: { params: Promise<{ s
             </p>
           )}
           <EscolherDevocaoButton santoId={santo.id} santoNome={santo.nome} />
+          <div className="mt-4">
+            <AcoesDevocaoCliente santoId={santo.id} santoNome={santo.nome} />
+          </div>
         </section>
       </div>
     </div>

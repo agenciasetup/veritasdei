@@ -291,7 +291,7 @@ export default function QuizEditor({ initial }: Props) {
               />
             </Field>
           </div>
-          <Field label="Relíquia (slug) ao gabaritar" hint="Deixe vazio se não libera relíquia">
+          <Field label="Selo (slug) ao gabaritar" hint="Deixe vazio se não libera selo">
             <input
               type="text"
               value={meta.reliquia_slug_on_master ?? ''}
