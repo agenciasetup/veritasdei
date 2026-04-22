@@ -147,7 +147,7 @@ export default function ReliquiaDetailSheet({
                   fontFamily: 'Poppins, sans-serif',
                 }}
               >
-                {unlocked ? '✓ Desbloqueada' : unlockHint(reliquia)}
+                {unlocked ? '✓ Desbloqueado' : unlockHint(reliquia)}
               </div>
 
               {unlocked && (

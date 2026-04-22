@@ -61,7 +61,7 @@ export default function ReliquiaUnlockModal({
           className="text-xs tracking-[0.25em] uppercase mb-5"
           style={{ color: style.color, fontFamily: 'Cinzel, serif' }}
         >
-          Relíquia conquistada · {style.label}
+          Selo conquistado · {style.label}
         </p>
 
         {reliquia.image_url ? (

@@ -40,7 +40,7 @@ export default function EquippedReliquiaChip({
         border: `1px solid ${rarity.border}`,
         boxShadow: `0 0 8px ${rarity.border}`,
       }}
-      title={`Relíquia: ${reliquia.name}`}
+      title={`Selo: ${reliquia.name}`}
     >
       {reliquia.image_url ? (
         <img

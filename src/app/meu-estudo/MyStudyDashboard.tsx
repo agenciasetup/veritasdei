@@ -73,7 +73,7 @@ export default function MyStudyDashboard() {
           className="text-xs mt-3"
           style={{ color: 'var(--text-muted)', fontFamily: 'Poppins, sans-serif' }}
         >
-          {gami.unlockedReliquiaIds?.size || 0} relíquias · streak atual{' '}
+          {gami.unlockedReliquiaIds?.size || 0} selos · perseverança atual{' '}
           {gami.currentStreak || 0} dias
         </p>
       </section>

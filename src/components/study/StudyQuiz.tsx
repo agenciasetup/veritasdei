@@ -205,7 +205,7 @@ function Intro({
         <Chip label={quiz.passing_score >= 100 ? 'Só vale com 100%' : `Aprovado com ${quiz.passing_score}%`} highlight />
         <Chip label={`+${quiz.xp_bonus} XP`} />
         {quiz.reliquia_slug_on_master ? (
-          <Chip label="Relíquia ao gabaritar" />
+          <Chip label="Selo ao gabaritar" />
         ) : null}
       </div>
 
@@ -440,7 +440,7 @@ function Result({
         >
           {passed
             ? quiz.reliquia_slug_on_master
-              ? `Gabaritou! +${quiz.xp_bonus} XP · relíquia conquistada`
+              ? `Gabaritou! +${quiz.xp_bonus} XP · selo conquistado`
               : `Gabaritou! +${quiz.xp_bonus} XP`
             : quiz.passing_score >= 100
               ? 'Não foi dessa vez — revisa e tenta de novo'
