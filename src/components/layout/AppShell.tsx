@@ -32,7 +32,14 @@ const PropositoCheckInGate = dynamic(
   { ssr: false },
 )
 
-const PUBLIC_PATHS = ['/login', '/auth', '/privacidade', '/termos', '/onboarding']
+// LegalGate — grava silenciosamente o aceite dos documentos legais pós-login,
+// ou força re-aceite quando a versão de Termos/Privacidade/Diretrizes mudar.
+const LegalGate = dynamic(
+  () => import('@/components/legal/LegalGate').then((m) => m.LegalGate),
+  { ssr: false },
+)
+
+const PUBLIC_PATHS = ['/login', '/auth', '/privacidade', '/termos', '/diretrizes', '/cookies', '/dmca', '/consentimento-parental', '/onboarding']
 const FULLSCREEN_PATHS = ['/verbum', '/rosario', '/liturgia/hoje']
 const FULLSCREEN_EXACT: string[] = []
 
@@ -81,6 +88,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {showChrome && <NovidadesModal />}
           {/* Check-in de propósitos — pergunta uma vez por dia */}
           {showChrome && <PropositoCheckInGate />}
+          {/* Aceite legal silencioso / re-aceite quando mudar versão */}
+          {isAuthenticated && <LegalGate />}
         </PropositoSheetProvider>
       </PropositosProvider>
     </SubscriptionProvider>

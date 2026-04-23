@@ -38,6 +38,8 @@ function LoginPageInner() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [acceptedLegal, setAcceptedLegal] = useState(false)
+  const [ageConfirmed, setAgeConfirmed] = useState(false)
 
   const { signInWithPassword, signUp, signInWithMagicLink, signInWithOAuth, isAuthenticated } = useAuth()
   const router = useRouter()
@@ -69,6 +71,12 @@ function LoginPageInner() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     clearState()
+
+    if (!acceptedLegal || !ageConfirmed) {
+      setError('Para criar sua conta, você precisa aceitar nossos documentos legais e declarar ter pelo menos 14 anos.')
+      return
+    }
+
     setLoading(true)
 
     if (password.length < 8) {
@@ -89,6 +97,12 @@ function LoginPageInner() {
   const handleMagicLink = async (e: React.FormEvent) => {
     e.preventDefault()
     clearState()
+
+    if (!acceptedLegal || !ageConfirmed) {
+      setError('Para receber o link de acesso, você precisa aceitar nossos documentos legais e declarar ter pelo menos 14 anos.')
+      return
+    }
+
     setLoading(true)
 
     const { error } = await signInWithMagicLink(email, nextPath)
@@ -102,6 +116,10 @@ function LoginPageInner() {
 
   const handleOAuth = async (provider: 'google' | 'facebook' | 'apple') => {
     clearState()
+    if (tab !== 'login' && (!acceptedLegal || !ageConfirmed)) {
+      setError('Para criar sua conta via ' + provider + ', você precisa aceitar nossos documentos legais e declarar ter pelo menos 14 anos.')
+      return
+    }
     setLoading(true)
     const { error } = await signInWithOAuth(provider, nextPath)
     if (error) setError(traduzirErro(error))
@@ -161,6 +179,16 @@ function LoginPageInner() {
         <p className="text-xs mb-2" style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}>
           Forma mais fácil: toque em Google e continue.
         </p>
+        {tab !== 'login' && (
+          <div className="mb-3">
+            <LegalAcceptanceBlock
+              acceptedLegal={acceptedLegal}
+              setAcceptedLegal={setAcceptedLegal}
+              ageConfirmed={ageConfirmed}
+              setAgeConfirmed={setAgeConfirmed}
+            />
+          </div>
+        )}
         <div className="space-y-2 mb-5">
           <OAuthButton provider="google" onClick={() => handleOAuth('google')} disabled={loading} />
         </div>
@@ -290,6 +318,13 @@ function LoginPageInner() {
               </div>
             </div>
 
+            <LegalAcceptanceBlock
+              acceptedLegal={acceptedLegal}
+              setAcceptedLegal={setAcceptedLegal}
+              ageConfirmed={ageConfirmed}
+              setAgeConfirmed={setAgeConfirmed}
+            />
+
             <SubmitButton loading={loading}>Criar Conta</SubmitButton>
           </form>
         )}
@@ -301,6 +336,12 @@ function LoginPageInner() {
               Insira seu e-mail e enviaremos um link de acesso. Ideal para primeiro login ou recuperação de senha.
             </p>
             <InputField label="E-mail" type="email" value={email} onChange={setEmail} placeholder="seu@email.com" required />
+            <LegalAcceptanceBlock
+              acceptedLegal={acceptedLegal}
+              setAcceptedLegal={setAcceptedLegal}
+              ageConfirmed={ageConfirmed}
+              setAgeConfirmed={setAgeConfirmed}
+            />
             <SubmitButton loading={loading}>Enviar Link de Acesso</SubmitButton>
           </form>
         )}
@@ -399,6 +440,60 @@ function SubmitButton({ children, loading }: { children: React.ReactNode; loadin
         <div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--border-1)', borderTopColor: 'var(--accent)' }} />
       ) : children}
     </button>
+  )
+}
+
+function LegalAcceptanceBlock({
+  acceptedLegal,
+  setAcceptedLegal,
+  ageConfirmed,
+  setAgeConfirmed,
+}: {
+  acceptedLegal: boolean
+  setAcceptedLegal: (v: boolean) => void
+  ageConfirmed: boolean
+  setAgeConfirmed: (v: boolean) => void
+}) {
+  return (
+    <div className="space-y-2 pt-1">
+      <label className="flex items-start gap-2 text-xs cursor-pointer" style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}>
+        <input
+          type="checkbox"
+          checked={acceptedLegal}
+          onChange={(e) => setAcceptedLegal(e.target.checked)}
+          className="mt-0.5"
+          required
+        />
+        <span>
+          Li e concordo com os{' '}
+          <Link href="/termos" target="_blank" className="underline" style={{ color: 'var(--accent)' }}>
+            Termos de Uso
+          </Link>
+          , a{' '}
+          <Link href="/privacidade" target="_blank" className="underline" style={{ color: 'var(--accent)' }}>
+            Política de Privacidade
+          </Link>{' '}
+          e as{' '}
+          <Link href="/diretrizes" target="_blank" className="underline" style={{ color: 'var(--accent)' }}>
+            Diretrizes da Comunidade
+          </Link>
+          .
+        </span>
+      </label>
+      <label className="flex items-start gap-2 text-xs cursor-pointer" style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}>
+        <input
+          type="checkbox"
+          checked={ageConfirmed}
+          onChange={(e) => setAgeConfirmed(e.target.checked)}
+          className="mt-0.5"
+          required
+        />
+        <span>
+          Declaro ter <strong>14 anos completos ou mais</strong>. Se tenho entre 14 e 17, sei que será
+          pedido consentimento do responsável legal.
+        </span>
+      </label>
+    </div>
   )
 }
 

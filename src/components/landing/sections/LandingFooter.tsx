@@ -32,7 +32,7 @@ export function LandingFooter() {
           {FOOTER_COPY.tagline}
         </p>
 
-        <div className="flex items-center justify-center gap-5 mb-4">
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-4">
           <Link
             href="/privacidade"
             className="text-xs underline underline-offset-4"
@@ -47,6 +47,30 @@ export function LandingFooter() {
             style={{ color: '#8E867A', fontFamily: 'Poppins, sans-serif' }}
           >
             {FOOTER_COPY.terms}
+          </Link>
+          <span style={{ color: 'rgba(201,168,76,0.3)' }}>|</span>
+          <Link
+            href="/diretrizes"
+            className="text-xs underline underline-offset-4"
+            style={{ color: '#8E867A', fontFamily: 'Poppins, sans-serif' }}
+          >
+            Diretrizes
+          </Link>
+          <span style={{ color: 'rgba(201,168,76,0.3)' }}>|</span>
+          <Link
+            href="/cookies"
+            className="text-xs underline underline-offset-4"
+            style={{ color: '#8E867A', fontFamily: 'Poppins, sans-serif' }}
+          >
+            Cookies
+          </Link>
+          <span style={{ color: 'rgba(201,168,76,0.3)' }}>|</span>
+          <Link
+            href="/dmca"
+            className="text-xs underline underline-offset-4"
+            style={{ color: '#8E867A', fontFamily: 'Poppins, sans-serif' }}
+          >
+            Direitos autorais
           </Link>
         </div>
 
