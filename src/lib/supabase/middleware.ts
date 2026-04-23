@@ -22,7 +22,11 @@ export async function updateSession(request: NextRequest) {
     (path.startsWith('/api/') && !isProtectedApi) ||
     path.startsWith('/auth/') ||
     path === '/privacidade' ||
-    path === '/termos'
+    path === '/termos' ||
+    path === '/diretrizes' ||
+    path === '/cookies' ||
+    path === '/dmca' ||
+    path === '/consentimento-parental'
   ) {
     return supabaseResponse
   }

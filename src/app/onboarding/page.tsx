@@ -32,6 +32,34 @@ const ESTADOS_BR = [
   'PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO',
 ]
 
+function computeAge(isoDate: string): number | null {
+  if (!isoDate) return null
+  const birth = new Date(isoDate)
+  if (Number.isNaN(birth.getTime())) return null
+  const today = new Date()
+  let age = today.getFullYear() - birth.getFullYear()
+  const m = today.getMonth() - birth.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age -= 1
+  return age
+}
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+}
+
+async function requestParentalConsent(parentEmail: string): Promise<void> {
+  try {
+    await fetch('/api/parental-consent/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ parentEmail: parentEmail.trim().toLowerCase() }),
+    })
+  } catch {
+    // Não bloqueia a conclusão do onboarding; o pedido pode ser reemitido
+    // no painel do perfil depois.
+  }
+}
+
 export default function OnboardingPage() {
   const { user, profile, refreshProfile, isAuthenticated, isLoading } = useAuth()
   const router = useRouter()
@@ -49,6 +77,8 @@ export default function OnboardingPage() {
   // Form state
   const [perfilTipo, setPerfilTipo] = useState<PerfilTipo>(null)
   const [name, setName] = useState('')
+  const [dob, setDob] = useState('')
+  const [parentEmail, setParentEmail] = useState('')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [vocacao, setVocacao] = useState<Vocacao>('leigo')
   const [santoDevocaoId, setSantoDevocaoId] = useState<string | null>(null)
@@ -73,6 +103,7 @@ export default function OnboardingPage() {
   useEffect(() => {
     if (profile) {
       setName(profile.name ?? user?.user_metadata?.name ?? '')
+      setDob(profile.data_nascimento ?? '')
       setAvatarUrl(profile.profile_image_url)
       setVocacao(profile.vocacao ?? 'leigo')
       setSantoDevocaoId(profile.santo_devocao_id ?? null)
@@ -120,6 +151,11 @@ export default function OnboardingPage() {
     if (!user || !supabase) return
     setSaving(true)
 
+    if (isUnder14) {
+      setSaving(false)
+      return
+    }
+
     if (perfilTipo === 'igreja') {
       // Igreja: só marca onboarding como concluído (mantém vocacao 'leigo')
       // e redireciona para o cadastro da igreja. Não grava sacramentos/paróquia
@@ -128,12 +164,17 @@ export default function OnboardingPage() {
         .from('profiles')
         .update({
           name: name || null,
+          data_nascimento: dob || null,
           profile_image_url: avatarUrl,
           cidade: cidade || null,
           estado: estado || null,
           onboarding_completed: true,
         })
         .eq('id', user.id)
+
+      if (isMinorRange) {
+        await requestParentalConsent(parentEmail)
+      }
 
       await refreshProfile()
       setSaving(false)
@@ -143,6 +184,7 @@ export default function OnboardingPage() {
 
     const profileUpdate: Record<string, unknown> = {
       name: name || null,
+      data_nascimento: dob || null,
       profile_image_url: avatarUrl,
       vocacao,
       sacramentos,
@@ -161,6 +203,10 @@ export default function OnboardingPage() {
       .from('profiles')
       .update(profileUpdate)
       .eq('id', user.id)
+
+    if (isMinorRange) {
+      await requestParentalConsent(parentEmail)
+    }
 
     // Auto-favorita a oração principal do santo escolhido
     if (santoDevocaoId) {
@@ -254,9 +300,18 @@ export default function OnboardingPage() {
     if (dx < 0 && canGoNext && !nextDisabled) goNext()
     else if (dx > 0 && canGoBack) goBack()
   }
+  const computedAge = computeAge(dob)
+  const isMinorRange = computedAge !== null && computedAge >= 14 && computedAge <= 17
+  const isUnder14 = computedAge !== null && computedAge < 14
+
   const nextDisabled = (() => {
     if (step === 0 && perfilTipo === null) return true
-    if (step === 1 && !name.trim()) return true
+    if (step === 1) {
+      if (!name.trim()) return true
+      if (!dob) return true
+      if (isUnder14) return true
+      if (isMinorRange && !isValidEmail(parentEmail)) return true
+    }
     return false
   })()
 
@@ -523,6 +578,61 @@ export default function OnboardingPage() {
                 onFocus={e => { e.target.style.borderColor = 'var(--accent)' }}
                 onBlur={e => { e.target.style.borderColor = 'var(--accent-soft)' }}
               />
+            </div>
+
+            {/* Data de nascimento (LGPD art. 14 + regra 14+) */}
+            <div className="w-full mt-4">
+              <label className="block text-xs mb-2 tracking-wider uppercase" style={{ fontFamily: 'var(--font-display)', color: 'var(--text-2)' }}>
+                Data de nascimento
+              </label>
+              <input
+                type="date"
+                value={dob}
+                onChange={e => setDob(e.target.value)}
+                max={new Date().toISOString().slice(0, 10)}
+                className="w-full px-4 py-3 rounded-xl text-sm"
+                style={{
+                  background: 'var(--surface-inset)',
+                  border: '1px solid var(--border-1)',
+                  color: 'var(--text-1)',
+                  fontFamily: 'var(--font-body)',
+                  outline: 'none',
+                }}
+              />
+              <p className="text-[11px] mt-1.5" style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}>
+                Para usar o Veritas Dei você precisa ter pelo menos 14 anos.
+              </p>
+
+              {isUnder14 && (
+                <div className="mt-3 p-3 rounded-xl" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                  <p className="text-xs" style={{ color: 'var(--text-1)', fontFamily: 'var(--font-body)' }}>
+                    Idade mínima não atingida. Sua conta não poderá ser concluída.
+                  </p>
+                </div>
+              )}
+
+              {isMinorRange && (
+                <div className="mt-3 p-3 rounded-xl space-y-2" style={{ background: 'var(--accent-soft)', border: '1px solid var(--border-1)' }}>
+                  <p className="text-xs" style={{ color: 'var(--text-1)', fontFamily: 'var(--font-body)' }}>
+                    Você tem entre 14 e 17 anos. Precisamos do consentimento de um responsável legal (LGPD, art. 14 §1º).
+                    Informe o e-mail do pai, mãe ou tutor legal — enviaremos um link para ele autorizar o uso da plataforma.
+                  </p>
+                  <input
+                    type="email"
+                    value={parentEmail}
+                    onChange={e => setParentEmail(e.target.value)}
+                    placeholder="E-mail do responsável legal"
+                    className="w-full px-4 py-2.5 rounded-lg text-sm"
+                    style={{
+                      background: 'var(--surface-inset)',
+                      border: '1px solid var(--border-1)',
+                      color: 'var(--text-1)',
+                      fontFamily: 'var(--font-body)',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </div>
         )}
