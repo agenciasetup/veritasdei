@@ -100,12 +100,15 @@ async function main() {
         continue
       }
 
-      // Comprime com sharp
+      // Comprime com sharp — WebP agressivo:
+      // - max 1600px largura (imagens 4:1 nativas → 1600×400 suficiente)
+      // - quality 62 + effort 6 (máximo) → tipicamente 10-34KB
+      // - smartSubsample preserva qualidade percebida em tons de pele/arte sacra
       const buffer = await readFile(srcPath)
       const { size: origSize } = await stat(srcPath)
       const webpBuffer = await sharp(buffer)
-        .resize(1800, null, { withoutEnlargement: true, fit: 'inside' })
-        .webp({ quality: 75, effort: 6 })
+        .resize(1600, null, { withoutEnlargement: true, fit: 'inside' })
+        .webp({ quality: 62, effort: 6, smartSubsample: true })
         .toBuffer()
 
       // Upload
