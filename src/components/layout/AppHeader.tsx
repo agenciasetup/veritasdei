@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Bell, LogOut, Settings, User as UserIcon } from 'lucide-react'
+import { Bell, HelpCircle, LogOut, Settings, User as UserIcon } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
 import { useUnreadNotifications } from '@/hooks/useUnreadNotifications'
@@ -45,6 +45,7 @@ const ROUTE_TITLES: Array<{ prefix: string; title: string }> = [
   { prefix: '/perfil', title: 'Perfil' },
   { prefix: '/notificacoes', title: 'Notificações' },
   { prefix: '/carteirinha', title: 'Carteirinha' },
+  { prefix: '/ajuda', title: 'Ajuda' },
 ]
 
 function resolveTitle(pathname: string): string | null {
@@ -163,6 +164,12 @@ export default function AppHeader() {
               icon={<Settings className="w-4 h-4" />}
               onClick={() => setMenuOpen(false)}
               label="Configurações"
+            />
+            <MenuItem
+              href="/ajuda"
+              icon={<HelpCircle className="w-4 h-4" />}
+              onClick={() => setMenuOpen(false)}
+              label="Ajuda"
             />
             <div
               className="my-1 h-px"
