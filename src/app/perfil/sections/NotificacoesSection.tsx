@@ -71,7 +71,7 @@ export default function NotificacoesSection() {
         await subscribePush()
         setEnabled(true)
         setPermissao(Notification.permission)
-        flash('Pronto! Você receberá lembretes 🙏')
+        flash('Pronto. Agora você recebe os lembretes aqui.')
       }
     } catch (err) {
       const code = (err as Error).message
@@ -111,8 +111,8 @@ export default function NotificacoesSection() {
     setBusy(true)
     try {
       const ok = await sendTestPush()
-      if (ok) flash('Enviado! Confira sua tela.')
-      else flash('Falha ao enviar teste', 'erro')
+      if (ok) flash('Enviei. Olha a tela.')
+      else flash('Não consegui enviar. Tenta de novo.', 'erro')
     } finally {
       setBusy(false)
     }

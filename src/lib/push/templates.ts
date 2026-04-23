@@ -5,8 +5,9 @@
  * em `self.addEventListener('push')` ([public/sw.js:274]). O `tag` define
  * agrupamento nativo (push nova de mesma tag substitui a anterior na gaveta).
  *
- * Tom: católico clássico, sem emojis decorativos. Body curto (<90 char) para
- * caber sem truncar no lockscreen do iOS.
+ * Tom: conversacional, como se um amigo estivesse mandando uma mensagem.
+ * Sem emojis decorativos (o ✝ do iOS renderiza com gradiente roxo feio).
+ * Body curto (<90 char) pra caber sem truncar no lockscreen.
  */
 
 import type { LiturgiaDia } from '@/types/liturgia'
@@ -25,44 +26,54 @@ export interface PushPayload {
   body: string
   url: string
   tag: string
-  /** Texto exibido em substituição ao título quando a notificação é agrupada */
   requireInteraction?: boolean
   /** Dedupe_key usada no feed in-app (1 registro por usuário+chave) */
   dedupeKey?: string
 }
 
-const intros = [
-  'Vigiai e orai',
-  'Hoje é dia de graça',
-  'Um momento com Deus',
-  'Tempo de silêncio',
-  'Venha rezar',
-]
-
 function pickByDay<T>(arr: T[]): T {
-  const day = new Date().getDate() + new Date().getMonth()
-  return arr[day % arr.length]
+  const d = new Date()
+  const idx = d.getDate() + d.getMonth()
+  return arr[idx % arr.length]
 }
 
 function shortRef(ref: string | null | undefined): string | null {
   if (!ref) return null
-  // "(At 2,42-47)" → "At 2,42-47"
   return ref.replace(/^[(\[]|[)\]]$/g, '').trim() || null
 }
 
-// ─── Liturgia do dia ─────────────────────────────────────────────────
+// ─── Liturgia do dia (manhã) ─────────────────────────────────────────
+
+const liturgiaTitulos = [
+  'Bom dia',
+  'Começando o dia',
+  'A Palavra de hoje',
+]
+
+const liturgiaBodiesSemRef = [
+  'A liturgia de hoje já tá aqui. Vem começar o dia bem?',
+  'Que tal abrir o dia com a Palavra?',
+  'Um minuto com a Palavra antes de começar?',
+  'O dia fica diferente quando começa com Ele.',
+]
+
+const liturgiaBodiesComRef = [
+  'Hoje tem {ref}. Vamos ler juntos?',
+  'No evangelho de hoje: {ref}. Um momento?',
+  'A Palavra de hoje: {ref}. Vem cá.',
+]
 
 export function liturgiaHoje(dia: LiturgiaDia | null): PushPayload {
   const evangelho = shortRef(dia?.evangelho?.referencia)
   const primeira = shortRef(dia?.primeira_leitura?.referencia)
-  const lista = [evangelho, primeira].filter(Boolean).join(' · ')
+  const ref = evangelho || primeira
 
-  const body = lista
-    ? `Hoje: ${lista}. Venha meditar a Palavra.`
-    : 'Comece o dia com a Palavra de Deus.'
+  const body = ref
+    ? pickByDay(liturgiaBodiesComRef).replace('{ref}', ref)
+    : pickByDay(liturgiaBodiesSemRef)
 
   return {
-    title: dia?.titulo ? `Liturgia — ${dia.titulo}` : 'Liturgia do dia',
+    title: pickByDay(liturgiaTitulos),
     body,
     url: '/liturgia',
     tag: 'liturgia-hoje',
@@ -72,17 +83,23 @@ export function liturgiaHoje(dia: LiturgiaDia | null): PushPayload {
 
 // ─── Ângelus (12h) ───────────────────────────────────────────────────
 
-const angelusBody = [
-  'O Anjo do Senhor anunciou a Maria. E ela concebeu do Espírito Santo.',
-  'É meio-dia. Pare um instante e reze o Ângelus.',
-  'Ave, Maria, cheia de graça. O Senhor é convosco.',
-  'Um minuto com Nossa Senhora antes de seguir o dia.',
+const angelusTitulos = [
+  'Meio-dia',
+  'Deu 12h',
+  'Pausa do almoço',
+]
+
+const angelusBodies = [
+  'Uma Ave-Maria pelo Ângelus?',
+  'Parou pro Ângelus? É rapidinho.',
+  'Um minuto com Nossa Senhora antes de seguir.',
+  'O Anjo do Senhor anunciou a Maria. Vem rezar.',
 ]
 
 export function angelus(): PushPayload {
   return {
-    title: 'Ângelus Domini',
-    body: pickByDay(angelusBody),
+    title: pickByDay(angelusTitulos),
+    body: pickByDay(angelusBodies),
     url: '/oracoes/angelus',
     tag: 'angelus',
     dedupeKey: `angelus:${new Date().toISOString().slice(0, 10)}`,
@@ -91,18 +108,24 @@ export function angelus(): PushPayload {
 
 // ─── Novena diária ───────────────────────────────────────────────────
 
-const novenaBody = [
-  'A perseverança é o caminho da graça. Reze sua novena hoje.',
-  'Não interrompa a corrente. Hoje é o seu dia de novena.',
-  'Mantenha a cadência. Sua novena espera por você.',
-  'Um dia de cada vez, com confiança. Venha rezar.',
+const novenaTitulos = [
+  'Sua novena',
+  'Hora da novena',
+  'Um dia a mais',
+]
+
+const novenaBodies = [
+  'Não quebra a corrente. Tá na hora.',
+  'Um passo a mais hoje. Vamos?',
+  'Sua novena te espera. Vem cá.',
+  'Perseverar é meio caminho. Bora?',
 ]
 
 export function novena(opts: { dia?: number; slug?: string | null }): PushPayload {
-  const detalhe = opts.dia ? `Dia ${opts.dia} de 9` : 'Continue sua novena'
+  const prefix = opts.dia ? `Dia ${opts.dia} de 9 — ` : ''
   return {
-    title: 'Hora da Novena',
-    body: `${detalhe} — ${pickByDay(novenaBody)}`,
+    title: pickByDay(novenaTitulos),
+    body: prefix + pickByDay(novenaBodies),
     url: '/novenas/minhas',
     tag: 'novena-daily',
     dedupeKey: `novena:${new Date().toISOString().slice(0, 10)}`,
@@ -111,17 +134,23 @@ export function novena(opts: { dia?: number; slug?: string | null }): PushPayloa
 
 // ─── Exame de consciência (noite) ────────────────────────────────────
 
-const exameBody = [
-  'Como foi seu dia aos olhos de Deus?',
-  'Examine sua consciência antes de dormir.',
-  'Pare e reveja o dia com o Senhor.',
-  'Um momento de verdade antes do descanso.',
+const exameTitulos = [
+  'Antes de dormir',
+  'Como foi seu dia?',
+  'Fim do dia',
+]
+
+const exameBodies = [
+  'Vamos olhar o dia juntos antes de descansar?',
+  'Um momento de verdade antes do sono.',
+  'O que Deus fez por você hoje? E você, por Ele?',
+  'Fecha o dia com Ele. É rápido.',
 ]
 
 export function exame(): PushPayload {
   return {
-    title: 'Exame de consciência',
-    body: pickByDay(exameBody),
+    title: pickByDay(exameTitulos),
+    body: pickByDay(exameBodies),
     url: '/exame-consciencia',
     tag: 'exame',
     dedupeKey: `exame:${new Date().toISOString().slice(0, 10)}`,
@@ -136,7 +165,7 @@ export function comunidadeRezouPorMim(opts: {
 }): PushPayload {
   return {
     title: `${opts.autor} rezou por você`,
-    body: 'Alguém está intercedendo pelo seu pedido. Que Deus o abençoe.',
+    body: 'Alguém tá intercedendo pelo seu pedido. Que alegria.',
     url: `/comunidade/pedidos/${opts.pedidoId}`,
     tag: `comunidade-rezou-${opts.pedidoId}`,
   }
@@ -148,7 +177,7 @@ export function comunidadeRespondeuCarta(opts: {
 }): PushPayload {
   return {
     title: `${opts.autor} te respondeu`,
-    body: 'Uma carta chegou. Abra quando puder.',
+    body: 'Uma carta chegou. Abre quando puder.',
     url: `/comunidade/cartas/${opts.cartaId}`,
     tag: `cartas-${opts.cartaId}`,
   }
@@ -157,10 +186,9 @@ export function comunidadeRespondeuCarta(opts: {
 // ─── Test ────────────────────────────────────────────────────────────
 
 export function testar(): PushPayload {
-  const frase = pickByDay(intros)
   return {
-    title: '✝ Veritas Dei',
-    body: `${frase}. Suas notificações estão ativas.`,
+    title: 'Tudo certo',
+    body: 'Funcionou. A partir de agora você recebe os lembretes aqui.',
     url: '/',
     tag: 'test',
   }

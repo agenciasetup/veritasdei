@@ -102,7 +102,7 @@ export default function AppHeader() {
 
   return (
     <header
-      className="sticky top-0 z-[60] w-full flex items-center justify-between h-12 px-3"
+      className="sticky top-0 z-[60] w-full flex items-center justify-between h-12 px-3 safe-top-standalone"
       style={{
         background: 'color-mix(in srgb, var(--surface-2) 90%, transparent)',
         borderBottom: '1px solid var(--border-1)',
