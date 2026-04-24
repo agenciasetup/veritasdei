@@ -17,6 +17,7 @@ import {
   LogOut,
   Users,
   Gem,
+  Gavel,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 
@@ -169,6 +170,11 @@ function PerfilContent() {
               href="/perfil/privacidade"
               icon={<ShieldCheck className="w-4 h-4" />}
               label="Privacidade e dados"
+            />
+            <SecondaryLink
+              href="/perfil/apelacoes"
+              icon={<Gavel className="w-4 h-4" />}
+              label="Apelações"
             />
             {profile?.vocacao && profile.vocacao !== 'leigo' && (
               <SecondaryLink

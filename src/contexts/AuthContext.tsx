@@ -232,6 +232,21 @@ function AuthProviderInner({
   }, [supabase, setAuthState])
 
   const signUp = async (email: string, password: string, name: string, nextPath?: string) => {
+    // Verifica se o e-mail / IP estão banidos antes de chamar o Supabase.
+    try {
+      const check = await fetch('/api/auth/signup-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      if (check.status === 403) {
+        const body = await check.json().catch(() => ({}))
+        return { error: body?.detail ?? 'Cadastro bloqueado.' }
+      }
+    } catch {
+      // Se o guard falhar, seguimos — prefiro deixar passar a quebrar signup.
+    }
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -244,10 +259,35 @@ function AuthProviderInner({
   }
 
   const signInWithPassword = async (email: string, password: string) => {
+    // Verifica bloqueio progressivo antes de tentar.
+    try {
+      const pre = await fetch('/api/auth/login-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, action: 'check' }),
+      })
+      if (pre.ok) {
+        const state = await pre.json()
+        if (state?.throttled) {
+          const minutes = Math.ceil((state.retryAfterMs ?? 900000) / 60000)
+          return {
+            error: `Muitas tentativas. Tente novamente em ${minutes} min ou redefina sua senha.`,
+          }
+        }
+      }
+    } catch {
+      // deixa passar se o check falhar
+    }
+
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (!error) {
-      // Não bloqueia o fluxo: o endpoint grava IP/UA via headers.
       fetch('/api/auth/log-login-event', { method: 'POST' }).catch(() => {})
+    } else {
+      fetch('/api/auth/login-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, action: 'fail' }),
+      }).catch(() => {})
     }
     return { error: error?.message ?? null }
   }
