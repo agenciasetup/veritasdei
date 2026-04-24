@@ -245,6 +245,10 @@ function AuthProviderInner({
 
   const signInWithPassword = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (!error) {
+      // Não bloqueia o fluxo: o endpoint grava IP/UA via headers.
+      fetch('/api/auth/log-login-event', { method: 'POST' }).catch(() => {})
+    }
     return { error: error?.message ?? null }
   }
 
