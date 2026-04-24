@@ -9,6 +9,12 @@ import { fetchPostsByIds } from '@/lib/community/posts'
 import { pushCommunityNotification } from '@/lib/community/notifications'
 import { requireCommunityPremiumAccess } from '@/lib/community/server'
 import type { VeritasKind, VeritasPostVariant } from '@/lib/community/types'
+import {
+  hasNsfwFlagged,
+  moderateText,
+  recordRejection,
+  scanAssetsAndPersist,
+} from '@/lib/moderation/pipeline'
 
 interface CreateVeritasRequest {
   kind: VeritasKind
@@ -66,6 +72,38 @@ export async function POST(req: NextRequest) {
   if (kind === 'original' || kind === 'reply' || kind === 'quote') {
     if (!body || body.length > VERITAS_MAX_BODY) {
       return NextResponse.json({ error: 'invalid_body' }, { status: 400 })
+    }
+  }
+
+  // Moderação de texto: filtro de teor sexual + blocklist de domínios.
+  if (body.length > 0) {
+    const textMod = await moderateText(supabase, body)
+    if (!textMod.ok) {
+      const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip')
+      const ua = req.headers.get('user-agent')
+      const reasonLabel =
+        textMod.reason === 'text_filter'
+          ? `text_filter:${textMod.hit.label}`
+          : `blocked_domain:${textMod.hit.matchedDomain}`
+      const sample =
+        textMod.reason === 'text_filter' ? textMod.hit.sample : textMod.hit.url
+      await recordRejection(supabase, {
+        userId: user.id,
+        reason: reasonLabel,
+        sample,
+        ip: ip ?? null,
+        userAgent: ua,
+      })
+      return NextResponse.json(
+        {
+          error: 'content_blocked',
+          reason: textMod.reason,
+          detail: textMod.reason === 'text_filter'
+            ? 'Seu post viola as Diretrizes da Comunidade (conteúdo sexual). Edite e tente novamente.'
+            : `Links para o domínio "${textMod.hit.matchedDomain}" não são permitidos.`,
+        },
+        { status: 400 },
+      )
     }
   }
 
@@ -172,13 +210,28 @@ export async function POST(req: NextRequest) {
       const { data: createdAssets, error: createAssetsError } = await supabase
         .from('vd_media_assets')
         .insert(mediaRows)
-        .select('id')
+        .select('id, object_key')
 
       if (createAssetsError || !createdAssets) {
         throw new Error(createAssetsError?.message ?? 'Erro ao criar mídia')
       }
 
       createdMediaAssetIds.push(...createdAssets.map(asset => asset.id))
+
+      // Classificação NSFW síncrona. Em dev (provider não configurado),
+      // a chamada retorna available:false e o fluxo prossegue sem bloquear.
+      const publicBaseForScan = getR2PublicBaseUrl()
+      const decisions = await scanAssetsAndPersist(
+        supabase,
+        createdAssets.map((asset) => ({
+          id: asset.id,
+          object_key: asset.object_key,
+          publicUrl: `${publicBaseForScan}/${asset.object_key}`,
+        })),
+      )
+      if (hasNsfwFlagged(decisions)) {
+        throw new Error('nsfw_flagged')
+      }
 
       const linkRows = createdAssets.map((asset, index) => ({
         post_id: createdPost.id,
@@ -243,6 +296,26 @@ export async function POST(req: NextRequest) {
         .from('vd_posts')
         .delete()
         .eq('id', createdPostId)
+    }
+
+    const isNsfw = error instanceof Error && error.message === 'nsfw_flagged'
+    if (isNsfw) {
+      const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip')
+      await recordRejection(supabase, {
+        userId: user.id,
+        reason: 'nsfw_flagged',
+        sample: null,
+        ip: ip ?? null,
+        userAgent: req.headers.get('user-agent'),
+      })
+      return NextResponse.json(
+        {
+          error: 'content_blocked',
+          reason: 'nsfw_image',
+          detail: 'Uma ou mais imagens foram classificadas como conteúdo adulto/NSFW. Publicação bloqueada.',
+        },
+        { status: 400 },
+      )
     }
 
     return NextResponse.json({ error: 'create_failed' }, { status: 500 })
