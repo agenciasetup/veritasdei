@@ -12,6 +12,7 @@ import {
   CreditCard,
   ChevronLeft,
   Shield,
+  ShieldCheck,
   Lock,
   LogOut,
   Users,
@@ -163,6 +164,11 @@ function PerfilContent() {
               href="/perfil/seguranca"
               icon={<Lock className="w-4 h-4" />}
               label="Segurança"
+            />
+            <SecondaryLink
+              href="/perfil/privacidade"
+              icon={<ShieldCheck className="w-4 h-4" />}
+              label="Privacidade e dados"
             />
             {profile?.vocacao && profile.vocacao !== 'leigo' && (
               <SecondaryLink
