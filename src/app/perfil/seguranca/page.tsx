@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import AuthGuard from '@/components/auth/AuthGuard'
-import { Lock, Eye, EyeOff, CheckCircle, ArrowLeft } from 'lucide-react'
+import { Lock, Eye, EyeOff, CheckCircle, ArrowLeft, ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
+import { TotpEnrollment } from '@/components/auth/TotpEnrollment'
 
 export default function SegurancaPage() {
   return (
@@ -211,6 +212,26 @@ function SegurancaContent() {
             </button>
           </form>
         )}
+
+        <div className="mt-8 pt-6" style={{ borderTop: '1px solid rgba(201,168,76,0.1)' }}>
+          <div className="flex items-center gap-3 mb-3">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.2)' }}
+            >
+              <ShieldCheck className="w-4 h-4" style={{ color: '#C9A84C' }} />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold tracking-wider uppercase" style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}>
+                Autenticação em dois fatores
+              </h2>
+              <p className="text-[11px]" style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}>
+                Segundo fator via app autenticador (TOTP).
+              </p>
+            </div>
+          </div>
+          <TotpEnrollment />
+        </div>
       </div>
     </div>
   )
