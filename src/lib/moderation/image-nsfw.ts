@@ -10,19 +10,47 @@
  * (tipicamente pular a moderação em dev local).
  */
 
+// O catálogo público da Cloudflare Workers AI hoje (abr/2026) só tem um
+// modelo de Image Classification: @cf/microsoft/resnet-50 (ImageNet 1000
+// classes). Não há modelo NSFW dedicado disponível. As labels abaixo
+// cobrem as classes do ImageNet que correspondem à política das Diretrizes
+// (proibido bikini, lingerie, sungas em pose sensualizada, roupa íntima)
+// — não detectam nudez explícita frontal, que precisaria de outro modelo.
 const DEFAULT_MODEL = process.env.CF_NSFW_MODEL || '@cf/microsoft/resnet-50'
+
+// Threshold para classificar como NSFW. Resnet-50 distribui probabilidade
+// entre 1000 classes, então a top-1 raramente passa de 0.7. Score de 0.15
+// na classe certa já é indicador forte.
+const NSFW_SCORE_THRESHOLD = Number.parseFloat(
+  process.env.CF_NSFW_THRESHOLD || '0.15',
+)
+
+// A Cloudflare devolve as labels do resnet-50 em MAIÚSCULAS e geralmente
+// só a primeira palavra ("BRASSIERE", "BIKINI", "MAILLOT") — não no
+// formato verboso original ("brassiere, bra, bandeau"). Comparamos em
+// lowercase, com substrings curtas. Match dispara o flag.
 const NSFW_LABELS_SUBSTRINGS = [
+  // strings genéricas (caso outro modelo seja usado no futuro)
   'pornography',
   'explicit',
   'nsfw',
   'nudity',
   'naked',
   'topless',
-  'sex',
-  'lingerie',
+  // ImageNet — roupa íntima e moda praia
   'bikini',
+  'maillot',
   'swimsuit',
+  'swimming trunks',
+  'brassiere',
   'underwear',
+  'lingerie',
+  'thong',
+  'g-string',
+  'panties',
+  'corset',
+  'bustier',
+  'stocking',
 ]
 
 export type NsfwScanResult =
@@ -121,7 +149,7 @@ export async function scanImage(publicUrl: string, opts?: { timeoutMs?: number }
         )
 
         const score = nsfwHit?.score ?? 0
-        const safe = !nsfwHit || score < 0.45
+        const safe = !nsfwHit || score < NSFW_SCORE_THRESHOLD
 
         return {
           available: true,
