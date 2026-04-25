@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { scanForBlockedDomains, type BlocklistHit } from './blocklist'
 import { scanText, isHardReject, type TextFilterHit } from './text-filter'
 import { isNsfwProviderConfigured, scanImage, type NsfwScanResult } from './image-nsfw'
@@ -35,7 +36,7 @@ export async function moderateText(
 }
 
 export async function recordRejection(
-  supabase: SupabaseClient,
+  _supabase: SupabaseClient,
   params: {
     userId: string
     reason: string
@@ -44,7 +45,10 @@ export async function recordRejection(
     userAgent: string | null
   },
 ) {
-  await supabase.from('moderation_rejections').insert({
+  // moderation_rejections tem RLS habilitada sem policy de INSERT — só
+  // service_role grava. Por isso usamos admin client aqui.
+  const admin = createAdminClient()
+  await admin.from('moderation_rejections').insert({
     user_id: params.userId,
     reason: params.reason,
     sample: params.sample?.slice(0, 400) ?? null,
@@ -120,7 +124,9 @@ export async function scanAssetsAndPersist(
     })
 
   if (logRows.length > 0) {
-    await supabase.from('vd_media_moderation_log').insert(logRows)
+    // vd_media_moderation_log tem RLS sem policy de INSERT — admin only.
+    const admin = createAdminClient()
+    await admin.from('vd_media_moderation_log').insert(logRows)
   }
 
   return decisions
