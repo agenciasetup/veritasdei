@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { checkIdentifierBan } from '@/lib/auth/identifier-guard'
+import { checkIdentifierBan, hashIdentifier } from '@/lib/auth/identifier-guard'
 import { clientIpFromHeaders } from '@/lib/auth/log-login-event'
+import { sendAdminAlert } from '@/lib/notifications/admin-alert'
+import { rateLimit } from '@/lib/rate-limit'
 
 type Body = { email?: string }
 
@@ -23,6 +25,19 @@ export async function POST(req: NextRequest) {
   })
 
   if (!result.allowed) {
+    const hash = hashIdentifier(email)
+    const alertAllowed = await rateLimit(`alert:signup_blocked:${hash}`, 1, 60 * 60 * 1000)
+    if (alertAllowed) {
+      await sendAdminAlert({
+        severity: 'info',
+        title: 'Tentativa de signup com identificador banido',
+        fields: [
+          { name: 'reason', value: result.reason, inline: true },
+          { name: 'email_hash', value: hash.slice(0, 16) + '…', inline: true },
+          { name: 'ip', value: clientIpFromHeaders(req.headers) ?? '—', inline: true },
+        ],
+      })
+    }
     return NextResponse.json(
       {
         allowed: false,
