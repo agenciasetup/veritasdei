@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { rateLimit } from '@/lib/rate-limit'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { clientIpFromHeaders } from '@/lib/auth/log-login-event'
+import { sendAdminAlert } from '@/lib/notifications/admin-alert'
 
 type Body = {
   target_user_id?: string
@@ -71,6 +72,19 @@ export async function POST(req: NextRequest) {
   if (error) {
     return NextResponse.json({ error: 'db_error', detail: error.message }, { status: 500 })
   }
+
+  await sendAdminAlert({
+    severity: 'critical',
+    title: 'Novo SOS recebido',
+    description: `Categoria: ${body.category}`,
+    fields: [
+      { name: 'sos_id', value: String(data.id), inline: true },
+      { name: 'reporter', value: user.id, inline: true },
+      { name: 'target_user', value: body.target_user_id ?? '—', inline: true },
+      { name: 'target_post', value: body.target_post_id ?? '—', inline: true },
+      ...(details ? [{ name: 'detalhes', value: details.slice(0, 500) }] : []),
+    ],
+  })
 
   return NextResponse.json({
     ok: true,

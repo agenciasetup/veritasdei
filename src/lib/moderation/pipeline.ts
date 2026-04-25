@@ -3,6 +3,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { scanForBlockedDomains, type BlocklistHit } from './blocklist'
 import { scanText, isHardReject, type TextFilterHit } from './text-filter'
 import { isNsfwProviderConfigured, scanImage, type NsfwScanResult } from './image-nsfw'
+import { sendAdminAlert } from '@/lib/notifications/admin-alert'
+import { rateLimit } from '@/lib/rate-limit'
 
 export type TextModerationResult =
   | { ok: true }
@@ -55,6 +57,36 @@ export async function recordRejection(
     ip: params.ip,
     user_agent: params.userAgent?.slice(0, 400) ?? null,
   })
+
+  if (params.reason.startsWith('nsfw')) {
+    void detectNsfwSpree(admin, params.userId)
+  }
+}
+
+async function detectNsfwSpree(admin: SupabaseClient, userId: string): Promise<void> {
+  try {
+    const since = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+    const { count } = await admin
+      .from('moderation_rejections')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .like('reason', 'nsfw%')
+      .gte('created_at', since)
+    if ((count ?? 0) < 3) return
+
+    const hourBucket = new Date().toISOString().slice(0, 13)
+    const allowed = await rateLimit(`alert:nsfw_spree:${userId}:${hourBucket}`, 1, 3 * 60 * 60 * 1000)
+    if (!allowed) return
+
+    await sendAdminAlert({
+      severity: 'warning',
+      title: 'Padrão NSFW suspeito',
+      description: `Usuário acumulou ${count} rejeições NSFW na última hora.`,
+      fields: [{ name: 'user_id', value: userId, inline: true }],
+    })
+  } catch (err) {
+    console.warn('[moderation] detectNsfwSpree falhou', err)
+  }
 }
 
 export type ImageScanDecision = {

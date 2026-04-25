@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { buildConsentUrl, generateToken } from '@/lib/legal/parental-token'
+import { generateToken } from '@/lib/legal/parental-token'
+import { sendParentalConsentRequestEmail } from '@/lib/legal/parental-email'
 
 type Body = {
   parentEmail?: string
@@ -42,14 +43,18 @@ export async function POST(req: NextRequest) {
   const { token, tokenHash } = generateToken()
   const ip = clientIp(req)
 
-  const { error: insertError } = await supabase.from('parental_consents').insert({
-    user_id: user.id,
-    parent_email: parentEmail,
-    token_hash: tokenHash,
-    requested_ip: ip,
-  })
-  if (insertError) {
-    return NextResponse.json({ error: 'db_error', detail: insertError.message }, { status: 500 })
+  const { data: inserted, error: insertError } = await supabase
+    .from('parental_consents')
+    .insert({
+      user_id: user.id,
+      parent_email: parentEmail,
+      token_hash: tokenHash,
+      requested_ip: ip,
+    })
+    .select('expires_at')
+    .single()
+  if (insertError || !inserted) {
+    return NextResponse.json({ error: 'db_error', detail: insertError?.message }, { status: 500 })
   }
 
   const { error: statusError } = await supabase
@@ -60,15 +65,35 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'db_error', detail: statusError.message }, { status: 500 })
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin
-  const consentUrl = buildConsentUrl(baseUrl, token)
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('display_name')
+    .eq('id', user.id)
+    .maybeSingle()
 
-  // TODO(pos-mvp): enviar e-mail real ao responsavel via Resend/Supabase.
-  // Por enquanto retornamos o link na resposta para envio manual pelo operador.
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin
+
+  let emailDelivered = false
+  let emailError: string | undefined
+  try {
+    await sendParentalConsentRequestEmail({
+      parentEmail,
+      minorName: profile?.display_name ?? 'um adolescente',
+      token,
+      expiresAt: new Date(inserted.expires_at),
+      baseUrl,
+    })
+    emailDelivered = true
+  } catch (err) {
+    emailError = err instanceof Error ? err.message : String(err)
+    console.error('[parental-consent/request] e-mail falhou:', emailError)
+  }
+
   return NextResponse.json({
     ok: true,
     parentEmail,
-    consentUrl,
-    note: 'Link provisorio. Em producao sera enviado por e-mail ao responsavel.',
+    expiresAt: inserted.expires_at,
+    emailDelivered,
+    ...(emailError ? { emailError } : {}),
   })
 }
