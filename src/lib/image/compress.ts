@@ -9,7 +9,9 @@
  * Estratégia: decodifica via createImageBitmap, redimensiona pra no máximo
  * MAX_DIMENSION (1600px — igual à maior variante do CDN, zero upscaling),
  * e itera por uma escada de qualidades até ficar abaixo do `TARGET_BYTES`
- * ou atingir o mínimo. WebP quando o browser suporta; JPEG fallback.
+ * ou atingir o mínimo. Output sempre em JPEG — o classificador NSFW
+ * (Cloudflare Workers AI / falconsai) só aceita JPEG/PNG; WebP rejeita
+ * com 400. Trade-off de ~25% mais bytes vale para ter moderação rodando.
  *
  * GIFs/SVGs passam direto pra preservar animação. Arquivos já pequenos
  * (< 60KB) não gastam CPU comprimindo. Se decodificação tombar
@@ -26,10 +28,9 @@ const MAX_DIMENSION = 1600
 // na primeira passada com WebP 0.72. Itera quality se estourar.
 const TARGET_BYTES = 400 * 1024
 
-// Escada de qualidade — sobe pra primeira, desce até QUALITY_MIN se
-// estourar o alvo. 0.72 WebP ≈ qualidade alta visualmente indistinguível
-// do original; 0.50 ainda fica bom pra feed.
-const WEBP_QUALITIES = [0.72, 0.62, 0.52]
+// Escada de qualidade — sobe pra primeira, desce se estourar o alvo.
+// 0.76 JPEG ≈ qualidade alta visualmente indistinguível do original;
+// 0.56 ainda fica bom pra feed.
 const JPEG_QUALITIES = [0.76, 0.66, 0.56]
 
 // Arquivos abaixo desse limite passam direto — o overhead de decode+
@@ -74,14 +75,6 @@ async function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: nu
   })
 }
 
-function supportsWebP(): boolean {
-  if (typeof document === 'undefined') return false
-  const c = document.createElement('canvas')
-  c.width = 1
-  c.height = 1
-  return c.toDataURL('image/webp').startsWith('data:image/webp')
-}
-
 export async function compressImage(file: File): Promise<CompressResult> {
   const originalBytes = file.size
 
@@ -114,12 +107,11 @@ export async function compressImage(file: File): Promise<CompressResult> {
     ctx.drawImage(bitmap, 0, 0, w, h)
     bitmap.close?.()
 
-    const wantsWebP = supportsWebP()
-    const targetType = wantsWebP ? 'image/webp' : 'image/jpeg'
-    const qualities = wantsWebP ? WEBP_QUALITIES : JPEG_QUALITIES
+    // Sempre JPEG: classificador NSFW da Cloudflare rejeita WebP com 400.
+    const targetType = 'image/jpeg'
 
     let best: Blob | null = null
-    for (const quality of qualities) {
+    for (const quality of JPEG_QUALITIES) {
       const blob = await canvasToBlob(canvas, targetType, quality)
       if (!blob) continue
       best = blob
@@ -136,9 +128,8 @@ export async function compressImage(file: File): Promise<CompressResult> {
       return { file, compressed: false, originalBytes, finalBytes: originalBytes }
     }
 
-    const ext = targetType === 'image/webp' ? 'webp' : 'jpg'
     const baseName = file.name.replace(/\.[^.]+$/, '') || 'veritas'
-    const compressed = new File([best], `${baseName}.${ext}`, {
+    const compressed = new File([best], `${baseName}.jpg`, {
       type: targetType,
       lastModified: Date.now(),
     })
