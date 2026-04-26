@@ -82,14 +82,14 @@ export async function POST(req: NextRequest) {
   try {
     const { data: profile } = await admin
       .from('profiles')
-      .select('display_name')
+      .select('name')
       .eq('id', consent.user_id)
       .maybeSingle()
     const { data: authUser } = await admin.auth.admin.getUserById(consent.user_id)
     await sendParentalConsentConfirmedEmails({
       parentEmail: consent.parent_email,
       parentName: parentName,
-      minorName: profile?.display_name ?? 'um adolescente',
+      minorName: profile?.name ?? 'um adolescente',
       minorEmail: authUser?.user?.email ?? null,
     })
   } catch (err) {

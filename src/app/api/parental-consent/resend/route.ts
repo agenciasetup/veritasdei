@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name')
+    .select('name')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
   try {
     await sendParentalConsentRequestEmail({
       parentEmail: latest.parent_email,
-      minorName: profile?.display_name ?? 'um adolescente',
+      minorName: profile?.name ?? 'um adolescente',
       token,
       expiresAt: new Date(inserted.expires_at),
       baseUrl,

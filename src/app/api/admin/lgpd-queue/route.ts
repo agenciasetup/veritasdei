@@ -11,7 +11,7 @@ export async function GET() {
   const admin = createAdminClient()
   const { data, error } = await admin
     .from('profiles')
-    .select('id, display_name, deletion_scheduled_for, deletion_requested_at')
+    .select('id, name, deletion_scheduled_for, deletion_requested_at')
     .eq('account_status', 'pending_deletion')
     .order('deletion_scheduled_for', { ascending: true })
     .limit(200)
