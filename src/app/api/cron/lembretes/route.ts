@@ -5,7 +5,8 @@ import { liturgiaHoje, angelus, exame } from '@/lib/push/templates'
 import type { LiturgiaDia } from '@/types/liturgia'
 
 /**
- * POST /api/cron/lembretes  —  vercel.json: "0 * * * *" (hora em hora)
+ * /api/cron/lembretes  —  vercel.json: "0 * * * *" (hora em hora)
+ * Aceita GET (Vercel Cron padrão) e POST (curl manual).
  *
  * 1 cron para todas as categorias com horário ajustável pelo usuário
  * (liturgia, ângelus, exame). Dispara por hora local (pref.timezone).
@@ -55,7 +56,7 @@ async function fetchLiturgiaHoje(origin: string): Promise<LiturgiaDia | null> {
   }
 }
 
-export async function POST(req: NextRequest) {
+async function runLembretes(req: NextRequest) {
   const authHeader = req.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
   if (!cronSecret) {
@@ -139,3 +140,6 @@ export async function POST(req: NextRequest) {
     exame: { candidates: bucketExame.length, result: rExa },
   })
 }
+
+export const GET = runLembretes
+export const POST = runLembretes

@@ -4,16 +4,17 @@ import { sendPushToUsers } from '@/lib/push/send'
 import { novena } from '@/lib/push/templates'
 
 /**
- * POST /api/novenas/reminders
+ * /api/novenas/reminders
  *
  * Cron diário (vercel.json: 0 8 * * * UTC = 5h BRT).
+ * Aceita GET (Vercel Cron padrão) e POST (curl manual).
  * Envia lembrete aos usuários com novenas ativas + push habilitado + pref_novenas=true.
  * Filtro de pref + envio HTTP ficam na lib `sendPushToUsers` (web-push).
  *
  * Protegido por CRON_SECRET.
  */
 
-export async function POST(req: NextRequest) {
+async function runNovenasReminders(req: NextRequest) {
   const authHeader = req.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
   if (!cronSecret) {
@@ -75,3 +76,6 @@ export async function POST(req: NextRequest) {
     ...result,
   })
 }
+
+export const GET = runNovenasReminders
+export const POST = runNovenasReminders

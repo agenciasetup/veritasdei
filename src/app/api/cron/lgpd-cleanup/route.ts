@@ -5,7 +5,9 @@ import { renderDeletionWarning } from '@/lib/email/templates/lgpd-deletion-warni
 import { sendAdminAlert } from '@/lib/notifications/admin-alert'
 
 /**
- * POST /api/cron/lgpd-cleanup — vercel.json: "0 6 * * *" (06h UTC = 03h BRT)
+ * /api/cron/lgpd-cleanup — vercel.json: "0 6 * * *" (06h UTC = 03h BRT)
+ *
+ * Aceita GET (Vercel Cron padrão + dashboard "Run Now") e POST (curl manual).
  *
  * 1. Executa soft_delete_user para contas com pending_deletion vencido.
  * 2. Avisa por e-mail quem está a 5 dias da exclusão (idempotente por dia
@@ -22,7 +24,7 @@ interface PendingRow {
   display_name: string | null
 }
 
-export async function POST(req: NextRequest) {
+async function runCleanup(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET
   if (!cronSecret) {
     return NextResponse.json({ error: 'server_misconfigured' }, { status: 500 })
@@ -163,3 +165,6 @@ export async function POST(req: NextRequest) {
     duration_ms: Date.now() - startedAt,
   })
 }
+
+export const GET = runCleanup
+export const POST = runCleanup
