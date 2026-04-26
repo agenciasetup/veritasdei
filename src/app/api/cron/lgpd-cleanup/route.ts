@@ -21,7 +21,7 @@ const HARD_LIMIT = 100
 interface PendingRow {
   id: string
   deletion_scheduled_for: string
-  display_name: string | null
+  name: string | null
 }
 
 async function runCleanup(req: NextRequest) {
@@ -43,7 +43,7 @@ async function runCleanup(req: NextRequest) {
   try {
     const { data: toDelete, error: dueErr } = await admin
       .from('profiles')
-      .select('id, deletion_scheduled_for, display_name')
+      .select('id, deletion_scheduled_for, name')
       .eq('account_status', 'pending_deletion')
       .lte('deletion_scheduled_for', new Date().toISOString())
       .order('deletion_scheduled_for', { ascending: true })
@@ -63,7 +63,7 @@ async function runCleanup(req: NextRequest) {
     const sixD = new Date(Date.now() + 6 * 86400_000).toISOString()
     const { data: warnRows, error: warnErr } = await admin
       .from('profiles')
-      .select('id, deletion_scheduled_for, display_name')
+      .select('id, deletion_scheduled_for, name')
       .eq('account_status', 'pending_deletion')
       .gte('deletion_scheduled_for', fiveD)
       .lt('deletion_scheduled_for', sixD)
@@ -103,7 +103,7 @@ async function runCleanup(req: NextRequest) {
         if (!email) continue
 
         const tpl = renderDeletionWarning({
-          displayName: row.display_name,
+          displayName: row.name,
           scheduledFor: new Date(row.deletion_scheduled_for),
           cancelUrl: `${appUrl}/perfil/seguranca?action=cancel-deletion`,
         })

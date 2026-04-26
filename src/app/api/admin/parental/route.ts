@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
   if (body.action === 'resend') {
     const { data: profile } = await admin
       .from('profiles')
-      .select('display_name')
+      .select('name')
       .eq('id', body.userId)
       .maybeSingle()
     let emailDelivered = false
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
     try {
       await sendParentalConsentRequestEmail({
         parentEmail: latest.parent_email,
-        minorName: profile?.display_name ?? 'um adolescente',
+        minorName: profile?.name ?? 'um adolescente',
         token,
         expiresAt: new Date(inserted.expires_at),
         baseUrl,

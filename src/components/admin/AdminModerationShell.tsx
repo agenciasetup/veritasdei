@@ -374,7 +374,7 @@ function ParentalTab() {
 
 interface LgpdRow {
   id: string
-  display_name: string | null
+  name: string | null
   deletion_scheduled_for: string | null
   deletion_requested_at: string | null
 }
@@ -409,7 +409,7 @@ function LgpdTab() {
           <Card key={p.id}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, color: TEXT }}>{p.display_name ?? '—'}</div>
+                <div style={{ fontSize: 14, color: TEXT }}>{p.name ?? '—'}</div>
                 <div style={{ fontSize: 11, color: MUTED, fontFamily: 'monospace', marginTop: 4 }}>
                   user: {p.id} · agendado {fmt(p.deletion_scheduled_for)} {daysLeft !== null && `(${daysLeft}d)`}
                 </div>
