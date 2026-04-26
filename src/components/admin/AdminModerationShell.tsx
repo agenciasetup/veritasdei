@@ -5,12 +5,20 @@ import Link from 'next/link'
 import { Loader2, AlertCircle, Check, X, Clock, ShieldAlert, Mail, Trash2, Ban, FileText, Activity, ArrowLeft } from 'lucide-react'
 import ModerationPanel from '@/components/comunidade/ModerationPanel'
 
-const BRAND = '#C9A84C'
-const SURFACE = '#15171c'
-const SURFACE_2 = '#1c1f26'
-const BORDER = '#2a2e36'
-const MUTED = '#9aa0a6'
-const TEXT = '#e9eaed'
+// Cores derivadas do tema do app (src/app/globals.css). Usar var(--*) em vez
+// de hex hardcoded mantém o painel coerente com o resto e responde a
+// theme switch (light/dark/system).
+const BRAND = 'var(--accent)'
+const BRAND_CONTRAST = 'var(--accent-contrast)'
+const BG = 'var(--surface-1)'
+const SURFACE = 'var(--surface-2)'
+const SURFACE_2 = 'var(--surface-3)'
+const BORDER = 'var(--border-1)'
+const MUTED = 'var(--text-3)'
+const TEXT = 'var(--text-1)'
+const DANGER = 'var(--danger)'
+const DANGER_SOFT = 'rgba(217, 79, 92, 0.15)'
+const DANGER_BORDER = 'rgba(217, 79, 92, 0.4)'
 
 type TabKey = 'sos' | 'appeals' | 'parental' | 'lgpd' | 'bans' | 'reports' | 'log'
 
@@ -44,12 +52,12 @@ export default function AdminModerationShell({ currentUserId, role }: Props) {
   const visibleTabs = TABS.filter((t) => !t.adminOnly || role === 'admin')
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f1115', color: TEXT, fontFamily: "'Helvetica Neue', Arial, sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: BG, color: TEXT, fontFamily: 'var(--font-sans, system-ui), Poppins, "Helvetica Neue", Arial, sans-serif' }}>
       <header style={{ padding: '20px 24px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', gap: 16 }}>
         <Link href="/comunidade" style={{ color: MUTED, display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', fontSize: 14 }}>
           <ArrowLeft size={16} /> Voltar
         </Link>
-        <h1 style={{ fontFamily: "Georgia,'Times New Roman',serif", fontSize: 22, color: BRAND, margin: 0, letterSpacing: '.04em' }}>
+        <h1 style={{ fontFamily: "var(--font-display, 'Cinzel'), Georgia, serif", fontSize: 22, color: BRAND, margin: 0, letterSpacing: '.04em' }}>
           Moderação · Admin
         </h1>
         <span style={{ fontSize: 12, color: MUTED, marginLeft: 'auto' }}>
@@ -72,7 +80,7 @@ export default function AdminModerationShell({ currentUserId, role }: Props) {
                 padding: '8px 14px',
                 borderRadius: 8,
                 background: active ? BRAND : 'transparent',
-                color: active ? '#1a1505' : TEXT,
+                color: active ? BRAND_CONTRAST : TEXT,
                 border: `1px solid ${active ? BRAND : BORDER}`,
                 cursor: 'pointer',
                 fontSize: 13,
@@ -111,8 +119,8 @@ function Card({ children }: { children: React.ReactNode }) {
 function Btn({ children, onClick, variant = 'default', disabled }: { children: React.ReactNode; onClick: () => void; variant?: 'default' | 'primary' | 'danger'; disabled?: boolean }) {
   const colors = {
     default: { bg: SURFACE_2, fg: TEXT, border: BORDER },
-    primary: { bg: BRAND, fg: '#1a1505', border: BRAND },
-    danger: { bg: 'rgba(231,76,60,.15)', fg: '#f5b8b3', border: 'rgba(231,76,60,.4)' },
+    primary: { bg: BRAND, fg: BRAND_CONTRAST, border: BRAND },
+    danger: { bg: DANGER_SOFT, fg: DANGER, border: DANGER_BORDER },
   }[variant]
   return (
     <button
@@ -201,13 +209,13 @@ function SosTab() {
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
-                  <span style={{ background: overdue ? 'rgba(231,76,60,.18)' : SURFACE_2, color: overdue ? '#f5b8b3' : MUTED, padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>
+                  <span style={{ background: overdue ? DANGER_SOFT : SURFACE_2, color: overdue ? DANGER : MUTED, padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>
                     {r.category}
                   </span>
                   <span style={{ background: SURFACE_2, color: MUTED, padding: '3px 8px', borderRadius: 4, fontSize: 11 }}>
                     {r.status}
                   </span>
-                  <span style={{ color: overdue ? '#f5b8b3' : MUTED, fontSize: 11 }}>
+                  <span style={{ color: overdue ? DANGER : MUTED, fontSize: 11 }}>
                     <Clock size={11} style={{ display: 'inline', verticalAlign: 'middle' }} /> {ageH}h atrás
                   </span>
                 </div>
@@ -599,7 +607,7 @@ function Loading() {
 function ErrBox({ msg }: { msg: string }) {
   return (
     <Card>
-      <div style={{ display: 'flex', gap: 8, color: '#f5b8b3' }}>
+      <div style={{ display: 'flex', gap: 8, color: DANGER }}>
         <X size={16} /> Erro: {msg}
       </div>
     </Card>
