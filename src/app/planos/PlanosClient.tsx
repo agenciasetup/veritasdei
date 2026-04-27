@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { Check, Sparkles, Loader2, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -104,19 +105,22 @@ export default function PlanosClient({ plans }: { plans: Plan[] }) {
   }, [confirming, isPremium])
 
   // Polling de fallback enquanto o overlay está ativo.
+  // Webhook do RC normalmente chega em <300ms; deadline de 15s é
+  // generoso. Se estourar, fazemos hard reload pra /perfil — a
+  // navegação re-monta tudo, refaz get_user_entitlement, e o
+  // usuário vê o premium ativo (que provavelmente já está no banco).
   useEffect(() => {
     if (!confirming) return
     const tick = () => {
       if (Date.now() > confirmDeadlineRef.current) {
-        setConfirming(false)
-        setError(
-          'A confirmação está demorando. A assinatura aparece em alguns minutos — tente fechar e abrir o app.',
-        )
+        if (typeof window !== 'undefined') {
+          window.location.assign('/perfil?tab=assinatura')
+        }
         return
       }
       refreshSubscription().catch(() => {})
     }
-    const interval = setInterval(tick, 2500)
+    const interval = setInterval(tick, 1500)
     return () => clearInterval(interval)
   }, [confirming, refreshSubscription])
 
@@ -137,7 +141,10 @@ export default function PlanosClient({ plans }: { plans: Plan[] }) {
         result === PAYWALL_RESULT.RESTORED
       ) {
         // Inicia overlay de confirmação + polling até webhook landar.
-        confirmDeadlineRef.current = Date.now() + 30000
+        // 15s é deadline suficiente: webhook do RC chega em <300ms;
+        // se não chegou nesse tempo, algo está errado e o reload em
+        // /perfil pega o estado mais novo (ou mostra "sem assinatura").
+        confirmDeadlineRef.current = Date.now() + 15000
         setConfirming(true)
         // Refresh imediato — pode pegar de primeira se webhook foi rápido.
         refreshSubscription().catch(() => {})
@@ -196,59 +203,71 @@ export default function PlanosClient({ plans }: { plans: Plan[] }) {
 
   return (
     <main className="min-h-screen px-4 py-12 md:py-20">
-      {confirming && (
-        <div
-          role="alertdialog"
-          aria-modal="true"
-          aria-labelledby="confirming-title"
-          className="fixed inset-0 z-[150] flex items-center justify-center px-4"
-          style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)' }}
-        >
+      {/* Overlay vai pra document.body via portal — assim escapa de
+          qualquer parent com transform/filter que faria `position:fixed`
+          se tornar relativo ao parent em vez do viewport. */}
+      {confirming &&
+        typeof window !== 'undefined' &&
+        createPortal(
           <div
-            className="w-full max-w-sm rounded-3xl p-8 text-center"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="confirming-title"
+            className="fixed inset-0 z-[1000] flex items-center justify-center px-4"
             style={{
-              background: 'var(--surface-2)',
-              border: '1px solid var(--border-1)',
+              background: 'rgba(0,0,0,0.7)',
+              backdropFilter: 'blur(6px)',
             }}
           >
             <div
-              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
+              className="w-full max-w-sm rounded-3xl p-8 text-center"
               style={{
-                background: 'color-mix(in srgb, var(--success) 15%, transparent)',
-                border: '1px solid color-mix(in srgb, var(--success) 30%, transparent)',
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border-1)',
               }}
             >
-              <CheckCircle2
-                className="w-8 h-8"
-                style={{ color: 'var(--success)' }}
+              <div
+                className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
+                style={{
+                  background:
+                    'color-mix(in srgb, var(--success) 15%, transparent)',
+                  border:
+                    '1px solid color-mix(in srgb, var(--success) 30%, transparent)',
+                }}
+              >
+                <CheckCircle2
+                  className="w-8 h-8"
+                  style={{ color: 'var(--success)' }}
+                />
+              </div>
+              <h3
+                id="confirming-title"
+                className="text-xl mb-2"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  color: 'var(--text-1)',
+                }}
+              >
+                Compra confirmada
+              </h3>
+              <p
+                className="text-sm mb-4"
+                style={{
+                  color: 'var(--text-2)',
+                  fontFamily: 'var(--font-body)',
+                }}
+              >
+                Estamos ativando seu Premium. Isso costuma levar alguns
+                segundos.
+              </p>
+              <Loader2
+                className="w-6 h-6 animate-spin mx-auto"
+                style={{ color: 'var(--accent)' }}
               />
             </div>
-            <h3
-              id="confirming-title"
-              className="text-xl mb-2"
-              style={{
-                fontFamily: 'var(--font-display)',
-                color: 'var(--text-1)',
-              }}
-            >
-              Compra confirmada
-            </h3>
-            <p
-              className="text-sm mb-4"
-              style={{
-                color: 'var(--text-2)',
-                fontFamily: 'var(--font-body)',
-              }}
-            >
-              Estamos ativando seu Premium. Isso costuma levar alguns segundos.
-            </p>
-            <Loader2
-              className="w-6 h-6 animate-spin mx-auto"
-              style={{ color: 'var(--accent)' }}
-            />
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
 
       <div className="max-w-2xl mx-auto">
         <header className="text-center mb-10">
