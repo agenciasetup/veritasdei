@@ -14,6 +14,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin/guard'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { sendPushToUsers } from '@/lib/push/send'
 import { getFcmStatus } from '@/lib/push/fcm'
 
@@ -54,10 +55,12 @@ export async function POST(req: NextRequest) {
   const url =
     typeof body.url === 'string' && body.url.startsWith('/') ? body.url : '/'
 
-  // Diagnóstico do destino antes de enviar — facilita debug quando
-  // notificação "não chega" (na maioria das vezes é fcm_token ausente
-  // ou FIREBASE_SERVICE_ACCOUNT mal configurada).
-  const { data: prefRow } = await ctx.supabase
+  // Cliente service role pra bypassar RLS — diagnóstico precisa ler
+  // prefs de QUALQUER usuário (não só o admin logado), e o
+  // sendPushToUsers também precisa do mesmo poder.
+  const adminDb = createAdminClient()
+
+  const { data: prefRow } = await adminDb
     .from('user_notificacoes_prefs')
     .select(
       'push_enabled, push_endpoint, push_p256dh, fcm_token, fcm_platform, fcm_registered_at',
@@ -84,7 +87,7 @@ export async function POST(req: NextRequest) {
       url,
       tag: `admin-test-${Date.now()}`,
     },
-    { categoria: 'test', admin: ctx.supabase },
+    { categoria: 'test', admin: adminDb },
   )
 
   return NextResponse.json({
