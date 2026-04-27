@@ -43,3 +43,26 @@ scripts/ingest/data/*.pdf
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# capacitor / android — versionamos a pasta /android (projeto nativo),
+# mas ignoramos artefatos de build, settings de máquina local e libs
+# que o Gradle baixa por conta. Se /android ainda não foi gerado pelo
+# `cap add android`, estes patterns não fazem mal.
+/android/.gradle/
+/android/.idea/
+/android/build/
+/android/app/build/
+/android/captures/
+/android/local.properties
+/android/app/release/
+/android/app/debug/
+*.iml
+*.keystore
+*.jks
+# segredos de assinatura (não comitar nunca)
+/android/app/google-services.json
+/android/key.properties
+
+# capacitor (gerado por cap sync — nunca editar à mão)
+/android/app/src/main/assets/capacitor.config.json
+/android/app/src/main/assets/capacitor.plugins.json

@@ -9,7 +9,12 @@
     "lint": "eslint",
     "r2:cors": "tsx scripts/r2-cors-setup.ts",
     "vapid:gen": "node scripts/generate-vapid.mjs",
-    "push:migrate": "node scripts/apply-migration-notificacoes-prefs.mjs"
+    "push:migrate": "node scripts/apply-migration-notificacoes-prefs.mjs",
+    "cap:add:android": "cap add android",
+    "cap:sync": "cap sync",
+    "cap:sync:android": "cap sync android",
+    "cap:open:android": "cap open android",
+    "cap:run:android": "cap run android"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1031.0",
@@ -42,6 +47,9 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.3.1",
+    "@capacitor/cli": "^8.3.1",
+    "@capacitor/core": "^8.3.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pdf-parse": "^1.1.5",
