@@ -4,25 +4,48 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Sparkles } from 'lucide-react'
 import { useSubscription } from '@/contexts/SubscriptionContext'
+import { isNativePlatform } from '@/lib/platform/is-native'
 
 export default function AssinaturaSection() {
-  const { isPremium, loading, plano, status, expiraEm, cancelAtPeriodEnd, refresh } =
+  const { isPremium, loading, plano, status, expiraEm, cancelAtPeriodEnd, fonte, refresh } =
     useSubscription()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [native, setNative] = useState(false)
 
   useEffect(() => {
     refresh()
   }, [refresh])
 
-  async function abrirPortal() {
+  useEffect(() => {
+    setNative(isNativePlatform())
+  }, [])
+
+  // `admin_role` significa que o premium é override (perfis admin têm
+  // acesso permanente). Não há nada pra gerenciar — só esconder o
+  // botão. Para usuários reais, o gerenciamento depende da fonte:
+  //  - 'revenuecat' → Customer Center nativo do SDK (Play/Apple).
+  //  - 'stripe'     → Customer Portal do Stripe (URL).
+  const fonteGerenciavel = fonte && fonte !== 'admin_role'
+  const usaRevenueCat = fonte === 'revenuecat'
+
+  async function abrirGerenciamento() {
     setBusy(true)
     setError(null)
     try {
-      const res = await fetch('/api/payments/portal', { method: 'POST' })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Falha ao abrir portal')
-      if (data.url) window.location.href = data.url
+      if (usaRevenueCat && native) {
+        const { RevenueCatUI } = await import(
+          '@revenuecat/purchases-capacitor-ui'
+        )
+        await RevenueCatUI.presentCustomerCenter()
+        // Customer Center pode ter cancelamento; refresca depois.
+        await refresh()
+      } else {
+        const res = await fetch('/api/payments/portal', { method: 'POST' })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error ?? 'Falha ao abrir portal')
+        if (data.url) window.location.href = data.url
+      }
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -132,10 +155,10 @@ export default function AssinaturaSection() {
         </div>
       )}
 
-      {isPremium && (
+      {isPremium && fonteGerenciavel && (
         <button
           type="button"
-          onClick={abrirPortal}
+          onClick={abrirGerenciamento}
           disabled={busy}
           className="w-full py-3 rounded-xl text-sm touch-target-lg active:scale-[0.98]"
           style={{
@@ -145,7 +168,11 @@ export default function AssinaturaSection() {
             fontFamily: 'var(--font-body)',
           }}
         >
-          {busy ? 'Abrindo…' : 'Gerenciar pagamento'}
+          {busy
+            ? 'Abrindo…'
+            : usaRevenueCat
+              ? 'Gerenciar assinatura'
+              : 'Gerenciar pagamento'}
         </button>
       )}
     </section>

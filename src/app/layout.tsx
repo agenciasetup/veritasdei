@@ -11,6 +11,7 @@ import PwaRegister from "@/components/layout/PwaRegister"
 import InstallPrompt from "@/components/pwa/InstallPrompt"
 import NoZoom from "@/components/layout/NoZoom"
 import GamificationEventsProvider from "@/components/gamification/GamificationEventsProvider"
+import RevenueCatBootstrap from "@/components/payments/RevenueCatBootstrap"
 
 // next/font/google: self-hosting + auto-subset + preload com display:swap.
 // Pesos reduzidos vs versão antiga (-400/-500 typical) para economia de bytes.
@@ -100,6 +101,7 @@ export default function RootLayout({
           <LiturgicalThemeSync />
           <AuthProvider>
             <ThemeSupabaseSync />
+            <RevenueCatBootstrap />
             <GamificationEventsProvider>
               <AppShell>{children}</AppShell>
             </GamificationEventsProvider>

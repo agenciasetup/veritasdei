@@ -4,12 +4,13 @@
  * Cliente de /planos — seleção de intervalo + checkout.
  */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, Sparkles, Loader2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import PremiumFeaturesCarousel from '@/components/payments/PremiumFeaturesCarousel'
+import { isNativePlatform } from '@/lib/platform/is-native'
 
 type Price = {
   id: string
@@ -52,9 +53,15 @@ function economia(price: Price, mensal: Price | undefined): number | null {
 export default function PlanosClient({ plans }: { plans: Plan[] }) {
   const router = useRouter()
   const { isAuthenticated } = useAuth()
-  const { isPremium } = useSubscription()
+  const { isPremium, refresh: refreshSubscription } = useSubscription()
   const [loadingPriceId, setLoadingPriceId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // `native` é setado após mount: SSR sempre renderiza o fluxo web e o
+  // hydrate do WebView Capacitor troca pro fluxo nativo. Evita mismatch.
+  const [native, setNative] = useState(false)
+  useEffect(() => {
+    setNative(isNativePlatform())
+  }, [])
 
   const plan = plans[0] ?? null
 
@@ -66,7 +73,52 @@ export default function PlanosClient({ plans }: { plans: Plan[] }) {
 
   const mensal = sortedPrices.find(p => p.intervalo === 'mensal')
 
-  async function assinar(priceId: string) {
+  /**
+   * Caminho NATIVO (Capacitor Android/iOS): apresenta o Paywall do
+   * RevenueCat. O Paywall mostra a Offering "current" configurada no
+   * painel — usuário escolhe um package (mensal/semestral/anual/lifetime)
+   * e a compra acontece via Play Billing/StoreKit. Webhook do RC grava
+   * em billing_subscriptions; refresh() puxa o entitlement novo.
+   *
+   * O `priceId` recebido aqui é só um trigger — no Paywall do RC o
+   * usuário pode escolher qualquer package; o próprio Paywall sabe
+   * qual é o "destacado" pela ordem definida no painel.
+   */
+  async function assinarNative() {
+    if (!isAuthenticated) {
+      router.push(`/login?next=/planos`)
+      return
+    }
+    setError(null)
+    setLoadingPriceId('paywall')
+    try {
+      const { RevenueCatUI, PAYWALL_RESULT } = await import(
+        '@revenuecat/purchases-capacitor-ui'
+      )
+      const { result } = await RevenueCatUI.presentPaywall()
+      if (
+        result === PAYWALL_RESULT.PURCHASED ||
+        result === PAYWALL_RESULT.RESTORED
+      ) {
+        // Webhook do RC pode levar alguns segundos para gravar no
+        // Supabase. Refresh imediato + fallback após 4s.
+        await refreshSubscription()
+        setTimeout(() => {
+          refreshSubscription().catch(() => {})
+        }, 4000)
+      }
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setLoadingPriceId(null)
+    }
+  }
+
+  /**
+   * Caminho WEB (browser/PWA): mantém o Stripe Checkout existente.
+   * Não muda nada do fluxo legado.
+   */
+  async function assinarWeb(priceId: string) {
     if (!isAuthenticated) {
       router.push(`/login?next=/planos`)
       return
@@ -90,6 +142,11 @@ export default function PlanosClient({ plans }: { plans: Plan[] }) {
       setError((err as Error).message)
       setLoadingPriceId(null)
     }
+  }
+
+  function assinar(priceId: string) {
+    if (native) return assinarNative()
+    return assinarWeb(priceId)
   }
 
   if (!plan) {
