@@ -12,6 +12,7 @@ import InstallPrompt from "@/components/pwa/InstallPrompt"
 import NoZoom from "@/components/layout/NoZoom"
 import GamificationEventsProvider from "@/components/gamification/GamificationEventsProvider"
 import RevenueCatBootstrap from "@/components/payments/RevenueCatBootstrap"
+import CrashlyticsBootstrap from "@/components/observability/CrashlyticsBootstrap"
 import PushBootstrap from "@/components/notifications/PushBootstrap"
 import NotificationToast from "@/components/notifications/NotificationToast"
 import { NotificationToastProvider } from "@/contexts/NotificationToastContext"
@@ -108,6 +109,7 @@ export default function RootLayout({
             <ThemeSupabaseSync />
             <NotificationToastProvider>
               <RevenueCatBootstrap />
+              <CrashlyticsBootstrap />
               <PushBootstrap />
               <NativeAppearanceBootstrap />
               <NotificationToast />
