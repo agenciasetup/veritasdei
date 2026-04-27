@@ -16,6 +16,7 @@ import PushBootstrap from "@/components/notifications/PushBootstrap"
 import NotificationToast from "@/components/notifications/NotificationToast"
 import { NotificationToastProvider } from "@/contexts/NotificationToastContext"
 import NativeAppearanceBootstrap from "@/components/layout/NativeAppearanceBootstrap"
+import PremiumWelcomeModal from "@/components/payments/PremiumWelcomeModal"
 
 // next/font/google: self-hosting + auto-subset + preload com display:swap.
 // Pesos reduzidos vs versão antiga (-400/-500 typical) para economia de bytes.
@@ -112,6 +113,7 @@ export default function RootLayout({
               <NotificationToast />
               <GamificationEventsProvider>
                 <AppShell>{children}</AppShell>
+                <PremiumWelcomeModal />
               </GamificationEventsProvider>
             </NotificationToastProvider>
           </AuthProvider>

@@ -16,19 +16,21 @@ import {
   Database,
   Menu,
   BookOpenText,
+  Bell,
 } from 'lucide-react'
 import AdminMobileNav from './AdminMobileNav'
 
 const ADMIN_NAV = [
-  { href: '/admin/usuarios',     icon: Users,          label: 'Usuários' },
-  { href: '/admin/conteudos',    icon: FileText,       label: 'Conteúdos' },
-  { href: '/admin/oracoes',      icon: BookOpenText,   label: 'Orações' },
-  { href: '/admin/trilhas',      icon: GraduationCap,  label: 'Trilhas' },
-  { href: '/admin/provas',       icon: GraduationCap,  label: 'Provas' },
-  { href: '/admin/aprovacoes',   icon: CheckSquare,    label: 'Aprovações' },
-  { href: '/admin/ia-knowledge', icon: Brain,          label: 'Base IA' },
-  { href: '/admin/embeddings',   icon: Database,       label: 'Embeddings' },
-  { href: '/admin/planos',       icon: CreditCard,     label: 'Planos' },
+  { href: '/admin/usuarios',            icon: Users,          label: 'Usuários' },
+  { href: '/admin/conteudos',           icon: FileText,       label: 'Conteúdos' },
+  { href: '/admin/oracoes',             icon: BookOpenText,   label: 'Orações' },
+  { href: '/admin/trilhas',             icon: GraduationCap,  label: 'Trilhas' },
+  { href: '/admin/provas',              icon: GraduationCap,  label: 'Provas' },
+  { href: '/admin/aprovacoes',          icon: CheckSquare,    label: 'Aprovações' },
+  { href: '/admin/ia-knowledge',        icon: Brain,          label: 'Base IA' },
+  { href: '/admin/embeddings',          icon: Database,       label: 'Embeddings' },
+  { href: '/admin/planos',              icon: CreditCard,     label: 'Planos' },
+  { href: '/admin/notificacoes-teste',  icon: Bell,           label: 'Push teste' },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
