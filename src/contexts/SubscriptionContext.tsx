@@ -39,6 +39,11 @@ interface SubscriptionContextValue {
   status: string | null
   expiraEm: string | null
   cancelAtPeriodEnd: boolean
+  // `fonte` indica de onde veio o entitlement: 'stripe' (web),
+  // 'revenuecat' (mobile/loja), 'admin_role' (override de admin), etc.
+  // Usado pra decidir entre Stripe Customer Portal vs RevenueCat
+  // Customer Center na tela de gerenciar assinatura.
+  fonte: string | null
   refresh: () => Promise<void>
 }
 
@@ -49,6 +54,7 @@ const Ctx = createContext<SubscriptionContextValue>({
   status: null,
   expiraEm: null,
   cancelAtPeriodEnd: false,
+  fonte: null,
   refresh: async () => {},
 })
 
@@ -93,6 +99,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     status: ent?.status ?? null,
     expiraEm: ent?.expira_em ?? null,
     cancelAtPeriodEnd: ent?.cancel_at_period_end ?? false,
+    fonte: ent?.fonte ?? null,
     refresh,
   }
 

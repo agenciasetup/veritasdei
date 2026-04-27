@@ -6,7 +6,13 @@
  * `webhook-dispatcher` só conhece esse shape e atualiza o Supabase.
  */
 
-export type ProviderId = 'stripe' | 'kirvano' | 'hotmart' | 'eduzz' | 'manual'
+export type ProviderId =
+  | 'stripe'
+  | 'kirvano'
+  | 'hotmart'
+  | 'eduzz'
+  | 'manual'
+  | 'revenuecat'
 
 export type Intervalo = 'mensal' | 'semestral' | 'anual' | 'unico'
 
