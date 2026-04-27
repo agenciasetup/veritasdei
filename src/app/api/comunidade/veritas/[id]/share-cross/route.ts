@@ -14,7 +14,7 @@ export async function POST(
   const { id } = await params
   const { supabase, user } = session
 
-  if (!rateLimit(`community:share-cross:${user.id}`, 60, 60_000)) {
+  if (!(await rateLimit(`community:share-cross:${user.id}`, 60, 60_000))) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
   }
 

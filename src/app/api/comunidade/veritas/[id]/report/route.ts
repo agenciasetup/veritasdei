@@ -19,7 +19,7 @@ export async function POST(
   const { id } = await params
   const { supabase, user } = access.context
 
-  if (!rateLimit(`community:report:${user.id}`, 20, 60_000)) {
+  if (!(await rateLimit(`community:report:${user.id}`, 20, 60_000))) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
   }
 

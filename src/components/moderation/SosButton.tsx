@@ -9,6 +9,10 @@ type Props = {
   targetUserId?: string
   targetPostId?: string
   compact?: boolean
+  /** Quando true, abre o modal direto no mount e oculta o trigger interno. Útil para acionar via menu externo. */
+  defaultOpen?: boolean
+  /** Disparado quando o modal fecha (cancelar, sucesso ou clique fora). */
+  onClose?: () => void
 }
 
 const CATEGORY_LABELS: Record<Category, string> = {
@@ -19,12 +23,17 @@ const CATEGORY_LABELS: Record<Category, string> = {
   outro: 'Outro (urgente)',
 }
 
-export function SosButton({ targetUserId, targetPostId, compact = false }: Props) {
-  const [open, setOpen] = useState(false)
+export function SosButton({ targetUserId, targetPostId, compact = false, defaultOpen = false, onClose }: Props) {
+  const [open, setOpen] = useState(defaultOpen)
   const [category, setCategory] = useState<Category | ''>('')
   const [details, setDetails] = useState('')
   const [state, setState] = useState<'idle' | 'submitting' | 'ok' | 'error'>('idle')
   const [message, setMessage] = useState<string | null>(null)
+
+  function close() {
+    setOpen(false)
+    onClose?.()
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -60,6 +69,7 @@ export function SosButton({ targetUserId, targetPostId, compact = false }: Props
   }
 
   if (!open) {
+    if (defaultOpen) return null
     return (
       <button
         type="button"
@@ -85,7 +95,7 @@ export function SosButton({ targetUserId, targetPostId, compact = false }: Props
       aria-modal="true"
       className="fixed inset-0 z-[120] flex items-end justify-center md:items-center px-4 py-6"
       style={{ background: 'rgba(0,0,0,0.7)' }}
-      onClick={() => setOpen(false)}
+      onClick={() => close()}
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -128,7 +138,7 @@ export function SosButton({ targetUserId, targetPostId, compact = false }: Props
               <li>Polícia: 190 · Polícia Federal: 194</li>
             </ul>
             <button
-              onClick={() => setOpen(false)}
+              onClick={() => close()}
               className="px-4 py-2 rounded-xl text-sm w-full"
               style={{ background: '#C9A84C', color: '#0A0A0A', fontFamily: 'Poppins, sans-serif' }}
             >
@@ -209,7 +219,7 @@ export function SosButton({ targetUserId, targetPostId, compact = false }: Props
               </button>
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={() => close()}
                 className="px-4 py-2 rounded-xl text-sm"
                 style={{ background: 'transparent', color: '#7A7368', fontFamily: 'Poppins, sans-serif', border: '1px solid rgba(201,168,76,0.15)' }}
               >

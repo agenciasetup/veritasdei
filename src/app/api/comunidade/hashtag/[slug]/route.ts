@@ -17,7 +17,7 @@ export async function GET(
   const { slug: rawSlug } = await params
   const { supabase, user } = session
 
-  if (!rateLimit(`community:hashtag:${user.id}`, 60, 60_000)) {
+  if (!(await rateLimit(`community:hashtag:${user.id}`, 60, 60_000))) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
   }
 

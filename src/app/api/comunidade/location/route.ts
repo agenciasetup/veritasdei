@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
   }
 
-  if (!rateLimit(`community:location:${user.id}`, 12, 60_000)) {
+  if (!(await rateLimit(`community:location:${user.id}`, 12, 60_000))) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
   }
 

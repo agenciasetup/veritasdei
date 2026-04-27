@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
 
-  if (!rateLimit(`community:appeal:${user.id}`, 5, 60_000)) {
+  if (!(await rateLimit(`community:appeal:${user.id}`, 5, 60_000))) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
   }
 

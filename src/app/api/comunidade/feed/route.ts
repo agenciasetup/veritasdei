@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
 
   const { supabase, user } = session
 
-  if (!rateLimit(`community:feed:${user.id}`, 60, 60_000)) {
+  if (!(await rateLimit(`community:feed:${user.id}`, 60, 60_000))) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
   }
 

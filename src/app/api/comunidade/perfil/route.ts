@@ -66,7 +66,7 @@ export async function PUT(req: NextRequest) {
 
   const { supabase, user } = session
 
-  if (!rateLimit(`community:profile:${user.id}`, 10, 60_000)) {
+  if (!(await rateLimit(`community:profile:${user.id}`, 10, 60_000))) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
   }
 

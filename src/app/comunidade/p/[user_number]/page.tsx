@@ -83,9 +83,16 @@ export default async function CommunityPublicNumberPage({ params }: PageProps) {
 
   const { data: privacy } = await supabase
     .from('profiles')
-    .select('show_likes_public')
+    .select('show_likes_public, profile_visibility')
     .eq('id', snapshot.profile.id)
     .maybeSingle()
+
+  const visibility = (privacy?.profile_visibility ?? 'public') as 'public' | 'followers' | 'private'
+  const isOwner = Boolean(user && user.id === snapshot.profile.id)
+  if (!isOwner) {
+    if (visibility === 'private') notFound()
+    if (visibility === 'followers' && !viewerFollows) notFound()
+  }
 
   return (
     <PublicProfileView

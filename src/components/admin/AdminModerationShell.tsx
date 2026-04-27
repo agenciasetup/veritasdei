@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Loader2, AlertCircle, Check, X, Clock, ShieldAlert, Mail, Trash2, Ban, FileText, Activity, ArrowLeft } from 'lucide-react'
+import { Loader2, AlertCircle, Check, X, Clock, ShieldAlert, Mail, Trash2, Ban, FileText, Activity, ArrowLeft, History } from 'lucide-react'
 import ModerationPanel from '@/components/comunidade/ModerationPanel'
 
 // Cores derivadas do tema do app (src/app/globals.css). Usar var(--*) em vez
@@ -20,7 +20,7 @@ const DANGER = 'var(--danger)'
 const DANGER_SOFT = 'rgba(217, 79, 92, 0.15)'
 const DANGER_BORDER = 'rgba(217, 79, 92, 0.4)'
 
-type TabKey = 'sos' | 'appeals' | 'parental' | 'lgpd' | 'bans' | 'reports' | 'log'
+type TabKey = 'sos' | 'appeals' | 'parental' | 'lgpd' | 'cron_lgpd' | 'bans' | 'reports' | 'log'
 
 interface Props {
   currentUserId: string
@@ -32,6 +32,7 @@ const TABS: Array<{ key: TabKey; label: string; icon: React.ComponentType<{ size
   { key: 'appeals', label: 'Apelações', icon: FileText },
   { key: 'parental', label: 'Parental', icon: Mail },
   { key: 'lgpd', label: 'Exclusões LGPD', icon: Trash2, adminOnly: true },
+  { key: 'cron_lgpd', label: 'Cron LGPD', icon: History, adminOnly: true },
   { key: 'bans', label: 'Banimentos', icon: Ban, adminOnly: true },
   { key: 'reports', label: 'Denúncias', icon: AlertCircle },
   { key: 'log', label: 'Moderation log', icon: Activity },
@@ -100,6 +101,7 @@ export default function AdminModerationShell({ currentUserId, role }: Props) {
         {tab === 'appeals' && <AppealsTab currentUserId={currentUserId} />}
         {tab === 'parental' && <ParentalTab />}
         {tab === 'lgpd' && <LgpdTab />}
+        {tab === 'cron_lgpd' && <CronLgpdLogTab />}
         {tab === 'bans' && <BansTab />}
         {tab === 'reports' && <ReportsTab />}
         {tab === 'log' && <LogTab />}
@@ -417,6 +419,68 @@ function LgpdTab() {
               <div style={{ display: 'flex', gap: 6 }}>
                 <Btn variant="danger" onClick={() => action(p.id, 'execute_now')}>Executar agora</Btn>
                 <Btn variant="primary" onClick={() => action(p.id, 'restore')}>Restaurar</Btn>
+              </div>
+            </div>
+          </Card>
+        )
+      })}
+    </div>
+  )
+}
+
+interface CronLgpdLogRow {
+  id: string
+  run_at: string
+  duration_ms: number | null
+  processed_count: number | null
+  warned_count: number | null
+  failed_count: number | null
+  error_message: string | null
+}
+
+function CronLgpdLogTab() {
+  const { data, loading, error } = useFetch<{ items: CronLgpdLogRow[] }>('/api/admin/lgpd-log')
+
+  if (loading) return <Loading />
+  if (error) return <ErrBox msg={error} />
+  const items = data?.items ?? []
+  if (items.length === 0) return <Empty msg="Nenhuma execução do cron LGPD registrada ainda." />
+
+  return (
+    <div>
+      {items.map((row) => {
+        const failed = (row.failed_count ?? 0) > 0 || row.error_message
+        return (
+          <Card key={row.id}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
+              <div style={{ flex: 1, fontSize: 12 }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 6 }}>
+                  <span style={{ fontWeight: 600, color: TEXT, fontSize: 13 }}>{fmt(row.run_at)}</span>
+                  {row.duration_ms !== null && (
+                    <span style={{ color: MUTED, fontSize: 11 }}>{(row.duration_ms / 1000).toFixed(2)}s</span>
+                  )}
+                  {failed ? (
+                    <span style={{ background: DANGER_SOFT, color: DANGER, padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>
+                      falhou
+                    </span>
+                  ) : (
+                    <span style={{ background: SURFACE_2, color: MUTED, padding: '2px 8px', borderRadius: 4, fontSize: 11 }}>
+                      ok
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 14, color: MUTED, flexWrap: 'wrap' }}>
+                  <span><strong style={{ color: TEXT }}>{row.processed_count ?? 0}</strong> processados</span>
+                  <span><strong style={{ color: TEXT }}>{row.warned_count ?? 0}</strong> avisados (D-5)</span>
+                  <span style={{ color: failed ? DANGER : MUTED }}>
+                    <strong style={{ color: failed ? DANGER : TEXT }}>{row.failed_count ?? 0}</strong> falhas
+                  </span>
+                </div>
+                {row.error_message && (
+                  <div style={{ marginTop: 8, padding: 8, background: DANGER_SOFT, color: DANGER, borderRadius: 6, fontSize: 11, fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                    {row.error_message}
+                  </div>
+                )}
               </div>
             </div>
           </Card>

@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
   const { supabase, user } = access.context
   const flags = getCommunityFlags()
 
-  if (!rateLimit(`community:create:${user.id}`, 20, 60_000)) {
+  if (!(await rateLimit(`community:create:${user.id}`, 20, 60_000))) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
   }
 

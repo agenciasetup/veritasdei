@@ -19,8 +19,10 @@ import {
   Pencil,
   Send,
   MapPin,
+  AlertOctagon,
 } from 'lucide-react'
 import CrossIcon from '@/components/icons/CrossIcon'
+import { SosButton } from '@/components/moderation/SosButton'
 import type { VeritasPost } from '@/lib/community/types'
 import { renderVeritasBody } from '@/lib/community/body-renderer'
 import { VERITAS_MAX_BODY } from '@/lib/community/constants'
@@ -162,6 +164,7 @@ export default function VeritasCard({
   repliesExpanded = false,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [sosOpen, setSosOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [shareOpen, setShareOpen] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -232,9 +235,10 @@ export default function VeritasCard({
     ? `@${post.author.public_handle}`
     : '#sem-handle'
 
+  const canSos = !!viewerUserId && !isOwnPost
   const hasMenu =
     (isOwnPost && (onEditSubmit || onDelete)) ||
-    (!isOwnPost && (onToggleFollow || onToggleMute))
+    (!isOwnPost && (onToggleFollow || onToggleMute || canSos))
 
   // Indentação visual para sub-respostas: empurra o conteúdo e desenha
   // uma linha conectora dourada à esquerda, alinhada com o avatar do pai.
@@ -434,6 +438,20 @@ export default function VeritasCard({
                           : <BellOff className="w-4 h-4" strokeWidth={1.5} />
                         }
                         {post.viewer.muted_author ? 'Reativar notificações' : 'Silenciar'}
+                      </button>
+                    )}
+                    {canSos && (
+                      <button
+                        type="button"
+                        onClick={() => { setMenuOpen(false); setSosOpen(true) }}
+                        className="flex items-center gap-2 w-full px-3 py-2.5 text-[13px] text-left hover:bg-[rgba(239,68,68,0.08)]"
+                        style={{
+                          color: '#ef4444',
+                          fontFamily: 'var(--font-body)',
+                          borderTop: (onToggleFollow || onToggleMute) ? '1px solid rgba(201,168,76,0.08)' : undefined,
+                        }}
+                      >
+                        <AlertOctagon className="w-4 h-4" strokeWidth={1.5} /> Denunciar urgente (SOS)
                       </button>
                     )}
                     {isOwnPost && onEditSubmit && (
@@ -843,6 +861,14 @@ export default function VeritasCard({
           )}
         </div>
       </div>
+      {sosOpen && (
+        <SosButton
+          targetUserId={post.author_user_id}
+          targetPostId={post.id}
+          defaultOpen
+          onClose={() => setSosOpen(false)}
+        />
+      )}
     </article>
   )
 }
