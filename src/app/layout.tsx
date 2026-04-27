@@ -13,6 +13,9 @@ import NoZoom from "@/components/layout/NoZoom"
 import GamificationEventsProvider from "@/components/gamification/GamificationEventsProvider"
 import RevenueCatBootstrap from "@/components/payments/RevenueCatBootstrap"
 import PushBootstrap from "@/components/notifications/PushBootstrap"
+import NotificationToast from "@/components/notifications/NotificationToast"
+import { NotificationToastProvider } from "@/contexts/NotificationToastContext"
+import NativeAppearanceBootstrap from "@/components/layout/NativeAppearanceBootstrap"
 
 // next/font/google: self-hosting + auto-subset + preload com display:swap.
 // Pesos reduzidos vs versão antiga (-400/-500 typical) para economia de bytes.
@@ -102,11 +105,15 @@ export default function RootLayout({
           <LiturgicalThemeSync />
           <AuthProvider>
             <ThemeSupabaseSync />
-            <RevenueCatBootstrap />
-            <PushBootstrap />
-            <GamificationEventsProvider>
-              <AppShell>{children}</AppShell>
-            </GamificationEventsProvider>
+            <NotificationToastProvider>
+              <RevenueCatBootstrap />
+              <PushBootstrap />
+              <NativeAppearanceBootstrap />
+              <NotificationToast />
+              <GamificationEventsProvider>
+                <AppShell>{children}</AppShell>
+              </GamificationEventsProvider>
+            </NotificationToastProvider>
           </AuthProvider>
         </ThemeProvider>
         <PwaRegister />

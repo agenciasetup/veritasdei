@@ -11,6 +11,7 @@ import {
 } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { safeNext } from '@/lib/auth/safe-next'
+import { isNativePlatform } from '@/lib/platform/is-native'
 import type { Profile, UserRole } from '@/types/auth'
 import type { User, Session } from '@supabase/supabase-js'
 
@@ -293,6 +294,37 @@ function AuthProviderInner({
   }
 
   const signInWithOAuth = async (provider: OAuthProvider, nextPath?: string) => {
+    // Native (Capacitor): Google/Apple/Facebook em WebView são bloqueados
+    // pelos providers (disallowed_useragent). Usamos o SDK nativo do
+    // Firebase Authentication pra disparar a tela nativa de login,
+    // pegamos o ID token e trocamos por sessão Supabase via
+    // signInWithIdToken — sem deep links nem Custom Tabs.
+    if (isNativePlatform() && provider === 'google') {
+      try {
+        const { FirebaseAuthentication } = await import(
+          '@capacitor-firebase/authentication'
+        )
+        const result = await FirebaseAuthentication.signInWithGoogle()
+        const idToken = result.credential?.idToken
+        if (!idToken) {
+          return { error: 'Google login cancelado ou sem token' }
+        }
+        const nonce = result.credential?.nonce
+        const { error } = await supabase.auth.signInWithIdToken({
+          provider: 'google',
+          token: idToken,
+          nonce,
+        })
+        return { error: error?.message ?? null }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Google login falhou'
+        return { error: msg }
+      }
+    }
+
+    // Native + outros providers (Apple, Facebook): cair no fluxo web
+    // por enquanto. Mesmo bloqueio se aplica; será necessário
+    // FirebaseAuthentication.signInWithApple/Facebook análogo.
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
@@ -332,6 +364,20 @@ function AuthProviderInner({
 
   const signOut = async () => {
     try {
+      // Em native, deslogamos do Firebase também — caso contrário, no
+      // próximo signInWithGoogle a tela aparece "logado" e o user
+      // não consegue trocar de conta sem ir nas configs do Google
+      // do device.
+      if (isNativePlatform()) {
+        try {
+          const { FirebaseAuthentication } = await import(
+            '@capacitor-firebase/authentication'
+          )
+          await FirebaseAuthentication.signOut()
+        } catch {
+          // não bloqueia signOut do Supabase se o Firebase falhar
+        }
+      }
       await supabase.auth.signOut()
     } catch (err) {
       console.error('[Auth] signOut error:', err)

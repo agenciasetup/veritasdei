@@ -31,6 +31,26 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: false,
   },
+  plugins: {
+    // Splash: NativeAppearanceBootstrap chama hide() depois de ~600ms;
+    // o launchShowDuration aqui é só fallback caso o bootstrap falhe
+    // (sem ele o splash ficaria pra sempre por padrão).
+    SplashScreen: {
+      launchShowDuration: 3000,
+      launchAutoHide: true,
+      backgroundColor: '#0A0A0A',
+      androidSplashResourceName: 'splash',
+      androidScaleType: 'CENTER_CROP',
+      showSpinner: false,
+      splashFullScreen: true,
+      splashImmersive: true,
+    },
+    // Permissões de push (FCM): plugin do Firebase já lida com a
+    // requisição; aqui só mantém a config explícita.
+    FirebaseMessaging: {
+      presentationOptions: ['badge', 'sound', 'alert'],
+    },
+  },
 }
 
 export default config

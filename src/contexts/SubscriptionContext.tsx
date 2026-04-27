@@ -92,6 +92,22 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     refresh()
   }, [refresh])
 
+  // P6 — escuta o evento global emitido pelo RevenueCatBootstrap
+  // (após customerInfoUpdated nativo) pra puxar entitlement novo
+  // sem o usuário precisar fechar/abrir o app.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handler = () => {
+      refresh()
+    }
+    window.addEventListener('veritasdei:subscription-refresh', handler)
+    return () =>
+      window.removeEventListener(
+        'veritasdei:subscription-refresh',
+        handler,
+      )
+  }, [refresh])
+
   const value: SubscriptionContextValue = {
     loading,
     isPremium: !!ent?.ativo,
