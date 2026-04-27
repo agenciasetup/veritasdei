@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { CalendarHeart, Check, Loader2 } from 'lucide-react'
+import { CalendarHeart, Check, Loader2, X } from 'lucide-react'
 import NovenaProgresso from './NovenaProgresso'
 import type { NovenaComSanto } from '@/types/devocao'
 
@@ -16,6 +16,8 @@ export default function NovenaCard() {
   const [loading, setLoading] = useState(true)
   const [marking, setMarking] = useState(false)
   const [justMarked, setJustMarked] = useState(false)
+  const [confirmCancel, setConfirmCancel] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -49,6 +51,22 @@ export default function NovenaCard() {
       }
     } finally {
       setMarking(false)
+    }
+  }
+
+  async function handleCancelar() {
+    if (!novena || cancelling) return
+    setCancelling(true)
+    try {
+      const res = await fetch(`/api/novenas?id=${encodeURIComponent(novena.id)}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        setConfirmCancel(false)
+        setNovena(null)
+      }
+    } finally {
+      setCancelling(false)
     }
   }
 
@@ -148,6 +166,58 @@ export default function NovenaCard() {
           'Rezei o dia de hoje'
         )}
       </button>
+
+      {!confirmCancel ? (
+        <button
+          type="button"
+          onClick={() => setConfirmCancel(true)}
+          className="mt-3 mx-auto block text-[11px] underline-offset-2 hover:underline"
+          style={{
+            color: 'rgba(242,237,228,0.45)',
+            fontFamily: 'Poppins, sans-serif',
+          }}
+        >
+          Encerrar novena
+        </button>
+      ) : (
+        <div
+          className="mt-3 rounded-lg p-3 flex items-center gap-2"
+          style={{
+            background: 'rgba(201,168,76,0.08)',
+            border: '1px solid rgba(201,168,76,0.2)',
+          }}
+        >
+          <span
+            className="text-xs flex-1"
+            style={{ color: 'rgba(242,237,228,0.75)', fontFamily: 'Poppins, sans-serif' }}
+          >
+            Encerrar e iniciar outra novena depois?
+          </span>
+          <button
+            type="button"
+            onClick={handleCancelar}
+            disabled={cancelling}
+            className="text-[11px] px-2.5 py-1 rounded inline-flex items-center gap-1"
+            style={{
+              background: 'rgba(201,168,76,0.18)',
+              color: '#C9A84C',
+              fontFamily: 'Poppins, sans-serif',
+              fontWeight: 500,
+            }}
+          >
+            {cancelling ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />}
+            Confirmar
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirmCancel(false)}
+            className="text-[11px] px-2 py-1"
+            style={{ color: 'rgba(242,237,228,0.55)', fontFamily: 'Poppins, sans-serif' }}
+          >
+            Não
+          </button>
+        </div>
+      )}
     </div>
   )
 }

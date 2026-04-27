@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { sendPushToUsers } from '@/lib/push/send'
 import { comunidadeRezouPorMim } from '@/lib/push/templates'
+import { pushCommunityNotification } from '@/lib/community/notifications'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -73,9 +74,23 @@ async function notifyPedidoOwner(
     rezouProfile?.name?.split(' ')[0] ||
     (rezouProfile?.public_handle ? `@${rezouProfile.public_handle}` : 'Um irmão')
 
-  await sendPushToUsers(
-    [pedido.user_id],
-    comunidadeRezouPorMim({ autor, pedidoId }),
-    { categoria: 'comunidade' },
-  )
+  // Push (notificação do sistema) + feed in-app (sino).
+  // Ambos são fire-and-forget: falha em qualquer um não bloqueia a ação.
+  await Promise.all([
+    sendPushToUsers(
+      [pedido.user_id],
+      comunidadeRezouPorMim({ autor, pedidoId }),
+      { categoria: 'comunidade' },
+    ),
+    pushCommunityNotification({
+      userId: pedido.user_id,
+      type: 'pedido_rezou',
+      title: `${autor} rezou por você`,
+      body: 'Alguém está intercedendo pelo seu pedido.',
+      targetUrl: '/pedidos-oracao',
+      payload: { pedido_id: pedidoId, rezou_user_id: rezouUserId },
+      source: 'community',
+      dedupeKey: `pedido_${pedidoId}_rezei_${rezouUserId}`,
+    }),
+  ])
 }

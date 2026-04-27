@@ -145,3 +145,28 @@ export async function PUT(req: NextRequest) {
   if (updErr) return NextResponse.json({ error: 'db_error' }, { status: 500 })
   return NextResponse.json({ ok: true, novena: updated, concluida: concluir })
 }
+
+// Cancela (apaga) uma novena ativa do user. Permite recomeçar uma nova
+// para o mesmo santo. Não usar para novenas concluídas — para histórico,
+// `concluida_em` permanece preservado.
+export async function DELETE(req: NextRequest) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+
+  const id = req.nextUrl.searchParams.get('id')
+  if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    return NextResponse.json({ error: 'invalid_id' }, { status: 400 })
+  }
+
+  const { error } = await supabase
+    .from('novenas')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id)
+  if (error) {
+    console.error('[novenas] DELETE error', error)
+    return NextResponse.json({ error: 'db_error' }, { status: 500 })
+  }
+  return NextResponse.json({ ok: true })
+}
