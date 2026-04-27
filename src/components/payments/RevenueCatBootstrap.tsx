@@ -33,6 +33,13 @@ import { isNativePlatform, getPlatform } from '@/lib/platform/is-native'
 const ANDROID_KEY = process.env.NEXT_PUBLIC_REVENUECAT_PUBLIC_KEY_ANDROID ?? ''
 const IOS_KEY = process.env.NEXT_PUBLIC_REVENUECAT_PUBLIC_KEY_IOS ?? ''
 
+/**
+ * Evento global emitido quando o RC SDK notifica mudança de assinatura
+ * (compra, renovação, cancelamento, restore). SubscriptionContext escuta
+ * pra puxar entitlement novo do banco.
+ */
+export const RC_REFRESH_EVENT = 'veritasdei:subscription-refresh'
+
 export default function RevenueCatBootstrap() {
   const { user, isAuthenticated } = useAuth()
   const configuredRef = useRef(false)
@@ -52,6 +59,7 @@ export default function RevenueCatBootstrap() {
     }
 
     let canceled = false
+    let listenerCallbackId: string | null = null
     ;(async () => {
       try {
         const { Purchases, LOG_LEVEL } = await import(
@@ -66,6 +74,23 @@ export default function RevenueCatBootstrap() {
         })
         await Purchases.configure({ apiKey })
         configuredRef.current = true
+
+        // P6 — fix do bug "premium não aparece após compra".
+        // Após webhook RC bater no nosso backend e gravar em
+        // billing_subscriptions, o SDK também recebe o customerInfo
+        // atualizado. Ouvimos esse evento e disparamos refresh
+        // global pro SubscriptionContext puxar o entitlement novo.
+        // Sem isso, o usuário precisava fechar/abrir o app.
+        try {
+          listenerCallbackId = await Purchases.addCustomerInfoUpdateListener(
+            () => {
+              if (typeof window === 'undefined') return
+              window.dispatchEvent(new CustomEvent(RC_REFRESH_EVENT))
+            },
+          )
+        } catch (err) {
+          console.warn('[revenuecat] addCustomerInfoUpdateListener:', err)
+        }
       } catch (err) {
         console.warn('[revenuecat] configure falhou:', err)
       }
@@ -73,6 +98,13 @@ export default function RevenueCatBootstrap() {
 
     return () => {
       canceled = true
+      if (listenerCallbackId) {
+        import('@revenuecat/purchases-capacitor').then(({ Purchases }) => {
+          Purchases.removeCustomerInfoUpdateListener({
+            listenerToRemove: listenerCallbackId!,
+          }).catch(() => {})
+        })
+      }
     }
   }, [])
 

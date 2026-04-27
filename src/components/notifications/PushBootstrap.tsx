@@ -21,20 +21,25 @@
  */
 
 import { useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { useNotificationToast } from '@/contexts/NotificationToastContext'
 import { isNativePlatform, getPlatform } from '@/lib/platform/is-native'
 
 export default function PushBootstrap() {
   const { user, isAuthenticated } = useAuth()
+  const { show: showToast } = useNotificationToast()
+  const router = useRouter()
   const registeredForUserRef = useRef<string | null>(null)
 
+  // Listeners SEMPRE ligados em native (mesmo deslogado), pra capturar
+  // taps em notificações que abrem o app. O register de token só roda
+  // depois de logar (precisa de user_id).
   useEffect(() => {
     if (!isNativePlatform()) return
-    if (!isAuthenticated || !user) return
-    if (registeredForUserRef.current === user.id) return
 
     let canceled = false
-    let removeListener: (() => void) | null = null
+    const removers: Array<() => void> = []
 
     ;(async () => {
       try {
@@ -43,37 +48,42 @@ export default function PushBootstrap() {
         )
         if (canceled) return
 
-        // 1. Pede permissão. Em iOS/Android moderno o sistema mostra prompt.
-        const perm = await FirebaseMessaging.requestPermissions()
-        if (perm.receive !== 'granted') {
-          // Usuário negou. Não tenta de novo nesta sessão.
-          registeredForUserRef.current = user.id
-          return
-        }
+        // P2 — foreground: notificação chega com app aberto. FCM não
+        // mostra na barra do sistema; renderizamos um toast in-app.
+        const fgHandle = await FirebaseMessaging.addListener(
+          'notificationReceived',
+          (event) => {
+            const n = event.notification
+            if (!n) return
+            const data = (n.data ?? {}) as Record<string, unknown>
+            const url = typeof data.url === 'string' ? data.url : undefined
+            showToast({
+              title: n.title ?? 'Veritas Dei',
+              body: n.body ?? '',
+              url,
+            })
+          },
+        )
+        removers.push(() => fgHandle.remove().catch(() => {}))
 
-        // 2. Token. iOS pode demorar uns segundos no 1º get.
-        const tokenResult = await FirebaseMessaging.getToken()
-        if (canceled || !tokenResult.token) return
+        // P3 — tap em notif (background ou app fechado). data.url leva
+        // pra rota destino. router.push usa o roteador do Next, não
+        // sai do WebView.
+        const tapHandle = await FirebaseMessaging.addListener(
+          'notificationActionPerformed',
+          (event) => {
+            const data = (event.notification?.data ?? {}) as Record<
+              string,
+              unknown
+            >
+            const url = typeof data.url === 'string' ? data.url : undefined
+            if (url) router.push(url)
+          },
+        )
+        removers.push(() => tapHandle.remove().catch(() => {}))
 
-        // 3. Manda pro servidor.
-        const platform = getPlatform()
-        if (platform !== 'android' && platform !== 'ios') return
-        const res = await fetch('/api/push/register-token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: tokenResult.token, platform }),
-          credentials: 'include',
-        })
-        if (!res.ok) {
-          console.warn('[push] register-token falhou:', res.status)
-          return
-        }
-        registeredForUserRef.current = user.id
-
-        // 4. Listener de rotação de token. Firebase pode trocar quando
-        // o app é reinstalado, dados limpos, ou periodicamente em
-        // alguns devices. Re-registra silenciosamente.
-        const handle = await FirebaseMessaging.addListener(
+        // Rotação de token — re-registra se Firebase trocar.
+        const tokenHandle = await FirebaseMessaging.addListener(
           'tokenReceived',
           (event) => {
             if (!event.token) return
@@ -92,17 +102,61 @@ export default function PushBootstrap() {
             )
           },
         )
-        removeListener = () => {
-          handle.remove().catch(() => {})
-        }
+        removers.push(() => tokenHandle.remove().catch(() => {}))
       } catch (err) {
-        console.warn('[push] bootstrap falhou:', err)
+        console.warn('[push] listeners falhou:', err)
       }
     })()
 
     return () => {
       canceled = true
-      if (removeListener) removeListener()
+      removers.forEach((fn) => fn())
+    }
+  }, [router, showToast])
+
+  // Effect 2: registra token quando user loga.
+  useEffect(() => {
+    if (!isNativePlatform()) return
+    if (!isAuthenticated || !user) return
+    if (registeredForUserRef.current === user.id) return
+
+    let canceled = false
+    ;(async () => {
+      try {
+        const { FirebaseMessaging } = await import(
+          '@capacitor-firebase/messaging'
+        )
+        if (canceled) return
+
+        const perm = await FirebaseMessaging.requestPermissions()
+        if (perm.receive !== 'granted') {
+          registeredForUserRef.current = user.id
+          return
+        }
+
+        const tokenResult = await FirebaseMessaging.getToken()
+        if (canceled || !tokenResult.token) return
+
+        const platform = getPlatform()
+        if (platform !== 'android' && platform !== 'ios') return
+        const res = await fetch('/api/push/register-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: tokenResult.token, platform }),
+          credentials: 'include',
+        })
+        if (!res.ok) {
+          console.warn('[push] register-token falhou:', res.status)
+          return
+        }
+        registeredForUserRef.current = user.id
+      } catch (err) {
+        console.warn('[push] register falhou:', err)
+      }
+    })()
+
+    return () => {
+      canceled = true
     }
   }, [isAuthenticated, user])
 
