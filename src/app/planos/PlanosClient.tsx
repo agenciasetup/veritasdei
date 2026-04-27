@@ -4,9 +4,9 @@
  * Cliente de /planos — seleção de intervalo + checkout.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, Sparkles, Loader2 } from 'lucide-react'
+import { Check, Sparkles, Loader2, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import PremiumFeaturesCarousel from '@/components/payments/PremiumFeaturesCarousel'
@@ -84,6 +84,42 @@ export default function PlanosClient({ plans }: { plans: Plan[] }) {
    * usuário pode escolher qualquer package; o próprio Paywall sabe
    * qual é o "destacado" pela ordem definida no painel.
    */
+  // Confirmação pós-compra: imediatamente após o Paywall fechar com
+  // sucesso, mostramos um overlay "Compra confirmada — confirmando…"
+  // e iniciamos polling. RC dispara o evento customerInfoUpdated quase
+  // instantaneamente (SDK conhece o receipt local), mas o webhook bater
+  // no nosso backend pode levar 3-15s. O overlay fica até detectarmos
+  // isPremium=true via SubscriptionContext (que ouvirá tanto o evento
+  // do RC quanto os refreshes manuais abaixo) ou até estourar o
+  // timeout de 30s.
+  const [confirming, setConfirming] = useState(false)
+  const confirmDeadlineRef = useRef<number>(0)
+
+  // Auto-dismiss do overlay quando virar premium.
+  useEffect(() => {
+    if (!confirming) return
+    if (isPremium) {
+      setConfirming(false)
+    }
+  }, [confirming, isPremium])
+
+  // Polling de fallback enquanto o overlay está ativo.
+  useEffect(() => {
+    if (!confirming) return
+    const tick = () => {
+      if (Date.now() > confirmDeadlineRef.current) {
+        setConfirming(false)
+        setError(
+          'A confirmação está demorando. A assinatura aparece em alguns minutos — tente fechar e abrir o app.',
+        )
+        return
+      }
+      refreshSubscription().catch(() => {})
+    }
+    const interval = setInterval(tick, 2500)
+    return () => clearInterval(interval)
+  }, [confirming, refreshSubscription])
+
   async function assinarNative() {
     if (!isAuthenticated) {
       router.push(`/login?next=/planos`)
@@ -100,12 +136,11 @@ export default function PlanosClient({ plans }: { plans: Plan[] }) {
         result === PAYWALL_RESULT.PURCHASED ||
         result === PAYWALL_RESULT.RESTORED
       ) {
-        // Webhook do RC pode levar alguns segundos para gravar no
-        // Supabase. Refresh imediato + fallback após 4s.
-        await refreshSubscription()
-        setTimeout(() => {
-          refreshSubscription().catch(() => {})
-        }, 4000)
+        // Inicia overlay de confirmação + polling até webhook landar.
+        confirmDeadlineRef.current = Date.now() + 30000
+        setConfirming(true)
+        // Refresh imediato — pode pegar de primeira se webhook foi rápido.
+        refreshSubscription().catch(() => {})
       }
     } catch (err) {
       setError((err as Error).message)
@@ -161,6 +196,60 @@ export default function PlanosClient({ plans }: { plans: Plan[] }) {
 
   return (
     <main className="min-h-screen px-4 py-12 md:py-20">
+      {confirming && (
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="confirming-title"
+          className="fixed inset-0 z-[150] flex items-center justify-center px-4"
+          style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)' }}
+        >
+          <div
+            className="w-full max-w-sm rounded-3xl p-8 text-center"
+            style={{
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border-1)',
+            }}
+          >
+            <div
+              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
+              style={{
+                background: 'color-mix(in srgb, var(--success) 15%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--success) 30%, transparent)',
+              }}
+            >
+              <CheckCircle2
+                className="w-8 h-8"
+                style={{ color: 'var(--success)' }}
+              />
+            </div>
+            <h3
+              id="confirming-title"
+              className="text-xl mb-2"
+              style={{
+                fontFamily: 'var(--font-display)',
+                color: 'var(--text-1)',
+              }}
+            >
+              Compra confirmada
+            </h3>
+            <p
+              className="text-sm mb-4"
+              style={{
+                color: 'var(--text-2)',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              Estamos ativando seu Premium. Isso costuma levar alguns segundos.
+            </p>
+            <Loader2
+              className="w-6 h-6 animate-spin mx-auto"
+              style={{ color: 'var(--accent)' }}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="max-w-2xl mx-auto">
         <header className="text-center mb-10">
           <div

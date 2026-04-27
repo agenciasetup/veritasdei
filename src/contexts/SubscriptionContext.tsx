@@ -16,6 +16,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   useCallback,
   type ReactNode,
@@ -33,7 +34,11 @@ type Entitlement = {
 }
 
 interface SubscriptionContextValue {
+  // Primeira carga (sem dados ainda).
   loading: boolean
+  // Re-fetch em background (já tem dados anteriores). UI deve manter
+  // o conteúdo na tela; opcionalmente mostra um spinner discreto.
+  refreshing: boolean
   isPremium: boolean
   plano: string | null
   status: string | null
@@ -49,6 +54,7 @@ interface SubscriptionContextValue {
 
 const Ctx = createContext<SubscriptionContextValue>({
   loading: true,
+  refreshing: false,
   isPremium: false,
   plano: null,
   status: null,
@@ -61,12 +67,19 @@ const Ctx = createContext<SubscriptionContextValue>({
 export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated } = useAuth()
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [ent, setEnt] = useState<Entitlement | null>(null)
+  // Após a 1ª resposta (sucesso ou erro), os refetches subsequentes
+  // não devem piscar `loading=true` — isso causava o "loop esperando"
+  // no /perfil quando AuthContext re-emitia user em cada visibility
+  // change ou navegação.
+  const hasLoadedOnceRef = useRef(false)
 
   const refresh = useCallback(async () => {
     if (!isAuthenticated || !user) {
       setEnt(null)
       setLoading(false)
+      hasLoadedOnceRef.current = true
       return
     }
     const supabase = createClient()
@@ -74,18 +87,29 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       setLoading(false)
       return
     }
-    setLoading(true)
-    const { data, error } = await supabase.rpc('get_user_entitlement', {
-      uid: user.id,
-    })
-    if (error) {
-      console.warn('[subscription] rpc error:', error.message)
-      setEnt(null)
+    if (hasLoadedOnceRef.current) {
+      setRefreshing(true)
     } else {
-      const row = Array.isArray(data) ? data[0] : data
-      setEnt((row as Entitlement) ?? null)
+      setLoading(true)
     }
-    setLoading(false)
+    try {
+      const { data, error } = await supabase.rpc('get_user_entitlement', {
+        uid: user.id,
+      })
+      if (error) {
+        console.warn('[subscription] rpc error:', error.message)
+        // Em refresh: stale-while-revalidate (mantém último ent visível).
+        // Em load inicial: limpa pra mostrar "sem assinatura".
+        if (!hasLoadedOnceRef.current) setEnt(null)
+      } else {
+        const row = Array.isArray(data) ? data[0] : data
+        setEnt((row as Entitlement) ?? null)
+      }
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+      hasLoadedOnceRef.current = true
+    }
   }, [isAuthenticated, user])
 
   useEffect(() => {
@@ -110,6 +134,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
   const value: SubscriptionContextValue = {
     loading,
+    refreshing,
     isPremium: !!ent?.ativo,
     plano: ent?.plano ?? null,
     status: ent?.status ?? null,
