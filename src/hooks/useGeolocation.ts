@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
+import { isNativePlatform } from '@/lib/platform/is-native'
 
 const STORAGE_KEY = 'vd_geo_v1'
 
@@ -81,36 +82,77 @@ export function useGeolocation(): UseGeolocationReturn {
   const [status, setStatus] = useState<GeoStatus>(() => (loadCached() ? 'granted' : 'idle'))
   const [error, setError] = useState<string | null>(null)
 
-  const request = useCallback(() => {
-    if (typeof window === 'undefined' || !('geolocation' in navigator)) {
-      setStatus('unavailable')
-      setError('Geolocalização não disponível neste dispositivo.')
-      return
-    }
+  const request = useCallback(async () => {
+    if (typeof window === 'undefined') return
 
     setStatus('prompting')
     setError(null)
 
+    const onSuccess = async (
+      latitude: number,
+      longitude: number,
+      accuracy: number | undefined,
+    ) => {
+      setStatus('loading')
+      const base: GeoCoords = {
+        latitude,
+        longitude,
+        accuracy,
+        timestamp: Date.now(),
+      }
+      const { cidade, estado } = await reverseGeocode(latitude, longitude)
+      const loc: GeoLocation = {
+        ...base,
+        cidade,
+        estado,
+        label: cidade && estado ? `${cidade}, ${estado}` : cidade ?? null,
+      }
+      setCoords(loc)
+      setStatus('granted')
+      saveCached(loc)
+    }
+
+    // Capacitor nativo: pede permissão pelo plugin (diálogo nativo do
+    // Android/iOS) em vez de confiar no navigator.geolocation do
+    // WebView, que nem sempre dispara o diálogo nativo. Mais confiável.
+    if (isNativePlatform()) {
+      try {
+        const { Geolocation } = await import('@capacitor/geolocation')
+        const perm = await Geolocation.requestPermissions({
+          permissions: ['location'],
+        })
+        if (perm.location !== 'granted') {
+          setStatus('denied')
+          setError('Você negou a permissão de localização.')
+          return
+        }
+        const pos = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: false,
+          timeout: 10000,
+          maximumAge: 5 * 60 * 1000,
+        })
+        await onSuccess(
+          pos.coords.latitude,
+          pos.coords.longitude,
+          pos.coords.accuracy,
+        )
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Erro ao obter localização.'
+        setStatus('error')
+        setError(msg)
+      }
+      return
+    }
+
+    // Web/PWA: usa o navigator.geolocation padrão.
+    if (!('geolocation' in navigator)) {
+      setStatus('unavailable')
+      setError('Geolocalização não disponível neste dispositivo.')
+      return
+    }
     navigator.geolocation.getCurrentPosition(
-      async pos => {
-        setStatus('loading')
-        const base: GeoCoords = {
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-          accuracy: pos.coords.accuracy,
-          timestamp: Date.now(),
-        }
-        const { cidade, estado } = await reverseGeocode(base.latitude, base.longitude)
-        const loc: GeoLocation = {
-          ...base,
-          cidade,
-          estado,
-          label: cidade && estado ? `${cidade}, ${estado}` : cidade ?? null,
-        }
-        setCoords(loc)
-        setStatus('granted')
-        saveCached(loc)
-      },
+      pos =>
+        onSuccess(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy),
       err => {
         if (err.code === err.PERMISSION_DENIED) {
           setStatus('denied')
