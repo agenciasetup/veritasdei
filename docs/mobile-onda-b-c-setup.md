@@ -96,46 +96,39 @@ depois).
 
 ---
 
-## Tarefa 3 — Diagnóstico de schema (1 min, urgente)
+## Tarefa 3 — Diagnóstico de schema ✅ CONCLUÍDA (2026-04-27)
 
-**Por que:** as tabelas `billing_subscriptions`, `billing_prices` e
-`billing_webhook_events` **não estão versionadas em
-`supabase/migrations/`** — provavelmente foram criadas direto no
-Supabase Studio. Antes de eu mexer em qualquer webhook, preciso
-confirmar:
-1. Que constraints existem na coluna `provider`.
-2. Como a função `get_user_entitlement(uid)` agrega os providers.
+Acessei o banco via Management API e fechei o diagnóstico. Resumo:
 
-**Faça assim:** abra o Supabase Studio do projeto de produção, vá em
-**SQL Editor** e rode:
+**Constraint de `provider` em `billing_subscriptions`:**
+- Antes: aceitava `stripe | kirvano | hotmart | eduzz | manual`.
+- **Agora aceita também `revenuecat`** — migration aditiva
+  `20260427000000_billing_subscriptions_allow_revenuecat.sql` aplicada.
+- Nenhuma linha existente foi tocada (1 assinatura Stripe ativa
+  permanece intacta).
 
-```sql
--- 1. Constraints da coluna provider em billing_subscriptions
-SELECT con.conname, pg_get_constraintdef(con.oid)
-FROM pg_constraint con
-JOIN pg_class cls ON cls.oid = con.conrelid
-WHERE cls.relname = 'billing_subscriptions';
+**Schema das 4 tabelas billing (`billing_plans`, `billing_prices`,
+`billing_subscriptions`, `billing_webhook_events`):**
+- Já são multi-provider: `billing_subscriptions` tem `provider`,
+  `provider_customer_id`, `provider_subscription_id`.
+- `billing_webhook_events.provider` não tem check constraint —
+  aceita `'revenuecat'` direto.
+- `billing_prices.intervalo` aceita
+  `mensal | semestral | anual | unico` — bate com o que vamos cadastrar
+  no RevenueCat.
 
--- 2. Schema das 3 tabelas billing
-SELECT table_name, column_name, data_type, is_nullable, column_default
-FROM information_schema.columns
-WHERE table_schema = 'public'
-  AND table_name IN ('billing_subscriptions', 'billing_prices', 'billing_webhook_events')
-ORDER BY table_name, ordinal_position;
+**Função `get_user_entitlement(uid)`:**
+- Lê `billing_subscriptions` ordenado por `(status_ativo, atualizado_em DESC)
+  LIMIT 1`.
+- Já é provider-agnostic — quando RevenueCat gravar uma row ativa,
+  o usuário fica premium sem mudar nada na função.
+- Bonus: usuário com role `admin` é sempre premium.
 
--- 3. Definição da função get_user_entitlement
-SELECT pg_get_functiondef(p.oid)
-FROM pg_proc p
-JOIN pg_namespace n ON p.pronamespace = n.oid
-WHERE n.nspname = 'public' AND p.proname = 'get_user_entitlement';
-```
+### Conclusão
 
-### O que me devolver
-- Cole o resultado dos 3 SELECTs aqui no chat.
-
-A partir daí eu sei se preciso (a) ampliar uma check constraint, (b)
-alterar a função RPC, ou (c) só plugar o webhook sem mudar nada no
-banco.
+Não há mais bloqueio de schema para a Onda C. A única coisa adicional
+do lado do banco será (eventualmente) versionar as migrations órfãs
+de `billing_*` — fica como item de tech debt para quando convier.
 
 ---
 
@@ -178,8 +171,8 @@ Eu te guio em detalhe quando chegarmos lá.
 
 Por ordem de urgência:
 
-1. **Resultado dos 3 SELECTs da Tarefa 3** — destrava o diagnóstico
-   do banco.
+1. ~~Resultado dos 3 SELECTs da Tarefa 3~~ — ✅ feito por mim
+   (Management API). Migration já aplicada.
 2. **`google-services.json` da Tarefa 1** — destrava Onda B.
 3. **4 chaves do RevenueCat da Tarefa 2** — destrava Onda C.
 4. **Confirmação que o app shell abre na sua mão (Tarefa 4)** —
