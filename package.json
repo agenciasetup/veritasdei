@@ -14,7 +14,8 @@
     "cap:sync": "cap sync",
     "cap:sync:android": "cap sync android",
     "cap:open:android": "cap open android",
-    "cap:run:android": "cap run android"
+    "cap:run:android": "cap run android",
+    "mobile:assets": "node scripts/gen-mobile-assets.mjs && capacitor-assets generate --android"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1031.0",
@@ -58,6 +59,7 @@
   },
   "devDependencies": {
     "@capacitor/android": "^8.3.1",
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.3.1",
     "@capacitor/core": "^8.3.1",
     "@tailwindcss/postcss": "^4",
