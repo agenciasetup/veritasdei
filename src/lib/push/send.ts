@@ -19,6 +19,7 @@
 import webpush, { type PushSubscription as WebPushSubscription } from 'web-push'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Categoria, PushPayload } from './templates'
+import { sendFcmToTokens, type FcmTokenInfo } from './fcm'
 
 let vapidConfigured = false
 
@@ -57,6 +58,7 @@ interface PrefRow {
   push_endpoint: string | null
   push_p256dh: string | null
   push_auth: string | null
+  fcm_token: string | null
 }
 
 export interface SendResult {
@@ -87,12 +89,15 @@ export async function sendPushToUsers(
   }
 
   const column = CATEGORIA_TO_COLUMN[opts.categoria]
+  // Pega todo mundo com push_enabled — pode ter Web Push (push_endpoint),
+  // FCM (fcm_token), ou ambos (PWA + app). Disparo ocorre no canal que
+  // o usuário tiver registrado.
   let query = supabase
     .from('user_notificacoes_prefs')
-    .select('user_id, push_endpoint, push_p256dh, push_auth')
+    .select('user_id, push_endpoint, push_p256dh, push_auth, fcm_token')
     .in('user_id', userIds)
     .eq('push_enabled', true)
-    .not('push_endpoint', 'is', null)
+    .or('push_endpoint.not.is.null,fcm_token.not.is.null')
   if (column) query = query.eq(column, true)
 
   const { data: rows, error } = await query
@@ -112,12 +117,13 @@ export async function sendPushToUsers(
     tag: payload.tag,
   })
 
-  const expiredUsers: string[] = []
+  const expiredWebUsers: string[] = []
 
-  // Envio em batches para evitar bursts enormes
+  // Web Push (subset com push_endpoint) — em batches.
+  const webRows = prefRows.filter((r) => r.push_endpoint && r.push_p256dh && r.push_auth)
   const BATCH = 50
-  for (let i = 0; i < prefRows.length; i += BATCH) {
-    const slice = prefRows.slice(i, i + BATCH)
+  for (let i = 0; i < webRows.length; i += BATCH) {
+    const slice = webRows.slice(i, i + BATCH)
     const outcomes = await Promise.allSettled(
       slice.map((row) =>
         webpush.sendNotification(
@@ -140,7 +146,7 @@ export async function sendPushToUsers(
       const err = outcome.reason as { statusCode?: number; message?: string }
       if (err?.statusCode === 404 || err?.statusCode === 410) {
         result.cleaned += 1
-        expiredUsers.push(row.user_id)
+        expiredWebUsers.push(row.user_id)
       } else {
         result.failed += 1
         console.warn(
@@ -153,17 +159,68 @@ export async function sendPushToUsers(
     })
   }
 
-  if (expiredUsers.length) {
+  if (expiredWebUsers.length) {
     await supabase
       .from('user_notificacoes_prefs')
       .update({
-        push_enabled: false,
         push_endpoint: null,
         push_p256dh: null,
         push_auth: null,
         atualizado_em: new Date().toISOString(),
       })
-      .in('user_id', expiredUsers)
+      .in('user_id', expiredWebUsers)
+  }
+
+  // FCM (subset com fcm_token) — paralelo ao Web Push, canais
+  // independentes. Usuário com PWA + app recebe nos dois.
+  const fcmRows: FcmTokenInfo[] = prefRows
+    .filter((r) => r.fcm_token)
+    .map((r) => ({ user_id: r.user_id, fcm_token: r.fcm_token! }))
+
+  if (fcmRows.length) {
+    const fcmResult = await sendFcmToTokens(fcmRows, payload)
+    result.sent += fcmResult.sent
+    result.failed += fcmResult.failed
+    result.cleaned += fcmResult.cleaned
+
+    if (fcmResult.expiredUserIds.length) {
+      await supabase
+        .from('user_notificacoes_prefs')
+        .update({
+          fcm_token: null,
+          fcm_platform: null,
+          fcm_registered_at: null,
+          atualizado_em: new Date().toISOString(),
+        })
+        .in('user_id', fcmResult.expiredUserIds)
+    }
+  }
+
+  // Se TODOS os canais do usuário deram expired (web + fcm), aí sim
+  // desliga o push_enabled. Caso contrário, mantém ligado pra outros
+  // canais.
+  const allExpired = expiredWebUsers.filter((u) =>
+    prefRows.find(
+      (r) => r.user_id === u && (!r.fcm_token || expiredWebUsers.includes(u)),
+    ),
+  )
+  if (allExpired.length) {
+    // Verifica se algum desses ainda tem fcm_token vivo (não foi expirado).
+    const stillHasFcm = await supabase
+      .from('user_notificacoes_prefs')
+      .select('user_id')
+      .in('user_id', allExpired)
+      .not('fcm_token', 'is', null)
+    const stillHasFcmIds = new Set(
+      (stillHasFcm.data ?? []).map((r) => (r as { user_id: string }).user_id),
+    )
+    const toDisable = allExpired.filter((u) => !stillHasFcmIds.has(u))
+    if (toDisable.length) {
+      await supabase
+        .from('user_notificacoes_prefs')
+        .update({ push_enabled: false, atualizado_em: new Date().toISOString() })
+        .in('user_id', toDisable)
+    }
   }
 
   // Feed in-app — todo mundo que tinha push habilitado recebe entrada,
