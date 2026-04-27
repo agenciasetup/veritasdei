@@ -12,6 +12,7 @@ import InstallPrompt from "@/components/pwa/InstallPrompt"
 import NoZoom from "@/components/layout/NoZoom"
 import GamificationEventsProvider from "@/components/gamification/GamificationEventsProvider"
 import RevenueCatBootstrap from "@/components/payments/RevenueCatBootstrap"
+import PushBootstrap from "@/components/notifications/PushBootstrap"
 
 // next/font/google: self-hosting + auto-subset + preload com display:swap.
 // Pesos reduzidos vs versão antiga (-400/-500 typical) para economia de bytes.
@@ -102,6 +103,7 @@ export default function RootLayout({
           <AuthProvider>
             <ThemeSupabaseSync />
             <RevenueCatBootstrap />
+            <PushBootstrap />
             <GamificationEventsProvider>
               <AppShell>{children}</AppShell>
             </GamificationEventsProvider>
