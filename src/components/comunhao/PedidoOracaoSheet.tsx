@@ -15,13 +15,20 @@ export default function PedidoOracaoSheet({
   santoId,
   santoNome,
   onCreated,
+  editPedidoId,
+  initialTexto,
+  initialAnonimo,
 }: {
   open: boolean
   onClose: () => void
   santoId?: string | null
   santoNome?: string
   onCreated?: () => void
+  editPedidoId?: string
+  initialTexto?: string
+  initialAnonimo?: boolean
 }) {
+  const isEditing = Boolean(editPedidoId)
   const [texto, setTexto] = useState('')
   const [anonimo, setAnonimo] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -29,13 +36,13 @@ export default function PedidoOracaoSheet({
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!open) {
-      setTexto('')
-      setAnonimo(false)
+    if (open) {
+      setTexto(initialTexto ?? '')
+      setAnonimo(initialAnonimo ?? false)
       setError(null)
       setDone(false)
     }
-  }, [open])
+  }, [open, initialTexto, initialAnonimo])
 
   useEffect(() => {
     if (!open) return
@@ -57,9 +64,13 @@ export default function PedidoOracaoSheet({
     setError(null)
     try {
       const res = await fetch('/api/pedidos-oracao', {
-        method: 'POST',
+        method: isEditing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ texto: t, santo_id: santoId ?? null, anonimo }),
+        body: JSON.stringify(
+          isEditing
+            ? { id: editPedidoId, texto: t, anonimo }
+            : { texto: t, santo_id: santoId ?? null, anonimo },
+        ),
       })
       if (!res.ok) throw new Error(String(res.status))
       setDone(true)
@@ -106,7 +117,7 @@ export default function PedidoOracaoSheet({
                 <div className="flex items-center gap-2">
                   <Hand className="w-4 h-4" style={{ color: '#C9A84C' }} />
                   <h2 style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C', fontSize: '1.05rem' }}>
-                    Pedir oração
+                    {isEditing ? 'Editar pedido' : 'Pedir oração'}
                   </h2>
                 </div>
                 <button type="button" onClick={onClose} aria-label="Fechar">
@@ -184,7 +195,8 @@ export default function PedidoOracaoSheet({
               >
                 {saving ? (
                   <Loader2 className="w-4 h-4 animate-spin mx-auto" />
-                ) : done ? 'Pedido publicado' : 'Publicar pedido'}
+                ) : done ? (isEditing ? 'Pedido atualizado' : 'Pedido publicado')
+                  : (isEditing ? 'Salvar alterações' : 'Publicar pedido')}
               </button>
             </div>
           </motion.div>

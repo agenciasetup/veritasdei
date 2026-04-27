@@ -11,7 +11,7 @@ import type { PedidoOracaoPublico } from '@/types/comunhao'
 export default function PedidosOracaoFeed({ santoId, santoNome }: { santoId?: string; santoNome?: string }) {
   const { isAuthenticated } = useAuth()
   const router = useRouter()
-  const [pedidos, setPedidos] = useState<(PedidoOracaoPublico & { ja_rezou?: boolean })[]>([])
+  const [pedidos, setPedidos] = useState<(PedidoOracaoPublico & { ja_rezou?: boolean; is_mine?: boolean })[]>([])
   const [loading, setLoading] = useState(true)
   const [sheetOpen, setSheetOpen] = useState(false)
 
@@ -21,7 +21,7 @@ export default function PedidosOracaoFeed({ santoId, santoNome }: { santoId?: st
       const qs = santoId ? `?santo_id=${encodeURIComponent(santoId)}` : ''
       const res = await fetch(`/api/pedidos-oracao${qs}`, { cache: 'no-store' })
       if (res.ok) {
-        const j = await res.json() as { pedidos: (PedidoOracaoPublico & { ja_rezou?: boolean })[] }
+        const j = await res.json() as { pedidos: (PedidoOracaoPublico & { ja_rezou?: boolean; is_mine?: boolean })[] }
         setPedidos(j.pedidos ?? [])
       }
     } finally {

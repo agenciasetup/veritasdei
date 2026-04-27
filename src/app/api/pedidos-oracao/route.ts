@@ -26,20 +26,34 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'db_error' }, { status: 500 })
   }
 
-  // Se autenticado, anota quais o user já rezou
+  // Se autenticado, anota quais o user já rezou e quais são dele (pra editar/apagar)
   const { data: { user } } = await supabase.auth.getUser()
   let rezouIds: Set<string> = new Set()
+  let mineIds: Set<string> = new Set()
   if (user && data && data.length > 0) {
-    const { data: rezas } = await supabase
-      .from('pedidos_oracao_rezas')
-      .select('pedido_id')
-      .eq('user_id', user.id)
-      .in('pedido_id', data.map(p => p.id))
+    const ids = data.map(p => p.id)
+    const [{ data: rezas }, { data: meus }] = await Promise.all([
+      supabase
+        .from('pedidos_oracao_rezas')
+        .select('pedido_id')
+        .eq('user_id', user.id)
+        .in('pedido_id', ids),
+      supabase
+        .from('pedidos_oracao')
+        .select('id')
+        .eq('user_id', user.id)
+        .in('id', ids),
+    ])
     rezouIds = new Set((rezas ?? []).map((r: { pedido_id: string }) => r.pedido_id))
+    mineIds = new Set((meus ?? []).map((r: { id: string }) => r.id))
   }
 
   return NextResponse.json({
-    pedidos: (data ?? []).map(p => ({ ...p, ja_rezou: rezouIds.has(p.id) })),
+    pedidos: (data ?? []).map(p => ({
+      ...p,
+      ja_rezou: rezouIds.has(p.id),
+      is_mine: mineIds.has(p.id),
+    })),
   })
 }
 
@@ -74,6 +88,40 @@ export async function POST(req: NextRequest) {
     console.error('[pedidos-oracao] POST error', error)
     return NextResponse.json({ error: 'db_error' }, { status: 500 })
   }
+  return NextResponse.json({ pedido: data })
+}
+
+export async function PUT(req: NextRequest) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+
+  let body: { id?: string; texto?: string; anonimo?: boolean }
+  try { body = await req.json() } catch { return NextResponse.json({ error: 'invalid_json' }, { status: 400 }) }
+
+  if (!body.id || !UUID_RE.test(body.id)) {
+    return NextResponse.json({ error: 'invalid_id' }, { status: 400 })
+  }
+  const texto = String(body.texto ?? '').trim()
+  if (texto.length < 10) return NextResponse.json({ error: 'texto_too_short' }, { status: 400 })
+  if (texto.length > 600) return NextResponse.json({ error: 'texto_too_long' }, { status: 400 })
+
+  const { data, error } = await supabase
+    .from('pedidos_oracao')
+    .update({
+      texto,
+      anonimo: Boolean(body.anonimo),
+    })
+    .eq('id', body.id)
+    .eq('user_id', user.id)
+    .select('*')
+    .single()
+
+  if (error) {
+    console.error('[pedidos-oracao] PUT error', error)
+    return NextResponse.json({ error: 'db_error' }, { status: 500 })
+  }
+  if (!data) return NextResponse.json({ error: 'not_found' }, { status: 404 })
   return NextResponse.json({ pedido: data })
 }
 

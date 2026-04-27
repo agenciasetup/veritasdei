@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Heart } from 'lucide-react'
 import { getTop30Santos } from '@/lib/santos/queries'
-import SantoCoverFallback from '@/components/devocao/SantoCoverFallback'
+import SantoCardImage from '@/components/devocao/SantoCardImage'
 import SantosSearch from './SantosSearch'
 
 export const revalidate = 3600
@@ -61,33 +61,28 @@ export default async function SantosPage() {
           >
             Em destaque
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {top30.map(santo => (
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2.5">
+            {top30.map((santo, idx) => (
               <Link
                 key={santo.id}
                 href={`/santos/${santo.slug}`}
                 className="group relative overflow-hidden rounded-xl active:scale-[0.98] transition-transform"
                 style={{
-                  aspectRatio: '3 / 4',
+                  aspectRatio: '1 / 1',
                   border: '1px solid rgba(242,237,228,0.12)',
                 }}
               >
-                {santo.imagem_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={santo.imagem_url}
-                    alt={santo.nome}
-                    loading="lazy"
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
-                  />
-                ) : (
-                  <SantoCoverFallback nome={santo.nome} invocacao={santo.invocacao} />
-                )}
+                <SantoCardImage
+                  imagemUrl={santo.imagem_url}
+                  nome={santo.nome}
+                  invocacao={santo.invocacao}
+                  eager={idx < 6}
+                />
                 <div
                   aria-hidden
-                  className="absolute inset-x-0 bottom-0 p-2.5 pt-10"
+                  className="absolute inset-x-0 bottom-0 px-2 py-1.5 pt-8"
                   style={{
-                    background: 'linear-gradient(to top, rgba(10,10,10,0.92) 0%, rgba(10,10,10,0.55) 60%, transparent 100%)',
+                    background: 'linear-gradient(to top, rgba(10,10,10,0.94) 0%, rgba(10,10,10,0.5) 65%, transparent 100%)',
                   }}
                 >
                   <div
@@ -95,28 +90,16 @@ export default async function SantosPage() {
                     style={{
                       fontFamily: 'Cinzel, Georgia, serif',
                       color: '#F2EDE4',
-                      fontSize: '0.82rem',
+                      fontSize: '0.72rem',
                       fontWeight: 600,
                       lineHeight: 1.15,
                     }}
                   >
                     {santo.nome}
                   </div>
-                  {santo.patronatos && santo.patronatos.length > 0 && (
-                    <div
-                      className="truncate mt-0.5"
-                      style={{
-                        fontFamily: 'Poppins, sans-serif',
-                        color: 'rgba(242,237,228,0.6)',
-                        fontSize: '0.62rem',
-                      }}
-                    >
-                      {santo.patronatos.slice(0, 2).join(' · ')}
-                    </div>
-                  )}
                 </div>
                 <div
-                  className="absolute top-2 left-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px]"
+                  className="absolute top-1.5 left-1.5 inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px]"
                   style={{
                     background: 'rgba(201,168,76,0.9)',
                     color: '#0A0A0A',
@@ -124,7 +107,7 @@ export default async function SantosPage() {
                     fontWeight: 600,
                   }}
                 >
-                  <Heart className="w-2.5 h-2.5" fill="#0A0A0A" />
+                  <Heart className="w-2 h-2" fill="#0A0A0A" />
                   {santo.popularidade_rank}
                 </div>
               </Link>
