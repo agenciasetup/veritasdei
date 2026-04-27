@@ -50,6 +50,14 @@ const config: CapacitorConfig = {
     FirebaseMessaging: {
       presentationOptions: ['badge', 'sound', 'alert'],
     },
+    // FirebaseAuthentication exige declarar quais providers o app
+    // usa — sem isso o plugin rejeita signInWithGoogle/Apple/etc com
+    // "provider not enabled". Apple/Facebook ficam pra quando
+    // implementarmos os respectivos signInWithApple/Facebook.
+    FirebaseAuthentication: {
+      skipNativeAuth: false,
+      providers: ['google.com'],
+    },
   },
 }
 
