@@ -93,11 +93,14 @@ No Android Studio:
   do app.
 
 ### Bloqueios potenciais (avaliar caso a caso)
-- **Stripe Checkout** dentro do WebView funciona, mas pode ser
-  reprovado por Apple (regra de in-app purchases). No Android é
-  tolerado para serviços assinados em browser. Recomendação: abrir
-  checkout em browser externo via `Browser.open()` antes de submeter
-  para a App Store.
+- **Stripe Checkout dentro do app empacotado: NÃO publicar assim.**
+  Diagnóstico completo em [`docs/mobile-payments-strategy.md`](mobile-payments-strategy.md).
+  Resumo: Apple bloqueia (regra 3.1.1) e Google reprova (UMA-2).
+  Estratégia: Stripe continua na web; Android usa Play Billing;
+  iOS usa StoreKit. `/planos` precisa detectar
+  `Capacitor.isNativePlatform()` e trocar o CTA. Não fazer parte
+  desta sprint — só após decisão executiva sobre fee de 15–30%
+  e ferramenta (RevenueCat vs plugin direto).
 - **CSP em report-only** hoje. Quando virar enforced, adicionar à
   `connect-src` qualquer domínio que o Capacitor use (ex.: APIs do
   FCM se push for adicionado), e considerar `capacitor://localhost`
@@ -125,12 +128,14 @@ No Android Studio:
 - [ ] Atualizar `.gitignore` para artefatos do Android.
 - [ ] `docs/android-build.md` com passo a passo para leigo.
 
-### Fase 3 — Push e auth nativos (próxima sprint)
+### Fase 3 — Push, auth e pagamentos nativos
 - [ ] Instalar `@capacitor/push-notifications` + setup FCM.
 - [ ] Adaptar `src/app/api/push/*` para aceitar tokens FCM além de
       endpoints Web Push.
 - [ ] Trocar OAuth Google por `@capacitor/google-auth` ou Custom Tabs.
-- [ ] Migrar Stripe Checkout para `Browser.open()` (Custom Tabs).
+- [ ] **Pagamentos:** implementar Play Billing (Android) e StoreKit
+      (iOS) — ver [`docs/mobile-payments-strategy.md`](mobile-payments-strategy.md).
+      Stripe continua só na web.
 
 ### Fase 4 — iOS
 - [ ] `npx cap add ios` (precisa de macOS + Xcode).
