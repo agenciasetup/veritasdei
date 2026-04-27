@@ -114,14 +114,46 @@ export interface ShareContent {
   url?: string
 }
 
+function isCapacitorNative(): boolean {
+  if (typeof window === 'undefined') return false
+  // @capacitor/core expõe Capacitor.isNativePlatform() quando rodando
+  // dentro de um WebView Capacitor (Android/iOS). Carregado sob demanda
+  // pra não inflar bundle web.
+  const cap = (
+    window as Window & { Capacitor?: { isNativePlatform?: () => boolean } }
+  ).Capacitor
+  return typeof cap?.isNativePlatform === 'function' && cap.isNativePlatform()
+}
+
 export const share = {
   isAvailable(): boolean {
-    return typeof navigator !== 'undefined' && typeof navigator.share === 'function'
+    if (typeof navigator === 'undefined') return false
+    return isCapacitorNative() || typeof navigator.share === 'function'
   },
   async text(content: ShareContent): Promise<boolean> {
     if (typeof navigator === 'undefined') return false
+
+    // Capacitor nativo: navigator.share no WebView Android nem sempre
+    // dispara o sheet completo (vimos: modal abria sem apps). O plugin
+    // @capacitor/share usa o Intent.ACTION_SEND nativo, sempre traz a
+    // lista correta de apps.
+    if (isCapacitorNative()) {
+      try {
+        const { Share } = await import('@capacitor/share')
+        await Share.share({
+          title: content.title,
+          text: content.text,
+          url: content.url,
+          dialogTitle: 'Compartilhar',
+        })
+        return true
+      } catch {
+        return false
+      }
+    }
+
     if (typeof navigator.share !== 'function') {
-      // Fallback: copia para clipboard
+      // Web sem Web Share API: fallback de clipboard.
       try {
         const combined = [content.title, content.text, content.url]
           .filter(Boolean)
