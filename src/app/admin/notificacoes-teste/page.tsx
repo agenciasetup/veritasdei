@@ -22,9 +22,25 @@ interface SendResult {
   skipped: number
 }
 
+interface TargetDiag {
+  user_id: string
+  push_enabled: boolean
+  has_web_push: boolean
+  has_fcm: boolean
+  fcm_platform: string | null
+  fcm_registered_at: string | null
+}
+
+interface FcmStatus {
+  available: boolean
+  reason: string | null
+}
+
 interface ApiResponse {
   ok: boolean
-  target?: string
+  target?: TargetDiag
+  fcm?: FcmStatus
+  vapid_configured?: boolean
   result?: SendResult
   error?: string
 }
@@ -238,49 +254,148 @@ export default function AdminPushTestPage() {
       )}
 
       {response?.ok && response.result && (
-        <div
-          className="p-4 rounded-xl"
-          style={{
-            background: 'rgba(34,197,94,0.10)',
-            border: '1px solid rgba(34,197,94,0.30)',
-            fontFamily: 'Poppins, sans-serif',
-          }}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <CheckCircle2 className="w-4 h-4" style={{ color: '#22C55E' }} />
-            <span className="text-sm" style={{ color: '#22C55E' }}>
-              Disparada para{' '}
-              <code className="text-xs">{response.target?.slice(0, 8)}…</code>
-            </span>
+        <div className="grid gap-3">
+          {/* Status do destino */}
+          <div
+            className="p-4 rounded-xl"
+            style={{
+              background: 'rgba(255,255,255,0.02)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              fontFamily: 'Poppins, sans-serif',
+            }}
+          >
+            <div
+              className="text-xs uppercase tracking-wider mb-2"
+              style={{ color: '#8A8378' }}
+            >
+              Destinatário
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <Diag
+                label="push_enabled"
+                ok={response.target?.push_enabled}
+                value={response.target?.push_enabled ? 'sim' : 'NÃO'}
+              />
+              <Diag
+                label="Web Push"
+                ok={response.target?.has_web_push}
+                value={response.target?.has_web_push ? 'registrado' : 'não'}
+              />
+              <Diag
+                label="FCM (app)"
+                ok={response.target?.has_fcm}
+                value={
+                  response.target?.has_fcm
+                    ? `${response.target.fcm_platform}`
+                    : 'não'
+                }
+              />
+              <Diag
+                label="FCM disponível"
+                ok={response.fcm?.available}
+                value={
+                  response.fcm?.available
+                    ? 'sim'
+                    : response.fcm?.reason ?? 'não'
+                }
+              />
+            </div>
           </div>
-          <div className="grid grid-cols-4 gap-2 text-center">
-            {[
-              { label: 'Enviadas', value: response.result.sent },
-              { label: 'Falhadas', value: response.result.failed },
-              { label: 'Limpas', value: response.result.cleaned },
-              { label: 'Skipped', value: response.result.skipped },
-            ].map((m) => (
-              <div
-                key={m.label}
-                className="p-2 rounded-lg"
-                style={{ background: 'rgba(0,0,0,0.4)' }}
-              >
-                <div className="text-lg font-medium" style={{ color: '#E8E4D9' }}>
-                  {m.value}
+
+          {/* Resultado do envio */}
+          <div
+            className="p-4 rounded-xl"
+            style={{
+              background:
+                response.result.sent > 0
+                  ? 'rgba(34,197,94,0.10)'
+                  : 'rgba(230,126,34,0.10)',
+              border:
+                response.result.sent > 0
+                  ? '1px solid rgba(34,197,94,0.30)'
+                  : '1px solid rgba(230,126,34,0.30)',
+              fontFamily: 'Poppins, sans-serif',
+            }}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              {response.result.sent > 0 ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4" style={{ color: '#22C55E' }} />
+                  <span className="text-sm" style={{ color: '#22C55E' }}>
+                    {response.result.sent} push(es) entregue(s) ao provedor
+                  </span>
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="w-4 h-4" style={{ color: '#E67E22' }} />
+                  <span className="text-sm" style={{ color: '#E67E22' }}>
+                    Nada foi enviado — verifica diagnóstico acima
+                  </span>
+                </>
+              )}
+            </div>
+            <div className="grid grid-cols-4 gap-2 text-center">
+              {[
+                { label: 'Enviadas', value: response.result.sent },
+                { label: 'Falhadas', value: response.result.failed },
+                { label: 'Limpas', value: response.result.cleaned },
+                { label: 'Skipped', value: response.result.skipped },
+              ].map((m) => (
+                <div
+                  key={m.label}
+                  className="p-2 rounded-lg"
+                  style={{ background: 'rgba(0,0,0,0.4)' }}
+                >
+                  <div
+                    className="text-lg font-medium"
+                    style={{ color: '#E8E4D9' }}
+                  >
+                    {m.value}
+                  </div>
+                  <div className="text-[10px]" style={{ color: '#8A8378' }}>
+                    {m.label}
+                  </div>
                 </div>
-                <div className="text-[10px]" style={{ color: '#8A8378' }}>
-                  {m.label}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            <p className="text-[11px] mt-3" style={{ color: '#8A8378' }}>
+              "Sent" = entregue ao FCM/Apple (não garante chegada no
+              device — pode atrasar). "Skipped" = sem push_enabled ou sem
+              token. "Failed" = erro de envio.
+            </p>
           </div>
-          <p className="text-[11px] mt-3" style={{ color: '#8A8378' }}>
-            "Skipped" = usuário sem push registrado, ou opt-out da categoria
-            test (essa categoria não filtra, mas se push_enabled=false aparece
-            aqui).
-          </p>
         </div>
       )}
+    </div>
+  )
+}
+
+function Diag({
+  label,
+  ok,
+  value,
+}: {
+  label: string
+  ok: boolean | undefined
+  value: string
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span
+        className="w-2 h-2 rounded-full flex-shrink-0"
+        style={{ background: ok ? '#22C55E' : '#E67E22' }}
+      />
+      <div className="min-w-0">
+        <div className="text-[10px] uppercase" style={{ color: '#8A8378' }}>
+          {label}
+        </div>
+        <div
+          className="text-xs truncate"
+          style={{ color: ok ? '#E8E4D9' : '#E67E22' }}
+        >
+          {value}
+        </div>
+      </div>
     </div>
   )
 }

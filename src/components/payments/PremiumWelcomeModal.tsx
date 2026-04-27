@@ -8,16 +8,17 @@
  * pós-compra. Auto-dismiss em 12s. Toque em card navega; toque em
  * "Vamos lá" fecha sem navegar.
  *
- * Anti-spam: localStorage flag impede re-abrir o modal pra mesma
- * assinatura (user_id + plano hash). Se cancelar e reassinar, abre
- * de novo (intencional — é uma nova vida premium).
+ * Detecção de transição: aguarda `loading` ficar false (subscription
+ * resolvida). Quando isPremium muda de false → true depois disso, abre
+ * o modal. Reabre em cada novo ciclo de assinatura (cancel + repurchase).
+ * Não persiste em localStorage para permitir re-teste em sandbox e não
+ * inflar dados do device.
  */
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sparkles, BookOpen, Map, GraduationCap, X } from 'lucide-react'
 import { useSubscription } from '@/contexts/SubscriptionContext'
-import { useAuth } from '@/contexts/AuthContext'
 
 const SHORTCUTS = [
   {
@@ -46,37 +47,28 @@ const SHORTCUTS = [
   },
 ]
 
-const STORAGE_KEY = 'veritasdei:premium-welcome-shown'
-
 export default function PremiumWelcomeModal() {
-  const { isPremium, plano } = useSubscription()
-  const { user } = useAuth()
+  const { isPremium, loading } = useSubscription()
   const router = useRouter()
   const prevPremiumRef = useRef<boolean | null>(null)
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    // Skip enquanto subscription ainda carregando (prev = null).
+    // Aguarda subscription terminar de carregar antes de marcar baseline.
+    // Se inicializássemos com isPremium=false (estado default) e depois
+    // resolvesse pra true, o modal abriria em toda visita de usuário
+    // premium. Esperando `loading=false` garante que o baseline reflete
+    // o estado real.
+    if (loading) return
     if (prevPremiumRef.current === null) {
       prevPremiumRef.current = isPremium
       return
     }
-    // Detecta transição false → true.
-    if (!prevPremiumRef.current && isPremium && user?.id) {
-      const flagKey = `${STORAGE_KEY}:${user.id}:${plano ?? 'unknown'}`
-      const alreadyShown =
-        typeof window !== 'undefined' && localStorage.getItem(flagKey)
-      if (!alreadyShown) {
-        setOpen(true)
-        try {
-          localStorage.setItem(flagKey, String(Date.now()))
-        } catch {
-          // localStorage cheio / privado — não bloqueia
-        }
-      }
+    if (!prevPremiumRef.current && isPremium) {
+      setOpen(true)
     }
     prevPremiumRef.current = isPremium
-  }, [isPremium, plano, user?.id])
+  }, [loading, isPremium])
 
   // Auto-dismiss 12s
   useEffect(() => {

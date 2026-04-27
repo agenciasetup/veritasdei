@@ -15,6 +15,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin/guard'
 import { sendPushToUsers } from '@/lib/push/send'
+import { getFcmStatus } from '@/lib/push/fcm'
 
 interface Body {
   targetUserId?: string
@@ -53,6 +54,28 @@ export async function POST(req: NextRequest) {
   const url =
     typeof body.url === 'string' && body.url.startsWith('/') ? body.url : '/'
 
+  // Diagnóstico do destino antes de enviar — facilita debug quando
+  // notificação "não chega" (na maioria das vezes é fcm_token ausente
+  // ou FIREBASE_SERVICE_ACCOUNT mal configurada).
+  const { data: prefRow } = await ctx.supabase
+    .from('user_notificacoes_prefs')
+    .select(
+      'push_enabled, push_endpoint, push_p256dh, fcm_token, fcm_platform, fcm_registered_at',
+    )
+    .eq('user_id', targetId)
+    .maybeSingle()
+
+  const target = {
+    user_id: targetId,
+    push_enabled: !!prefRow?.push_enabled,
+    has_web_push: !!(prefRow?.push_endpoint && prefRow?.push_p256dh),
+    has_fcm: !!prefRow?.fcm_token,
+    fcm_platform: prefRow?.fcm_platform ?? null,
+    fcm_registered_at: prefRow?.fcm_registered_at ?? null,
+  }
+
+  const fcm = getFcmStatus()
+
   const result = await sendPushToUsers(
     [targetId],
     {
@@ -64,5 +87,11 @@ export async function POST(req: NextRequest) {
     { categoria: 'test', admin: ctx.supabase },
   )
 
-  return NextResponse.json({ ok: true, target: targetId, result })
+  return NextResponse.json({
+    ok: true,
+    target,
+    fcm,
+    vapid_configured: !!process.env.VAPID_PRIVATE_KEY,
+    result,
+  })
 }

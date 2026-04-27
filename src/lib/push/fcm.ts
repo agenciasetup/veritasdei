@@ -21,6 +21,8 @@ let cachedApp: App | null = null
 let cachedMessaging: Messaging | null = null
 let initFailed = false
 
+let lastInitError: string | null = null
+
 function getMessagingClient(): Messaging | null {
   if (cachedMessaging) return cachedMessaging
   if (initFailed) return null
@@ -28,6 +30,7 @@ function getMessagingClient(): Messaging | null {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT
   if (!raw) {
     initFailed = true
+    lastInitError = 'FIREBASE_SERVICE_ACCOUNT env var ausente'
     return null
   }
 
@@ -52,9 +55,36 @@ function getMessagingClient(): Messaging | null {
     cachedMessaging = getMessaging(cachedApp)
     return cachedMessaging
   } catch (err) {
-    console.error('[fcm] init falhou:', err)
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[fcm] init falhou:', msg)
     initFailed = true
+    lastInitError = `parse/init falhou: ${msg}`
     return null
+  }
+}
+
+/**
+ * Diagnóstico do estado do FCM. Útil em endpoints de admin pra
+ * mostrar por que push pode não estar saindo.
+ */
+export function getFcmStatus(): {
+  available: boolean
+  reason: string | null
+} {
+  if (cachedMessaging) return { available: true, reason: null }
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+    return {
+      available: false,
+      reason: 'FIREBASE_SERVICE_ACCOUNT env var ausente na Vercel',
+    }
+  }
+  // Tenta inicializar uma vez pra detectar erros de parse.
+  if (!cachedMessaging && !initFailed) {
+    getMessagingClient()
+  }
+  return {
+    available: !!cachedMessaging,
+    reason: lastInitError,
   }
 }
 
