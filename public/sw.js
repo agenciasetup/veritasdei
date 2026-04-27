@@ -13,32 +13,37 @@
  * cache antigo são limpas no `activate`.
  */
 
-const CACHE_VERSION = 'v5'
+const CACHE_VERSION = 'v6'
 const CACHE_NAME = `veritasdei-app-${CACHE_VERSION}`
 const LITURGIA_CACHE = `veritasdei-liturgia-${CACHE_VERSION}`
 
-// Páginas pré-cacheadas no install — shell mínima offline
+// Páginas pré-cacheadas no install — shell mínima offline.
+// /orar e /aprender foram REMOVIDOS porque agora redirecionam (301) em
+// next.config.ts → /rezar e /formacao; cachear o redirect quebra a navegação
+// offline. Mantemos só rotas finais.
 const PRECACHE_URLS = [
   '/',
-  '/orar',
+  '/rezar',
   '/liturgia',
-  '/aprender',
+  '/formacao',
   '/oracoes',
   '/exame-consciencia',
   '/icon.svg',
   '/favicon.ico',
   '/manifest.webmanifest',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/apple-touch-icon.png',
 ]
 
 // network-first: páginas que mudam (deve buscar fresco quando possível)
 const NETWORK_FIRST_PATTERNS = [
   /^\/$/,
-  /^\/orar(\/|$)/,
+  /^\/rezar(\/|$)/,
   /^\/liturgia$/,
-  /^\/aprender(\/|$)/,
+  /^\/formacao(\/|$)/,
   /^\/rosario(\/|$)/,
   /^\/novenas(\/|$)/,
-  /^\/perfil(\/|$)/,
   /^\/mapa(\/|$)/,
   /^\/calendario(\/|$)/,
 ]
@@ -52,7 +57,11 @@ const CACHE_FIRST_PATTERNS = [
   /^\/sao-tomas(\/|$)/,
 ]
 
-// no-cache: nunca cachear estas (busca/realtime/admin/APIs)
+// no-cache: nunca cachear estas (busca/realtime/admin/APIs/conta-do-usuário).
+// CRÍTICO: rotas autenticadas/personalizadas NUNCA podem ser cacheadas, pois
+// o SW serviria a página de outro usuário ou estado de assinatura velho. Em
+// contexto Capacitor (WebView), cache cruzado é ainda mais perigoso porque
+// não há separação por aba.
 const NO_CACHE_PATTERNS = [
   /^\/buscar(\/|$)/,
   /^\/comunidade(\/|$)/,
@@ -61,7 +70,14 @@ const NO_CACHE_PATTERNS = [
   /^\/notificacoes(\/|$)/,
   /^\/auth(\/|$)/,
   /^\/login(\/|$)/,
-  // /api/* exceto /api/liturgia/hoje
+  /^\/cadastro(\/|$)/,
+  /^\/onboarding(\/|$)/,
+  /^\/perfil(\/|$)/,
+  /^\/conta(\/|$)/,
+  /^\/planos(\/|$)/,
+  /^\/checkout(\/|$)/,
+  /^\/carteirinha(\/|$)/,
+  // /api/* tratado separadamente no fetch handler
 ]
 
 // API com cache especial: liturgia do dia (24h stale-while-revalidate)
