@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
 
   const { user } = access.context
 
-  if (!rateLimit(`community:presign:${user.id}`, 25, 60_000)) {
+  if (!(await rateLimit(`community:presign:${user.id}`, 25, 60_000))) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
   }
 

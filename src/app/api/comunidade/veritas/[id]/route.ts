@@ -78,7 +78,7 @@ export async function PATCH(
   const { id } = await params
   const { supabase, user } = access.context
 
-  if (!rateLimit(`community:edit:${user.id}`, 20, 60_000)) {
+  if (!(await rateLimit(`community:edit:${user.id}`, 20, 60_000))) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
   }
 
@@ -138,7 +138,7 @@ export async function DELETE(
   const { id } = await params
   const { supabase, user } = access.context
 
-  if (!rateLimit(`community:delete:${user.id}`, 20, 60_000)) {
+  if (!(await rateLimit(`community:delete:${user.id}`, 20, 60_000))) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
   }
 

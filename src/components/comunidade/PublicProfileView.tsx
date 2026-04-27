@@ -7,6 +7,7 @@ import CrossIcon from '@/components/icons/CrossIcon'
 import RoleBadge from '@/components/comunidade/RoleBadge'
 import VerifiedBadge from '@/components/comunidade/VerifiedBadge'
 import ProfileFollowButton from '@/components/comunidade/ProfileFollowButton'
+import { SosButton } from '@/components/moderation/SosButton'
 import ProfileTabs from '@/components/comunidade/ProfileTabs'
 import { OrnamentDivider } from '@/components/landing/components/OrnamentDivider'
 import LevelBadge from '@/components/gamification/LevelBadge'
@@ -179,10 +180,13 @@ export default function PublicProfileView({
                   Editar perfil
                 </Link>
               ) : isAuthenticated ? (
-                <ProfileFollowButton
-                  profileId={profile.id}
-                  initialFollowing={viewerFollows}
-                />
+                <div className="flex items-center gap-2">
+                  <ProfileFollowButton
+                    profileId={profile.id}
+                    initialFollowing={viewerFollows}
+                  />
+                  <SosButton targetUserId={profile.id} compact />
+                </div>
               ) : null}
             </div>
 
