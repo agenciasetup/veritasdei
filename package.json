@@ -11,12 +11,13 @@
     "vapid:gen": "node scripts/generate-vapid.mjs",
     "push:migrate": "node scripts/apply-migration-notificacoes-prefs.mjs",
     "cap:add:android": "cap add android",
-    "cap:sync": "cap sync && node scripts/patch-android-manifest.mjs && node scripts/patch-android-gradle.mjs",
-    "cap:sync:android": "cap sync android && node scripts/patch-android-manifest.mjs && node scripts/patch-android-gradle.mjs",
+    "cap:sync": "cap sync && node scripts/patch-android-manifest.mjs && node scripts/patch-android-gradle.mjs && node scripts/patch-android-signing.mjs",
+    "cap:sync:android": "cap sync android && node scripts/patch-android-manifest.mjs && node scripts/patch-android-gradle.mjs && node scripts/patch-android-signing.mjs",
     "cap:open:android": "cap open android",
     "cap:run:android": "cap run android",
     "android:patch-manifest": "node scripts/patch-android-manifest.mjs",
     "android:patch-gradle": "node scripts/patch-android-gradle.mjs",
+    "android:patch-signing": "node scripts/patch-android-signing.mjs",
     "mobile:assets": "node scripts/gen-mobile-assets.mjs && capacitor-assets generate --android && node scripts/patch-android-manifest.mjs"
   },
   "dependencies": {

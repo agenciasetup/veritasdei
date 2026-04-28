@@ -145,39 +145,79 @@ No Android Studio:
 
 > AAB (Android App Bundle) é o formato exigido pela Play Store.
 
-### 7.1 Criar uma keystore (uma vez só)
+### 7.1 Criar a release keystore (uma vez só)
 
-Esta é a chave que prova que **só você** pode publicar atualizações
-do app. **Guarde em local seguro e nunca comite no Git.**
-
-No terminal:
+Esta chave prova que **só você** publica atualizações do app. **Guarde
+em local seguro e nunca commite.**
 
 ```bash
-keytool -genkey -v \
-  -keystore veritasdei-release.keystore \
+mkdir -p ~/Documents/veritasdei-secrets && \
+keytool -genkeypair -v \
+  -keystore ~/Documents/veritasdei-secrets/veritasdei-release.keystore \
   -alias veritasdei \
-  -keyalg RSA -keysize 2048 -validity 10000
+  -keyalg RSA -keysize 2048 -validity 10000 -storetype PKCS12
 ```
 
-Ele pede:
-- senha da keystore (anote)
-- nome, organização, cidade…
-- senha do alias (pode ser igual à da keystore)
+Ele pede a senha (anota), depois nome/empresa/cidade/UF/país. Após
+gerar, faz backup imediato no 1Password ou Drive privado — **se
+perder, você não consegue mais atualizar o app na Play.**
 
-Você acaba com um arquivo `veritasdei-release.keystore`. **Salve em
-um lugar fora do projeto** (ex.: 1Password, Google Drive privado).
+### 7.2 Configurar `key.properties`
 
-### 7.2 Gerar o AAB
+`scripts/patch-android-signing.mjs` (encadeado em `cap:sync:android`)
+já injeta a `signingConfig.release` no `app/build.gradle`. Falta só
+criar o arquivo local com as credenciais:
 
-No Android Studio:
-1. **Build ▸ Generate Signed App Bundle / APK** ▸ escolha
-   **Android App Bundle** ▸ Next.
-2. Selecione a keystore criada acima e digite as senhas.
-3. Em "Build Variants", escolha **release** ▸ Finish.
-4. Em ~3 min aparece o AAB em
-   `/android/app/release/app-release.aab`.
+```bash
+cat > android/key.properties <<EOF
+storePassword=SUA_SENHA_AQUI
+keyPassword=SUA_SENHA_AQUI
+keyAlias=veritasdei
+storeFile=$HOME/Documents/veritasdei-secrets/veritasdei-release.keystore
+EOF
+```
 
-Esse arquivo `.aab` é o que você sobe na Google Play Console.
+Esse arquivo é **gitignored** (`.gitignore` linha `/android/key.properties`).
+Nunca commitar.
+
+> Se `key.properties` não existir, `signingConfig.release` é
+> condicional e o build release apenas pula o signing — não quebra.
+> Útil pra debug em outras máquinas.
+
+### 7.3 Sincronizar e build via CLI (sem Android Studio)
+
+```bash
+npm run cap:sync:android
+cd android && ./gradlew :app:bundleRelease
+```
+
+AAB sai em `android/app/build/outputs/bundle/release/app-release.aab`.
+Tempo: ~2-4 min na primeira vez (Gradle baixa deps), ~30-60s nas
+seguintes.
+
+### 7.4 (Alternativa) Build pelo Android Studio
+
+1. **Build ▸ Generate Signed App Bundle / APK** ▸ **Android App Bundle** ▸ Next.
+2. Como o `key.properties` já está no projeto, ele preenche keystore +
+   senhas automaticamente (só revise).
+3. **release** ▸ Finish.
+4. AAB em `android/app/release/app-release.aab`.
+
+### 7.5 Adicionar SHA-1 release no Firebase
+
+**Antes de subir o AAB pra Play**, pega a SHA-1 da release keystore:
+
+```bash
+keytool -list -v \
+  -keystore ~/Documents/veritasdei-secrets/veritasdei-release.keystore \
+  -alias veritasdei | grep SHA1
+```
+
+Adiciona no Firebase Console ▸ Project Settings ▸ Your Apps ▸ app
+Android ▸ **Add fingerprint**. Sem isso, Google Sign-In nativo
+quebra com `12500: SIGN_IN_FAILED` em todas as instalações da Play.
+Re-baixa o `google-services.json` atualizado e copia pra
+`android/app/`.
 
 ---
 
