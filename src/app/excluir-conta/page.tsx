@@ -16,7 +16,7 @@ export const metadata = {
 
 export default function ExcluirContaPage() {
   return (
-    <LegalDocumentShell documentKey="account-deletion" title="Excluir conta">
+    <LegalDocumentShell version="1.0.0" lastUpdated="2026-04-28" title="Excluir conta">
       <LegalSection title="1. Sobre esta página">
         <p>
           Esta página explica como solicitar a exclusão permanente da sua conta no aplicativo{' '}

@@ -3,14 +3,17 @@ import type { ReactNode } from 'react'
 import { formatBrDate, LEGAL_DATES, LEGAL_VERSIONS, type LegalDocumentKey } from '@/lib/legal/versions'
 
 type Props = {
-  documentKey: LegalDocumentKey
   title: string
   children: ReactNode
-}
+} & (
+  | { documentKey: LegalDocumentKey; version?: never; lastUpdated?: never }
+  | { documentKey?: never; version: string; lastUpdated: string }
+)
 
-export function LegalDocumentShell({ documentKey, title, children }: Props) {
-  const version = LEGAL_VERSIONS[documentKey]
-  const date = formatBrDate(LEGAL_DATES[documentKey])
+export function LegalDocumentShell(props: Props) {
+  const { title, children } = props
+  const version = props.documentKey ? LEGAL_VERSIONS[props.documentKey] : props.version
+  const date = formatBrDate(props.documentKey ? LEGAL_DATES[props.documentKey] : props.lastUpdated)
   return (
     <div className="min-h-screen px-4 py-16 flex justify-center" style={{ background: '#0A0A0A' }}>
       <article className="max-w-3xl w-full">
