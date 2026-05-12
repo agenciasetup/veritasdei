@@ -13,6 +13,7 @@ export type ProviderId =
   | 'eduzz'
   | 'manual'
   | 'revenuecat'
+  | 'hubla'
 
 export type Intervalo = 'mensal' | 'semestral' | 'anual' | 'unico'
 
