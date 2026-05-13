@@ -3,10 +3,12 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { useProduct } from '@/contexts/ProductContext'
+import { useSubscription } from '@/contexts/SubscriptionContext'
 import { Cross, GraduationCap, Church, Users, Library } from 'lucide-react'
 import { useHaptic } from '@/hooks/useHaptic'
 import { motion } from 'framer-motion'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 /**
  * Navegação mobile — 5 hubs primários.
@@ -26,14 +28,24 @@ import { useEffect, useRef, useState } from 'react'
  * - Se a rota é "imersiva" (terço, verbum, leituras), nem renderiza
  */
 
+type BottomNavItem = {
+  href: string
+  icon: React.ElementType
+  label: string
+  hideForProducts?: ReadonlyArray<'veritas-dei' | 'veritas-educa'>
+  requiresFeature?: string
+}
+
 // Rezar fica no centro (3ª posição) — é a HOME do app.
-const NAV_ITEMS = [
+const NAV_ITEMS: BottomNavItem[] = [
   { href: '/formacao',   icon: GraduationCap,  label: 'Formação' },
-  { href: '/comunidade', icon: Users,          label: 'Comunidade' },
+  { href: '/comunidade', icon: Users,          label: 'Comunidade',
+    hideForProducts: ['veritas-educa'], requiresFeature: 'community' },
   { href: '/rezar',      icon: Cross,          label: 'Rezar' },
-  { href: '/igrejas',    icon: Church,         label: 'Igrejas' },
+  { href: '/igrejas',    icon: Church,         label: 'Igrejas',
+    hideForProducts: ['veritas-educa'] },
   { href: '/biblioteca', icon: Library,        label: 'Biblioteca' },
-] as const
+]
 
 const IMMERSIVE_PATHS = ['/verbum', '/rosario', '/liturgia/hoje']
 
@@ -58,10 +70,24 @@ function isItemActive(pathname: string, href: string): boolean {
 export default function BottomNav() {
   const pathname = usePathname()
   const { isAuthenticated } = useAuth()
+  const { product } = useProduct()
+  const { hasFeature, loading: subLoading } = useSubscription()
   const haptic = useHaptic()
   const [hidden, setHidden] = useState(false)
   const [keyboardOpen, setKeyboardOpen] = useState(false)
   const lastScrollRef = useRef(0)
+
+  const visibleItems = useMemo(
+    () =>
+      NAV_ITEMS.filter(item => {
+        if (item.hideForProducts?.includes(product)) return false
+        if (item.requiresFeature && !subLoading && !hasFeature(item.requiresFeature)) {
+          return false
+        }
+        return true
+      }),
+    [product, hasFeature, subLoading],
+  )
 
   // Hide on scroll-down, show on scroll-up
   useEffect(() => {
@@ -110,7 +136,7 @@ export default function BottomNav() {
         transform: offscreen ? 'translateY(110%)' : 'translateY(0)',
       }}
     >
-      {NAV_ITEMS.map((item) => {
+      {visibleItems.map((item) => {
         const isActive = isItemActive(pathname, item.href)
         const Icon = item.icon
 

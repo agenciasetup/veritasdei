@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import { useProduct } from '@/contexts/ProductContext'
+import { useSubscription } from '@/contexts/SubscriptionContext'
 import { getDisplayName } from '@/lib/greetings'
 import CrossIcon from '@/components/icons/CrossIcon'
 import LevelBadge from '@/components/gamification/LevelBadge'
@@ -21,6 +23,17 @@ interface NavItem {
   href: string
   icon: React.ElementType
   label: string
+  /**
+   * Quando definido, esconde o item se o produto atual estiver listado.
+   * Ex.: 'veritas-educa' esconde links de comunidade no subdomínio educa.*.
+   */
+  hideForProducts?: ReadonlyArray<'veritas-dei' | 'veritas-educa'>
+  /**
+   * Quando definido, só mostra o item se o usuário tiver a feature.
+   * Em loading (subscription ainda carregando), o item é exibido —
+   * evita flash de "sumiu/voltou" durante hidratação.
+   */
+  requiresFeature?: string
 }
 
 interface NavGroup {
@@ -34,9 +47,11 @@ interface NavGroup {
  */
 const NAV_MAIN: NavItem[] = [
   { href: '/rezar',      icon: Cross,         label: 'Rezar' },
-  { href: '/comunidade', icon: Users,         label: 'Comunidade' },
+  { href: '/comunidade', icon: Users,         label: 'Comunidade',
+    hideForProducts: ['veritas-educa'], requiresFeature: 'community' },
   { href: '/formacao',   icon: GraduationCap, label: 'Formação' },
-  { href: '/igrejas',    icon: Church,        label: 'Igrejas' },
+  { href: '/igrejas',    icon: Church,        label: 'Igrejas',
+    hideForProducts: ['veritas-educa'] },
   { href: '/biblioteca', icon: Library,       label: 'Biblioteca' },
 ]
 
@@ -77,18 +92,52 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Igrejas',
     items: [
-      { href: '/paroquias/buscar', icon: MapPin, label: 'Igrejas perto de mim' },
+      { href: '/paroquias/buscar', icon: MapPin, label: 'Igrejas perto de mim',
+        hideForProducts: ['veritas-educa'] },
     ],
   },
 ]
+
+/**
+ * Filtra items de nav considerando produto atual e features liberadas.
+ * Em loading da subscription, ignora `requiresFeature` (evita flash).
+ */
+function filterNavItems(
+  items: NavItem[],
+  product: 'veritas-dei' | 'veritas-educa',
+  hasFeature: (f: string) => boolean,
+  subLoading: boolean,
+): NavItem[] {
+  return items.filter(item => {
+    if (item.hideForProducts?.includes(product)) return false
+    if (item.requiresFeature && !subLoading && !hasFeature(item.requiresFeature)) {
+      return false
+    }
+    return true
+  })
+}
 
 export default function Sidebar() {
   const [expanded, setExpanded] = useState(false)
   const pathname = usePathname()
   const { isAuthenticated, profile, signOut, isLoading, user } = useAuth()
+  const { product } = useProduct()
+  const { hasFeature, loading: subLoading } = useSubscription()
   const level = useUserLevel(user?.id) ?? 1
 
   const avatarUrl = profile?.profile_image_url
+
+  const visibleMain = useMemo(
+    () => filterNavItems(NAV_MAIN, product, hasFeature, subLoading),
+    [product, hasFeature, subLoading],
+  )
+  const visibleGroups = useMemo(
+    () =>
+      NAV_GROUPS
+        .map(g => ({ ...g, items: filterNavItems(g.items, product, hasFeature, subLoading) }))
+        .filter(g => g.items.length > 0),
+    [product, hasFeature, subLoading],
+  )
 
   return (
     <nav
@@ -121,7 +170,7 @@ export default function Sidebar() {
 
         {/* ── Main nav items ── */}
         <div className="flex flex-col gap-0.5">
-          {NAV_MAIN.map((item) => (
+          {visibleMain.map((item) => (
             <SidebarLink
               key={item.href}
               item={item}
@@ -132,7 +181,7 @@ export default function Sidebar() {
         </div>
 
         {/* ── Grouped sections ── */}
-        {NAV_GROUPS.map((group) => (
+        {visibleGroups.map((group) => (
           <div key={group.label} className="mt-4">
             {/* Group label */}
             {expanded ? (

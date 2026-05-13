@@ -1,10 +1,17 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { PRODUCT_HEADER, productFromHostname } from '@/lib/product/types'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
 
 export async function updateSession(request: NextRequest) {
+  // Detecta produto pelo hostname (ex.: educa.veritasdei.com.br → veritas-educa)
+  // e injeta no header da request. Server components consultam via
+  // `getCurrentProduct()` (lib/product/server.ts).
+  const product = productFromHostname(request.headers.get('host'))
+  request.headers.set(PRODUCT_HEADER, product)
+
   let supabaseResponse = NextResponse.next({ request })
 
   if (!supabaseUrl || !supabaseAnonKey) {
@@ -63,6 +70,19 @@ export async function updateSession(request: NextRequest) {
     } catch (retryErr) {
       console.error('[Middleware] Auth refresh failed after retry:', retryErr)
     }
+  }
+
+  // No subdomínio educa.*, a raiz "/" serve o dashboard `/educa`. Rewrite
+  // mantém a URL na barra (UX limpa) e preserva qualquer cookie de sessão
+  // que setAll possa ter setado durante o refresh acima.
+  if (product === 'veritas-educa' && path === '/') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/educa'
+    const rewriteResponse = NextResponse.rewrite(url, { request })
+    for (const setCookie of supabaseResponse.headers.getSetCookie()) {
+      rewriteResponse.headers.append('set-cookie', setCookie)
+    }
+    return rewriteResponse
   }
 
   return supabaseResponse

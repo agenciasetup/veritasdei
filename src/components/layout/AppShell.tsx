@@ -9,10 +9,12 @@ import AppHeader from './AppHeader'
 import { PropositosProvider } from '@/contexts/PropositosContext'
 import { PropositoSheetProvider } from '@/components/propositos/PropositoSheet'
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext'
+import { ProductProvider } from '@/contexts/ProductContext'
 import InstallPrompt from '@/components/pwa/InstallPrompt'
 import PageTransition from '@/components/mobile/PageTransition'
 import OfflineBanner from '@/components/mobile/OfflineBanner'
 import dynamic from 'next/dynamic'
+import type { ProductId } from '@/lib/product/types'
 
 // CoachMarks só aparece na primeira sessão pós-onboarding (flag em
 // localStorage). Lazy-load para não pesar o bundle inicial.
@@ -43,7 +45,13 @@ const PUBLIC_PATHS = ['/login', '/auth', '/privacidade', '/termos', '/diretrizes
 const FULLSCREEN_PATHS = ['/verbum', '/rosario', '/liturgia/hoje']
 const FULLSCREEN_EXACT: string[] = []
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
+export default function AppShell({
+  children,
+  product,
+}: {
+  children: React.ReactNode
+  product: ProductId
+}) {
   const { isAuthenticated } = useAuth()
   const pathname = usePathname()
 
@@ -53,6 +61,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const hideLiturgicalBar = pathname.startsWith('/liturgia/hoje')
 
   return (
+    <ProductProvider product={product}>
     <SubscriptionProvider>
       <PropositosProvider>
         <PropositoSheetProvider>
@@ -93,5 +102,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </PropositoSheetProvider>
       </PropositosProvider>
     </SubscriptionProvider>
+    </ProductProvider>
   )
 }
