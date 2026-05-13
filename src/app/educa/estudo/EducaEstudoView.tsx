@@ -118,16 +118,19 @@ export default function EducaEstudoView() {
           <BannerSlider banners={banners} />
         ) : last ? (
           <CinematicHero
-            variant="continue"
-            data={{
-              href: `/estudo/${last.groupSlug}`,
-              eyebrow: 'Continue de onde parou',
-              title: last.subtopicTitle,
-              subtitle: last.groupTitle,
-            }}
+            eyebrow="Continue de onde parou"
+            title={last.subtopicTitle}
+            subtitle={last.groupTitle}
+            primary={{ label: 'Continuar', href: `/estudo/${last.groupSlug}` }}
+            secondary={{ label: 'Ver detalhes', href: '/educa/trilhas' }}
           />
         ) : (
-          <CinematicHero variant="welcome" />
+          <CinematicHero
+            eyebrow="Veritas Educa"
+            title="Aprofunde sua fé católica com método."
+            subtitle="Trilhas, IA católica, debate apologético e mais."
+            primary={{ label: 'Começar agora', href: '/educa/trilhas' }}
+          />
         )
       )}
 

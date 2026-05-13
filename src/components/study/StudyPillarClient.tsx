@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { notFound } from 'next/navigation'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ArrowRight, BookOpen } from 'lucide-react'
 import {
   useContentItems,
   type ContentSubtopic,
@@ -13,6 +13,9 @@ import { useAuth } from '@/contexts/AuthContext'
 import StudyReader from './StudyReader'
 import StudyLayout from './StudyLayout'
 import StudyLessonsSidebar from './StudyLessonsSidebar'
+import CinematicHero from '@/components/educa/CinematicHero'
+import ContentRail, { RailItem } from '@/components/educa/ContentRail'
+import InlineEditOverlay from '@/components/admin/InlineEditOverlay'
 import StudyMobileChip from './StudyMobileChip'
 import StudyNavBar from './StudyNavBar'
 import StudyTopicQuizCard from './StudyTopicQuizCard'
@@ -130,48 +133,187 @@ function PillarTopicGrid({
   topics,
 }: {
   pillarSlug: string
-  group: { title: string; subtitle: string | null; description: string | null }
+  group: {
+    id: string
+    title: string
+    subtitle: string | null
+    description: string | null
+    cover_url?: string | null
+  }
   topics: PillarTreeNode[]
 }) {
+  const firstTopic = topics[0]
   return (
     <div className="flex flex-col min-h-screen relative">
-      <PillarHero title={group.title} subtitle={group.description || group.subtitle || ''} />
-      <main className="relative z-10 flex-1 pb-16">
-        <div className="max-w-[1200px] mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
-          {topics.map((topic, i) => (
-            <Link
-              key={topic.id}
-              href={`/estudo/${pillarSlug}/${topic.slug}`}
-              className="text-left p-5 rounded-2xl fade-in active:scale-[0.99] transition-transform"
-              style={{ ...CARD_STYLE, animationDelay: `${i * 0.06}s` }}
-            >
-              {topic.sort_order > 0 && topic.subtitle ? (
-                <span
-                  className="text-xs tracking-[0.15em] uppercase block mb-3"
-                  style={{ color: 'var(--accent)', fontFamily: 'var(--font-body)' }}
-                >
-                  {topic.subtitle}
-                </span>
-              ) : null}
-              <h3
-                className="text-base font-semibold leading-snug mb-2 tracking-[0.04em]"
-                style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
-              >
-                {topic.title}
-              </h3>
-              {topic.description ? (
-                <p
-                  className="text-sm leading-relaxed line-clamp-2"
-                  style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
-                >
-                  {topic.description}
-                </p>
-              ) : null}
-            </Link>
-          ))}
+      {/* Hero cinematográfico — usa cover_url do pilar quando houver.
+       *  Admins veem um botão de lápis no canto pra editar a capa
+       *  diretamente (sem precisar ir no /admin). */}
+      <InlineEditOverlay
+        table="content_groups"
+        id={group.id}
+        fields={['cover_url']}
+        label="Editar capa do pilar"
+      >
+        <CinematicHero
+          eyebrow={group.subtitle || 'Pilar de estudo'}
+          title={group.title}
+          subtitle={group.description ?? undefined}
+          imageUrl={group.cover_url ?? null}
+          primary={
+            firstTopic
+              ? {
+                  label: 'Começar',
+                  href: `/estudo/${pillarSlug}/${firstTopic.slug}`,
+                }
+              : undefined
+          }
+        />
+      </InlineEditOverlay>
+
+      <main
+        className="relative z-10 flex-1 pb-16 -mt-16 md:-mt-24"
+        style={{ background: 'var(--surface-1)' }}
+      >
+        <div className="max-w-6xl mx-auto px-4 md:px-8">
+          <ContentRail
+            title="Tópicos"
+            subtitle="Escolha por onde começar — ou avance em sequência."
+          >
+            {topics.map((topic) => (
+              <div key={topic.id} className="contents">
+                <RailItem widthClassName="w-72 md:w-80">
+                  <TopicPosterCard
+                    href={`/estudo/${pillarSlug}/${topic.slug}`}
+                    title={topic.title}
+                    subtitle={topic.subtitle ?? undefined}
+                    description={topic.description ?? undefined}
+                    coverUrl={topic.cover_url ?? null}
+                  />
+                </RailItem>
+              </div>
+            ))}
+          </ContentRail>
         </div>
       </main>
     </div>
+  )
+}
+
+function TopicPosterCard({
+  href,
+  title,
+  subtitle,
+  description,
+  coverUrl,
+}: {
+  href: string
+  title: string
+  subtitle?: string
+  description?: string
+  coverUrl?: string | null
+}) {
+  const hasCover = Boolean(coverUrl)
+  return (
+    <Link
+      href={href}
+      className="group relative block rounded-3xl overflow-hidden active:scale-[0.99] transition-transform"
+      style={{
+        aspectRatio: '4 / 5',
+        background: hasCover
+          ? 'var(--surface-2)'
+          : 'linear-gradient(180deg, color-mix(in srgb, var(--accent) 18%, var(--surface-2)) 0%, var(--surface-1) 100%)',
+        border: '1px solid color-mix(in srgb, var(--accent) 15%, transparent)',
+        boxShadow: '0 8px 32px -12px rgba(0,0,0,0.6)',
+      }}
+    >
+      {hasCover ? (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={coverUrl as string}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
+          />
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                'linear-gradient(180deg, rgba(15,14,12,0.3) 0%, rgba(15,14,12,0.55) 55%, rgba(15,14,12,0.95) 100%)',
+            }}
+          />
+        </>
+      ) : (
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-25"
+          style={{
+            background:
+              'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.18), transparent 60%)',
+          }}
+        />
+      )}
+
+      <div className="relative h-full p-4 md:p-5 flex flex-col">
+        {/* Ícone topo (se não há cover, fica visível; com cover, fica subtle) */}
+        <div
+          className="w-11 h-11 md:w-12 md:h-12 rounded-2xl flex items-center justify-center backdrop-blur"
+          style={{
+            background: hasCover ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.3)',
+            border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
+          }}
+        >
+          <BookOpen
+            className="w-5 h-5 md:w-6 md:h-6"
+            style={{ color: 'var(--accent)' }}
+          />
+        </div>
+
+        <div className="flex-1" />
+
+        <div>
+          {subtitle && (
+            <p
+              className="text-[10px] tracking-[0.2em] uppercase mb-1 opacity-90"
+              style={{
+                color: 'var(--accent)',
+                fontFamily: 'var(--font-display)',
+              }}
+            >
+              {subtitle}
+            </p>
+          )}
+          <h3
+            className="text-lg md:text-xl leading-tight mb-1"
+            style={{
+              fontFamily: 'var(--font-display)',
+              color: 'var(--text-1)',
+              textShadow: hasCover ? '0 2px 10px rgba(0,0,0,0.6)' : 'none',
+            }}
+          >
+            {title}
+          </h3>
+          {description && (
+            <p
+              className="text-xs leading-relaxed line-clamp-2 mt-1"
+              style={{
+                color: 'rgba(232,226,216,0.78)',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              {description}
+            </p>
+          )}
+          <div className="flex items-center justify-end mt-2">
+            <ArrowRight
+              className="w-4 h-4 group-hover:translate-x-1 transition-transform"
+              style={{ color: 'var(--accent)' }}
+            />
+          </div>
+        </div>
+      </div>
+    </Link>
   )
 }
 
@@ -285,6 +427,8 @@ function PillarTopicView({
               subtitle={targetSubtopic.subtitle || undefined}
               description={targetSubtopic.description || undefined}
               items={items}
+              videoUrl={targetSubtopic.video_url}
+              coverUrl={targetSubtopic.cover_url}
               onMarkStudied={
                 isStudied(targetSubtopic.id)
                   ? undefined
@@ -311,77 +455,225 @@ function PillarTopicView({
     )
   }
 
-  // Subtopic grid when topic has multiple subtopics
+  // Subtopic grid when topic has multiple subtopics — versão premium
+  // (hero cinematográfico + rail horizontal de cards).
+  const firstSub = subtopics[0]
   return (
     <div className="flex flex-col min-h-screen relative">
-      <header className="relative z-10 w-full pt-6 pb-2 px-4 md:px-8">
-        <div className="max-w-7xl mx-auto">
-          <BackChip href={`/estudo/${pillarSlug}`} label={group.title} />
-        </div>
-      </header>
-      <PillarHero title={topic.title} subtitle={topic.description} />
-      <main className="relative z-10 flex-1 pb-16">
-        <div className="max-w-[1200px] mx-auto px-4 md:px-8 mb-6">
+      <InlineEditOverlay
+        table="content_topics"
+        id={topic.id}
+        fields={['cover_url']}
+        label="Editar capa do tópico"
+      >
+        <CinematicHero
+          eyebrow={group.title}
+          title={topic.title}
+          subtitle={topic.description ?? undefined}
+          imageUrl={topic.cover_url ?? null}
+          primary={
+            firstSub
+              ? {
+                  label: 'Começar',
+                  href: `/estudo/${pillarSlug}/${topicSlug}/${firstSub.slug}`,
+                }
+              : undefined
+          }
+          secondary={{
+            label: 'Voltar',
+            href: `/estudo/${pillarSlug}`,
+          }}
+        />
+      </InlineEditOverlay>
+
+      <main
+        className="relative z-10 flex-1 pb-16 -mt-16 md:-mt-24"
+        style={{ background: 'var(--surface-1)' }}
+      >
+        <div className="max-w-6xl mx-auto px-4 md:px-8 space-y-6 md:space-y-10">
+          {/* Prova do tópico */}
           <StudyTopicQuizCard
             pillarSlug={pillarSlug}
             topicSlug={topicSlug}
             topicTitle={topic.title}
           />
-        </div>
-        <div className="max-w-[1200px] mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
-          {subtopics.map((sub, i) => {
-            const studied = isStudied(sub.id)
-            return (
-            <Link
-              key={sub.id}
-              href={`/estudo/${pillarSlug}/${topicSlug}/${sub.slug}`}
-              className="text-left p-5 rounded-2xl fade-in active:scale-[0.99] transition-transform relative"
-              style={{
-                ...CARD_STYLE,
-                animationDelay: `${i * 0.06}s`,
-                borderColor: studied ? 'rgba(201,168,76,0.35)' : undefined,
-                background: studied
-                  ? 'linear-gradient(135deg, rgba(201,168,76,0.06), var(--surface-2))'
-                  : CARD_STYLE.background,
-              }}
-            >
-              {sub.subtitle ? (
-                <span
-                  className="text-xs tracking-[0.15em] uppercase block mb-3"
-                  style={{ color: 'var(--accent)', fontFamily: 'var(--font-body)' }}
-                >
-                  {sub.subtitle}
-                </span>
-              ) : null}
-              <h3
-                className="text-base font-semibold leading-snug mb-2 tracking-[0.04em]"
-                style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
-              >
-                {sub.title}
-              </h3>
-              {sub.description ? (
-                <p
-                  className="text-sm leading-relaxed line-clamp-2"
-                  style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
-                >
-                  {sub.description}
-                </p>
-              ) : null}
-              <span
-                className="mt-3 inline-block text-[11px]"
-                style={{
-                  color: studied ? 'var(--accent)' : 'var(--text-3)',
-                  fontFamily: 'var(--font-body)',
-                }}
-              >
-                {studied ? '✓ estudado' : 'Abrir'}
-              </span>
-            </Link>
-            )
-          })}
+
+          {/* Rail de subtópicos */}
+          <ContentRail
+            title="Lições"
+            subtitle={`${subtopics.length} ${subtopics.length === 1 ? 'lição' : 'lições'} neste tópico`}
+          >
+            {subtopics.map((sub, i) => {
+              const studied = isStudied(sub.id)
+              return (
+                <div key={sub.id} className="contents">
+                  <RailItem widthClassName="w-72 md:w-80">
+                    <SubtopicPosterCard
+                      href={`/estudo/${pillarSlug}/${topicSlug}/${sub.slug}`}
+                      lessonNumber={i + 1}
+                      title={sub.title}
+                      subtitle={sub.subtitle ?? undefined}
+                      description={sub.description ?? undefined}
+                      coverUrl={sub.cover_url ?? null}
+                      studied={studied}
+                    />
+                  </RailItem>
+                </div>
+              )
+            })}
+          </ContentRail>
         </div>
       </main>
     </div>
+  )
+}
+
+function SubtopicPosterCard({
+  href,
+  lessonNumber,
+  title,
+  subtitle,
+  description,
+  coverUrl,
+  studied,
+}: {
+  href: string
+  lessonNumber: number
+  title: string
+  subtitle?: string
+  description?: string
+  coverUrl?: string | null
+  studied?: boolean
+}) {
+  const hasCover = Boolean(coverUrl)
+  return (
+    <Link
+      href={href}
+      className="group relative block rounded-3xl overflow-hidden active:scale-[0.99] transition-transform"
+      style={{
+        aspectRatio: '4 / 5',
+        background: hasCover
+          ? 'var(--surface-2)'
+          : 'linear-gradient(180deg, color-mix(in srgb, var(--accent) 14%, var(--surface-2)) 0%, var(--surface-1) 100%)',
+        border: studied
+          ? '1px solid color-mix(in srgb, var(--accent) 38%, transparent)'
+          : '1px solid color-mix(in srgb, var(--accent) 12%, transparent)',
+        boxShadow: studied
+          ? '0 8px 32px -12px color-mix(in srgb, var(--accent) 30%, transparent)'
+          : '0 8px 32px -12px rgba(0,0,0,0.6)',
+      }}
+    >
+      {hasCover ? (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={coverUrl as string}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
+          />
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                'linear-gradient(180deg, rgba(15,14,12,0.3) 0%, rgba(15,14,12,0.55) 55%, rgba(15,14,12,0.95) 100%)',
+            }}
+          />
+        </>
+      ) : (
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-25"
+          style={{
+            background:
+              'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.18), transparent 60%)',
+          }}
+        />
+      )}
+
+      <div className="relative h-full p-4 md:p-5 flex flex-col">
+        <div className="flex items-start justify-between gap-2">
+          {/* Numero da lição num badge dourado */}
+          <div
+            className="px-3 py-1 rounded-full"
+            style={{
+              background: studied
+                ? 'linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 70%, black) 100%)'
+                : 'rgba(0,0,0,0.45)',
+              border:
+                '1px solid color-mix(in srgb, var(--accent) 35%, transparent)',
+              color: studied ? 'var(--accent-contrast)' : 'var(--accent)',
+              fontFamily: 'var(--font-display)',
+              fontWeight: 700,
+              fontSize: 12,
+              letterSpacing: '0.1em',
+              backdropFilter: 'blur(6px)',
+            }}
+          >
+            LIÇÃO {lessonNumber}
+          </div>
+          {studied && (
+            <span
+              className="text-[10px] tracking-wider uppercase px-2 py-1 rounded-full backdrop-blur"
+              style={{
+                background: 'color-mix(in srgb, var(--accent) 16%, rgba(0,0,0,0.5))',
+                color: 'var(--accent)',
+                fontFamily: 'var(--font-body)',
+                fontWeight: 600,
+                border:
+                  '1px solid color-mix(in srgb, var(--accent) 35%, transparent)',
+              }}
+            >
+              ✓ estudado
+            </span>
+          )}
+        </div>
+
+        <div className="flex-1" />
+
+        <div>
+          {subtitle && (
+            <p
+              className="text-[10px] tracking-[0.2em] uppercase mb-1 opacity-90"
+              style={{
+                color: 'var(--accent)',
+                fontFamily: 'var(--font-display)',
+              }}
+            >
+              {subtitle}
+            </p>
+          )}
+          <h3
+            className="text-lg md:text-xl leading-tight mb-1"
+            style={{
+              fontFamily: 'var(--font-display)',
+              color: 'var(--text-1)',
+              textShadow: hasCover ? '0 2px 10px rgba(0,0,0,0.6)' : 'none',
+            }}
+          >
+            {title}
+          </h3>
+          {description && (
+            <p
+              className="text-xs leading-relaxed line-clamp-2 mt-1"
+              style={{
+                color: 'rgba(232,226,216,0.78)',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              {description}
+            </p>
+          )}
+          <div className="flex items-center justify-end mt-2">
+            <ArrowRight
+              className="w-4 h-4 group-hover:translate-x-1 transition-transform"
+              style={{ color: 'var(--accent)' }}
+            />
+          </div>
+        </div>
+      </div>
+    </Link>
   )
 }
 
