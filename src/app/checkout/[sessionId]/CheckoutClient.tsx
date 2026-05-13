@@ -52,9 +52,19 @@ type Plan = {
   nome: string
   descricao: string | null
   beneficios: string[]
+  codigo?: string
 }
 
 type UserInfo = { email: string; name: string }
+
+type OrderBump = {
+  id: string
+  codigo: string
+  titulo: string
+  descricao: string | null
+  valor_cents: number
+  badge: string | null
+}
 
 type Props = {
   sessionId: string
@@ -253,6 +263,66 @@ export default function CheckoutClient({
   const [installments, setInstallments] = useState(1)
 
   const brand = useMemo(() => detectBrand(card.number), [card.number])
+
+  // Order bumps disponíveis pro plano + ids selecionados pelo cliente.
+  // currentTotal reflete o que vai ser cobrado (base + bumps).
+  const [bumps, setBumps] = useState<OrderBump[]>([])
+  const [selectedBumps, setSelectedBumps] = useState<Set<string>>(new Set())
+  const [currentTotal, setCurrentTotal] = useState<number>(amountCents)
+  const [applyingBumps, setApplyingBumps] = useState(false)
+
+  useEffect(() => {
+    if (!plan.codigo) return
+    let cancelled = false
+    fetch(`/api/checkout/bumps?planCodigo=${encodeURIComponent(plan.codigo)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (cancelled) return
+        setBumps((data.bumps ?? []) as OrderBump[])
+      })
+      .catch(() => {
+        // Lista de bumps é opcional — falha silenciosa não bloqueia checkout.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [plan.codigo])
+
+  // Quando o cliente liga/desliga um bump, manda pro backend recalcular
+  // amount_cents da session. Usamos AbortController pra cancelar request
+  // anterior se ele clica rápido em vários toggles.
+  useEffect(() => {
+    if (bumps.length === 0) return
+    const ctl = new AbortController()
+    setApplyingBumps(true)
+    fetch('/api/checkout/bumps/apply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId,
+        bumpIds: Array.from(selectedBumps),
+      }),
+      signal: ctl.signal,
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data?.amount_cents) setCurrentTotal(data.amount_cents)
+      })
+      .catch(() => {
+        // ignora abort/falha — UI mantém o último total válido
+      })
+      .finally(() => setApplyingBumps(false))
+    return () => ctl.abort()
+  }, [selectedBumps, sessionId, bumps.length])
+
+  function toggleBump(id: string) {
+    setSelectedBumps(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   // Polling
   const polling = !!pix || !!boleto || cardSubmitted !== null
@@ -519,9 +589,20 @@ export default function CheckoutClient({
           <div className="space-y-10 order-2 lg:order-1">
             <ProductSummary
               plan={plan}
-              amountCents={amountCents}
+              baseCents={amountCents}
+              totalCents={currentTotal}
               intervalo={intervalo}
+              selectedBumps={bumps.filter(b => selectedBumps.has(b.id))}
+              applying={applyingBumps}
             />
+
+            {bumps.length > 0 && (
+              <OrderBumpsSection
+                bumps={bumps}
+                selected={selectedBumps}
+                onToggle={toggleBump}
+              />
+            )}
 
             {/* Dados pessoais — inputs flutuantes, sem card envolvendo */}
             <section>
@@ -657,7 +738,7 @@ export default function CheckoutClient({
                   installments={installments}
                   setInstallments={setInstallments}
                   installmentsMax={settings.installmentsMax}
-                  amountCents={amountCents}
+                  amountCents={currentTotal}
                   submitted={cardSubmitted}
                   onSubmit={submitCard}
                   loading={loading}
@@ -689,13 +770,20 @@ export default function CheckoutClient({
 
 function ProductSummary({
   plan,
-  amountCents,
+  baseCents,
+  totalCents,
   intervalo,
+  selectedBumps,
+  applying,
 }: {
   plan: Plan
-  amountCents: number
+  baseCents: number
+  totalCents: number
   intervalo: Props['intervalo']
+  selectedBumps: OrderBump[]
+  applying: boolean
 }) {
+  const hasExtras = selectedBumps.length > 0
   return (
     <section>
       <SectionTitle eyebrow="Resumo da assinatura" title={plan.nome} />
@@ -713,15 +801,16 @@ function ProductSummary({
 
       <div className="flex items-baseline gap-1.5 mt-5">
         <span
-          className="text-4xl md:text-5xl"
+          className="text-4xl md:text-5xl transition-opacity"
           style={{
             color: 'var(--cks-primary)',
             fontFamily: 'var(--font-elegant, var(--font-display))',
             fontWeight: 700,
             letterSpacing: '-0.02em',
+            opacity: applying ? 0.55 : 1,
           }}
         >
-          {formatBRL(amountCents)}
+          {formatBRL(totalCents)}
         </span>
         <span
           className="text-xs"
@@ -733,6 +822,44 @@ function ProductSummary({
           {intervaloLabel(intervalo)}
         </span>
       </div>
+
+      {hasExtras && (
+        <div
+          className="mt-4 p-3 rounded-2xl text-xs flex flex-col gap-1.5"
+          style={{
+            background:
+              'color-mix(in srgb, var(--cks-text) 4%, transparent)',
+            border:
+              '1px solid color-mix(in srgb, var(--cks-text) 12%, transparent)',
+            fontFamily: 'var(--font-body)',
+            color:
+              'color-mix(in srgb, var(--cks-text) 80%, transparent)',
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <span>Plano</span>
+            <span>{formatBRL(baseCents)}</span>
+          </div>
+          {selectedBumps.map(b => (
+            <div key={b.id} className="flex items-center justify-between">
+              <span className="truncate pr-2">+ {b.titulo}</span>
+              <span>{formatBRL(b.valor_cents)}</span>
+            </div>
+          ))}
+          <div
+            className="flex items-center justify-between pt-1.5 mt-1.5"
+            style={{
+              borderTop:
+                '1px solid color-mix(in srgb, var(--cks-text) 10%, transparent)',
+              color: 'var(--cks-text)',
+              fontWeight: 600,
+            }}
+          >
+            <span>Total</span>
+            <span>{formatBRL(totalCents)}</span>
+          </div>
+        </div>
+      )}
 
       {plan.beneficios.length > 0 && (
         <ul className="flex flex-col gap-2.5 mt-6">
@@ -764,6 +891,116 @@ function ProductSummary({
           ))}
         </ul>
       )}
+    </section>
+  )
+}
+
+function OrderBumpsSection({
+  bumps,
+  selected,
+  onToggle,
+}: {
+  bumps: OrderBump[]
+  selected: Set<string>
+  onToggle: (id: string) => void
+}) {
+  return (
+    <section>
+      <SectionTitle eyebrow="Adicione ao seu pedido" title="Ofertas exclusivas" />
+      <div className="mt-5 space-y-3">
+        {bumps.map(bump => {
+          const isOn = selected.has(bump.id)
+          return (
+            <label
+              key={bump.id}
+              className="block cursor-pointer rounded-2xl p-4 transition-all relative"
+              style={{
+                background: isOn
+                  ? 'color-mix(in srgb, var(--cks-primary) 14%, transparent)'
+                  : 'color-mix(in srgb, var(--cks-text) 4%, transparent)',
+                border: isOn
+                  ? '1px solid color-mix(in srgb, var(--cks-primary) 50%, transparent)'
+                  : '1px solid color-mix(in srgb, var(--cks-text) 12%, transparent)',
+              }}
+            >
+              {bump.badge && (
+                <span
+                  className="absolute -top-2 left-4 px-2 py-0.5 rounded-full text-[9px] tracking-wider uppercase"
+                  style={{
+                    background: 'var(--cks-primary)',
+                    color: 'var(--cks-accent)',
+                    fontFamily: 'var(--font-body)',
+                    fontWeight: 700,
+                  }}
+                >
+                  {bump.badge}
+                </span>
+              )}
+              <div className="flex items-start gap-3">
+                <span
+                  className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors"
+                  style={{
+                    background: isOn
+                      ? 'var(--cks-primary)'
+                      : 'transparent',
+                    border: isOn
+                      ? '1px solid var(--cks-primary)'
+                      : '1px solid color-mix(in srgb, var(--cks-text) 30%, transparent)',
+                  }}
+                >
+                  {isOn && (
+                    <Check
+                      className="w-3 h-3"
+                      style={{ color: 'var(--cks-accent)' }}
+                    />
+                  )}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span
+                      className="text-sm font-medium"
+                      style={{
+                        color: 'var(--cks-text)',
+                        fontFamily: 'var(--font-body)',
+                      }}
+                    >
+                      {bump.titulo}
+                    </span>
+                    <span
+                      className="text-sm whitespace-nowrap"
+                      style={{
+                        color: 'var(--cks-primary)',
+                        fontFamily: 'var(--font-body)',
+                        fontWeight: 600,
+                      }}
+                    >
+                      + {formatBRL(bump.valor_cents)}
+                    </span>
+                  </div>
+                  {bump.descricao && (
+                    <p
+                      className="text-xs mt-1"
+                      style={{
+                        color:
+                          'color-mix(in srgb, var(--cks-text) 65%, transparent)',
+                        fontFamily: 'var(--font-body)',
+                      }}
+                    >
+                      {bump.descricao}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                checked={isOn}
+                onChange={() => onToggle(bump.id)}
+                className="sr-only"
+              />
+            </label>
+          )
+        })}
+      </div>
     </section>
   )
 }

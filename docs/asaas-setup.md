@@ -177,6 +177,39 @@ descrição. O plano nasce vazio — depois adicione preços nele.
 
 ---
 
+## Order bumps (add-ons no checkout)
+
+Você pode oferecer add-ons opcionais que o cliente marca **antes** de
+pagar — vão aparecer no painel esquerdo do `/checkout/[sessionId]`,
+abaixo do resumo do plano.
+
+Crie/edite em **/admin/order-bumps**. Campos:
+
+| Campo | O que faz |
+|-------|-----------|
+| `código` | Slug único (ex: `ebook-confissao`) — não muda depois |
+| `título` | Texto que aparece no checkout |
+| `descrição` | Subtítulo, opcional |
+| `valor (R$)` | Vai somado à assinatura |
+| `badge` | Etiqueta pequena (ex: "MAIS POPULAR") |
+| `planos em que aparece` | Códigos separados por vírgula. Vazio = todos. |
+| `ordem` | Menor aparece primeiro |
+| `ativo` | Desliga sem apagar |
+
+**Importante**: o valor do bump entra como **add-on recorrente** — o
+cliente paga junto com a renovação enquanto não cancelar. O Asaas
+trata como um único `value` na subscription, então não dá pra cobrar
+o bump uma vez só com este recurso. Pra ofertas one-shot, use o painel
+da Asaas pra disparar um payment único (ainda não temos UI própria
+pra isso).
+
+Quando o cliente liga um toggle no checkout, chamamos `POST
+/api/checkout/bumps/apply` que recalcula `amount_cents` da sessão e
+grava um snapshot dos bumps em `metadata.order_bumps` — assim mesmo
+se o bump for editado/excluído depois, o histórico fica preservado.
+
+---
+
 ## Self-service do assinante
 
 O painel `/perfil → Minha assinatura` permite ao próprio usuário:
