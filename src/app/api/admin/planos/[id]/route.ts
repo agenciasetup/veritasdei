@@ -45,8 +45,23 @@ export async function PATCH(
     'destaque',
     'ativo',
     'ordem',
+    'default_provider',
   ]) {
     if (k in body) patch[k] = body[k]
+  }
+
+  // Valida default_provider (CHECK constraint no banco já barra, mas
+  // damos erro user-friendly).
+  if (
+    patch.default_provider !== undefined &&
+    !['asaas', 'stripe', 'hubla', 'manual'].includes(
+      String(patch.default_provider),
+    )
+  ) {
+    return NextResponse.json(
+      { error: 'default_provider inválido' },
+      { status: 400 },
+    )
   }
 
   if (Object.keys(patch).length === 0) {

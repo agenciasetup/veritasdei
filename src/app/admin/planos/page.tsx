@@ -29,6 +29,7 @@ type Plan = {
   destaque: string | null
   ativo: boolean
   ordem: number
+  default_provider: 'asaas' | 'stripe' | 'hubla' | 'manual'
   billing_prices: Price[]
 }
 
@@ -81,6 +82,7 @@ export default function AdminPlanosPage() {
           destaque: plan.destaque,
           ativo: plan.ativo,
           ordem: plan.ordem,
+          default_provider: plan.default_provider,
         }),
       })
       if (!res.ok) {
@@ -260,6 +262,33 @@ export default function AdminPlanosPage() {
               value={plan.destaque ?? ''}
               onChange={e => updatePlan(plan.id, { destaque: e.target.value })}
             />
+          </Field>
+
+          <Field label="Provedor de pagamento padrão">
+            <select
+              className="w-full px-3 py-2 rounded-lg text-sm"
+              style={fieldStyle}
+              value={plan.default_provider ?? 'asaas'}
+              onChange={e =>
+                updatePlan(plan.id, {
+                  default_provider: e.target.value as Plan['default_provider'],
+                })
+              }
+            >
+              <option value="asaas">Asaas (PIX + cartão, checkout custom)</option>
+              <option value="stripe">Stripe (cartão, hosted checkout)</option>
+              <option value="hubla">
+                Hubla (link estático — usado por /educa/assine)
+              </option>
+              <option value="manual">Manual (sem checkout automático)</option>
+            </select>
+            <p
+              className="text-[10px] mt-1"
+              style={{ color: '#7A7368', fontFamily: 'Poppins, sans-serif' }}
+            >
+              Asaas é o default global. Stripe/Hubla só fazem sentido se o
+              plano específico precisar de fluxo legado.
+            </p>
           </Field>
 
           <div className="mb-4">

@@ -18,6 +18,7 @@ import {
   BookOpenText,
   Bell,
   Megaphone,
+  Palette,
 } from 'lucide-react'
 import AdminMobileNav from './AdminMobileNav'
 
@@ -32,6 +33,7 @@ const ADMIN_NAV = [
   { href: '/admin/ia-knowledge',        icon: Brain,          label: 'Base IA' },
   { href: '/admin/embeddings',          icon: Database,       label: 'Embeddings' },
   { href: '/admin/planos',              icon: CreditCard,     label: 'Planos' },
+  { href: '/admin/checkout',            icon: Palette,        label: 'Checkout' },
   { href: '/admin/notificacoes-teste',  icon: Bell,           label: 'Push teste' },
 ]
 
