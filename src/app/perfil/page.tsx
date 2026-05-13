@@ -22,6 +22,7 @@ import {
 import { AnimatePresence, motion } from 'framer-motion'
 
 import { useAuth } from '@/contexts/AuthContext'
+import { useProduct } from '@/contexts/ProductContext'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { useHaptic } from '@/hooks/useHaptic'
 import ProfileHeaderCard from '@/components/perfil/ProfileHeaderCard'
@@ -42,7 +43,7 @@ import ReliquiasSection from './sections/ReliquiasSection'
 
 type Tab = 'conta' | 'propositos' | 'reliquias' | 'notificacoes' | 'assinatura' | 'carteirinha'
 
-const TABS: { key: Tab; label: string; icon: React.ElementType }[] = [
+const ALL_TABS: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: 'conta',        label: 'Conta',         icon: User },
   { key: 'propositos',   label: 'Propósitos',    icon: Target },
   { key: 'reliquias',    label: 'Selos',         icon: Gem },
@@ -65,7 +66,14 @@ function PerfilContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { profile, signOut } = useAuth()
+  const { isEduca } = useProduct()
   const haptic = useHaptic()
+
+  // Carteirinha é uma feature da Comunidade (badge digital com handle público
+  // e selo de verificação). No Veritas Educa não faz sentido — escondemos.
+  const TABS = isEduca
+    ? ALL_TABS.filter((t) => t.key !== 'carteirinha')
+    : ALL_TABS
 
   const initialTab = (() => {
     const t = searchParams.get('tab')
@@ -75,7 +83,7 @@ function PerfilContent() {
       t === 'reliquias' ||
       t === 'notificacoes' ||
       t === 'assinatura' ||
-      t === 'carteirinha'
+      (t === 'carteirinha' && !isEduca)
     ) {
       return t as Tab
     }
@@ -160,6 +168,20 @@ function PerfilContent() {
             como lista simples no fim — são raramente usados e a tab bar
             já está cheia. */}
         <div className="mt-10 space-y-3">
+          {/* Atalho admin — só pra quem tem role=admin. Aparece em ambos
+              produtos; no Educa fica como a única forma de chegar no painel. */}
+          {profile?.role === 'admin' && (
+            <SecondaryGroup>
+              <SecondaryLink
+                href="/admin/conteudos"
+                icon={<ShieldCheck className="w-4 h-4" />}
+                label="Admin"
+                badge="painel"
+                isLast
+              />
+            </SecondaryGroup>
+          )}
+
           <SecondaryGroup>
             <SecondaryLink
               href="/perfil/seguranca"

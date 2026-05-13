@@ -95,6 +95,10 @@ export async function updateSession(request: NextRequest) {
       // Rosário (terço solo + sessões compartilhadas + histórico).
       path === '/rosario' ||
       path.startsWith('/rosario/') ||
+      // Perfil rico do Veritas: reusado direto no Educa (sem comunidade —
+      // a aba "Carteirinha" é escondida no front quando product=educa).
+      path === '/perfil' ||
+      path.startsWith('/perfil/') ||
       // Auth / API / páginas legais
       path === '/login' ||
       path.startsWith('/auth/') ||

@@ -17,7 +17,7 @@
  */
 
 import Link from 'next/link'
-import { ArrowRight, BookOpen, Flame, GraduationCap, Lock, NotebookPen, Swords } from 'lucide-react'
+import { ArrowRight, BookOpen, Flame, Lock, NotebookPen, Swords } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useGamification } from '@/lib/gamification/useGamification'
 import { useLastStudied } from '@/lib/content/useLastStudied'
@@ -243,50 +243,7 @@ export default function EducaDashboard() {
         </div>
       </Link>
 
-      {/* 4. Trilhas */}
-      <Link
-        href="/educa/trilhas"
-        className="block rounded-2xl p-4 active:scale-[0.99] transition-transform"
-        style={{
-          background: 'var(--surface-2)',
-          border: '1px solid var(--border-1)',
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{
-              background: 'var(--accent-soft)',
-              border: '1px solid var(--border-1)',
-            }}
-          >
-            <GraduationCap
-              className="w-5 h-5"
-              style={{ color: 'var(--accent)' }}
-            />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p
-              className="text-sm font-medium mb-0.5"
-              style={{ color: 'var(--text-1)', fontFamily: 'var(--font-body)' }}
-            >
-              Trilhas de estudo
-            </p>
-            <p
-              className="text-xs"
-              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
-            >
-              Católico iniciante, Apologética, Pais da Igreja e mais.
-            </p>
-          </div>
-          <ArrowRight
-            className="w-4 h-4 flex-shrink-0"
-            style={{ color: 'var(--text-3)' }}
-          />
-        </div>
-      </Link>
-
-      {/* 5. CTA pra assinar (só se ainda não tem plano) */}
+      {/* 4. CTA pra assinar (só se ainda não tem plano) */}
       {!subLoading && !isPremium && (
         <Link
           href="/educa/assine"
