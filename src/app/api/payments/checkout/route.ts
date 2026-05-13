@@ -158,6 +158,7 @@ export async function POST(req: Request) {
       priceId,
       successUrl: `${origin}/perfil?tab=assinatura&status=success`,
       cancelUrl: `${origin}/planos?status=canceled`,
+      origin,
     })
     return NextResponse.json(result)
   } catch (err) {

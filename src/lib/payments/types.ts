@@ -88,6 +88,14 @@ export type CheckoutInput = {
   priceId: string // id da row billing_prices
   successUrl: string
   cancelUrl: string
+  /**
+   * Origin do request (https://educa.veritasdei.com.br, etc). Quando
+   * presente, o provider DEVE montar a URL retornada usando este origin
+   * em vez de NEXT_PUBLIC_APP_URL — caso contrário um usuário em
+   * `educa.veritasdei.com.br` cai em `veritasdei.com.br`, perde a
+   * sessão Supabase e vê tela de login.
+   */
+  origin?: string
 }
 
 export type CheckoutResult = { url: string; provider: ProviderId }

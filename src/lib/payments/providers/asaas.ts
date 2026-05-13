@@ -169,7 +169,12 @@ export const asaasProvider: PaymentProvider = {
       .single()
     if (sessErr) throw new Error(`session create: ${sessErr.message}`)
 
+    // Prioriza o origin do request (educa.veritasdei.com.br, etc) para
+    // manter o usuário no mesmo subdomínio onde ele está logado. Sem
+    // isso, o cookie de sessão Supabase do subdomínio não vale no
+    // domínio principal e o usuário é jogado pra tela de login.
     const origin =
+      input.origin?.replace(/\/$/, '') ??
       process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ??
       'http://localhost:3000'
 
