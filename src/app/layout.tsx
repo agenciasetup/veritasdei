@@ -18,6 +18,7 @@ import NotificationToast from "@/components/notifications/NotificationToast"
 import { NotificationToastProvider } from "@/contexts/NotificationToastContext"
 import NativeAppearanceBootstrap from "@/components/layout/NativeAppearanceBootstrap"
 import PremiumWelcomeModal from "@/components/payments/PremiumWelcomeModal"
+import { getCurrentProduct } from "@/lib/product/server"
 
 // next/font/google: self-hosting + auto-subset + preload com display:swap.
 // Pesos reduzidos vs versão antiga (-400/-500 typical) para economia de bytes.
@@ -88,15 +89,21 @@ export const viewport: Viewport = {
   themeColor: "#0A0A0A",
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  // Produto detectado no middleware via hostname (educa.* → veritas-educa).
+  // Passamos como prop pra AppShell → ProductProvider, evitando flicker
+  // de hidratação (sem inferir do window.location no client).
+  const product = await getCurrentProduct()
+
   return (
     <html
       lang="pt-BR"
       className={`h-full antialiased ${cinzel.variable} ${cormorant.variable} ${poppins.variable}`}
+      data-product={product}
     >
       <body className="min-h-full flex flex-col">
         <ThemeScript />
@@ -114,7 +121,7 @@ export default function RootLayout({
               <NativeAppearanceBootstrap />
               <NotificationToast />
               <GamificationEventsProvider>
-                <AppShell>{children}</AppShell>
+                <AppShell product={product}>{children}</AppShell>
                 <PremiumWelcomeModal />
               </GamificationEventsProvider>
             </NotificationToastProvider>

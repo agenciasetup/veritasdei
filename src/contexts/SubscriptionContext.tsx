@@ -49,6 +49,11 @@ interface SubscriptionContextValue {
   // Usado pra decidir entre Stripe Customer Portal vs RevenueCat
   // Customer Center na tela de gerenciar assinatura.
   fonte: string | null
+  // Features liberadas pelo plano atual. Espelha o RPC `get_user_features`.
+  // Use `hasFeature(slug)` em vez de inspecionar o array direto — o helper
+  // já trata loading/auth corretamente.
+  features: string[]
+  hasFeature: (feature: string) => boolean
   refresh: () => Promise<void>
 }
 
@@ -61,6 +66,8 @@ const Ctx = createContext<SubscriptionContextValue>({
   expiraEm: null,
   cancelAtPeriodEnd: false,
   fonte: null,
+  features: [],
+  hasFeature: () => false,
   refresh: async () => {},
 })
 
@@ -69,6 +76,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [ent, setEnt] = useState<Entitlement | null>(null)
+  const [features, setFeatures] = useState<string[]>([])
   // Após a 1ª resposta (sucesso ou erro), os refetches subsequentes
   // não devem piscar `loading=true` — isso causava o "loop esperando"
   // no /perfil quando AuthContext re-emitia user em cada visibility
@@ -78,6 +86,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     if (!isAuthenticated || !user) {
       setEnt(null)
+      setFeatures([])
       setLoading(false)
       hasLoadedOnceRef.current = true
       return
@@ -93,17 +102,27 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       setLoading(true)
     }
     try {
-      const { data, error } = await supabase.rpc('get_user_entitlement', {
-        uid: user.id,
-      })
-      if (error) {
-        console.warn('[subscription] rpc error:', error.message)
-        // Em refresh: stale-while-revalidate (mantém último ent visível).
-        // Em load inicial: limpa pra mostrar "sem assinatura".
+      // Duas RPCs em paralelo — entitlement (plano/status) e features.
+      const [entRes, featRes] = await Promise.all([
+        supabase.rpc('get_user_entitlement', { uid: user.id }),
+        supabase.rpc('get_user_features', { uid: user.id }),
+      ])
+
+      if (entRes.error) {
+        console.warn('[subscription] entitlement rpc error:', entRes.error.message)
         if (!hasLoadedOnceRef.current) setEnt(null)
       } else {
-        const row = Array.isArray(data) ? data[0] : data
+        const row = Array.isArray(entRes.data) ? entRes.data[0] : entRes.data
         setEnt((row as Entitlement) ?? null)
+      }
+
+      if (featRes.error) {
+        console.warn('[subscription] features rpc error:', featRes.error.message)
+        // Stale-while-revalidate: mantém features anteriores em erro de refresh.
+        if (!hasLoadedOnceRef.current) setFeatures([])
+      } else {
+        const arr = Array.isArray(featRes.data) ? (featRes.data as string[]) : []
+        setFeatures(arr)
       }
     } finally {
       setLoading(false)
@@ -132,6 +151,11 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       )
   }, [refresh])
 
+  const hasFeature = useCallback(
+    (feature: string) => features.includes(feature),
+    [features],
+  )
+
   const value: SubscriptionContextValue = {
     loading,
     refreshing,
@@ -141,6 +165,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     expiraEm: ent?.expira_em ?? null,
     cancelAtPeriodEnd: ent?.cancel_at_period_end ?? false,
     fonte: ent?.fonte ?? null,
+    features,
+    hasFeature,
     refresh,
   }
 
