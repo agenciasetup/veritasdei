@@ -145,7 +145,7 @@ export async function POST(req: Request) {
   // Carrega nome do usuário (opcional, melhora UX do checkout)
   const { data: profile } = await admin
     .from('profiles')
-    .select('nome, email')
+    .select('name, email')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -154,7 +154,7 @@ export async function POST(req: Request) {
     const result = await provider.createCheckout({
       userId: user.id,
       userEmail: user.email ?? (profile?.email as string | null) ?? '',
-      userName: (profile?.nome as string | null) ?? null,
+      userName: (profile?.name as string | null) ?? null,
       priceId,
       successUrl: `${origin}/perfil?tab=assinatura&status=success`,
       cancelUrl: `${origin}/planos?status=canceled`,

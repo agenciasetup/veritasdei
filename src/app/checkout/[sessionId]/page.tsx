@@ -135,7 +135,7 @@ export default async function CheckoutPage({
 
   const profile = await supabase
     .from('profiles')
-    .select('nome')
+    .select('name')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -165,7 +165,7 @@ export default async function CheckoutPage({
       }}
       user={{
         email: user.email ?? '',
-        name: (profile.data?.nome as string | null) ?? '',
+        name: (profile.data?.name as string | null) ?? '',
       }}
     />
   )
