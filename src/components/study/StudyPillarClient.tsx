@@ -15,6 +15,7 @@ import StudyLayout from './StudyLayout'
 import StudyLessonsSidebar from './StudyLessonsSidebar'
 import CinematicHero from '@/components/educa/CinematicHero'
 import ContentRail, { RailItem } from '@/components/educa/ContentRail'
+import InlineEditOverlay from '@/components/admin/InlineEditOverlay'
 import StudyMobileChip from './StudyMobileChip'
 import StudyNavBar from './StudyNavBar'
 import StudyTopicQuizCard from './StudyTopicQuizCard'
@@ -133,6 +134,7 @@ function PillarTopicGrid({
 }: {
   pillarSlug: string
   group: {
+    id: string
     title: string
     subtitle: string | null
     description: string | null
@@ -143,21 +145,30 @@ function PillarTopicGrid({
   const firstTopic = topics[0]
   return (
     <div className="flex flex-col min-h-screen relative">
-      {/* Hero cinematográfico — usa cover_url do pilar quando houver */}
-      <CinematicHero
-        eyebrow={group.subtitle || 'Pilar de estudo'}
-        title={group.title}
-        subtitle={group.description ?? undefined}
-        imageUrl={group.cover_url ?? null}
-        primary={
-          firstTopic
-            ? {
-                label: 'Começar',
-                href: `/estudo/${pillarSlug}/${firstTopic.slug}`,
-              }
-            : undefined
-        }
-      />
+      {/* Hero cinematográfico — usa cover_url do pilar quando houver.
+       *  Admins veem um botão de lápis no canto pra editar a capa
+       *  diretamente (sem precisar ir no /admin). */}
+      <InlineEditOverlay
+        table="content_groups"
+        id={group.id}
+        fields={['cover_url']}
+        label="Editar capa do pilar"
+      >
+        <CinematicHero
+          eyebrow={group.subtitle || 'Pilar de estudo'}
+          title={group.title}
+          subtitle={group.description ?? undefined}
+          imageUrl={group.cover_url ?? null}
+          primary={
+            firstTopic
+              ? {
+                  label: 'Começar',
+                  href: `/estudo/${pillarSlug}/${firstTopic.slug}`,
+                }
+              : undefined
+          }
+        />
+      </InlineEditOverlay>
 
       <main
         className="relative z-10 flex-1 pb-16 -mt-16 md:-mt-24"
@@ -416,6 +427,8 @@ function PillarTopicView({
               subtitle={targetSubtopic.subtitle || undefined}
               description={targetSubtopic.description || undefined}
               items={items}
+              videoUrl={targetSubtopic.video_url}
+              coverUrl={targetSubtopic.cover_url}
               onMarkStudied={
                 isStudied(targetSubtopic.id)
                   ? undefined
@@ -447,24 +460,31 @@ function PillarTopicView({
   const firstSub = subtopics[0]
   return (
     <div className="flex flex-col min-h-screen relative">
-      <CinematicHero
-        eyebrow={group.title}
-        title={topic.title}
-        subtitle={topic.description ?? undefined}
-        imageUrl={topic.cover_url ?? null}
-        primary={
-          firstSub
-            ? {
-                label: 'Começar',
-                href: `/estudo/${pillarSlug}/${topicSlug}/${firstSub.slug}`,
-              }
-            : undefined
-        }
-        secondary={{
-          label: 'Voltar',
-          href: `/estudo/${pillarSlug}`,
-        }}
-      />
+      <InlineEditOverlay
+        table="content_topics"
+        id={topic.id}
+        fields={['cover_url']}
+        label="Editar capa do tópico"
+      >
+        <CinematicHero
+          eyebrow={group.title}
+          title={topic.title}
+          subtitle={topic.description ?? undefined}
+          imageUrl={topic.cover_url ?? null}
+          primary={
+            firstSub
+              ? {
+                  label: 'Começar',
+                  href: `/estudo/${pillarSlug}/${topicSlug}/${firstSub.slug}`,
+                }
+              : undefined
+          }
+          secondary={{
+            label: 'Voltar',
+            href: `/estudo/${pillarSlug}`,
+          }}
+        />
+      </InlineEditOverlay>
 
       <main
         className="relative z-10 flex-1 pb-16 -mt-16 md:-mt-24"

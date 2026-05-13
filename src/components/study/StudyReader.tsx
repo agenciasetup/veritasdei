@@ -8,6 +8,7 @@ import StudyDeepdive from './StudyDeepdive'
 import StudyNotesPanel from './StudyNotesPanel'
 import ProgressTrack from './ProgressTrack'
 import { useStudyDeepdive } from '@/lib/study/useStudyDeepdive'
+import InlineEditOverlay from '@/components/admin/InlineEditOverlay'
 import type {
   ContentItem,
   StudyNextHint,
@@ -26,6 +27,36 @@ export interface StudyReaderProps {
   onMarkStudied?: () => void
   isStudied?: boolean
   next?: StudyNextHint | null
+  /** Vídeo opcional do YouTube/Vimeo. Renderiza embed acima do conteúdo. */
+  videoUrl?: string | null
+  /** Capa opcional da lição. Hoje só usada pra preview (não renderiza
+   *  hero — o ImmersiveReader já tem identidade própria). Fica aqui pra
+   *  o InlineEditOverlay editar quando admin. */
+  coverUrl?: string | null
+}
+
+/**
+ * Extrai o ID do YouTube de uma URL comum (watch?v=, youtu.be/, embed/).
+ * Retorna null se não conseguir extrair — nesse caso não renderiza player.
+ */
+function youtubeId(url: string | null | undefined): string | null {
+  if (!url) return null
+  try {
+    const u = new URL(url)
+    if (u.hostname.includes('youtu.be')) {
+      return u.pathname.slice(1).split('/')[0] || null
+    }
+    if (u.hostname.includes('youtube.com')) {
+      const v = u.searchParams.get('v')
+      if (v) return v
+      // /embed/{id} ou /shorts/{id}
+      const parts = u.pathname.split('/').filter(Boolean)
+      if (parts[0] === 'embed' || parts[0] === 'shorts') return parts[1] ?? null
+    }
+    return null
+  } catch {
+    return null
+  }
 }
 
 export default function StudyReader({
@@ -40,9 +71,11 @@ export default function StudyReader({
   onMarkStudied,
   isStudied,
   next,
+  videoUrl,
 }: StudyReaderProps) {
   const { deepdive } = useStudyDeepdive(contentType, contentRef)
   const [notesOpen, setNotesOpen] = useState(false)
+  const ytId = youtubeId(videoUrl)
 
   const pillarPercent = useMemo(() => {
     if (!pillar.total) return 0
@@ -59,10 +92,52 @@ export default function StudyReader({
         onMarkStudied={onMarkStudied}
         isStudied={isStudied}
         topSlot={
-          <ProgressTrack
-            percent={pillarPercent}
-            label={`${pillar.title} · ${pillar.studiedCount}/${pillar.total}`}
-          />
+          <>
+            <ProgressTrack
+              percent={pillarPercent}
+              label={`${pillar.title} · ${pillar.studiedCount}/${pillar.total}`}
+            />
+            {/* Botão de edição inline da lição (capa + vídeo). Só admin vê. */}
+            <div className="mt-3">
+              <InlineEditOverlay
+                table="content_subtopics"
+                id={contentRef}
+                fields={['cover_url', 'video_url']}
+                label="Editar lição"
+                position="top-right"
+              >
+                {ytId ? (
+                  <div
+                    className="relative w-full rounded-2xl overflow-hidden mb-4"
+                    style={{
+                      aspectRatio: '16 / 9',
+                      background: 'rgba(0,0,0,0.5)',
+                      border:
+                        '1px solid color-mix(in srgb, var(--accent) 22%, transparent)',
+                      boxShadow:
+                        '0 8px 32px -12px color-mix(in srgb, var(--accent) 24%, transparent)',
+                    }}
+                  >
+                    <iframe
+                      src={`https://www.youtube.com/embed/${ytId}?rel=0`}
+                      title="Vídeo da lição"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                      loading="lazy"
+                      className="absolute inset-0 w-full h-full"
+                      style={{ border: 0 }}
+                    />
+                  </div>
+                ) : (
+                  /* Slot vazio (sem vídeo) — só o botão de edição flutua sobre
+                   *  um placeholder discreto pra que admin saiba que pode editar.
+                   *  Pra não-admin, o InlineEditOverlay renderiza só children, e
+                   *  como children está vazio, nada aparece. */
+                  <div />
+                )}
+              </InlineEditOverlay>
+            </div>
+          </>
         }
         headerSlot={
           <Breadcrumb pillar={pillar} topic={topic} currentTitle={title} />

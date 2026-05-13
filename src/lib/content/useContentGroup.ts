@@ -36,6 +36,8 @@ export interface ContentSubtopic {
   subtitle: string | null
   description: string | null
   cover_url: string | null
+  /** URL de vídeo opcional (YouTube). Renderiza embed no StudyReader. */
+  video_url: string | null
   sort_order: number
   visible: boolean
 }
