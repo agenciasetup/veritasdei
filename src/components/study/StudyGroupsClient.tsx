@@ -5,7 +5,6 @@ import { Users, Plus, LogIn, Copy, Check, Crown, LogOut, ArrowLeft } from 'lucid
 import Link from 'next/link'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { useMyStudyGroups, type StudyGroup } from '@/lib/study/useStudyGroups'
-import StudyGroupMembersDrawer from './StudyGroupMembersDrawer'
 import GlassCard from '@/components/educa/GlassCard'
 
 export default function StudyGroupsClient() {
@@ -16,7 +15,6 @@ export default function StudyGroupsClient() {
   const [newDesc, setNewDesc] = useState('')
   const [joinCode, setJoinCode] = useState('')
   const [feedback, setFeedback] = useState<{ tone: 'ok' | 'err'; msg: string } | null>(null)
-  const [membersOpen, setMembersOpen] = useState<StudyGroup | null>(null)
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -307,7 +305,6 @@ export default function StudyGroupsClient() {
                   <div key={g.id} className="contents">
                     <GroupCard
                       group={g}
-                      onViewMembers={() => setMembersOpen(g)}
                       onLeave={async () => {
                         if (!window.confirm(`Sair de "${g.name}"?`)) return
                         await leaveGroup(g.id)
@@ -320,13 +317,6 @@ export default function StudyGroupsClient() {
             )}
           </section>
         </main>
-
-        {membersOpen && (
-          <StudyGroupMembersDrawer
-            group={membersOpen}
-            onClose={() => setMembersOpen(null)}
-          />
-        )}
 
         <style jsx>{`
           .input {
@@ -375,11 +365,10 @@ function Field({
 
 function GroupCard({
   group,
-  onViewMembers,
   onLeave,
 }: {
   group: StudyGroup
-  onViewMembers: () => void
+  onViewMembers?: () => void // mantido pra compat; agora o card inteiro é link
   onLeave: () => void
 }) {
   const [copied, setCopied] = useState(false)
@@ -439,16 +428,15 @@ function GroupCard({
       </div>
 
       <div className="flex items-center justify-between gap-2 mt-4">
-        <button
-          type="button"
-          onClick={onViewMembers}
-          className="inline-flex items-center gap-1.5 text-xs"
-          style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}
+        <Link
+          href={`/estudo/grupos/${group.id}`}
+          className="inline-flex items-center gap-1.5 text-xs hover:opacity-80 transition-opacity"
+          style={{ color: 'var(--accent)', fontFamily: 'var(--font-body)' }}
         >
           <Users className="w-3.5 h-3.5" />
           {group.member_count}{' '}
-          {group.member_count === 1 ? 'membro' : 'membros'}
-        </button>
+          {group.member_count === 1 ? 'membro' : 'membros'} · abrir
+        </Link>
         <button
           type="button"
           onClick={copyCode}

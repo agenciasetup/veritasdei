@@ -134,15 +134,12 @@ export default function EducaEstudoView() {
         )
       )}
 
-      {/* Conteúdo. A margem negativa só aplica quando o hero é o CinematicHero
-       *  (que tem fade infinito na base pra absorver o conteúdo). O
-       *  BannerSlider não tem fade, então sobrepor a imagem fica ruim — por
-       *  isso o `hasBanners` desliga o offset. */}
-      <div
-        className={`max-w-6xl mx-auto px-4 md:px-8 pt-2 md:pt-4 relative space-y-10 md:space-y-14 ${
-          hasBanners ? 'mt-8 md:mt-10' : '-mt-16 md:-mt-24'
-        }`}
-      >
+      {/* Conteúdo. O fade infinito do CinematicHero já faz a transição
+       *  visual com a página — não precisamos puxar o conteúdo pra dentro
+       *  dele com margem negativa (estava causando sobreposição do título
+       *  "Pilares de estudo" sobre os CTAs do hero). Mantemos um respiro
+       *  generoso entre hero e primeiro título. */}
+      <div className="max-w-6xl mx-auto px-4 md:px-8 pt-8 md:pt-12 relative space-y-10 md:space-y-14">
         {/* ─── PILARES (destaque principal) ───────────────────────── */}
         {recentLoading ? (
           <section>

@@ -171,7 +171,7 @@ function PillarTopicGrid({
       </InlineEditOverlay>
 
       <main
-        className="relative z-10 flex-1 pb-16 -mt-16 md:-mt-24"
+        className="relative z-10 flex-1 pb-16 pt-8 md:pt-12"
         style={{ background: 'var(--surface-1)' }}
       >
         <div className="max-w-6xl mx-auto px-4 md:px-8">
@@ -487,7 +487,7 @@ function PillarTopicView({
       </InlineEditOverlay>
 
       <main
-        className="relative z-10 flex-1 pb-16 -mt-16 md:-mt-24"
+        className="relative z-10 flex-1 pb-16 pt-8 md:pt-12"
         style={{ background: 'var(--surface-1)' }}
       >
         <div className="max-w-6xl mx-auto px-4 md:px-8 space-y-6 md:space-y-10">
