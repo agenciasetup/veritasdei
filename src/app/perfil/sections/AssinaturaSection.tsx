@@ -10,7 +10,10 @@ export default function AssinaturaSection() {
   const { isPremium, loading, plano, status, expiraEm, cancelAtPeriodEnd, fonte, refresh } =
     useSubscription()
   const [busy, setBusy] = useState(false)
+  const [canceling, setCanceling] = useState(false)
+  const [confirmCancel, setConfirmCancel] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [info, setInfo] = useState<string | null>(null)
   const [native, setNative] = useState(false)
 
   useEffect(() => {
@@ -21,13 +24,15 @@ export default function AssinaturaSection() {
     setNative(isNativePlatform())
   }, [])
 
-  // `admin_role` significa que o premium é override (perfis admin têm
-  // acesso permanente). Não há nada pra gerenciar — só esconder o
-  // botão. Para usuários reais, o gerenciamento depende da fonte:
+  // 'admin_role' = premium override (admins). Não há nada pra gerenciar.
+  // Para usuários reais, o gerenciamento depende da fonte:
   //  - 'revenuecat' → Customer Center nativo do SDK (Play/Apple).
   //  - 'stripe'     → Customer Portal do Stripe (URL).
+  //  - 'asaas'      → Cancelamento direto via /api/payments/cancel (sem portal).
+  //  - 'hubla'      → Sem self-service ainda; usuário fala com suporte.
   const fonteGerenciavel = fonte && fonte !== 'admin_role'
   const usaRevenueCat = fonte === 'revenuecat'
+  const usaAsaas = fonte === 'asaas'
 
   async function abrirGerenciamento() {
     setBusy(true)
@@ -38,7 +43,6 @@ export default function AssinaturaSection() {
           '@revenuecat/purchases-capacitor-ui'
         )
         await RevenueCatUI.presentCustomerCenter()
-        // Customer Center pode ter cancelamento; refresca depois.
         await refresh()
       } else {
         const res = await fetch('/api/payments/portal', { method: 'POST' })
@@ -50,6 +54,24 @@ export default function AssinaturaSection() {
       setError((err as Error).message)
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function cancelarAsaas() {
+    setCanceling(true)
+    setError(null)
+    setInfo(null)
+    try {
+      const res = await fetch('/api/payments/cancel', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Falha ao cancelar')
+      setInfo('Assinatura cancelada. O acesso premium expira ao fim do período.')
+      setConfirmCancel(false)
+      await refresh()
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setCanceling(false)
     }
   }
 
@@ -155,7 +177,21 @@ export default function AssinaturaSection() {
         </div>
       )}
 
-      {isPremium && fonteGerenciavel && (
+      {info && (
+        <div
+          className="mb-4 p-3 rounded-xl text-xs"
+          style={{
+            background: 'color-mix(in srgb, var(--success) 12%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--success) 30%, transparent)',
+            color: 'var(--success)',
+            fontFamily: 'var(--font-body)',
+          }}
+        >
+          {info}
+        </div>
+      )}
+
+      {isPremium && fonteGerenciavel && !usaAsaas && (
         <button
           type="button"
           onClick={abrirGerenciamento}
@@ -174,6 +210,72 @@ export default function AssinaturaSection() {
               ? 'Gerenciar assinatura'
               : 'Gerenciar pagamento'}
         </button>
+      )}
+
+      {isPremium && usaAsaas && status !== 'canceled' && (
+        <div className="flex flex-col gap-2">
+          {!confirmCancel ? (
+            <button
+              type="button"
+              onClick={() => setConfirmCancel(true)}
+              disabled={canceling}
+              className="w-full py-3 rounded-xl text-sm touch-target-lg active:scale-[0.98]"
+              style={{
+                background: 'transparent',
+                border: '1px solid color-mix(in srgb, var(--warning) 35%, transparent)',
+                color: 'var(--warning)',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              Cancelar assinatura
+            </button>
+          ) : (
+            <div
+              className="p-4 rounded-xl"
+              style={{
+                background: 'color-mix(in srgb, var(--warning) 10%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--warning) 30%, transparent)',
+              }}
+            >
+              <p
+                className="text-xs mb-3"
+                style={{ color: 'var(--text-1)', fontFamily: 'var(--font-body)' }}
+              >
+                Tem certeza? Você manterá o acesso até o fim do período pago.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmCancel(false)}
+                  disabled={canceling}
+                  className="flex-1 py-2.5 rounded-lg text-xs touch-target active:scale-[0.98]"
+                  style={{
+                    background: 'var(--surface-2)',
+                    border: '1px solid var(--border-1)',
+                    color: 'var(--text-1)',
+                    fontFamily: 'var(--font-body)',
+                  }}
+                >
+                  Manter
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelarAsaas}
+                  disabled={canceling}
+                  className="flex-1 py-2.5 rounded-lg text-xs touch-target active:scale-[0.98]"
+                  style={{
+                    background: 'var(--warning)',
+                    color: '#0F0E0C',
+                    fontFamily: 'var(--font-body)',
+                    fontWeight: 600,
+                  }}
+                >
+                  {canceling ? 'Cancelando…' : 'Confirmar cancelamento'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </section>
   )

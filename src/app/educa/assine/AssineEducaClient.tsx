@@ -1,28 +1,29 @@
 'use client'
 
 /**
- * Client de /educa/assine — captura email, valida, monta a URL final
- * com `?email=` e `?name=` e redireciona pro checkout Hubla.
+ * Client de /educa/assine.
  *
- * Regras de UX:
- *  - Se o usuário está logado, pré-preenchemos com o email da conta e
- *    avisamos: "Use este mesmo email — é assim que liberamos seu acesso."
- *  - Se não estiver logado, oferecemos um link pra criar conta antes.
- *    Permitimos pagar assim mesmo (o webhook ainda tenta resolver depois),
- *    mas com aviso de que é melhor criar conta primeiro.
- *  - O botão fica desabilitado se a URL base do checkout não estiver
- *    configurada (admin não terminou o setup).
+ * Não autenticado → "Entrar pra assinar" leva pro /login?next=/educa/assine.
+ *   (Asaas precisa do user_id como externalReference; sem conta não dá pra
+ *    associar a assinatura ao usuário.)
+ * Autenticado → clique no CTA chama /api/payments/checkout com
+ *   planCodigo=veritas-educa → redireciona pra /checkout/[sessionId].
  */
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-import { BookOpen, Check, Loader2, ShieldCheck, Sparkles } from 'lucide-react'
+import {
+  BookOpen,
+  Check,
+  Loader2,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react'
 
 type Props = {
   prefillEmail: string | null
   prefillName: string | null
   isAuthenticated: boolean
-  checkoutBaseUrl: string | null
 }
 
 const BENEFICIOS = [
@@ -33,47 +34,32 @@ const BENEFICIOS = [
   'Acesso completo ao app Veritas Dei',
 ]
 
-function isValidEmail(s: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim())
-}
-
 export default function AssineEducaClient({
   prefillEmail,
   prefillName,
   isAuthenticated,
-  checkoutBaseUrl,
 }: Props) {
-  const [email, setEmail] = useState(prefillEmail ?? '')
-  const [name, setName] = useState(prefillName ?? '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const emailLocked = isAuthenticated && !!prefillEmail
-  const canSubmit = useMemo(
-    () => !!checkoutBaseUrl && isValidEmail(email),
-    [checkoutBaseUrl, email],
-  )
-
-  function handleContinue() {
-    if (!checkoutBaseUrl) {
-      setError(
-        'Checkout ainda não configurado. Avise o admin: defina NEXT_PUBLIC_HUBLA_CHECKOUT_URL_VERITAS_EDUCA.',
-      )
-      return
-    }
-    if (!isValidEmail(email)) {
-      setError('Informe um email válido.')
-      return
-    }
+  async function handleAssinar() {
     setLoading(true)
     setError(null)
     try {
-      const url = new URL(checkoutBaseUrl)
-      url.searchParams.set('email', email.trim())
-      if (name.trim()) url.searchParams.set('name', name.trim())
-      window.location.href = url.toString()
-    } catch {
-      setError('URL de checkout inválida.')
+      const res = await fetch('/api/payments/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          planCodigo: 'veritas-educa',
+          intervalo: 'mensal',
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Falha ao iniciar checkout')
+      if (!data.url) throw new Error('URL de checkout ausente')
+      window.location.href = data.url
+    } catch (err) {
+      setError((err as Error).message)
       setLoading(false)
     }
   }
@@ -89,10 +75,7 @@ export default function AssineEducaClient({
               border: '1px solid var(--border-1)',
             }}
           >
-            <BookOpen
-              className="w-6 h-6"
-              style={{ color: 'var(--accent)' }}
-            />
+            <BookOpen className="w-6 h-6" style={{ color: 'var(--accent)' }} />
           </div>
           <h1
             className="text-3xl md:text-4xl mb-2"
@@ -141,94 +124,28 @@ export default function AssineEducaClient({
             ))}
           </ul>
 
-          {!isAuthenticated && (
+          {isAuthenticated && prefillEmail && (
             <div
-              className="mb-5 p-3 rounded-2xl text-xs"
+              className="mb-5 p-3 rounded-2xl text-xs flex items-start gap-2"
               style={{
-                background:
-                  'color-mix(in srgb, var(--accent) 10%, transparent)',
+                background: 'color-mix(in srgb, var(--accent) 10%, transparent)',
                 border:
                   '1px solid color-mix(in srgb, var(--accent) 25%, transparent)',
                 color: 'var(--text-2)',
                 fontFamily: 'var(--font-body)',
               }}
             >
-              Já tem conta?{' '}
-              <Link
-                href="/login?next=/educa/assine"
-                className="underline"
+              <ShieldCheck
+                className="w-4 h-4 flex-shrink-0 mt-0.5"
                 style={{ color: 'var(--accent)' }}
-              >
-                Entre antes de assinar
-              </Link>{' '}
-              — assim seu acesso é liberado automaticamente após o pagamento.
-            </div>
-          )}
-
-          <div className="flex flex-col gap-3 mb-4">
-            <label
-              className="text-xs"
-              style={{
-                color: 'var(--text-3)',
-                fontFamily: 'var(--font-body)',
-              }}
-            >
-              Seu email
-            </label>
-            <input
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              disabled={emailLocked}
-              placeholder="voce@exemplo.com"
-              className="px-4 py-3 rounded-2xl outline-none disabled:opacity-70"
-              style={{
-                background: 'var(--surface-inset)',
-                border: '1px solid var(--border-1)',
-                color: 'var(--text-1)',
-                fontFamily: 'var(--font-body)',
-              }}
-            />
-            <p
-              className="text-[11px] flex items-center gap-1"
-              style={{
-                color: 'var(--text-3)',
-                fontFamily: 'var(--font-body)',
-              }}
-            >
-              <ShieldCheck className="w-3 h-3" />
-              Use o mesmo email da sua conta Veritas — é por ele que liberamos
-              seu acesso após o pagamento.
-            </p>
-          </div>
-
-          {!emailLocked && (
-            <div className="flex flex-col gap-3 mb-5">
-              <label
-                className="text-xs"
-                style={{
-                  color: 'var(--text-3)',
-                  fontFamily: 'var(--font-body)',
-                }}
-              >
-                Seu nome (opcional)
-              </label>
-              <input
-                type="text"
-                autoComplete="name"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="Como devemos te chamar?"
-                className="px-4 py-3 rounded-2xl outline-none"
-                style={{
-                  background: 'var(--surface-inset)',
-                  border: '1px solid var(--border-1)',
-                  color: 'var(--text-1)',
-                  fontFamily: 'var(--font-body)',
-                }}
               />
+              <span>
+                Você está logado como{' '}
+                <strong style={{ color: 'var(--text-1)' }}>
+                  {prefillName ?? prefillEmail}
+                </strong>
+                . A assinatura será vinculada à sua conta automaticamente.
+              </span>
             </div>
           )}
 
@@ -248,27 +165,43 @@ export default function AssineEducaClient({
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={handleContinue}
-            disabled={!canSubmit || loading}
-            className="w-full px-5 py-4 rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-60"
-            style={{
-              background: 'var(--accent)',
-              color: 'var(--accent-contrast)',
-              fontFamily: 'var(--font-body)',
-              fontWeight: 600,
-            }}
-          >
-            {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                Continuar pra assinatura
-              </>
-            )}
-          </button>
+          {isAuthenticated ? (
+            <button
+              type="button"
+              onClick={handleAssinar}
+              disabled={loading}
+              className="w-full px-5 py-4 rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-60"
+              style={{
+                background: 'var(--accent)',
+                color: 'var(--accent-contrast)',
+                fontFamily: 'var(--font-body)',
+                fontWeight: 600,
+              }}
+            >
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Continuar pra assinatura
+                </>
+              )}
+            </button>
+          ) : (
+            <Link
+              href="/login?next=/educa/assine"
+              className="w-full px-5 py-4 rounded-2xl flex items-center justify-center gap-2 transition-all"
+              style={{
+                background: 'var(--accent)',
+                color: 'var(--accent-contrast)',
+                fontFamily: 'var(--font-body)',
+                fontWeight: 600,
+              }}
+            >
+              <Sparkles className="w-4 h-4" />
+              Entrar pra assinar
+            </Link>
+          )}
 
           <p
             className="text-[11px] text-center mt-3"
@@ -277,7 +210,7 @@ export default function AssineEducaClient({
               fontFamily: 'var(--font-body)',
             }}
           >
-            Pagamento processado pela Hubla. Cancele quando quiser.
+            Pagamento processado com segurança. Cancele quando quiser.
           </p>
         </section>
 

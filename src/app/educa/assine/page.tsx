@@ -1,14 +1,13 @@
 /**
- * /educa/assine — primeira tela do subproduto Veritas Educa.
+ * /educa/assine — assinatura do subproduto Veritas Educa.
  *
- * Mostra o pitch, o input de email (pré-preenchido se o usuário já
- * estiver logado), o aviso de "use o mesmo email da sua conta" e o
- * botão que redireciona pro checkout externo da Hubla.
+ * Usa o checkout custom Asaas (via /api/payments/checkout?planCodigo=veritas-educa).
+ * Antes redirecionava pra link estático da Hubla; agora cria uma session
+ * Asaas e redireciona pra /checkout/[sessionId] com a identidade visual
+ * configurada em /admin/checkout.
  *
- * O retorno acontece via webhook (subscription.activated/invoice.paid).
- * Após pagar, o usuário pode logar com o mesmo email e o entitlement
- * já está ativo. Configure a URL de "obrigado" da Hubla apontando pro
- * `/educa` (ou login com next=/educa).
+ * Hubla continua como provider alternativo: basta o admin trocar o
+ * default_provider do plano `veritas-educa` em /admin/planos.
  */
 
 import { createServerSupabaseClient } from '@/lib/supabase/server'
@@ -22,30 +21,21 @@ export default async function AssineEducaPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  let prefillEmail: string | null = user?.email ?? null
   let prefillName: string | null = null
-
   if (user) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('name, email')
+      .select('name')
       .eq('id', user.id)
       .maybeSingle()
-    if (profile?.email) prefillEmail = profile.email as string
     if (profile?.name) prefillName = profile.name as string
   }
 
-  // Base URL do checkout. Usamos NEXT_PUBLIC pra também ficar disponível
-  // no client (não é segredo — é a URL pública da oferta na Hubla).
-  const checkoutBaseUrl =
-    process.env.NEXT_PUBLIC_HUBLA_CHECKOUT_URL_VERITAS_EDUCA ?? null
-
   return (
     <AssineEducaClient
-      prefillEmail={prefillEmail}
+      prefillEmail={user?.email ?? null}
       prefillName={prefillName}
       isAuthenticated={!!user}
-      checkoutBaseUrl={checkoutBaseUrl}
     />
   )
 }
