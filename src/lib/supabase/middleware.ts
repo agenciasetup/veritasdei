@@ -104,6 +104,11 @@ export async function updateSession(request: NextRequest) {
       // e o atalho "Admin" no perfil leva pra cá.
       path === '/admin' ||
       path.startsWith('/admin/') ||
+      // Checkout custom (Asaas). /educa/assine cria a sessão e redireciona
+      // pra /checkout/<sessionId>; sem essa permissão o middleware joga o
+      // usuário de volta pra /educa.
+      path === '/checkout' ||
+      path.startsWith('/checkout/') ||
       // Auth / API / páginas legais
       path === '/login' ||
       path.startsWith('/auth/') ||
