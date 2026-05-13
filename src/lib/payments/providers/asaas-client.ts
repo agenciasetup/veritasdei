@@ -201,6 +201,32 @@ export async function findCustomerByExternalReference(
   return res.data[0] ?? null
 }
 
+/**
+ * Atualiza dados do customer. Asaas exige `cpfCnpj` no customer para
+ * gerar qualquer cobrança (PIX/Boleto/Cartão), e benefíciamos de ter
+ * email + telefone para os e-mails transacionais que ela manda. Por
+ * isso atualizamos o customer logo antes de cada criação de subscription.
+ *
+ * Endpoint: POST /v3/customers/:id (a Asaas trata POST como upsert
+ * parcial — apenas os campos enviados são alterados).
+ */
+export async function updateCustomer(
+  id: string,
+  input: {
+    name?: string
+    email?: string
+    cpfCnpj?: string
+    mobilePhone?: string
+    phone?: string
+    postalCode?: string
+    addressNumber?: string
+    addressComplement?: string
+    province?: string
+  },
+): Promise<AsaasCustomer> {
+  return request<AsaasCustomer>('POST', `/customers/${id}`, input)
+}
+
 // --------------------------------------------------------------------------
 // Payments (single payment ou parcelado)
 // --------------------------------------------------------------------------

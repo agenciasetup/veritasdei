@@ -25,6 +25,7 @@ import {
   getPixQrCode,
   intervaloToCycle,
   listSubscriptionPayments,
+  updateCustomer,
   type AsaasBillingType,
 } from '@/lib/payments/providers/asaas-client'
 
@@ -38,27 +39,47 @@ const cardSchema = z.object({
   ccv: z.string().min(3).max(4),
 })
 
-const holderSchema = z.object({
+// Dados que SEMPRE precisamos no customer Asaas pra cobrar (PIX/Boleto/Cartão).
+// O CPF é o que faltava — Asaas exige `cpfCnpj` no customer pra qualquer
+// cobrança, retornando "É necessário preencher o CPF ou CNPJ do cliente".
+const customerSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
-  cpfCnpj: z.string().min(11).max(18),
+  cpfCnpj: z
+    .string()
+    .min(11)
+    .max(18)
+    .refine(v => {
+      const d = v.replace(/\D/g, '')
+      return d.length === 11 || d.length === 14
+    }, 'CPF/CNPJ deve ter 11 ou 14 dígitos'),
+  mobilePhone: z.string().max(20).optional(),
+})
+
+// Endereço usado só pra cartão (Asaas exige no creditCardHolderInfo).
+const addressSchema = z.object({
   postalCode: z.string().min(8).max(9),
   addressNumber: z.string().min(1).max(10),
   addressComplement: z.string().max(80).optional(),
-  phone: z.string().max(20).optional(),
-  mobilePhone: z.string().max(20).optional(),
 })
 
 const bodySchema = z.discriminatedUnion('method', [
   z.object({
     sessionId: z.string().uuid(),
     method: z.literal('pix'),
+    customer: customerSchema,
+  }),
+  z.object({
+    sessionId: z.string().uuid(),
+    method: z.literal('boleto'),
+    customer: customerSchema,
   }),
   z.object({
     sessionId: z.string().uuid(),
     method: z.literal('credit_card'),
+    customer: customerSchema,
     card: cardSchema,
-    holder: holderSchema,
+    address: addressSchema,
     installments: z.number().int().min(1).max(12).optional(),
   }),
 ])
@@ -133,10 +154,30 @@ export async function POST(req: Request) {
     .slice(0, 10) // YYYY-MM-DD (D+1)
 
   const billingType: AsaasBillingType =
-    body.method === 'pix' ? 'PIX' : 'CREDIT_CARD'
+    body.method === 'pix'
+      ? 'PIX'
+      : body.method === 'boleto'
+        ? 'BOLETO'
+        : 'CREDIT_CARD'
 
   try {
-    // 4. Cria subscription no Asaas
+    // 4. Atualiza o customer Asaas com os dados que o checkout coletou.
+    // Sem cpfCnpj, qualquer cobrança falha — independente do método.
+    await updateCustomer(sess.asaas_customer_id as string, {
+      name: body.customer.name,
+      email: body.customer.email,
+      cpfCnpj: body.customer.cpfCnpj.replace(/\D/g, ''),
+      mobilePhone: body.customer.mobilePhone?.replace(/\D/g, '') || undefined,
+      ...(body.method === 'credit_card'
+        ? {
+            postalCode: body.address.postalCode.replace(/\D/g, ''),
+            addressNumber: body.address.addressNumber,
+            addressComplement: body.address.addressComplement,
+          }
+        : {}),
+    })
+
+    // 5. Cria subscription no Asaas
     const sub = await createSubscription({
       customer: sess.asaas_customer_id as string,
       billingType,
@@ -157,7 +198,16 @@ export async function POST(req: Request) {
                   : body.card.expiryYear,
               ccv: body.card.ccv,
             },
-            creditCardHolderInfo: body.holder,
+            creditCardHolderInfo: {
+              name: body.customer.name,
+              email: body.customer.email,
+              cpfCnpj: body.customer.cpfCnpj.replace(/\D/g, ''),
+              postalCode: body.address.postalCode.replace(/\D/g, ''),
+              addressNumber: body.address.addressNumber,
+              addressComplement: body.address.addressComplement,
+              mobilePhone:
+                body.customer.mobilePhone?.replace(/\D/g, '') || undefined,
+            },
             remoteIp: getRemoteIp(req),
           }
         : {}),
@@ -213,7 +263,22 @@ export async function POST(req: Request) {
       }
     }
 
-    // 8. Cartão: o payment já vem confirmado (capture síncrona)
+    // 8. Boleto: devolve a URL do bankSlip (a Asaas hospeda) +
+    // o invoiceUrl (página completa da fatura).
+    if (body.method === 'boleto' && firstPayment) {
+      return NextResponse.json({
+        ok: true,
+        paymentId: firstPayment.id,
+        subscriptionId: sub.id,
+        boleto: {
+          bankSlipUrl: firstPayment.bankSlipUrl ?? null,
+          dueDate: firstPayment.dueDate,
+        },
+        invoiceUrl: firstPayment.invoiceUrl ?? null,
+      })
+    }
+
+    // 9. Cartão: o payment já vem confirmado (capture síncrona)
     return NextResponse.json({
       ok: true,
       paymentId: firstPayment?.id ?? null,
