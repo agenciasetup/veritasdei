@@ -83,7 +83,15 @@ const DIFFICULTY_COLORS: Record<string, string> = {
   'Avançado': 'rgba(201,168,76,0.25)',
 }
 
-export default function TrilhasView() {
+interface TrilhasViewProps {
+  /** Esconde o page-header (título e subtítulo). Útil quando embutido em
+   *  outro dashboard (ex.: `/educa/estudo`) que já tem seu próprio título. */
+  hideHeader?: boolean
+  /** Limita o número de trilhas mostradas. Default = todas. */
+  limit?: number
+}
+
+export default function TrilhasView({ hideHeader, limit }: TrilhasViewProps = {}) {
   const [trails, setTrails] = useState<Trail[]>([])
   const [loading, setLoading] = useState(true)
   const [openTrailId, setOpenTrailId] = useState<string | null>(null)
@@ -380,20 +388,24 @@ export default function TrilhasView() {
   }
 
   // ─── TRAIL LIST VIEW ───
+  const visibleTrails = typeof limit === 'number' ? trails.slice(0, limit) : trails
+
   return (
-    <div className="flex flex-col min-h-screen relative">
-      <div className="bg-glow" />
-      <section className="page-header relative z-10">
-        <h1>Trilhas de Aprendizado</h1>
-        <p className="subtitle">
-          Caminhos estruturados para aprender a fé católica passo a passo. Escolha uma trilha e estude o conteúdo diretamente aqui.
-        </p>
-        <div className="ornament-divider max-w-sm mx-auto mt-4"><span>&#10022;</span></div>
-      </section>
+    <div className="flex flex-col relative">
+      {!hideHeader && <div className="bg-glow" />}
+      {!hideHeader && (
+        <section className="page-header relative z-10">
+          <h1>Trilhas de Aprendizado</h1>
+          <p className="subtitle">
+            Caminhos estruturados para aprender a fé católica passo a passo. Escolha uma trilha e estude o conteúdo diretamente aqui.
+          </p>
+          <div className="ornament-divider max-w-sm mx-auto mt-4"><span>&#10022;</span></div>
+        </section>
+      )}
 
       <main className="relative z-10 flex-1 pb-16 px-4 md:px-8">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {trails.map((trail, i) => {
+          {visibleTrails.map((trail, i) => {
             const Icon = ICON_MAP[trail.iconName] ?? BookOpen
             const completed = completedSteps[trail.id] ?? []
             const progress = trail.steps.length > 0

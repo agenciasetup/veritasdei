@@ -1,108 +1,48 @@
 'use client'
 
 /**
- * Dashboard do Veritas Educa — versão minimal.
+ * Dashboard do Veritas Educa.
  *
- * 5 seções, todos hrefs apontam pra dentro de /educa/*:
- *   1. Header        — saudação + LevelBadge + XpBar + streak
- *   2. EducaSearch   — "Pergunte ao Magistério" (IA)
- *   3. Modo Debate   — card destaque → /educa/debate
- *   4. Trilhas       — atalho → /educa/trilhas
- *   5. CTA Assine    — só se !isPremium → /educa/assine
+ * Estrutura (de cima pra baixo):
+ *   1. LevelHero         — avatar + nível atual→próximo + barra dourada
+ *   2. DailyCheckin      — 7 gemas da semana, hoje destacado
+ *   3. EducaSearch       — "Pergunte ao Magistério" (IA)
+ *   4. Continue de onde parou  — só se houver histórico
+ *   5. Estudo (atalho)   — leva ao hub /educa/estudo
+ *   6. Modo Debate       — card destaque vinho
+ *   7. CTA Assine        — só se !isPremium
  *
- * Sem "Continue de onde parou", "Pilares" e "Provas recentes" — esses
- * dados de progresso vivem em /educa/perfil (XP, streak) e /educa/trilhas
- * (continue de onde parou dentro da trilha). O dashboard fica focado em
- * "começar agora", não em histórico.
+ * Estética sacra: dourado (--accent), vinho (--wine*), preto, off-white.
+ * Hrefs internos sempre vão pra /educa/* ou /estudo/* (que está na
+ * whitelist do middleware educa).
  */
 
 import Link from 'next/link'
-import { ArrowRight, BookOpen, Flame, GraduationCap, Lock, NotebookPen, Swords } from 'lucide-react'
+import { ArrowRight, BookOpen, Lock, NotebookPen, Swords } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { useGamification } from '@/lib/gamification/useGamification'
 import { useLastStudied } from '@/lib/content/useLastStudied'
 import { useSubscription } from '@/contexts/SubscriptionContext'
-import LevelBadge from '@/components/gamification/LevelBadge'
-import XpBar from '@/components/gamification/XpBar'
+import LevelHero from '@/components/educa/LevelHero'
+import DailyCheckin from '@/components/educa/DailyCheckin'
 import EducaSearch from './EducaSearch'
 
-function greeting(): string {
-  const h = new Date().getHours()
-  if (h < 5) return 'Boa madrugada'
-  if (h < 12) return 'Bom dia'
-  if (h < 18) return 'Boa tarde'
-  return 'Boa noite'
-}
-
 export default function EducaDashboard() {
-  const { user, profile } = useAuth()
-  const gami = useGamification(user?.id)
+  const { user } = useAuth()
   const { last: lastStudied } = useLastStudied(user?.id)
   const { isPremium, loading: subLoading } = useSubscription()
 
-  const firstName = (profile?.name || user?.email?.split('@')[0] || '')
-    .split(' ')[0]
-
   return (
     <main className="max-w-2xl mx-auto px-4 pt-5 pb-24 md:py-8 space-y-4">
-      {/* 1. Header — saudação + XP + streak */}
-      <header
-        className="rounded-3xl p-5 md:p-6"
-        style={{
-          background: 'var(--surface-2)',
-          border: '1px solid var(--border-1)',
-        }}
-      >
-        <div className="flex items-start justify-between gap-3 mb-4">
-          <div className="min-w-0">
-            <p
-              className="text-xs tracking-[0.15em] uppercase mb-1"
-              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}
-            >
-              {greeting()}
-            </p>
-            <h1
-              className="text-2xl md:text-3xl truncate"
-              style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
-            >
-              {firstName ? `Olá, ${firstName}` : 'Veritas Educa'}
-            </h1>
-          </div>
-          <LevelBadge level={gami.level} size="md" showLabel />
-        </div>
+      {/* 1. LevelHero */}
+      <LevelHero />
 
-        <XpBar
-          level={gami.level}
-          xpInLevel={gami.xpInLevel}
-          xpToNextLevel={gami.xpToNextLevel}
-          percentInLevel={gami.percentInLevel}
-          size="md"
-          showLabels
-        />
+      {/* 2. Sequência diária */}
+      <DailyCheckin />
 
-        <div
-          className="flex items-center justify-between mt-3 text-xs"
-          style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
-        >
-          <span className="flex items-center gap-1.5">
-            <Flame
-              className="w-3.5 h-3.5"
-              style={{
-                color: gami.currentStreak > 0 ? 'var(--accent)' : 'var(--text-3)',
-              }}
-            />
-            {gami.currentStreak > 0
-              ? `${gami.currentStreak} dia${gami.currentStreak === 1 ? '' : 's'} seguidos`
-              : 'Estude hoje pra começar uma sequência'}
-          </span>
-          <span>{gami.totalXp} XP</span>
-        </div>
-      </header>
-
-      {/* 2. Pergunte ao Magistério (IA) */}
+      {/* 3. Pergunte ao Magistério (IA) */}
       <EducaSearch />
 
-      {/* 2.5. Continue de onde parou (se houver) */}
+      {/* 4. Continue de onde parou (se houver) */}
       {lastStudied && (
         <Link
           href={`/estudo/${lastStudied.groupSlug}`}
@@ -162,7 +102,7 @@ export default function EducaDashboard() {
         </Link>
       )}
 
-      {/* 3. Estudo (hub) — atalho */}
+      {/* 5. Estudo (atalho pro hub) */}
       <Link
         href="/educa/estudo"
         className="block rounded-2xl p-4 active:scale-[0.99] transition-transform"
@@ -192,7 +132,7 @@ export default function EducaDashboard() {
               className="text-xs"
               style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
             >
-              Pilares, provas, selos e grupos de estudo.
+              Trilhas, pilares, provas, selos e grupos.
             </p>
           </div>
           <ArrowRight
@@ -202,22 +142,22 @@ export default function EducaDashboard() {
         </div>
       </Link>
 
-      {/* 3.5. Modo Debate — destaque */}
+      {/* 6. Modo Debate — destaque com gradient vinho→preto (sacral) */}
       <Link
         href="/educa/debate"
         className="block rounded-2xl p-4 active:scale-[0.99] transition-transform"
         style={{
           background:
-            'linear-gradient(135deg, color-mix(in srgb, var(--accent) 18%, var(--surface-2)) 0%, var(--surface-2) 100%)',
-          border: '1px solid color-mix(in srgb, var(--accent) 28%, transparent)',
+            'linear-gradient(135deg, #5A1625 0%, #2a0f15 60%, var(--surface-2) 100%)',
+          border: '1px solid color-mix(in srgb, var(--wine-light) 35%, transparent)',
         }}
       >
         <div className="flex items-center gap-3">
           <div
             className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
             style={{
-              background: 'var(--accent-soft)',
-              border: '1px solid var(--border-1)',
+              background: 'rgba(0,0,0,0.35)',
+              border: '1px solid color-mix(in srgb, var(--accent) 25%, transparent)',
             }}
           >
             <Swords className="w-5 h-5" style={{ color: 'var(--accent)' }} />
@@ -231,7 +171,10 @@ export default function EducaDashboard() {
             </p>
             <p
               className="text-xs"
-              style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}
+              style={{
+                color: 'color-mix(in srgb, var(--text-1) 70%, transparent)',
+                fontFamily: 'var(--font-body)',
+              }}
             >
               Sola Scriptura, Maria, Eucaristia, Papado, Sola Fide.
             </p>
@@ -243,50 +186,7 @@ export default function EducaDashboard() {
         </div>
       </Link>
 
-      {/* 4. Trilhas */}
-      <Link
-        href="/educa/trilhas"
-        className="block rounded-2xl p-4 active:scale-[0.99] transition-transform"
-        style={{
-          background: 'var(--surface-2)',
-          border: '1px solid var(--border-1)',
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{
-              background: 'var(--accent-soft)',
-              border: '1px solid var(--border-1)',
-            }}
-          >
-            <GraduationCap
-              className="w-5 h-5"
-              style={{ color: 'var(--accent)' }}
-            />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p
-              className="text-sm font-medium mb-0.5"
-              style={{ color: 'var(--text-1)', fontFamily: 'var(--font-body)' }}
-            >
-              Trilhas de estudo
-            </p>
-            <p
-              className="text-xs"
-              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
-            >
-              Católico iniciante, Apologética, Pais da Igreja e mais.
-            </p>
-          </div>
-          <ArrowRight
-            className="w-4 h-4 flex-shrink-0"
-            style={{ color: 'var(--text-3)' }}
-          />
-        </div>
-      </Link>
-
-      {/* 5. CTA pra assinar (só se ainda não tem plano) */}
+      {/* 7. CTA pra assinar (só se ainda não tem plano) */}
       {!subLoading && !isPremium && (
         <Link
           href="/educa/assine"

@@ -1,23 +1,16 @@
 /**
- * /educa/perfil — perfil mínimo do Veritas Educa.
+ * /educa/perfil — redireciona pra /perfil.
  *
- * Server protege rota. Client compõe avatar + plano + XP/streak + sair.
+ * O perfil do Educa reusa o /perfil do Veritas full (com ProfileHeaderCard,
+ * tabs, capa, avatar editor). A aba "Carteirinha" é escondida quando o
+ * produto é veritas-educa. Mantemos este redirect por compatibilidade
+ * com links antigos pra /educa/perfil.
  */
 
 import { redirect } from 'next/navigation'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
-import EducaProfile from './EducaProfile'
 
 export const dynamic = 'force-dynamic'
 
-export default async function EducaPerfilPage() {
-  const supabase = await createServerSupabaseClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
-    redirect('/login?next=/educa/perfil')
-  }
-
-  return <EducaProfile />
+export default function EducaPerfilRedirect() {
+  redirect('/perfil')
 }
