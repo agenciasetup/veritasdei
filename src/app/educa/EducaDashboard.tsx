@@ -16,14 +16,13 @@
  */
 
 import Link from 'next/link'
-import { ArrowRight, BookOpen, Lock, NotebookPen, Swords } from 'lucide-react'
+import { ArrowRight, BookOpen, Lock, NotebookPen, Search, Sparkles, Swords } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLastStudied } from '@/lib/content/useLastStudied'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import LevelHero from '@/components/educa/LevelHero'
 import DailyCheckin from '@/components/educa/DailyCheckin'
 import GlassCard from '@/components/educa/GlassCard'
-import EducaSearch from './EducaSearch'
 
 export default function EducaDashboard() {
   const { user } = useAuth()
@@ -45,8 +44,64 @@ export default function EducaDashboard() {
         {/* 2. Sequência diária */}
         <DailyCheckin />
 
-        {/* 3. Pergunte ao Magistério */}
-        <EducaSearch />
+        {/* 3. Pergunte ao Magistério — atalho pra página dedicada
+             (antes era inline; ficava espremido com a resposta longa). */}
+        <Link href="/educa/magisterio" className="block">
+          <GlassCard variant="default" padded interactive>
+            <div className="flex items-center gap-3 md:gap-4">
+              <div
+                className="w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center flex-shrink-0 relative"
+                style={{
+                  background:
+                    'linear-gradient(135deg, color-mix(in srgb, var(--accent) 32%, rgba(0,0,0,0.4)) 0%, rgba(0,0,0,0.5) 100%)',
+                  border:
+                    '1px solid color-mix(in srgb, var(--accent) 45%, transparent)',
+                  boxShadow:
+                    '0 0 18px color-mix(in srgb, var(--accent) 28%, transparent)',
+                }}
+              >
+                <Sparkles
+                  className="w-5 h-5 md:w-6 md:h-6"
+                  style={{ color: 'var(--accent)' }}
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p
+                  className="text-[10px] tracking-[0.2em] uppercase mb-0.5"
+                  style={{
+                    color: 'var(--accent)',
+                    fontFamily: 'var(--font-display)',
+                  }}
+                >
+                  IA Católica
+                </p>
+                <p
+                  className="text-sm md:text-base font-medium"
+                  style={{
+                    color: 'var(--text-1)',
+                    fontFamily: 'var(--font-body)',
+                  }}
+                >
+                  Pergunte ao Magistério
+                </p>
+                <p
+                  className="text-[11px] mt-0.5 truncate flex items-center gap-1"
+                  style={{
+                    color: 'var(--text-3)',
+                    fontFamily: 'var(--font-body)',
+                  }}
+                >
+                  <Search className="w-3 h-3" />
+                  Bíblia, Magistério e Padres da Igreja
+                </p>
+              </div>
+              <ArrowRight
+                className="w-4 h-4 flex-shrink-0"
+                style={{ color: 'var(--accent)' }}
+              />
+            </div>
+          </GlassCard>
+        </Link>
 
         {/* 4. Continue de onde parou */}
         {lastStudied && (
