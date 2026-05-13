@@ -14,6 +14,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { Loader2, Search, Sparkles } from 'lucide-react'
+import GlassCard from '@/components/educa/GlassCard'
 
 type Verse = { reference: string; text: string; similarity?: number }
 type Source = { reference: string; text: string }
@@ -93,13 +94,7 @@ export default function EducaSearch() {
   }
 
   return (
-    <section
-      className="rounded-3xl p-4 md:p-5"
-      style={{
-        background: 'var(--surface-2)',
-        border: '1px solid var(--border-1)',
-      }}
-    >
+    <GlassCard variant="default" padded as="section">
       <div className="flex items-center gap-2 mb-3">
         <Sparkles className="w-4 h-4" style={{ color: 'var(--accent)' }} />
         <h2
@@ -209,7 +204,7 @@ export default function EducaSearch() {
           )}
         </div>
       )}
-    </section>
+    </GlassCard>
   )
 }
 
