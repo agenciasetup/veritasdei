@@ -1,20 +1,21 @@
 'use client'
 
 /**
- * EducaEstudoView — hub principal de estudo, estilo área de membros.
+ * EducaEstudoView — hub principal de estudo, estilo área de membros premium.
  *
- * Hierarquia visual (do mais "marketing" pro mais "operacional"):
+ * Topo cinematográfico:
+ *  - Se admin cadastrou banners ativos → BannerSlider (auto-play).
+ *  - Senão se o user tem progresso → CinematicHero "Continue de onde parou".
+ *  - Senão → CinematicHero "welcome" com pitch.
  *
- *  1. Hero — "Continue de onde parou" (banner cheio com gradient + título)
- *     ou, sem progresso, um pitch de boas-vindas.
- *  2. Trilhas — grade de cards bonitos (reusa TrilhasView com hideHeader + limit=6),
- *     com link "Ver todas" pra /educa/trilhas que ainda mostra a lista completa.
- *  3. Pilares — Bíblia/Magistério/Patrística como cards grandes coloridos
- *     (gradient + ícone grande + barra de progresso). Links pra /estudo/{slug}.
- *  4. Provas recentes + Selos — bloco de 2 colunas (lg) com link pra perfil.
- *  5. Grupos de estudo — card de atalho discreto no fim.
+ * Conteúdo (com fade entre o hero e a próxima seção):
+ *  - Pilares de estudo (rail horizontal com capas reais quando há cover_url).
+ *  - Provas recentes + Selos (2 cols no desktop, stack no mobile).
+ *  - Grupos de estudo (atalho).
  *
- * Nada novo no banco — só composição visual sobre os hooks existentes.
+ * Trilhas foram removidas do hub — material ainda raso. Continuam
+ * acessíveis em /educa/trilhas via URL direta (usuário não vai parar
+ * lá por engano).
  */
 
 import { useEffect, useState } from 'react'
@@ -24,8 +25,6 @@ import {
   Book,
   BookOpen,
   Building2,
-  Check,
-  GraduationCap,
   Loader2,
   NotebookPen,
   Scroll,
@@ -39,20 +38,12 @@ import { useLastStudied } from '@/lib/content/useLastStudied'
 import { useReliquias } from '@/lib/gamification/useReliquias'
 import { createClient } from '@/lib/supabase/client'
 import ContentRail, { RailItem } from '@/components/educa/ContentRail'
-import BannerSlider from '@/components/educa/BannerSlider'
+import BannerSlider, { useActiveBanners } from '@/components/educa/BannerSlider'
+import CinematicHero from '@/components/educa/CinematicHero'
+import GlassCard from '@/components/educa/GlassCard'
 import { RARITY_META } from '@/types/gamification'
-import { TRAILS_1 } from '@/features/trilhas/trails1'
-import { TRAILS_2 } from '@/features/trilhas/trails2'
-import { TRAILS_3 } from '@/features/trilhas/trails3'
-import { TRAILS_4 } from '@/features/trilhas/trails4'
-import { TRAILS_5 } from '@/features/trilhas/trails5'
-import { TRAILS_6 } from '@/features/trilhas/trails6'
-import type { Trail } from '@/features/trilhas/trails1'
 
-// Paleta sacra: dourado (Bíblia — texto sagrado), vinho (Magistério —
-// autoridade da Igreja, sangue de Cristo) e bronze/sépia (Patrística —
-// Padres da Igreja, antiguidade). Quando virmos pra Fase B (image_url),
-// trocamos por imagem real; até lá, gradient + ícone já carregam o tom.
+// Paleta sacra dos pilares (fallback quando não há cover_url cadastrado).
 const PILLAR_VISUAL: Record<
   string,
   { gradient: string; icon: React.ElementType; color: string }
@@ -73,69 +64,15 @@ const PILLAR_VISUAL: Record<
     color: '#C9A876',
   },
 }
-
 const DEFAULT_PILLAR_VISUAL = {
   gradient: 'linear-gradient(135deg, #4A3B28 0%, #1f1812 100%)',
   icon: BookOpen,
   color: '#B8AFA2',
 }
 
-// Catálogo de trilhas estático — fallback quando o DB não tem trails
-// cadastradas. Quando o admin cadastra `trails` no banco (com
-// `cover_url`), o rail prefere essas e mostra a capa real.
-const STATIC_TRAILS: Trail[] = [
-  ...TRAILS_1, ...TRAILS_2, ...TRAILS_3,
-  ...TRAILS_4, ...TRAILS_5, ...TRAILS_6,
-]
-
-/** Carrega trilhas do DB (com cover_url), fallback no estático. */
-function useEducaTrails(): { trails: Trail[]; loading: boolean } {
-  const [trails, setTrails] = useState<Trail[]>(STATIC_TRAILS)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const supabase = createClient()
-    if (!supabase) {
-      setLoading(false)
-      return
-    }
-    let cancelled = false
-    ;(async () => {
-      const { data, error } = await supabase
-        .from('trails')
-        .select('id, title, subtitle, description, difficulty, color, icon_name, cover_url')
-        .eq('visible', true)
-        .order('sort_order')
-      if (cancelled) return
-      if (!error && Array.isArray(data) && data.length > 0) {
-        setTrails(
-          data.map((t) => ({
-            id: t.id as string,
-            title: (t.title as string) ?? '',
-            subtitle: (t.subtitle as string) ?? '',
-            description: (t.description as string) ?? '',
-            difficulty: (t.difficulty as Trail['difficulty']) ?? 'Iniciante',
-            color: (t.color as string) ?? '#C9A84C',
-            iconName: (t.icon_name as string) ?? 'GraduationCap',
-            steps: [],
-            coverUrl: (t.cover_url as string | null) ?? null,
-          })),
-        )
-      }
-      setLoading(false)
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  return { trails, loading }
-}
-
 /** Carrega cover_url dos pilares (content_groups) indexado por slug. */
 function usePillarCovers(): Record<string, string> {
   const [covers, setCovers] = useState<Record<string, string>>({})
-
   useEffect(() => {
     const supabase = createClient()
     if (!supabase) return
@@ -158,14 +95,7 @@ function usePillarCovers(): Record<string, string> {
       cancelled = true
     }
   }, [])
-
   return covers
-}
-
-const DIFFICULTY_LABEL: Record<Trail['difficulty'], string> = {
-  Iniciante: 'Iniciante',
-  Intermediário: 'Intermediário',
-  Avançado: 'Avançado',
 }
 
 export default function EducaEstudoView() {
@@ -173,47 +103,36 @@ export default function EducaEstudoView() {
   const { last, loading: lastLoading } = useLastStudied(user?.id)
   const { attempts, pillars, loading: recentLoading } = useMyStudyRecent()
   const { catalog, unlockedIds, loading: relLoading } = useReliquias(user?.id)
-  const { trails } = useEducaTrails()
+  const { banners, loading: bannersLoading } = useActiveBanners()
   const pillarCovers = usePillarCovers()
 
   const unlockedSelos = catalog.filter((r) => unlockedIds.has(r.id))
+  const hasBanners = banners.length > 0
+  const heroLoading = bannersLoading || lastLoading
 
   return (
-    <main className="pb-24 md:pb-16">
-      {/* ─── 0. BANNER SLIDER (admin) ───────────────────────────────── */}
-      <BannerSlider />
+    <main className="pb-24 md:pb-16" style={{ background: 'var(--surface-1)' }}>
+      {/* ─── HERO CINEMATOGRÁFICO ───────────────────────────────────── */}
+      {!heroLoading && (
+        hasBanners ? (
+          <BannerSlider banners={banners} />
+        ) : last ? (
+          <CinematicHero
+            variant="continue"
+            data={{
+              href: `/estudo/${last.groupSlug}`,
+              eyebrow: 'Continue de onde parou',
+              title: last.subtopicTitle,
+              subtitle: last.groupTitle,
+            }}
+          />
+        ) : (
+          <CinematicHero variant="welcome" />
+        )
+      )}
 
-      {/* ─── 1. HERO ─────────────────────────────────────────────────── */}
-      <HeroSection
-        loading={lastLoading}
-        last={
-          last
-            ? {
-                href: `/estudo/${last.groupSlug}`,
-                title: last.subtopicTitle,
-                subtitle: last.groupTitle,
-              }
-            : null
-        }
-      />
-
-      <div className="max-w-6xl mx-auto px-4 md:px-8 pt-6 md:pt-10 space-y-10 md:space-y-12">
-        {/* ─── 2. TRILHAS (rail horizontal Netflix-style) ───────────── */}
-        <ContentRail
-          title="Trilhas guiadas"
-          subtitle="Caminhos estruturados pra estudar com método."
-          cta={{ label: 'Ver todas', href: '/educa/trilhas' }}
-        >
-          {trails.map((t) => (
-            <div key={t.id} className="contents">
-              <RailItem widthClassName="w-72 md:w-80">
-                <TrailPosterCard trail={t} />
-              </RailItem>
-            </div>
-          ))}
-        </ContentRail>
-
-        {/* ─── 3. PILARES (rail horizontal) ──────────────────────── */}
+      <div className="max-w-6xl mx-auto px-4 md:px-8 pt-2 md:pt-4 -mt-16 md:-mt-24 relative space-y-10 md:space-y-14">
+        {/* ─── PILARES (destaque principal) ───────────────────────── */}
         {recentLoading ? (
           <section>
             <SectionHeader
@@ -258,7 +177,7 @@ export default function EducaEstudoView() {
           </ContentRail>
         )}
 
-        {/* ─── 4. PROVAS + SELOS ──────────────────────────────────── */}
+        {/* ─── PROVAS + SELOS ─────────────────────────────────────── */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
           <ProvasCard attempts={attempts} loading={recentLoading} />
           <SelosCard
@@ -268,133 +187,50 @@ export default function EducaEstudoView() {
           />
         </section>
 
-        {/* ─── 5. GRUPOS DE ESTUDO ────────────────────────────────── */}
-        <Link
-          href="/estudo/grupos"
-          className="block rounded-2xl p-5 active:scale-[0.99] transition-transform"
-          style={{
-            background: 'var(--surface-2)',
-            border: '1px solid var(--border-1)',
-          }}
-        >
-          <div className="flex items-center gap-4">
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-              style={{
-                background: 'var(--accent-soft)',
-                border: '1px solid var(--border-1)',
-              }}
-            >
-              <Users className="w-6 h-6" style={{ color: 'var(--accent)' }} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p
-                className="text-sm font-medium mb-0.5"
+        {/* ─── GRUPOS DE ESTUDO ──────────────────────────────────── */}
+        <Link href="/estudo/grupos" className="block">
+          <GlassCard variant="default" padded interactive>
+            <div className="flex items-center gap-4">
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
                 style={{
-                  color: 'var(--text-1)',
-                  fontFamily: 'var(--font-body)',
+                  background:
+                    'linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, rgba(0,0,0,0.3)) 0%, rgba(0,0,0,0.45) 100%)',
+                  border:
+                    '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
                 }}
               >
-                Grupos de estudo
-              </p>
-              <p
-                className="text-xs"
-                style={{
-                  color: 'var(--text-3)',
-                  fontFamily: 'var(--font-body)',
-                }}
-              >
-                Estude com outras pessoas — entre num grupo por código.
-              </p>
+                <Users className="w-6 h-6" style={{ color: 'var(--accent)' }} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p
+                  className="text-sm font-medium mb-0.5"
+                  style={{
+                    color: 'var(--text-1)',
+                    fontFamily: 'var(--font-body)',
+                  }}
+                >
+                  Grupos de estudo
+                </p>
+                <p
+                  className="text-xs"
+                  style={{
+                    color: 'var(--text-3)',
+                    fontFamily: 'var(--font-body)',
+                  }}
+                >
+                  Estude com outras pessoas — entre num grupo por código.
+                </p>
+              </div>
+              <ArrowRight
+                className="w-4 h-4 flex-shrink-0"
+                style={{ color: 'var(--accent)' }}
+              />
             </div>
-            <ArrowRight
-              className="w-4 h-4 flex-shrink-0"
-              style={{ color: 'var(--text-3)' }}
-            />
-          </div>
+          </GlassCard>
         </Link>
       </div>
     </main>
-  )
-}
-
-// ──────────────────────────────────────────────────────────────────────
-// Hero
-// ──────────────────────────────────────────────────────────────────────
-
-function HeroSection({
-  loading,
-  last,
-}: {
-  loading: boolean
-  last: { href: string; title: string; subtitle: string } | null
-}) {
-  return (
-    <div
-      className="relative w-full overflow-hidden"
-      style={{
-        minHeight: 220,
-        background:
-          'linear-gradient(135deg, #0f0e0c 0%, #14080b 60%, #0f0e0c 100%)',
-        borderBottom: '1px solid var(--border-1)',
-      }}
-    >
-      {/* Glow decorativo — dourado + acento vinho sutil */}
-      <div
-        aria-hidden
-        className="absolute inset-0"
-        style={{
-          background:
-            'radial-gradient(ellipse 800px 300px at 20% 100%, rgba(201,168,76,0.22), transparent 70%), radial-gradient(ellipse 400px 200px at 90% 0%, rgba(139,49,69,0.18), transparent 70%)',
-        }}
-      />
-      <div className="relative max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-12">
-        <p
-          className="text-[11px] md:text-xs tracking-[0.25em] uppercase mb-2 md:mb-3"
-          style={{ color: 'var(--accent)', fontFamily: 'var(--font-display)' }}
-        >
-          {last ? 'Continue de onde parou' : 'Seu estudo'}
-        </p>
-        {loading ? (
-          <div className="h-9 w-72 rounded-md animate-pulse bg-white/5" />
-        ) : last ? (
-          <Link
-            href={last.href}
-            className="group inline-flex flex-col gap-1"
-          >
-            <h1
-              className="text-2xl md:text-4xl leading-tight"
-              style={{
-                fontFamily: 'var(--font-display)',
-                color: 'var(--text-1)',
-              }}
-            >
-              {last.title}
-            </h1>
-            <span
-              className="inline-flex items-center gap-1.5 text-xs md:text-sm"
-              style={{
-                color: 'var(--text-3)',
-                fontFamily: 'var(--font-body)',
-              }}
-            >
-              {last.subtitle}
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-            </span>
-          </Link>
-        ) : (
-          <h1
-            className="text-2xl md:text-4xl leading-tight max-w-2xl"
-            style={{
-              fontFamily: 'var(--font-display)',
-              color: 'var(--text-1)',
-            }}
-          >
-            Comece a estudar a fé católica com profundidade.
-          </h1>
-        )}
-      </div>
-    </div>
   )
 }
 
@@ -416,7 +252,10 @@ function SectionHeader({
       <div className="min-w-0">
         <h2
           className="text-xl md:text-2xl"
-          style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
+          style={{
+            fontFamily: 'var(--font-display)',
+            color: 'var(--text-1)',
+          }}
         >
           {title}
         </h2>
@@ -443,6 +282,132 @@ function SectionHeader({
 }
 
 // ──────────────────────────────────────────────────────────────────────
+// Pillar poster
+// ──────────────────────────────────────────────────────────────────────
+
+function PillarPosterCard({
+  slug,
+  title,
+  studied,
+  total,
+  percent,
+  visual,
+  coverUrl,
+}: {
+  slug: string
+  title: string
+  studied: number
+  total: number
+  percent: number
+  visual: { gradient: string; icon: React.ElementType; color: string }
+  coverUrl?: string | null
+}) {
+  const Icon = visual.icon
+  const hasCover = Boolean(coverUrl)
+  return (
+    <Link
+      href={`/estudo/${slug}`}
+      className="group relative block rounded-3xl overflow-hidden active:scale-[0.99] transition-transform"
+      style={{
+        aspectRatio: '16 / 10',
+        background: hasCover ? 'var(--surface-2)' : visual.gradient,
+        border: '1px solid color-mix(in srgb, var(--accent) 12%, transparent)',
+        boxShadow: `0 8px 32px -12px ${visual.color}55`,
+      }}
+    >
+      {hasCover && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={coverUrl as string}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
+          />
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                'linear-gradient(180deg, rgba(15,14,12,0.25) 0%, rgba(15,14,12,0.55) 70%, rgba(15,14,12,0.85) 100%)',
+            }}
+          />
+        </>
+      )}
+      {!hasCover && (
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-30"
+          style={{
+            background:
+              'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.18), transparent 60%)',
+          }}
+        />
+      )}
+      <div className="relative h-full flex flex-col justify-between p-5 md:p-6">
+        <div className="flex items-start justify-between gap-3">
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center"
+            style={{
+              background: 'rgba(0,0,0,0.35)',
+              border: '1px solid rgba(255,255,255,0.18)',
+              backdropFilter: 'blur(6px)',
+            }}
+          >
+            <Icon className="w-7 h-7 text-white" />
+          </div>
+          <span
+            className="text-xs px-2.5 py-1 rounded-full"
+            style={{
+              background: 'rgba(0,0,0,0.4)',
+              color: 'white',
+              fontFamily: 'var(--font-body)',
+              fontWeight: 600,
+              backdropFilter: 'blur(6px)',
+            }}
+          >
+            {percent}%
+          </span>
+        </div>
+        <div>
+          <h3
+            className="text-2xl md:text-3xl"
+            style={{
+              fontFamily: 'var(--font-display)',
+              color: 'white',
+              textShadow: '0 2px 12px rgba(0,0,0,0.6)',
+            }}
+          >
+            {title}
+          </h3>
+          <div className="flex items-center justify-between mt-3">
+            <span
+              className="text-xs"
+              style={{
+                color: 'rgba(255,255,255,0.85)',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              {studied}/{total} estudados
+            </span>
+            <ArrowRight className="w-4 h-4 text-white opacity-80 group-hover:translate-x-1 transition-transform" />
+          </div>
+          <div
+            className="mt-2 h-1 rounded-full overflow-hidden"
+            style={{ background: 'rgba(0,0,0,0.3)' }}
+          >
+            <div
+              className="h-full transition-all duration-700"
+              style={{ width: `${percent}%`, background: 'white' }}
+            />
+          </div>
+        </div>
+      </div>
+    </Link>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────
 // Provas
 // ──────────────────────────────────────────────────────────────────────
 
@@ -461,13 +426,7 @@ function ProvasCard({
   loading: boolean
 }) {
   return (
-    <div
-      className="rounded-3xl p-5 md:p-6"
-      style={{
-        background: 'var(--surface-2)',
-        border: '1px solid var(--border-1)',
-      }}
-    >
+    <GlassCard variant="default" padded>
       <div className="flex items-center justify-between mb-4">
         <h3
           className="text-sm tracking-[0.15em] uppercase flex items-center gap-2"
@@ -507,11 +466,11 @@ function ProvasCard({
               key={a.id}
               className="rounded-xl p-3 flex items-center justify-between"
               style={{
-                background: 'var(--surface-inset)',
+                background: 'rgba(0,0,0,0.3)',
                 border: `1px solid ${
                   a.passed
                     ? 'color-mix(in srgb, var(--success) 22%, transparent)'
-                    : 'var(--border-1)'
+                    : 'color-mix(in srgb, var(--accent) 10%, transparent)'
                 }`,
               }}
             >
@@ -549,7 +508,7 @@ function ProvasCard({
           ))}
         </ul>
       )}
-    </div>
+    </GlassCard>
   )
 }
 
@@ -572,13 +531,7 @@ function SelosCard({
   loading: boolean
 }) {
   return (
-    <div
-      className="rounded-3xl p-5 md:p-6"
-      style={{
-        background: 'var(--surface-2)',
-        border: '1px solid var(--border-1)',
-      }}
-    >
+    <GlassCard variant="default" padded>
       <div className="flex items-center justify-between mb-4">
         <h3
           className="text-sm tracking-[0.15em] uppercase flex items-center gap-2"
@@ -622,7 +575,7 @@ function SelosCard({
                 title={r.name}
                 className="aspect-square rounded-2xl flex items-center justify-center relative overflow-hidden"
                 style={{
-                  background: `color-mix(in srgb, ${meta.color} 18%, var(--surface-inset))`,
+                  background: `color-mix(in srgb, ${meta.color} 18%, rgba(0,0,0,0.4))`,
                   border: `1px solid color-mix(in srgb, ${meta.color} 40%, transparent)`,
                   boxShadow: `0 2px 12px -4px ${meta.color}55`,
                 }}
@@ -645,295 +598,7 @@ function SelosCard({
           })}
         </div>
       )}
-    </div>
-  )
-}
-
-// ──────────────────────────────────────────────────────────────────────
-// Poster cards (estilo módulo Netflix)
-// ──────────────────────────────────────────────────────────────────────
-
-/** Cor de label de dificuldade (paleta sacra). */
-const DIFFICULTY_BG: Record<Trail['difficulty'], string> = {
-  Iniciante:
-    'color-mix(in srgb, var(--accent) 18%, transparent)',
-  Intermediário:
-    'color-mix(in srgb, #C9A876 22%, transparent)',
-  Avançado:
-    'color-mix(in srgb, var(--wine-light) 28%, transparent)',
-}
-
-function TrailPosterCard({ trail }: { trail: Trail }) {
-  const hasCover = Boolean(trail.coverUrl)
-  return (
-    <Link
-      href="/educa/trilhas"
-      className="group block rounded-3xl overflow-hidden active:scale-[0.99] transition-transform relative"
-      style={{
-        aspectRatio: '4 / 5',
-        background: hasCover
-          ? 'var(--surface-2)'
-          : `linear-gradient(180deg, ${trail.color}33 0%, var(--surface-2) 60%, var(--surface-1) 100%)`,
-        border: `1px solid color-mix(in srgb, ${trail.color} 30%, transparent)`,
-        boxShadow: `0 6px 22px -8px ${trail.color}40`,
-      }}
-    >
-      {/* Cover image (se houver) — preenche todo o card como fundo */}
-      {hasCover && (
-        <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={trail.coverUrl as string}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover"
-            loading="lazy"
-          />
-          {/* Overlay gradient pra texto ficar legível */}
-          <div
-            aria-hidden
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background:
-                'linear-gradient(180deg, rgba(15,14,12,0.35) 0%, rgba(15,14,12,0.55) 55%, rgba(15,14,12,0.95) 100%)',
-            }}
-          />
-        </>
-      )}
-
-      <div className="relative h-full p-4 md:p-5 flex flex-col">
-        {/* Topo: ícone + nivel */}
-        <div className="flex items-center justify-between mb-3">
-          <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur"
-            style={{
-              background: hasCover ? 'rgba(0,0,0,0.45)' : `${trail.color}26`,
-              border: `1px solid ${trail.color}55`,
-            }}
-          >
-            <GraduationCap
-              className="w-6 h-6"
-              style={{ color: trail.color }}
-            />
-          </div>
-          <span
-            className="text-[10px] tracking-wider uppercase px-2 py-1 rounded-full backdrop-blur"
-            style={{
-              background: hasCover
-                ? 'rgba(0,0,0,0.45)'
-                : DIFFICULTY_BG[trail.difficulty],
-              color: trail.color,
-              fontFamily: 'var(--font-body)',
-              fontWeight: 600,
-            }}
-          >
-            {DIFFICULTY_LABEL[trail.difficulty]}
-          </span>
-        </div>
-
-        {/* Empurra conteúdo pra base quando há cover (visual netflix-poster) */}
-        {hasCover && <div className="flex-1" />}
-
-        {/* Meio (sem cover): título + descrição. Com cover: só título + subtítulo na base */}
-        {!hasCover ? (
-          <div className="flex-1 min-h-0">
-            <h3
-              className="text-lg md:text-xl leading-tight mb-1"
-              style={{
-                fontFamily: 'var(--font-display)',
-                color: 'var(--text-1)',
-              }}
-            >
-              {trail.title}
-            </h3>
-            <p
-              className="text-[11px] mb-3 opacity-80"
-              style={{
-                color: trail.color,
-                fontFamily: 'var(--font-body)',
-              }}
-            >
-              {trail.subtitle}
-            </p>
-            <p
-              className="text-xs leading-relaxed line-clamp-3"
-              style={{
-                color: 'var(--text-2)',
-                fontFamily: 'var(--font-body)',
-              }}
-            >
-              {trail.description}
-            </p>
-          </div>
-        ) : (
-          <div className="mt-auto">
-            <h3
-              className="text-xl md:text-2xl leading-tight mb-1"
-              style={{
-                fontFamily: 'var(--font-display)',
-                color: 'var(--text-1)',
-                textShadow: '0 2px 10px rgba(0,0,0,0.6)',
-              }}
-            >
-              {trail.title}
-            </h3>
-            <p
-              className="text-[11px] opacity-90"
-              style={{
-                color: trail.color,
-                fontFamily: 'var(--font-body)',
-              }}
-            >
-              {trail.subtitle}
-            </p>
-          </div>
-        )}
-
-        {/* Rodapé: steps + CTA */}
-        {!hasCover && (
-          <div
-            className="mt-3 pt-3 flex items-center justify-between"
-            style={{
-              borderTop: '1px solid var(--border-1)',
-            }}
-          >
-            <span
-              className="text-[11px] inline-flex items-center gap-1"
-              style={{
-                color: 'var(--text-3)',
-                fontFamily: 'var(--font-body)',
-              }}
-            >
-              <Check className="w-3 h-3" />
-              {trail.steps.length} etapas
-            </span>
-            <ArrowRight
-              className="w-4 h-4 group-hover:translate-x-1 transition-transform"
-              style={{ color: trail.color }}
-            />
-          </div>
-        )}
-      </div>
-    </Link>
-  )
-}
-
-function PillarPosterCard({
-  slug,
-  title,
-  studied,
-  total,
-  percent,
-  visual,
-  coverUrl,
-}: {
-  slug: string
-  title: string
-  studied: number
-  total: number
-  percent: number
-  visual: { gradient: string; icon: React.ElementType; color: string }
-  coverUrl?: string | null
-}) {
-  const Icon = visual.icon
-  const hasCover = Boolean(coverUrl)
-  return (
-    <Link
-      href={`/estudo/${slug}`}
-      className="group relative block rounded-3xl overflow-hidden active:scale-[0.99] transition-transform"
-      style={{
-        aspectRatio: '16 / 10',
-        background: hasCover ? 'var(--surface-2)' : visual.gradient,
-        border: '1px solid var(--border-1)',
-        boxShadow: `0 6px 24px -8px ${visual.color}55`,
-      }}
-    >
-      {hasCover && (
-        <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={coverUrl as string}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover"
-            loading="lazy"
-          />
-          <div
-            aria-hidden
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background:
-                'linear-gradient(180deg, rgba(15,14,12,0.25) 0%, rgba(15,14,12,0.55) 70%, rgba(15,14,12,0.85) 100%)',
-            }}
-          />
-        </>
-      )}
-      {!hasCover && (
-        <div
-          aria-hidden
-          className="absolute inset-0 opacity-30"
-          style={{
-            background:
-              'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.18), transparent 60%)',
-          }}
-        />
-      )}
-      <div className="relative h-full flex flex-col justify-between p-5 md:p-6">
-        <div className="flex items-start justify-between gap-3">
-          <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center"
-            style={{
-              background: 'rgba(0,0,0,0.35)',
-              border: '1px solid rgba(255,255,255,0.18)',
-            }}
-          >
-            <Icon className="w-7 h-7 text-white" />
-          </div>
-          <span
-            className="text-xs px-2.5 py-1 rounded-full"
-            style={{
-              background: 'rgba(0,0,0,0.4)',
-              color: 'white',
-              fontFamily: 'var(--font-body)',
-              fontWeight: 600,
-            }}
-          >
-            {percent}%
-          </span>
-        </div>
-        <div>
-          <h3
-            className="text-2xl md:text-3xl"
-            style={{
-              fontFamily: 'var(--font-display)',
-              color: 'white',
-              textShadow: '0 2px 8px rgba(0,0,0,0.4)',
-            }}
-          >
-            {title}
-          </h3>
-          <div className="flex items-center justify-between mt-3">
-            <span
-              className="text-xs"
-              style={{
-                color: 'rgba(255,255,255,0.85)',
-                fontFamily: 'var(--font-body)',
-              }}
-            >
-              {studied}/{total} estudados
-            </span>
-            <ArrowRight className="w-4 h-4 text-white opacity-80 group-hover:translate-x-1 transition-transform" />
-          </div>
-          <div
-            className="mt-2 h-1 rounded-full overflow-hidden"
-            style={{ background: 'rgba(0,0,0,0.3)' }}
-          >
-            <div
-              className="h-full transition-all duration-700"
-              style={{ width: `${percent}%`, background: 'white' }}
-            />
-          </div>
-        </div>
-      </div>
-    </Link>
+    </GlassCard>
   )
 }
 
@@ -961,13 +626,7 @@ function PillarsSkeleton() {
 
 function EmptyState({ text }: { text: string }) {
   return (
-    <div
-      className="rounded-2xl p-6 text-center"
-      style={{
-        background: 'var(--surface-2)',
-        border: '1px solid var(--border-1)',
-      }}
-    >
+    <GlassCard variant="default" padded className="text-center">
       <NotebookPen
         className="w-6 h-6 mx-auto mb-2"
         style={{ color: 'var(--text-3)' }}
@@ -978,6 +637,6 @@ function EmptyState({ text }: { text: string }) {
       >
         {text}
       </p>
-    </div>
+    </GlassCard>
   )
 }
