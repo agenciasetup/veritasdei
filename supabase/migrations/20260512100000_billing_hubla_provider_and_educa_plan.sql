@@ -39,13 +39,13 @@ VALUES (
   'veritas-educa',
   'Veritas Educa',
   'Aprofunde sua fé católica com trilhas de estudo guiadas, quizzes e IA católica.',
-  ARRAY[
-    'Trilhas de estudo: Bíblia, Magistério, Patrística',
-    'Pergunte ao Magistério (IA com fontes oficiais)',
-    'Quizzes com XP e conquistas',
-    'Progresso, sequência diária e relíquias',
-    'Acesso completo ao app Veritas Dei (exceto comunidade)'
-  ],
+  '[
+    "Trilhas de estudo: Bíblia, Magistério, Patrística",
+    "Pergunte ao Magistério (IA com fontes oficiais)",
+    "Quizzes com XP e conquistas",
+    "Progresso, sequência diária e relíquias",
+    "Acesso completo ao app Veritas Dei (exceto comunidade)"
+  ]'::jsonb,
   'Estudo guiado da fé católica',
   true,
   10
