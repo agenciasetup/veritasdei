@@ -14,6 +14,7 @@ import { ProductProvider } from '@/contexts/ProductContext'
 import InstallPrompt from '@/components/pwa/InstallPrompt'
 import PageTransition from '@/components/mobile/PageTransition'
 import OfflineBanner from '@/components/mobile/OfflineBanner'
+import SubscribeBanner from '@/components/payments/SubscribeBanner'
 import dynamic from 'next/dynamic'
 import type { ProductId } from '@/lib/product/types'
 
@@ -97,6 +98,7 @@ export default function AppShell({
                 </div>
               )}
               <div id="main-content" className={`${showChrome ? 'md:ml-16 pb-bottom-nav' : ''}`}>
+                {showChrome && <SubscribeBanner />}
                 {showChrome ? <PageTransition>{children}</PageTransition> : children}
               </div>
               {/* Bottom nav only on mobile */}

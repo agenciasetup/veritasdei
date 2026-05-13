@@ -78,9 +78,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthProviderInner supabase={supabase}>{children}</AuthProviderInner>
 }
 
+/**
+ * Resolve a base URL para callbacks de auth (OAuth, magic link, recovery).
+ *
+ * Prioriza `window.location.origin` quando rodando no browser, porque o
+ * app é multi-subdomínio (veritasdei.com.br e educa.veritasdei.com.br) e
+ * o usuário precisa voltar pro mesmo subdomínio que iniciou o login —
+ * senão o Google OAuth termina em veritasdei.com.br mesmo que ele tenha
+ * partido de educa.veritasdei.com.br.
+ *
+ * `NEXT_PUBLIC_APP_URL` continua como fallback para SSR / Capacitor (onde
+ * não há `window`).
+ *
+ * IMPORTANTE: cada subdomínio onde o app roda precisa estar listado em
+ * Supabase Dashboard → Authentication → URL Configuration → Redirect URLs.
+ */
 function getBaseUrl(): string {
-  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL
   if (typeof window !== 'undefined') return window.location.origin
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL
   return ''
 }
 
