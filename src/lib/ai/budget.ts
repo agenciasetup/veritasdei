@@ -12,6 +12,7 @@ export type AiFeature =
   | 'search'
   | 'catechism'
   | 'liturgia_reflexao'
+  | 'educa_debate'
 
 // Cap de tokens vem num sprint futuro — dependerá de função SQL separada
 // pra não dobrar o contador de calls. Por ora só cap de calls, que já é
@@ -22,6 +23,9 @@ const DEFAULT_CAPS: Record<AiFeature, { calls: number }> = {
   search:            { calls: 100 },
   catechism:         { calls: 300 }, // read-only do DB, sem OpenAI
   liturgia_reflexao: { calls: 10 },  // 1x por dia basta; 10 dá margem
+  // Debate consome mais tokens (histórico cresce). 30 turnos/dia é suficiente
+  // pra 2-3 sessões longas; corta abuso sem frustrar uso real.
+  educa_debate:      { calls: 30 },
 }
 
 export interface BudgetResult {

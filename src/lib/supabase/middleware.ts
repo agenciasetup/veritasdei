@@ -72,17 +72,52 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  // No subdomínio educa.*, a raiz "/" serve o dashboard `/educa`. Rewrite
-  // mantém a URL na barra (UX limpa) e preserva qualquer cookie de sessão
-  // que setAll possa ter setado durante o refresh acima.
-  if (product === 'veritas-educa' && path === '/') {
-    const url = request.nextUrl.clone()
-    url.pathname = '/educa'
-    const rewriteResponse = NextResponse.rewrite(url, { request })
-    for (const setCookie of supabaseResponse.headers.getSetCookie()) {
-      rewriteResponse.headers.append('set-cookie', setCookie)
+  // ─────────────────────────────────────────────────────────────────────
+  // Trancamento do subdomínio educa.*
+  //
+  // Veritas Educa é um produto isolado. No subdomínio, apenas /educa/* +
+  // rotas operacionais (auth, api, páginas legais) são acessíveis. Qualquer
+  // outra rota redireciona pra /educa, evitando que o user "vaze" pro
+  // Veritas full a partir do educa.veritasdei.com.br.
+  //
+  // - Raiz "/" → rewrite (URL preservada) pra /educa.
+  // - Demais paths fora da whitelist → 307 redirect pra /educa.
+  // ─────────────────────────────────────────────────────────────────────
+  if (product === 'veritas-educa') {
+    const isAllowedInEduca =
+      path === '/educa' ||
+      path.startsWith('/educa/') ||
+      path === '/login' ||
+      path.startsWith('/auth/') ||
+      path.startsWith('/api/') ||
+      path === '/privacidade' ||
+      path === '/termos' ||
+      path === '/diretrizes' ||
+      path === '/cookies' ||
+      path === '/dmca' ||
+      path === '/consentimento-parental' ||
+      path === '/excluir-conta'
+
+    if (path === '/') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/educa'
+      const rewriteResponse = NextResponse.rewrite(url, { request })
+      for (const setCookie of supabaseResponse.headers.getSetCookie()) {
+        rewriteResponse.headers.append('set-cookie', setCookie)
+      }
+      return rewriteResponse
     }
-    return rewriteResponse
+
+    if (!isAllowedInEduca) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/educa'
+      url.search = ''
+      const redirectResponse = NextResponse.redirect(url, 307)
+      for (const setCookie of supabaseResponse.headers.getSetCookie()) {
+        redirectResponse.headers.append('set-cookie', setCookie)
+      }
+      return redirectResponse
+    }
   }
 
   return supabaseResponse
