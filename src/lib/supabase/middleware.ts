@@ -72,5 +72,18 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
+  // No subdomínio educa.*, a raiz "/" serve o dashboard `/educa`. Rewrite
+  // mantém a URL na barra (UX limpa) e preserva qualquer cookie de sessão
+  // que setAll possa ter setado durante o refresh acima.
+  if (product === 'veritas-educa' && path === '/') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/educa'
+    const rewriteResponse = NextResponse.rewrite(url, { request })
+    for (const setCookie of supabaseResponse.headers.getSetCookie()) {
+      rewriteResponse.headers.append('set-cookie', setCookie)
+    }
+    return rewriteResponse
+  }
+
   return supabaseResponse
 }
