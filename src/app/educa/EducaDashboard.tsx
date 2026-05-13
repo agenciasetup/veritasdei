@@ -17,9 +17,10 @@
  */
 
 import Link from 'next/link'
-import { ArrowRight, Flame, GraduationCap, Lock, Swords } from 'lucide-react'
+import { ArrowRight, BookOpen, Flame, GraduationCap, Lock, NotebookPen, Swords } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useGamification } from '@/lib/gamification/useGamification'
+import { useLastStudied } from '@/lib/content/useLastStudied'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import LevelBadge from '@/components/gamification/LevelBadge'
 import XpBar from '@/components/gamification/XpBar'
@@ -36,6 +37,7 @@ function greeting(): string {
 export default function EducaDashboard() {
   const { user, profile } = useAuth()
   const gami = useGamification(user?.id)
+  const { last: lastStudied } = useLastStudied(user?.id)
   const { isPremium, loading: subLoading } = useSubscription()
 
   const firstName = (profile?.name || user?.email?.split('@')[0] || '')
@@ -100,7 +102,107 @@ export default function EducaDashboard() {
       {/* 2. Pergunte ao Magistério (IA) */}
       <EducaSearch />
 
-      {/* 3. Modo Debate — destaque */}
+      {/* 2.5. Continue de onde parou (se houver) */}
+      {lastStudied && (
+        <Link
+          href={`/estudo/${lastStudied.groupSlug}`}
+          className="block rounded-2xl p-4 active:scale-[0.99] transition-transform"
+          style={{
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border-1)',
+          }}
+        >
+          <div className="flex items-start gap-3">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{
+                background: 'var(--accent-soft)',
+                border: '1px solid var(--border-1)',
+              }}
+            >
+              <NotebookPen
+                className="w-5 h-5"
+                style={{ color: 'var(--accent)' }}
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p
+                className="text-[10px] tracking-[0.15em] uppercase mb-0.5"
+                style={{
+                  color: 'var(--accent)',
+                  fontFamily: 'var(--font-display)',
+                }}
+              >
+                Continue de onde parou
+              </p>
+              <p
+                className="text-sm truncate"
+                style={{
+                  color: 'var(--text-1)',
+                  fontFamily: 'var(--font-body)',
+                }}
+              >
+                {lastStudied.subtopicTitle}
+              </p>
+              <p
+                className="text-[11px] mt-0.5"
+                style={{
+                  color: 'var(--text-3)',
+                  fontFamily: 'var(--font-body)',
+                }}
+              >
+                {lastStudied.groupTitle}
+              </p>
+            </div>
+            <ArrowRight
+              className="w-4 h-4 flex-shrink-0 self-center"
+              style={{ color: 'var(--text-3)' }}
+            />
+          </div>
+        </Link>
+      )}
+
+      {/* 3. Estudo (hub) — atalho */}
+      <Link
+        href="/educa/estudo"
+        className="block rounded-2xl p-4 active:scale-[0.99] transition-transform"
+        style={{
+          background: 'var(--surface-2)',
+          border: '1px solid var(--border-1)',
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{
+              background: 'var(--accent-soft)',
+              border: '1px solid var(--border-1)',
+            }}
+          >
+            <BookOpen className="w-5 h-5" style={{ color: 'var(--accent)' }} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p
+              className="text-sm font-medium mb-0.5"
+              style={{ color: 'var(--text-1)', fontFamily: 'var(--font-body)' }}
+            >
+              Estudo
+            </p>
+            <p
+              className="text-xs"
+              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+            >
+              Pilares, provas, selos e grupos de estudo.
+            </p>
+          </div>
+          <ArrowRight
+            className="w-4 h-4 flex-shrink-0"
+            style={{ color: 'var(--text-3)' }}
+          />
+        </div>
+      </Link>
+
+      {/* 3.5. Modo Debate — destaque */}
       <Link
         href="/educa/debate"
         className="block rounded-2xl p-4 active:scale-[0.99] transition-transform"

@@ -87,6 +87,15 @@ export async function updateSession(request: NextRequest) {
     const isAllowedInEduca =
       path === '/educa' ||
       path.startsWith('/educa/') ||
+      // Conteúdo de estudo (pilares, tópicos, subtópicos, grupos) — o
+      // shell continua sendo o EducaShell (decidido pelo hostname); só
+      // permitimos as rotas em si.
+      path === '/estudo' ||
+      path.startsWith('/estudo/') ||
+      // Rosário (terço solo + sessões compartilhadas + histórico).
+      path === '/rosario' ||
+      path.startsWith('/rosario/') ||
+      // Auth / API / páginas legais
       path === '/login' ||
       path.startsWith('/auth/') ||
       path.startsWith('/api/') ||

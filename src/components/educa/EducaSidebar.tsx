@@ -10,17 +10,21 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, GraduationCap, Swords, User } from 'lucide-react'
+import { Home, BookOpen, GraduationCap, Cross, User } from 'lucide-react'
 
 const NAV_ITEMS = [
   { href: '/educa',          icon: Home,          label: 'Início' },
+  { href: '/educa/estudo',   icon: BookOpen,      label: 'Estudo' },
   { href: '/educa/trilhas',  icon: GraduationCap, label: 'Trilhas' },
-  { href: '/educa/debate',   icon: Swords,        label: 'Debate' },
+  { href: '/rosario',        icon: Cross,         label: 'Rosário' },
   { href: '/educa/perfil',   icon: User,          label: 'Perfil' },
 ] as const
 
 function isActive(pathname: string, href: string): boolean {
   if (href === '/educa') return pathname === '/educa'
+  if (href === '/educa/estudo') {
+    return pathname.startsWith('/educa/estudo') || pathname.startsWith('/estudo')
+  }
   return pathname === href || pathname.startsWith(href + '/')
 }
 
