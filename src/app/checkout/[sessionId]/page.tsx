@@ -145,6 +145,7 @@ export default async function CheckoutPage({
       amountCents={sess.amount_cents}
       intervalo={sess.intervalo}
       plan={{
+        codigo: plan.codigo,
         nome: plan.nome,
         descricao: plan.descricao,
         beneficios: plan.beneficios ?? [],

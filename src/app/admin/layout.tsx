@@ -19,6 +19,7 @@ import {
   Bell,
   Megaphone,
   Palette,
+  PlusSquare,
 } from 'lucide-react'
 import AdminMobileNav from './AdminMobileNav'
 
@@ -33,6 +34,7 @@ const ADMIN_NAV = [
   { href: '/admin/ia-knowledge',        icon: Brain,          label: 'Base IA' },
   { href: '/admin/embeddings',          icon: Database,       label: 'Embeddings' },
   { href: '/admin/planos',              icon: CreditCard,     label: 'Planos' },
+  { href: '/admin/order-bumps',         icon: PlusSquare,     label: 'Order bumps' },
   { href: '/admin/checkout',            icon: Palette,        label: 'Checkout' },
   { href: '/admin/notificacoes-teste',  icon: Bell,           label: 'Push teste' },
 ]

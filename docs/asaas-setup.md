@@ -37,6 +37,48 @@ um "Plano Premium" ou um "Veritas Educa" — quem coordena isso somos nós.
 
 ---
 
+## Sandbox vs. Produção — quando trocar
+
+A Asaas tem duas contas separadas:
+
+| Ambiente | URL do painel | API key | Cobrança real? |
+|----------|---------------|---------|----------------|
+| **Sandbox** | https://sandbox.asaas.com | `$aact_YTU5...` | Não — só simulação |
+| **Produção** | https://www.asaas.com | `$aact_PROD...` | **Sim** — dinheiro real |
+
+Sandbox é pra **testar fluxos sem cobrar ninguém**. PIX gerado em sandbox
+não cai na sua conta de verdade; cartão de teste do Asaas funciona, mas
+o saldo é fictício. Continue em sandbox enquanto:
+
+- Está ajustando a UI / copy / cores;
+- Quer ver o fluxo PIX → confirmação → premium ligado;
+- Quer testar cancelamento, mudança de cartão, etc.
+
+**Mude pra produção** quando:
+
+- A tela de checkout já está como você quer;
+- O webhook chega ok no sandbox (e o usuário-teste vira premium);
+- Você quer começar a receber pagamentos reais.
+
+### Como trocar pra produção
+
+1. Crie **uma chave API nova no painel de produção** (não dá pra reusar a de sandbox).
+2. Configure **um webhook novo no painel de produção** apontando pra `https://veritasdei.com.br/api/payments/webhooks/asaas`. Gere um novo `ASAAS_WEBHOOK_TOKEN` (com `openssl rand -hex 32`).
+3. No Vercel → **Project Settings → Environment Variables**, atualize:
+   - `ASAAS_API_KEY` = chave nova de produção
+   - `ASAAS_ENV` = `production`
+   - `ASAAS_WEBHOOK_TOKEN` = token novo de produção
+4. **Redeploy** (envs novas só pegam depois de build novo).
+5. Faça uma compra com seu próprio cartão pra validar (pode estornar
+   depois pelo painel Asaas, se quiser).
+
+> Os dados de cliente / assinaturas no sandbox **não migram** automaticamente
+> pra produção. Os clientes que assinaram em sandbox precisam refazer a
+> compra em prod. Por isso convém só anunciar o checkout depois que o
+> ambiente já estiver em produção.
+
+---
+
 ## Passo 1 — Criar conta + API key
 
 1. Crie conta em https://asaas.com (sandbox em https://sandbox.asaas.com).
@@ -132,6 +174,39 @@ descrição. O plano nasce vazio — depois adicione preços nele.
    `billing_webhook_events` se algo não bater — todo webhook tem trilha.
 6. Em `/perfil → Assinatura`, confira que aparecem: próximo vencimento,
    forma de pagamento, histórico, botão "Cancelar".
+
+---
+
+## Order bumps (add-ons no checkout)
+
+Você pode oferecer add-ons opcionais que o cliente marca **antes** de
+pagar — vão aparecer no painel esquerdo do `/checkout/[sessionId]`,
+abaixo do resumo do plano.
+
+Crie/edite em **/admin/order-bumps**. Campos:
+
+| Campo | O que faz |
+|-------|-----------|
+| `código` | Slug único (ex: `ebook-confissao`) — não muda depois |
+| `título` | Texto que aparece no checkout |
+| `descrição` | Subtítulo, opcional |
+| `valor (R$)` | Vai somado à assinatura |
+| `badge` | Etiqueta pequena (ex: "MAIS POPULAR") |
+| `planos em que aparece` | Códigos separados por vírgula. Vazio = todos. |
+| `ordem` | Menor aparece primeiro |
+| `ativo` | Desliga sem apagar |
+
+**Importante**: o valor do bump entra como **add-on recorrente** — o
+cliente paga junto com a renovação enquanto não cancelar. O Asaas
+trata como um único `value` na subscription, então não dá pra cobrar
+o bump uma vez só com este recurso. Pra ofertas one-shot, use o painel
+da Asaas pra disparar um payment único (ainda não temos UI própria
+pra isso).
+
+Quando o cliente liga um toggle no checkout, chamamos `POST
+/api/checkout/bumps/apply` que recalcula `amount_cents` da sessão e
+grava um snapshot dos bumps em `metadata.order_bumps` — assim mesmo
+se o bump for editado/excluído depois, o histórico fica preservado.
 
 ---
 
