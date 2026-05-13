@@ -20,7 +20,7 @@
  */
 
 import Link from 'next/link'
-import { BookOpen, Flame, GraduationCap, NotebookPen, Trophy, ArrowRight, Sparkles, Lock } from 'lucide-react'
+import { BookOpen, Flame, GraduationCap, NotebookPen, Trophy, ArrowRight, Lock, Swords } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useGamification } from '@/lib/gamification/useGamification'
 import { useMyStudyRecent } from '@/lib/study/useMyStudyRecent'
@@ -103,6 +103,53 @@ export default function EducaDashboard() {
 
       {/* 2. Pergunte ao Magistério */}
       <EducaSearch />
+
+      {/* 2.5. Modo Debate — destaque visual de venda */}
+      <Link
+        href="/educa/debate"
+        className="block rounded-2xl p-4 active:scale-[0.99] transition-transform"
+        style={{
+          background:
+            'linear-gradient(135deg, color-mix(in srgb, var(--accent) 18%, var(--surface-2)) 0%, var(--surface-2) 100%)',
+          border: '1px solid color-mix(in srgb, var(--accent) 28%, transparent)',
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{
+              background: 'var(--accent-soft)',
+              border: '1px solid var(--border-1)',
+            }}
+          >
+            <Swords className="w-5 h-5" style={{ color: 'var(--accent)' }} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p
+              className="text-sm font-medium mb-0.5"
+              style={{
+                color: 'var(--text-1)',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              Modo Debate — treine sua apologética
+            </p>
+            <p
+              className="text-xs"
+              style={{
+                color: 'var(--text-2)',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              Sola Scriptura, Maria, Eucaristia, Papado, Sola Fide.
+            </p>
+          </div>
+          <ArrowRight
+            className="w-4 h-4 flex-shrink-0"
+            style={{ color: 'var(--accent)' }}
+          />
+        </div>
+      </Link>
 
       {/* 3. Continue de onde parou */}
       {lastNote && (
