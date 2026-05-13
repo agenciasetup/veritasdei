@@ -37,6 +37,48 @@ um "Plano Premium" ou um "Veritas Educa" — quem coordena isso somos nós.
 
 ---
 
+## Sandbox vs. Produção — quando trocar
+
+A Asaas tem duas contas separadas:
+
+| Ambiente | URL do painel | API key | Cobrança real? |
+|----------|---------------|---------|----------------|
+| **Sandbox** | https://sandbox.asaas.com | `$aact_YTU5...` | Não — só simulação |
+| **Produção** | https://www.asaas.com | `$aact_PROD...` | **Sim** — dinheiro real |
+
+Sandbox é pra **testar fluxos sem cobrar ninguém**. PIX gerado em sandbox
+não cai na sua conta de verdade; cartão de teste do Asaas funciona, mas
+o saldo é fictício. Continue em sandbox enquanto:
+
+- Está ajustando a UI / copy / cores;
+- Quer ver o fluxo PIX → confirmação → premium ligado;
+- Quer testar cancelamento, mudança de cartão, etc.
+
+**Mude pra produção** quando:
+
+- A tela de checkout já está como você quer;
+- O webhook chega ok no sandbox (e o usuário-teste vira premium);
+- Você quer começar a receber pagamentos reais.
+
+### Como trocar pra produção
+
+1. Crie **uma chave API nova no painel de produção** (não dá pra reusar a de sandbox).
+2. Configure **um webhook novo no painel de produção** apontando pra `https://veritasdei.com.br/api/payments/webhooks/asaas`. Gere um novo `ASAAS_WEBHOOK_TOKEN` (com `openssl rand -hex 32`).
+3. No Vercel → **Project Settings → Environment Variables**, atualize:
+   - `ASAAS_API_KEY` = chave nova de produção
+   - `ASAAS_ENV` = `production`
+   - `ASAAS_WEBHOOK_TOKEN` = token novo de produção
+4. **Redeploy** (envs novas só pegam depois de build novo).
+5. Faça uma compra com seu próprio cartão pra validar (pode estornar
+   depois pelo painel Asaas, se quiser).
+
+> Os dados de cliente / assinaturas no sandbox **não migram** automaticamente
+> pra produção. Os clientes que assinaram em sandbox precisam refazer a
+> compra em prod. Por isso convém só anunciar o checkout depois que o
+> ambiente já estiver em produção.
+
+---
+
 ## Passo 1 — Criar conta + API key
 
 1. Crie conta em https://asaas.com (sandbox em https://sandbox.asaas.com).

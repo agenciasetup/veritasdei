@@ -213,9 +213,20 @@ export async function POST(req: Request) {
         : {}),
     })
 
-    // 5. Pega o primeiro payment dessa sub (o invoice imediato)
-    const list = await listSubscriptionPayments(sub.id, 1)
-    const firstPayment = list.data[0]
+    // 5. Pega o primeiro payment dessa sub (o invoice imediato).
+    // O Asaas cria a subscription e o primeiro invoice em duas operações
+    // assíncronas — a 1ª listagem retorna às vezes vazia. Tentamos até
+    // 4x com backoff progressivo antes de desistir (foi a causa de
+    // precisar clicar 2x pra gerar PIX).
+    let firstPayment: Awaited<
+      ReturnType<typeof listSubscriptionPayments>
+    >['data'][number] | undefined
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const list = await listSubscriptionPayments(sub.id, 1)
+      firstPayment = list.data[0]
+      if (firstPayment) break
+      await new Promise(r => setTimeout(r, 250 * (attempt + 1)))
+    }
 
     // 6. Atualiza session
     await admin
@@ -233,34 +244,40 @@ export async function POST(req: Request) {
       })
       .eq('id', sess.id)
 
-    // 7. PIX: busca QR code
+    // 7. PIX: busca QR code (retry — pode demorar ~500ms pra Asaas
+    // gerar o QR após o invoice nascer).
     if (body.method === 'pix' && firstPayment) {
-      try {
-        const qr = await getPixQrCode(firstPayment.id)
-        return NextResponse.json({
-          ok: true,
-          paymentId: firstPayment.id,
-          subscriptionId: sub.id,
-          pix: {
-            encodedImage: qr.encodedImage,
-            payload: qr.payload,
-            expirationDate: qr.expirationDate,
-          },
-          invoiceUrl: firstPayment.invoiceUrl ?? null,
-        })
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Falha ao gerar QR PIX'
-        return NextResponse.json(
-          {
+      let lastErr: unknown = null
+      for (let attempt = 0; attempt < 4; attempt++) {
+        try {
+          const qr = await getPixQrCode(firstPayment.id)
+          return NextResponse.json({
             ok: true,
             paymentId: firstPayment.id,
             subscriptionId: sub.id,
+            pix: {
+              encodedImage: qr.encodedImage,
+              payload: qr.payload,
+              expirationDate: qr.expirationDate,
+            },
             invoiceUrl: firstPayment.invoiceUrl ?? null,
-            warning: msg,
-          },
-          { status: 200 },
-        )
+          })
+        } catch (err) {
+          lastErr = err
+          await new Promise(r => setTimeout(r, 350 * (attempt + 1)))
+        }
       }
+      const msg = lastErr instanceof Error ? lastErr.message : 'Falha ao gerar QR PIX'
+      return NextResponse.json(
+        {
+          ok: true,
+          paymentId: firstPayment.id,
+          subscriptionId: sub.id,
+          invoiceUrl: firstPayment.invoiceUrl ?? null,
+          warning: msg,
+        },
+        { status: 200 },
+      )
     }
 
     // 8. Boleto: devolve a URL do bankSlip (a Asaas hospeda) +
