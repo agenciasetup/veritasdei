@@ -27,9 +27,57 @@ import {
   Shield,
   Sparkles,
   Swords,
+  Trash2,
   Wine,
 } from 'lucide-react'
 import GlassCard from '@/components/educa/GlassCard'
+import SimpleMarkdown from '@/lib/markdown/simple'
+
+const HISTORY_KEY_PREFIX = 'educa.debate.v1.'
+const MAX_PERSISTED_MSGS = 60
+
+type PersistedSession = {
+  messages: ChatMessage[]
+  evals: Record<string, Evaluation>
+}
+
+function loadSession(slug: string): PersistedSession | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(HISTORY_KEY_PREFIX + slug)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as PersistedSession
+    if (!Array.isArray(parsed.messages)) return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function saveSession(slug: string, session: PersistedSession): void {
+  if (typeof window === 'undefined') return
+  try {
+    const trimmed: PersistedSession = {
+      messages: session.messages.slice(-MAX_PERSISTED_MSGS),
+      evals: session.evals,
+    }
+    window.localStorage.setItem(
+      HISTORY_KEY_PREFIX + slug,
+      JSON.stringify(trimmed),
+    )
+  } catch {
+    // ignore — quota cheia ou storage indisponível
+  }
+}
+
+function clearSession(slug: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.removeItem(HISTORY_KEY_PREFIX + slug)
+  } catch {
+    // ignore
+  }
+}
 
 type Topic = { slug: string; title: string; subtitle: string }
 
@@ -117,19 +165,54 @@ export default function DebateRoom({ topics }: { topics: Topic[] }) {
 
   function selectTopic(t: Topic) {
     setTopic(t)
-    setMessages([])
-    setEvals({})
     setError(null)
-    callApi(t.slug, [])
+    setDraft('')
+    // Reidrata histórico do localStorage se existir
+    const saved = loadSession(t.slug)
+    if (saved && saved.messages.length > 0) {
+      setMessages(saved.messages)
+      setEvals(saved.evals ?? {})
+    } else {
+      setMessages([])
+      setEvals({})
+      callApi(t.slug, [])
+    }
   }
 
   function reset() {
+    // Salva sessão atual antes de sair do tema (pra retomar depois)
+    if (topic && messages.length > 0) {
+      saveSession(topic.slug, { messages, evals })
+    }
     setTopic(null)
     setMessages([])
     setEvals({})
     setError(null)
     setDraft('')
   }
+
+  function clearHistory() {
+    if (!topic) return
+    if (
+      typeof window !== 'undefined' &&
+      !window.confirm(`Apagar o histórico do debate "${topic.title}"?`)
+    ) {
+      return
+    }
+    clearSession(topic.slug)
+    setMessages([])
+    setEvals({})
+    setError(null)
+    callApi(topic.slug, [])
+  }
+
+  // Persiste a sessão sempre que muda (debounce simples — só salva depois
+  // de loading terminar). Mensagens enquanto carrega não são autoritativas.
+  useEffect(() => {
+    if (!topic || loading) return
+    if (messages.length === 0) return
+    saveSession(topic.slug, { messages, evals })
+  }, [topic, messages, evals, loading])
 
   async function sendUser() {
     const txt = draft.trim()
@@ -258,173 +341,234 @@ export default function DebateRoom({ topics }: { topics: Topic[] }) {
   // ── SALA DE DEBATE ────────────────────────────────────────────────────
   return (
     <div
-      className="relative"
+      className="relative flex flex-col h-[100dvh]"
       style={{
         background:
-          'radial-gradient(ellipse 600px 400px at 50% 0%, color-mix(in srgb, var(--wine) 14%, transparent), transparent 70%), var(--surface-1)',
-        minHeight: '100dvh',
+          'radial-gradient(ellipse 800px 500px at 50% 0%, color-mix(in srgb, var(--wine) 18%, transparent), transparent 70%), radial-gradient(ellipse 600px 400px at 90% 100%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 70%), var(--surface-1)',
       }}
     >
-    <main className="max-w-2xl mx-auto px-3 pt-3 pb-28 md:px-4 md:py-6 flex flex-col h-[100dvh] relative">
-      {/* Header */}
+      {/* Header sticky com nome do tema + botão limpar + botão voltar */}
       <header
-        className="flex items-center justify-between gap-2 mb-3 px-1"
-        style={{ flexShrink: 0 }}
+        className="flex-shrink-0 sticky top-0 z-20 px-4 md:px-6 py-3 flex items-center gap-3"
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(15,14,12,0.92) 0%, rgba(15,14,12,0.65) 100%)',
+          borderBottom:
+            '1px solid color-mix(in srgb, var(--accent) 14%, transparent)',
+          backdropFilter: 'blur(14px) saturate(140%)',
+        }}
       >
         <button
           type="button"
           onClick={reset}
-          className="inline-flex items-center gap-1 text-xs"
-          style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+          aria-label="Trocar tema"
+          className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-full active:scale-95"
+          style={{
+            background: 'rgba(0,0,0,0.4)',
+            border:
+              '1px solid color-mix(in srgb, var(--accent) 18%, transparent)',
+            color: 'var(--text-2)',
+            fontFamily: 'var(--font-body)',
+          }}
         >
-          <ArrowLeft className="w-3.5 h-3.5" /> Trocar tema
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Trocar tema</span>
         </button>
-        <div className="text-center min-w-0">
+        <div className="flex-1 min-w-0 text-center">
           <p
-            className="text-[10px] tracking-[0.2em] uppercase"
-            style={{ color: 'var(--accent)', fontFamily: 'var(--font-display)' }}
+            className="text-[9px] tracking-[0.25em] uppercase"
+            style={{
+              color: 'var(--accent)',
+              fontFamily: 'var(--font-display)',
+            }}
           >
             Debate
           </p>
           <p
-            className="text-sm truncate"
-            style={{ color: 'var(--text-1)', fontFamily: 'var(--font-body)' }}
+            className="text-sm md:text-base truncate"
+            style={{
+              color: 'var(--text-1)',
+              fontFamily: 'var(--font-display)',
+            }}
           >
             {topic.title}
           </p>
         </div>
-        <span className="w-12" />
+        <button
+          type="button"
+          onClick={clearHistory}
+          disabled={messages.length === 0}
+          title="Apagar histórico desta conversa"
+          aria-label="Apagar histórico"
+          className="inline-flex items-center gap-1 text-xs px-3 py-2 rounded-full active:scale-95 disabled:opacity-30 disabled:pointer-events-none"
+          style={{
+            background: 'rgba(0,0,0,0.4)',
+            border:
+              '1px solid color-mix(in srgb, var(--wine-light) 22%, transparent)',
+            color: 'var(--wine-light)',
+            fontFamily: 'var(--font-body)',
+          }}
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
       </header>
 
-      {/* Chat */}
+      {/* Chat — área principal, ocupa o resto da tela */}
       <div
         ref={listRef}
-        className="flex-1 overflow-y-auto rounded-2xl p-3 space-y-3"
+        className="flex-1 overflow-y-auto"
+      >
+        <div className="max-w-3xl mx-auto px-4 md:px-6 py-4 md:py-6 space-y-4">
+          {messages.length === 0 && loading && (
+            <div className="flex items-center justify-center py-16">
+              <Loader2
+                className="w-6 h-6 animate-spin"
+                style={{ color: 'var(--accent)' }}
+              />
+            </div>
+          )}
+
+          {messages.map((m) => {
+            const ev = m.role === 'user' ? evals[m.id] : null
+            return (
+              <div key={m.id}>
+                <div
+                  className={`flex ${
+                    m.role === 'user' ? 'justify-end' : 'justify-start'
+                  }`}
+                >
+                  <div
+                    className="max-w-[88%] md:max-w-[78%] rounded-2xl px-4 py-3"
+                    style={
+                      m.role === 'user'
+                        ? {
+                            background:
+                              'linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 75%, black) 100%)',
+                            color: 'var(--accent-contrast)',
+                            fontFamily: 'var(--font-body)',
+                            fontSize: 14,
+                            lineHeight: 1.55,
+                            whiteSpace: 'pre-wrap',
+                            boxShadow:
+                              '0 6px 18px -6px color-mix(in srgb, var(--accent) 45%, transparent)',
+                          }
+                        : {
+                            background:
+                              'linear-gradient(180deg, rgba(20,18,16,0.7) 0%, rgba(15,14,12,0.55) 100%)',
+                            color: 'var(--text-1)',
+                            border:
+                              '1px solid color-mix(in srgb, var(--accent) 14%, transparent)',
+                            backdropFilter: 'blur(12px)',
+                            boxShadow: '0 4px 14px -6px rgba(0,0,0,0.5)',
+                          }
+                    }
+                  >
+                    {m.role === 'assistant' ? (
+                      <SimpleMarkdown text={m.content} />
+                    ) : (
+                      <span>{m.content}</span>
+                    )}
+                  </div>
+                </div>
+                {ev && <Scorecard ev={ev} />}
+              </div>
+            )
+          })}
+
+          {loading && messages.length > 0 && (
+            <div className="flex justify-start">
+              <div
+                className="rounded-2xl px-3 py-2 text-xs flex items-center gap-2"
+                style={{
+                  background: 'rgba(20,18,16,0.7)',
+                  color: 'var(--text-3)',
+                  border:
+                    '1px solid color-mix(in srgb, var(--accent) 14%, transparent)',
+                  fontFamily: 'var(--font-body)',
+                  backdropFilter: 'blur(8px)',
+                }}
+              >
+                <Loader2 className="w-3 h-3 animate-spin" /> pensando...
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Composer fixo no rodapé */}
+      <div
+        className="flex-shrink-0 sticky bottom-0 z-20 px-4 md:px-6 py-3"
         style={{
-          background: 'var(--surface-1)',
-          border: '1px solid var(--border-1)',
+          background:
+            'linear-gradient(0deg, rgba(15,14,12,0.95) 0%, rgba(15,14,12,0.7) 100%)',
+          borderTop:
+            '1px solid color-mix(in srgb, var(--accent) 14%, transparent)',
+          backdropFilter: 'blur(14px) saturate(140%)',
+          paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))',
         }}
       >
-        {messages.length === 0 && loading && (
-          <div className="flex items-center justify-center py-8">
-            <Loader2
-              className="w-5 h-5 animate-spin"
-              style={{ color: 'var(--accent)' }}
-            />
-          </div>
-        )}
-
-        {messages.map((m) => {
-          const ev = m.role === 'user' ? evals[m.id] : null
-          return (
-            <div key={m.id}>
-              <div
-                className={`flex ${
-                  m.role === 'user' ? 'justify-end' : 'justify-start'
-                }`}
-              >
-                <div
-                  className="max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm whitespace-pre-wrap"
-                  style={{
-                    background:
-                      m.role === 'user'
-                        ? 'var(--accent)'
-                        : 'var(--surface-2)',
-                    color:
-                      m.role === 'user'
-                        ? 'var(--accent-contrast)'
-                        : 'var(--text-1)',
-                    border:
-                      m.role === 'assistant'
-                        ? '1px solid var(--border-1)'
-                        : undefined,
-                    fontFamily: 'var(--font-body)',
-                  }}
-                >
-                  {m.content}
-                </div>
-              </div>
-              {ev && <Scorecard ev={ev} />}
-            </div>
-          )
-        })}
-
-        {loading && messages.length > 0 && (
-          <div className="flex justify-start">
-            <div
-              className="rounded-2xl px-3 py-2 text-xs flex items-center gap-2"
+        <div className="max-w-3xl mx-auto">
+          {error && (
+            <p
+              className="mb-2 text-xs px-3 py-2 rounded-xl"
               style={{
-                background: 'var(--surface-2)',
-                color: 'var(--text-3)',
-                border: '1px solid var(--border-1)',
+                background:
+                  'color-mix(in srgb, var(--warning) 12%, transparent)',
+                color: 'var(--warning)',
                 fontFamily: 'var(--font-body)',
               }}
             >
-              <Loader2 className="w-3 h-3 animate-spin" /> pensando...
-            </div>
-          </div>
-        )}
-      </div>
-
-      {error && (
-        <p
-          className="mt-2 text-xs px-3 py-2 rounded-xl"
-          style={{
-            background: 'color-mix(in srgb, var(--warning) 12%, transparent)',
-            color: 'var(--warning)',
-            fontFamily: 'var(--font-body)',
-          }}
-        >
-          {error}
-        </p>
-      )}
-
-      {/* Composer */}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          sendUser()
-        }}
-        className="mt-3 flex items-end gap-2"
-        style={{ flexShrink: 0 }}
-      >
-        <textarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value.slice(0, MAX_USER_CHARS))}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
+              {error}
+            </p>
+          )}
+          <form
+            onSubmit={(e) => {
               e.preventDefault()
               sendUser()
-            }
-          }}
-          placeholder="Responda em PT. Use a Bíblia, o Magistério e a razão."
-          rows={2}
-          className="flex-1 rounded-2xl px-3 py-2.5 text-sm outline-none resize-none"
-          style={{
-            background: 'var(--surface-inset)',
-            border: '1px solid var(--border-1)',
-            color: 'var(--text-1)',
-            fontFamily: 'var(--font-body)',
-          }}
-        />
-        <button
-          type="submit"
-          disabled={loading || draft.trim().length < 3}
-          className="rounded-2xl w-12 h-12 flex items-center justify-center flex-shrink-0 disabled:opacity-50 transition-opacity"
-          style={{
-            background: 'var(--accent)',
-            color: 'var(--accent-contrast)',
-          }}
-          aria-label="Enviar"
-        >
-          {loading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Send className="w-4 h-4" />
-          )}
-        </button>
-      </form>
-    </main>
+            }}
+            className="flex items-end gap-2"
+          >
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value.slice(0, MAX_USER_CHARS))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  sendUser()
+                }
+              }}
+              placeholder="Responda em PT. Use a Bíblia, o Magistério e a razão."
+              rows={2}
+              className="flex-1 rounded-2xl px-3.5 py-3 text-sm outline-none resize-none"
+              style={{
+                background: 'rgba(0,0,0,0.45)',
+                border:
+                  '1px solid color-mix(in srgb, var(--accent) 18%, transparent)',
+                color: 'var(--text-1)',
+                fontFamily: 'var(--font-body)',
+              }}
+            />
+            <button
+              type="submit"
+              disabled={loading || draft.trim().length < 3}
+              className="rounded-2xl w-12 h-12 flex items-center justify-center flex-shrink-0 disabled:opacity-50 transition-opacity"
+              style={{
+                background: 'var(--accent)',
+                color: 'var(--accent-contrast)',
+                boxShadow:
+                  '0 6px 18px -6px color-mix(in srgb, var(--accent) 50%, transparent)',
+              }}
+              aria-label="Enviar"
+            >
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   )
 }

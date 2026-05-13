@@ -134,7 +134,15 @@ export default function EducaEstudoView() {
         )
       )}
 
-      <div className="max-w-6xl mx-auto px-4 md:px-8 pt-2 md:pt-4 -mt-16 md:-mt-24 relative space-y-10 md:space-y-14">
+      {/* Conteúdo. A margem negativa só aplica quando o hero é o CinematicHero
+       *  (que tem fade infinito na base pra absorver o conteúdo). O
+       *  BannerSlider não tem fade, então sobrepor a imagem fica ruim — por
+       *  isso o `hasBanners` desliga o offset. */}
+      <div
+        className={`max-w-6xl mx-auto px-4 md:px-8 pt-2 md:pt-4 relative space-y-10 md:space-y-14 ${
+          hasBanners ? 'mt-8 md:mt-10' : '-mt-16 md:-mt-24'
+        }`}
+      >
         {/* ─── PILARES (destaque principal) ───────────────────────── */}
         {recentLoading ? (
           <section>
