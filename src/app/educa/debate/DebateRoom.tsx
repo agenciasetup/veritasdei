@@ -17,13 +17,19 @@ import Link from 'next/link'
 import {
   ArrowLeft,
   BookOpenCheck,
+  Book,
   ChevronRight,
+  Crown,
+  Flame,
+  Heart,
   Loader2,
   Send,
   Shield,
   Sparkles,
   Swords,
+  Wine,
 } from 'lucide-react'
+import GlassCard from '@/components/educa/GlassCard'
 
 type Topic = { slug: string; title: string; subtitle: string }
 
@@ -146,104 +152,120 @@ export default function DebateRoom({ topics }: { topics: Topic[] }) {
   // ── PICKER DE TEMA ────────────────────────────────────────────────────
   if (!topic) {
     return (
-      <main className="max-w-2xl mx-auto px-4 pt-6 pb-24 md:py-10">
-        <Link
-          href="/educa"
-          className="inline-flex items-center gap-1 text-xs mb-5"
-          style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
-        >
-          <ArrowLeft className="w-3.5 h-3.5" /> Voltar ao painel
-        </Link>
+      <div
+        className="min-h-screen relative"
+        style={{
+          background:
+            'radial-gradient(ellipse 800px 500px at 50% -10%, color-mix(in srgb, var(--wine) 18%, transparent), transparent 70%), radial-gradient(ellipse 600px 400px at 80% 100%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%), var(--surface-1)',
+        }}
+      >
+        <main className="max-w-3xl mx-auto px-4 pt-6 pb-24 md:py-12">
+          <Link
+            href="/educa"
+            className="inline-flex items-center gap-1 text-xs mb-6"
+            style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> Voltar ao painel
+          </Link>
 
-        <header className="mb-6 text-center">
-          <div
-            className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-3"
-            style={{
-              background: 'var(--accent-soft)',
-              border: '1px solid var(--border-1)',
-            }}
-          >
-            <Swords className="w-6 h-6" style={{ color: 'var(--accent)' }} />
-          </div>
-          <h1
-            className="text-2xl md:text-3xl mb-1"
-            style={{
-              fontFamily: 'var(--font-display)',
-              color: 'var(--text-1)',
-            }}
-          >
-            Modo Debate
-          </h1>
+          <header className="mb-8 md:mb-10 text-center">
+            <div
+              className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-3xl mb-4 relative"
+              style={{
+                background:
+                  'linear-gradient(135deg, color-mix(in srgb, var(--wine-light) 50%, rgba(0,0,0,0.4)) 0%, rgba(0,0,0,0.6) 100%)',
+                border:
+                  '1.5px solid color-mix(in srgb, var(--accent) 35%, transparent)',
+                boxShadow:
+                  '0 12px 32px -12px color-mix(in srgb, var(--wine) 40%, transparent), inset 0 1px 0 rgba(255,255,255,0.06)',
+              }}
+            >
+              <Swords
+                className="w-7 h-7 md:w-9 md:h-9"
+                style={{ color: 'var(--accent)' }}
+              />
+            </div>
+            <p
+              className="text-[10px] md:text-xs tracking-[0.3em] uppercase mb-2"
+              style={{
+                color: 'var(--accent)',
+                fontFamily: 'var(--font-display)',
+              }}
+            >
+              Apologética católica
+            </p>
+            <h1
+              className="text-3xl md:text-5xl mb-3"
+              style={{
+                fontFamily: 'var(--font-display)',
+                color: 'var(--text-1)',
+                textShadow: '0 2px 12px rgba(0,0,0,0.4)',
+              }}
+            >
+              Modo Debate
+            </h1>
+            <p
+              className="text-sm md:text-base max-w-lg mx-auto"
+              style={{
+                color: 'var(--text-2)',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              A IA encarna um protestante bem formado. Você defende a fé
+              católica. Cada resposta recebe uma nota — bíblica, magistério e caridade.
+            </p>
+          </header>
+
           <p
-            className="text-sm max-w-md mx-auto"
+            className="text-[10px] tracking-[0.2em] uppercase text-center mb-4"
             style={{
-              color: 'var(--text-2)',
+              color: 'var(--text-3)',
+              fontFamily: 'var(--font-display)',
+            }}
+          >
+            Escolha o tema do debate
+          </p>
+
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+            {topics.map((t) => (
+              <li key={t.slug}>
+                <button
+                  type="button"
+                  onClick={() => selectTopic(t)}
+                  className="w-full text-left active:scale-[0.99] transition-transform"
+                >
+                  <TopicCard slug={t.slug} title={t.title} subtitle={t.subtitle} />
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          <p
+            className="mt-8 text-[11px] text-center px-3"
+            style={{
+              color: 'var(--text-3)',
               fontFamily: 'var(--font-body)',
             }}
           >
-            Treine sua apologética. A IA encarna um protestante bem formado e
-            você defende a fé católica. Cada resposta sua recebe uma nota.
+            O oponente não ataca a pessoa e admite quando você argumenta bem.
+            Limite de 30 turnos por dia.
           </p>
-        </header>
-
-        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {topics.map((t) => (
-            <li key={t.slug}>
-              <button
-                type="button"
-                onClick={() => selectTopic(t)}
-                className="w-full text-left rounded-2xl p-4 active:scale-[0.99] transition-transform"
-                style={{
-                  background: 'var(--surface-2)',
-                  border: '1px solid var(--border-1)',
-                }}
-              >
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <span
-                    className="text-sm font-medium"
-                    style={{
-                      color: 'var(--text-1)',
-                      fontFamily: 'var(--font-body)',
-                    }}
-                  >
-                    {t.title}
-                  </span>
-                  <ChevronRight
-                    className="w-4 h-4 flex-shrink-0"
-                    style={{ color: 'var(--accent)' }}
-                  />
-                </div>
-                <p
-                  className="text-xs"
-                  style={{
-                    color: 'var(--text-3)',
-                    fontFamily: 'var(--font-body)',
-                  }}
-                >
-                  {t.subtitle}
-                </p>
-              </button>
-            </li>
-          ))}
-        </ul>
-
-        <p
-          className="mt-6 text-[11px] text-center px-3"
-          style={{
-            color: 'var(--text-3)',
-            fontFamily: 'var(--font-body)',
-          }}
-        >
-          O oponente não ataca a pessoa e admite quando você argumenta bem.
-          Limite de 30 turnos por dia.
-        </p>
-      </main>
+        </main>
+      </div>
     )
   }
 
   // ── SALA DE DEBATE ────────────────────────────────────────────────────
   return (
-    <main className="max-w-2xl mx-auto px-3 pt-3 pb-28 md:px-4 md:py-6 flex flex-col h-[100dvh]">
+    <div
+      className="relative"
+      style={{
+        background:
+          'radial-gradient(ellipse 600px 400px at 50% 0%, color-mix(in srgb, var(--wine) 14%, transparent), transparent 70%), var(--surface-1)',
+        minHeight: '100dvh',
+      }}
+    >
+    <main className="max-w-2xl mx-auto px-3 pt-3 pb-28 md:px-4 md:py-6 flex flex-col h-[100dvh] relative">
       {/* Header */}
       <header
         className="flex items-center justify-between gap-2 mb-3 px-1"
@@ -403,6 +425,117 @@ export default function DebateRoom({ topics }: { topics: Topic[] }) {
         </button>
       </form>
     </main>
+    </div>
+  )
+}
+
+/** Ícone + gradient sutil por tema. Paleta sacra (ouro/vinho/bronze). */
+const TOPIC_VISUAL: Record<
+  string,
+  { icon: React.ElementType; accent: string; gradient: string }
+> = {
+  'sola-scriptura': {
+    icon: Book,
+    accent: '#C9A84C',
+    gradient:
+      'linear-gradient(135deg, color-mix(in srgb, #C9A84C 14%, rgba(20,18,16,0.7)) 0%, rgba(15,14,12,0.65) 100%)',
+  },
+  'sola-fide': {
+    icon: Flame,
+    accent: '#E5C97A',
+    gradient:
+      'linear-gradient(135deg, color-mix(in srgb, #E5C97A 12%, rgba(20,18,16,0.7)) 0%, rgba(15,14,12,0.65) 100%)',
+  },
+  'maria': {
+    icon: Heart,
+    accent: '#C66B7E',
+    gradient:
+      'linear-gradient(135deg, color-mix(in srgb, var(--wine-light) 22%, rgba(20,18,16,0.7)) 0%, rgba(15,14,12,0.65) 100%)',
+  },
+  'eucaristia': {
+    icon: Wine,
+    accent: '#A33247',
+    gradient:
+      'linear-gradient(135deg, color-mix(in srgb, var(--wine) 32%, rgba(20,18,16,0.7)) 0%, rgba(15,14,12,0.65) 100%)',
+  },
+  'papado': {
+    icon: Crown,
+    accent: '#C9A84C',
+    gradient:
+      'linear-gradient(135deg, color-mix(in srgb, #C9A84C 16%, rgba(20,18,16,0.7)) 0%, rgba(15,14,12,0.65) 100%)',
+  },
+}
+
+function TopicCard({
+  slug,
+  title,
+  subtitle,
+}: {
+  slug: string
+  title: string
+  subtitle: string
+}) {
+  const v = TOPIC_VISUAL[slug] ?? {
+    icon: Shield,
+    accent: '#C9A84C',
+    gradient:
+      'linear-gradient(135deg, rgba(20,18,16,0.7) 0%, rgba(15,14,12,0.65) 100%)',
+  }
+  const Icon = v.icon
+  return (
+    <div
+      className="rounded-2xl p-4 md:p-5 relative overflow-hidden"
+      style={{
+        background: v.gradient,
+        border: `1px solid color-mix(in srgb, ${v.accent} 22%, transparent)`,
+        backdropFilter: 'blur(16px) saturate(140%)',
+        boxShadow: `0 6px 24px -10px color-mix(in srgb, ${v.accent} 30%, transparent), inset 0 1px 0 rgba(255,255,255,0.05)`,
+      }}
+    >
+      {/* Glow decorativo */}
+      <div
+        aria-hidden
+        className="absolute -top-12 -right-12 w-32 h-32 rounded-full pointer-events-none opacity-50"
+        style={{
+          background: `radial-gradient(circle, ${v.accent}33 0%, transparent 70%)`,
+        }}
+      />
+      <div className="relative flex items-start gap-3">
+        <div
+          className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
+          style={{
+            background: 'rgba(0,0,0,0.45)',
+            border: `1px solid color-mix(in srgb, ${v.accent} 35%, transparent)`,
+          }}
+        >
+          <Icon className="w-5 h-5" style={{ color: v.accent }} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p
+            className="text-base md:text-lg leading-tight mb-1"
+            style={{
+              fontFamily: 'var(--font-display)',
+              color: 'var(--text-1)',
+            }}
+          >
+            {title}
+          </p>
+          <p
+            className="text-xs leading-relaxed"
+            style={{
+              color: 'var(--text-2)',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            {subtitle}
+          </p>
+        </div>
+        <ChevronRight
+          className="w-4 h-4 flex-shrink-0 self-center"
+          style={{ color: v.accent }}
+        />
+      </div>
+    </div>
   )
 }
 
