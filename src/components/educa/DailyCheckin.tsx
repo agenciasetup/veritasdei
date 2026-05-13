@@ -1,73 +1,53 @@
 'use client'
 
 /**
- * DailyCheckin — 7 gemas representando os últimos 7 dias.
+ * DailyCheckin — fileira compacta dos 7 dias da semana.
  *
- * Hoje destacado (com glow). Dias passados marcam ✓ se foram dias com
- * estudo (deduzido do `current_streak`). Sem nova tabela: derivamos
- * o estado dos 7 dias a partir de `current_streak` + `studied_today`:
- *   - Se streak=3 e studied_today=true → hoje + 2 anteriores estão ✓.
- *   - Se streak=5 e studied_today=false → últimos 5 dias antes de hoje ✓.
+ * Versão premium: pílulas circulares pequenas, hoje destacado por glow
+ * dourado, dias passados marcam ✓. Mantém glassmorphism externo via
+ * <GlassCard variant="inset">.
  *
- * Não é cronologicamente exato — mas dá o feedback visual essencial
- * (foco em "não quebrar a sequência"). Quando virmos pra logs precisos,
- * trocamos por query de `user_xp_logs` distinct date.
+ * Derivado de `current_streak` + `studied_today` (sem nova tabela —
+ * quando virmos logs precisos, trocamos por query distinct date).
  */
 
 import { useMemo } from 'react'
-import { Check, Flame, Sparkles } from 'lucide-react'
+import { Check, Flame } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useGamification } from '@/lib/gamification/useGamification'
+import GlassCard from './GlassCard'
 
-const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'] // dom→sáb (PT-BR)
+const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
 
 type DayState = {
-  /** Letra do dia da semana. */
   label: string
-  /** Número do dia do mês. */
   dayNumber: number
-  /** Esse é "hoje" (relativo ao agora). */
   isToday: boolean
-  /** Esse dia foi "checked-in" (estudou). */
   checked: boolean
-  /** Esse dia é no futuro (ainda não chegou). */
   future: boolean
 }
 
 function buildWeek(streak: number, studiedToday: boolean): DayState[] {
   const today = new Date()
-  // Pega segunda-feira da semana (start of week)
-  const dayOfWeek = today.getDay() // 0 = domingo
+  const dayOfWeek = today.getDay()
   const days: DayState[] = []
 
-  // Calcula quantos dos últimos N dias estiveram check-in.
-  // Se studied_today=true, hoje conta e o streak inclui hoje.
-  // Se studied_today=false, streak refere-se a dias ANTES de hoje
-  //   (ontem, anteontem, ...).
-  const checkedBackCount = studiedToday ? streak : streak
-
-  // Constrói 7 dias da semana corrente (domingo a sábado).
   for (let i = 0; i < 7; i++) {
-    const offset = i - dayOfWeek // distância em dias até este slot
+    const offset = i - dayOfWeek
     const d = new Date(today)
     d.setDate(today.getDate() + offset)
-
     const isToday = offset === 0
     const future = offset > 0
     let checked = false
-
     if (!future) {
-      const daysAgo = -offset // 0 = hoje, 1 = ontem, ...
+      const daysAgo = -offset
       if (daysAgo === 0) {
         checked = studiedToday
       } else {
-        // Se estudou nos últimos N dias seguidos, esses dias estão checked.
-        // Ajuste: se NÃO estudou hoje, a sequência começa em "ontem".
         const referenceStart = studiedToday ? 0 : 1
-        checked = daysAgo >= referenceStart && daysAgo < referenceStart + checkedBackCount
+        checked = daysAgo >= referenceStart && daysAgo < referenceStart + streak
       }
     }
-
     days.push({
       label: WEEKDAYS[d.getDay()],
       dayNumber: d.getDate(),
@@ -76,7 +56,6 @@ function buildWeek(streak: number, studiedToday: boolean): DayState[] {
       future,
     })
   }
-
   return days
 }
 
@@ -90,15 +69,8 @@ export default function DailyCheckin() {
   )
 
   return (
-    <section
-      className="rounded-3xl p-4 md:p-5"
-      style={{
-        background:
-          'linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, var(--surface-2)) 0%, var(--surface-2) 60%)',
-        border: '1px solid var(--border-1)',
-      }}
-    >
-      <div className="flex items-center justify-between mb-3 md:mb-4">
+    <GlassCard variant="inset" padded>
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Flame
             className="w-4 h-4"
@@ -107,7 +79,7 @@ export default function DailyCheckin() {
             }}
           />
           <h3
-            className="text-sm tracking-[0.15em] uppercase"
+            className="text-[11px] tracking-[0.18em] uppercase"
             style={{
               color: 'var(--accent)',
               fontFamily: 'var(--font-display)',
@@ -124,78 +96,78 @@ export default function DailyCheckin() {
         </p>
       </div>
 
-      <div className="grid grid-cols-7 gap-1.5 md:gap-2">
+      <div className="flex justify-between gap-1.5">
         {days.map((d, i) => (
           <div key={i} className="contents">
-            <DayCell day={d} />
+            <DayDot day={d} />
           </div>
         ))}
       </div>
 
       <p
-        className="text-[11px] mt-3"
+        className="text-[10px] mt-3 text-center"
         style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
       >
         {gami.studiedToday
           ? 'Você já estudou hoje. Continue assim!'
           : 'Estude qualquer subtópico hoje pra manter a sequência.'}
       </p>
-    </section>
+    </GlassCard>
   )
 }
 
-function DayCell({ day }: { day: DayState }) {
-  const base = {
-    background: 'var(--surface-inset)',
-    border: '1px solid var(--border-1)',
-    color: 'var(--text-3)',
-  }
-  const checked = {
+function DayDot({ day }: { day: DayState }) {
+  const checkedStyle = {
     background:
       'linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 70%, black) 100%)',
-    border: '1px solid color-mix(in srgb, var(--accent) 60%, transparent)',
     color: 'var(--accent-contrast)',
-    boxShadow: '0 2px 8px -2px color-mix(in srgb, var(--accent) 50%, transparent)',
+    border:
+      '1px solid color-mix(in srgb, var(--accent) 70%, transparent)',
+    boxShadow:
+      '0 2px 10px -2px color-mix(in srgb, var(--accent) 55%, transparent)',
   }
-  const today = {
+  const baseStyle = {
+    background: 'rgba(0,0,0,0.35)',
+    color: 'var(--text-3)',
+    border: '1px solid color-mix(in srgb, var(--accent) 8%, transparent)',
+  }
+  const todayHighlight = {
     border: '1.5px solid var(--accent)',
-    boxShadow: '0 0 12px color-mix(in srgb, var(--accent) 40%, transparent)',
+    boxShadow:
+      '0 0 14px color-mix(in srgb, var(--accent) 45%, transparent)',
   }
 
-  const style = day.checked
-    ? checked
-    : day.future
-      ? { ...base, opacity: 0.4 }
-      : base
-  const styleWithToday = day.isToday && !day.checked ? { ...style, ...today } : style
+  const style = day.future
+    ? { ...baseStyle, opacity: 0.4 }
+    : day.checked
+      ? checkedStyle
+      : baseStyle
+  const final = day.isToday && !day.checked ? { ...style, ...todayHighlight } : style
 
   return (
-    <div
-      className="aspect-square rounded-xl flex flex-col items-center justify-center text-[10px] relative"
-      style={styleWithToday}
-    >
+    <div className="flex-1 flex flex-col items-center gap-1">
       <span
-        className="tracking-wider opacity-70"
-        style={{ fontFamily: 'var(--font-body)' }}
+        className="text-[9px] tracking-wider"
+        style={{
+          color: day.isToday ? 'var(--accent)' : 'var(--text-3)',
+          fontFamily: 'var(--font-body)',
+          fontWeight: day.isToday ? 600 : 400,
+        }}
       >
         {day.label}
       </span>
-      {day.checked ? (
-        <Check className="w-4 h-4 mt-0.5" />
-      ) : (
-        <span
-          className="text-sm font-semibold mt-0.5"
-          style={{ fontFamily: 'var(--font-display)' }}
-        >
-          {day.dayNumber}
-        </span>
-      )}
-      {day.isToday && day.checked && (
-        <Sparkles
-          className="w-2.5 h-2.5 absolute top-1 right-1"
-          style={{ color: 'var(--accent-contrast)' }}
-        />
-      )}
+      <div
+        className="w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center text-[11px] font-semibold"
+        style={final}
+      >
+        {day.checked ? (
+          <Check className="w-3.5 h-3.5" />
+        ) : (
+          <span style={{ fontFamily: 'var(--font-display)' }}>
+            {day.dayNumber}
+          </span>
+        )}
+      </div>
     </div>
   )
 }
