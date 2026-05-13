@@ -14,6 +14,7 @@ export type ProviderId =
   | 'manual'
   | 'revenuecat'
   | 'hubla'
+  | 'asaas'
 
 export type Intervalo = 'mensal' | 'semestral' | 'anual' | 'unico'
 
@@ -83,6 +84,7 @@ export type NormalizedEvent =
 export type CheckoutInput = {
   userId: string
   userEmail: string
+  userName?: string | null
   priceId: string // id da row billing_prices
   successUrl: string
   cancelUrl: string
