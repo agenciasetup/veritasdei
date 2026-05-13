@@ -19,7 +19,7 @@ import { createClient } from '@/lib/supabase/client'
 
 const INTERVAL_MS = 5500
 
-type Banner = {
+export type Banner = {
   id: string
   image_url: string
   link_url: string | null
@@ -27,15 +27,12 @@ type Banner = {
   subtitle: string | null
 }
 
-export default function BannerSlider() {
+/** Hook compartilhado pra puxar banners ativos. Reusado pelo
+ *  EducaEstudoView pra decidir entre BannerSlider e CinematicHero. */
+export function useActiveBanners(): { banners: Banner[]; loading: boolean } {
   const [banners, setBanners] = useState<Banner[]>([])
   const [loading, setLoading] = useState(true)
-  const [active, setActive] = useState(0)
-  const scrollerRef = useRef<HTMLDivElement | null>(null)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const userInteractedRef = useRef(false)
 
-  // Fetch
   useEffect(() => {
     const supabase = createClient()
     if (!supabase) {
@@ -50,15 +47,26 @@ export default function BannerSlider() {
         .eq('ativo', true)
         .order('ordem', { ascending: true })
       if (cancelled) return
-      if (!error && Array.isArray(data)) {
-        setBanners(data as Banner[])
-      }
+      if (!error && Array.isArray(data)) setBanners(data as Banner[])
       setLoading(false)
     })()
     return () => {
       cancelled = true
     }
   }, [])
+
+  return { banners, loading }
+}
+
+export default function BannerSlider({ banners: bannersProp }: { banners?: Banner[] }) {
+  // Compatibilidade: se for chamado sem props (uso antigo), busca sozinho.
+  const fallback = useActiveBanners()
+  const banners = bannersProp ?? fallback.banners
+  const loading = bannersProp ? false : fallback.loading
+  const [active, setActive] = useState(0)
+  const scrollerRef = useRef<HTMLDivElement | null>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const userInteractedRef = useRef(false)
 
   // Auto-play
   const goTo = useCallback(
@@ -83,7 +91,6 @@ export default function BannerSlider() {
     }
   }, [active, banners.length, goTo])
 
-  // Sync `active` quando user faz swipe (sem auto-play)
   const onScroll = useCallback(() => {
     const el = scrollerRef.current
     if (!el || banners.length === 0) return
@@ -95,7 +102,6 @@ export default function BannerSlider() {
     userInteractedRef.current = true
   }
   function handlePointerUp() {
-    // Retoma auto-play após 8s sem interação
     setTimeout(() => {
       userInteractedRef.current = false
     }, 8000)

@@ -99,6 +99,11 @@ export async function updateSession(request: NextRequest) {
       // a aba "Carteirinha" é escondida no front quando product=educa).
       path === '/perfil' ||
       path.startsWith('/perfil/') ||
+      // Painel admin — o gate de role=admin já é feito no AdminLayout.
+      // Admin precisa acessar /admin/educa/banners de dentro do subdomínio,
+      // e o atalho "Admin" no perfil leva pra cá.
+      path === '/admin' ||
+      path.startsWith('/admin/') ||
       // Auth / API / páginas legais
       path === '/login' ||
       path.startsWith('/auth/') ||
