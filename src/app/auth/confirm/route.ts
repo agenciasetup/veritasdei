@@ -3,8 +3,9 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { safeNext } from '@/lib/auth/safe-next'
 import { finalizeAuthSession } from '@/lib/auth/finalize-session'
 
+// Mantém o usuário no MESMO subdomínio que iniciou a confirmação.
+// Ver comentário equivalente em /auth/callback/route.ts.
 function getOrigin(requestUrl: string): string {
-  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL
   return new URL(requestUrl).origin
 }
 

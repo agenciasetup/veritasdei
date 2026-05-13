@@ -4,8 +4,11 @@ import { safeNext } from '@/lib/auth/safe-next'
 import { finalizeAuthSession } from '@/lib/auth/finalize-session'
 import { clientIpFromHeaders, recordLoginEvent } from '@/lib/auth/log-login-event'
 
+// Mantém o usuário no MESMO subdomínio que iniciou o login. Antes
+// usava NEXT_PUBLIC_APP_URL primeiro, o que jogava quem partiu do
+// educa.veritasdei.com.br pro domínio principal e ele caía no login
+// de novo (cookie de sessão é por host).
 function getOrigin(requestUrl: string): string {
-  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL
   return new URL(requestUrl).origin
 }
 
