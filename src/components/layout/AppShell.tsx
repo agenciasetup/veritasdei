@@ -6,6 +6,7 @@ import Sidebar from './Sidebar'
 import BottomNav from './BottomNav'
 import LiturgicalBar from './LiturgicalBar'
 import AppHeader from './AppHeader'
+import EducaShell from '@/components/educa/EducaShell'
 import { PropositosProvider } from '@/contexts/PropositosContext'
 import { PropositoSheetProvider } from '@/components/propositos/PropositoSheet'
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext'
@@ -59,45 +60,58 @@ export default function AppShell({
   const isFullscreen = FULLSCREEN_PATHS.some(p => pathname.startsWith(p)) || FULLSCREEN_EXACT.includes(pathname)
   const showChrome = isAuthenticated && !isPublicPage && !isFullscreen
   const hideLiturgicalBar = pathname.startsWith('/liturgia/hoje')
+  const isEduca = product === 'veritas-educa'
 
   return (
     <ProductProvider product={product}>
     <SubscriptionProvider>
       <PropositosProvider>
         <PropositoSheetProvider>
-          {/* Offline indicator (mobile-friendly, fixed top) */}
-          {showChrome && <OfflineBanner />}
+          {/* ─────────────────────────────────────────────────────────
+              Veritas Educa — shell isolado (4 itens de nav).
+              Sem LiturgicalBar, sem AppHeader cheio, sem Sidebar com
+              hubs. PageTransition e providers ficam fora pra reuso de
+              modais/coachmarks/install se um dia precisar.
+              ───────────────────────────────────────────────────────── */}
+          {isEduca && showChrome ? (
+            <EducaShell>{children}</EducaShell>
+          ) : (
+            <>
+              {/* Offline indicator (mobile-friendly, fixed top) */}
+              {showChrome && <OfflineBanner />}
 
-          {/* Liturgical bar at the very top */}
-          {showChrome && !hideLiturgicalBar && <LiturgicalBar />}
+              {/* Liturgical bar at the very top */}
+              {showChrome && !hideLiturgicalBar && <LiturgicalBar />}
 
-          {/* Mobile header (avatar + sino) — mobile only, sticky below LiturgicalBar */}
-          {showChrome && (
-            <div className="md:hidden">
-              <AppHeader />
-            </div>
+              {/* Mobile header (avatar + sino) — mobile only, sticky below LiturgicalBar */}
+              {showChrome && (
+                <div className="md:hidden">
+                  <AppHeader />
+                </div>
+              )}
+
+              {/* Sidebar only on md+ screens */}
+              {showChrome && (
+                <div className="hidden md:block">
+                  <Sidebar />
+                </div>
+              )}
+              <div id="main-content" className={`${showChrome ? 'md:ml-16 pb-bottom-nav' : ''}`}>
+                {showChrome ? <PageTransition>{children}</PageTransition> : children}
+              </div>
+              {/* Bottom nav only on mobile */}
+              {showChrome && <BottomNav />}
+              {/* Install PWA prompt (Android + iOS fallback) */}
+              {showChrome && <InstallPrompt />}
+              {/* CoachMarks — só primeira sessão pós-onboarding */}
+              {showChrome && <CoachMarks />}
+              {/* NovidadesModal — uma vez por versão */}
+              {showChrome && <NovidadesModal />}
+              {/* Check-in de propósitos — pergunta uma vez por dia */}
+              {showChrome && <PropositoCheckInGate />}
+            </>
           )}
-
-          {/* Sidebar only on md+ screens */}
-          {showChrome && (
-            <div className="hidden md:block">
-              <Sidebar />
-            </div>
-          )}
-          <div id="main-content" className={`${showChrome ? 'md:ml-16 pb-bottom-nav' : ''}`}>
-            {showChrome ? <PageTransition>{children}</PageTransition> : children}
-          </div>
-          {/* Bottom nav only on mobile */}
-          {showChrome && <BottomNav />}
-          {/* Install PWA prompt (Android + iOS fallback) */}
-          {showChrome && <InstallPrompt />}
-          {/* CoachMarks — só primeira sessão pós-onboarding */}
-          {showChrome && <CoachMarks />}
-          {/* NovidadesModal — uma vez por versão */}
-          {showChrome && <NovidadesModal />}
-          {/* Check-in de propósitos — pergunta uma vez por dia */}
-          {showChrome && <PropositoCheckInGate />}
-          {/* Aceite legal silencioso / re-aceite quando mudar versão */}
+          {/* Aceite legal silencioso / re-aceite quando mudar versão (ambos shells) */}
           {isAuthenticated && <LegalGate />}
         </PropositoSheetProvider>
       </PropositosProvider>
