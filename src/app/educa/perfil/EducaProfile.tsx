@@ -20,6 +20,7 @@ import { useRouter } from 'next/navigation'
 import { Loader2, LogOut, User, Sparkles, Flame, ArrowRight } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useGamification } from '@/lib/gamification/useGamification'
+import { useReliquias } from '@/lib/gamification/useReliquias'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import LevelBadge from '@/components/gamification/LevelBadge'
 import XpBar from '@/components/gamification/XpBar'
@@ -35,8 +36,11 @@ export default function EducaProfile() {
   const { user, profile, signOut } = useAuth()
   const router = useRouter()
   const gami = useGamification(user?.id)
+  const { catalog, unlockedIds, loading: relLoading } = useReliquias(user?.id)
   const { isPremium, plano, fonte, expiraEm, cancelAtPeriodEnd } = useSubscription()
   const [signingOut, setSigningOut] = useState(false)
+
+  const unlockedSelos = catalog.filter((r) => unlockedIds.has(r.id))
 
   const avatarUrl = profile?.profile_image_url
   const name = profile?.name || user?.email?.split('@')[0] || 'Estudante'
@@ -210,6 +214,74 @@ export default function EducaProfile() {
             value={`${gami.longestStreak}d`}
           />
         </div>
+      </section>
+
+      {/* Selos */}
+      <section
+        className="rounded-3xl p-5"
+        style={{
+          background: 'var(--surface-2)',
+          border: '1px solid var(--border-1)',
+        }}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <p
+            className="text-[10px] tracking-[0.2em] uppercase"
+            style={{
+              color: 'var(--accent)',
+              fontFamily: 'var(--font-display)',
+            }}
+          >
+            Selos
+          </p>
+          <p
+            className="text-[11px]"
+            style={{
+              color: 'var(--text-3)',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            {unlockedSelos.length}/{catalog.length}
+          </p>
+        </div>
+
+        {relLoading ? (
+          <div className="flex items-center justify-center py-3">
+            <Loader2
+              className="w-4 h-4 animate-spin"
+              style={{ color: 'var(--text-3)' }}
+            />
+          </div>
+        ) : unlockedSelos.length === 0 ? (
+          <p
+            className="text-sm"
+            style={{
+              color: 'var(--text-3)',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            Conclua estudos e provas pra desbloquear seus primeiros selos.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {unlockedSelos.map((r) => (
+              <span
+                key={r.id}
+                title={r.description || r.name}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs"
+                style={{
+                  background: 'var(--surface-inset)',
+                  border: '1px solid var(--border-1)',
+                  color: 'var(--accent)',
+                  fontFamily: 'var(--font-body)',
+                }}
+              >
+                <Sparkles className="w-3 h-3" />
+                {r.name}
+              </span>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Sair */}

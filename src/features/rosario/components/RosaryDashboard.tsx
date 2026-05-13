@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { User, Users, Link2, Cross, Crown, ArrowLeft } from 'lucide-react'
+import { useProduct } from '@/contexts/ProductContext'
 
 type PrayerMode = 'individual' | 'grupo' | 'entrar'
 type PrayerType = 'terco' | 'rosario'
@@ -19,6 +20,10 @@ export function RosaryDashboard({ onStartIndividual }: Props) {
   const [roomCode, setRoomCode] = useState('')
   const [joining, setJoining] = useState(false)
   const [joinError, setJoinError] = useState<string | null>(null)
+  // No subdomínio Educa, o link "Voltar" não pode ir pra /orar (hub do
+  // Veritas full, fora da whitelist) — vai pra /educa.
+  const { isEduca } = useProduct()
+  const backHref = isEduca ? '/educa' : '/orar'
 
   async function handleJoinRoom() {
     const code = roomCode.trim().toUpperCase()
@@ -62,7 +67,7 @@ export function RosaryDashboard({ onStartIndividual }: Props) {
       <div className="bg-glow" aria-hidden />
 
       <Link
-        href="/orar"
+        href={backHref}
         className="inline-flex items-center gap-2 text-sm mb-4 relative z-10"
         style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
       >
