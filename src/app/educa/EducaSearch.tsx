@@ -18,9 +18,18 @@ import { Loader2, Search, Sparkles } from 'lucide-react'
 type Verse = { reference: string; text: string; similarity?: number }
 type Source = { reference: string; text: string }
 
+// O endpoint /api/verbum/research devolve `insight` como objeto AIInsight,
+// não como string. Aqui modelamos só os campos que renderizamos.
+type Insight = {
+  summary?: string
+  keyPoints?: string[]
+  relatedTopics?: string[]
+  curiosity?: string | null
+} | null
+
 type ResearchResponse = {
   query: string
-  insight: string
+  insight: Insight
   verses: Verse[]
   magisterium: Source[]
   patristic: Source[]
@@ -158,14 +167,36 @@ export default function EducaSearch() {
 
       {result && (
         <div className="mt-4 space-y-3">
-          {result.insight && (
+          {result.insight?.summary && (
             <p
-              className="text-sm leading-relaxed"
+              className="text-sm leading-relaxed whitespace-pre-wrap"
               style={{ color: 'var(--text-1)', fontFamily: 'var(--font-body)' }}
             >
-              {result.insight}
+              {result.insight.summary}
             </p>
           )}
+
+          {Array.isArray(result.insight?.keyPoints) &&
+            result.insight!.keyPoints.length > 0 && (
+              <ul className="space-y-1.5">
+                {result.insight!.keyPoints.slice(0, 5).map((pt, i) => (
+                  <li
+                    key={i}
+                    className="text-sm flex items-start gap-2"
+                    style={{
+                      color: 'var(--text-2)',
+                      fontFamily: 'var(--font-body)',
+                    }}
+                  >
+                    <span
+                      className="inline-block w-1 h-1 rounded-full mt-2 flex-shrink-0"
+                      style={{ background: 'var(--accent)' }}
+                    />
+                    {pt}
+                  </li>
+                ))}
+              </ul>
+            )}
 
           {result.verses.length > 0 && (
             <SourceList title="Bíblia" items={result.verses} />
