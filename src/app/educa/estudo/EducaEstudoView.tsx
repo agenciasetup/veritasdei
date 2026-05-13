@@ -23,6 +23,8 @@ import {
   Book,
   BookOpen,
   Building2,
+  Check,
+  GraduationCap,
   Loader2,
   NotebookPen,
   Scroll,
@@ -34,38 +36,59 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useMyStudyRecent } from '@/lib/study/useMyStudyRecent'
 import { useLastStudied } from '@/lib/content/useLastStudied'
 import { useReliquias } from '@/lib/gamification/useReliquias'
-import TrilhasView from '@/features/trilhas/TrilhasView'
+import ContentRail, { RailItem } from '@/components/educa/ContentRail'
 import { RARITY_META } from '@/types/gamification'
+import { TRAILS_1 } from '@/features/trilhas/trails1'
+import { TRAILS_2 } from '@/features/trilhas/trails2'
+import { TRAILS_3 } from '@/features/trilhas/trails3'
+import { TRAILS_4 } from '@/features/trilhas/trails4'
+import { TRAILS_5 } from '@/features/trilhas/trails5'
+import { TRAILS_6 } from '@/features/trilhas/trails6'
+import type { Trail } from '@/features/trilhas/trails1'
 
-// Visual canônico dos 3 pilares de estudo. Cor + ícone aplicados em todos
-// os lugares do Educa pra dar consistência. Quando virmos pra Fase B
-// (image_url no banco), trocamos por imagem; até lá, gradient + ícone
-// já dão presença bem maior que um card cinza.
+// Paleta sacra: dourado (Bíblia — texto sagrado), vinho (Magistério —
+// autoridade da Igreja, sangue de Cristo) e bronze/sépia (Patrística —
+// Padres da Igreja, antiguidade). Quando virmos pra Fase B (image_url),
+// trocamos por imagem real; até lá, gradient + ícone já carregam o tom.
 const PILLAR_VISUAL: Record<
   string,
   { gradient: string; icon: React.ElementType; color: string }
 > = {
   biblia: {
-    gradient: 'linear-gradient(135deg, #C9A84C 0%, #8a6e2e 100%)',
+    gradient: 'linear-gradient(135deg, #C9A84C 0%, #6e5421 100%)',
     icon: Book,
     color: '#C9A84C',
   },
   magisterio: {
-    gradient: 'linear-gradient(135deg, #7B5BA8 0%, #4a3568 100%)',
+    gradient: 'linear-gradient(135deg, #8B3145 0%, #3D0F1A 100%)',
     icon: Building2,
-    color: '#A98DDB',
+    color: '#C66B7E',
   },
   patristica: {
-    gradient: 'linear-gradient(135deg, #6B8E5A 0%, #3f5634 100%)',
+    gradient: 'linear-gradient(135deg, #8B6F47 0%, #3a2d1a 100%)',
     icon: Scroll,
-    color: '#A9C998',
+    color: '#C9A876',
   },
 }
 
 const DEFAULT_PILLAR_VISUAL = {
-  gradient: 'linear-gradient(135deg, #5C5648 0%, #2f2c26 100%)',
+  gradient: 'linear-gradient(135deg, #4A3B28 0%, #1f1812 100%)',
   icon: BookOpen,
   color: '#B8AFA2',
+}
+
+// Catálogo de trilhas (estático — fallback do TrilhasView quando o DB
+// não tem trails). Usamos só pra renderizar o rail; a abertura/detalhe
+// continua acontecendo em /educa/trilhas.
+const ALL_TRAILS: Trail[] = [
+  ...TRAILS_1, ...TRAILS_2, ...TRAILS_3,
+  ...TRAILS_4, ...TRAILS_5, ...TRAILS_6,
+]
+
+const DIFFICULTY_LABEL: Record<Trail['difficulty'], string> = {
+  Iniciante: 'Iniciante',
+  Intermediário: 'Intermediário',
+  Avançado: 'Avançado',
 }
 
 export default function EducaEstudoView() {
@@ -93,121 +116,64 @@ export default function EducaEstudoView() {
       />
 
       <div className="max-w-6xl mx-auto px-4 md:px-8 pt-6 md:pt-10 space-y-10 md:space-y-12">
-        {/* ─── 2. TRILHAS ──────────────────────────────────────────── */}
-        <section>
-          <SectionHeader
-            title="Trilhas guiadas"
-            subtitle="Caminhos estruturados pra estudar com método."
-            cta={{ label: 'Ver todas', href: '/educa/trilhas' }}
-          />
-          <TrilhasView hideHeader limit={6} />
-        </section>
+        {/* ─── 2. TRILHAS (rail horizontal Netflix-style) ───────────── */}
+        <ContentRail
+          title="Trilhas guiadas"
+          subtitle="Caminhos estruturados pra estudar com método."
+          cta={{ label: 'Ver todas', href: '/educa/trilhas' }}
+        >
+          {ALL_TRAILS.map((t) => (
+            <div key={t.id} className="contents">
+              <RailItem widthClassName="w-72 md:w-80">
+                <TrailPosterCard trail={t} />
+              </RailItem>
+            </div>
+          ))}
+        </ContentRail>
 
-        {/* ─── 3. PILARES ──────────────────────────────────────────── */}
-        <section>
-          <SectionHeader
+        {/* ─── 3. PILARES (rail horizontal) ──────────────────────── */}
+        {recentLoading ? (
+          <section>
+            <SectionHeader
+              title="Pilares de estudo"
+              subtitle="Bíblia, Magistério e Patrística — o tripé da fé católica."
+            />
+            <PillarsSkeleton />
+          </section>
+        ) : pillars.length === 0 ? (
+          <section>
+            <SectionHeader
+              title="Pilares de estudo"
+              subtitle="Bíblia, Magistério e Patrística — o tripé da fé católica."
+            />
+            <EmptyState text="O conteúdo dos pilares aparece aqui assim que carregar." />
+          </section>
+        ) : (
+          <ContentRail
             title="Pilares de estudo"
             subtitle="Bíblia, Magistério e Patrística — o tripé da fé católica."
-          />
-          {recentLoading ? (
-            <PillarsSkeleton />
-          ) : pillars.length === 0 ? (
-            <EmptyState text="O conteúdo dos pilares aparece aqui assim que carregar." />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5">
-              {pillars.map((p) => {
-                const v = PILLAR_VISUAL[p.slug] ?? DEFAULT_PILLAR_VISUAL
-                const Icon = v.icon
-                const percent =
-                  p.total > 0 ? Math.round((p.studied / p.total) * 100) : 0
-                return (
-                  <Link
-                    key={p.slug}
-                    href={`/estudo/${p.slug}`}
-                    className="group relative block rounded-3xl overflow-hidden active:scale-[0.99] transition-transform"
-                    style={{
-                      aspectRatio: '16 / 10',
-                      background: v.gradient,
-                      border: '1px solid var(--border-1)',
-                      boxShadow: `0 6px 24px -8px ${v.color}40`,
-                    }}
-                  >
-                    {/* Pattern decorativo */}
-                    <div
-                      aria-hidden
-                      className="absolute inset-0 opacity-30"
-                      style={{
-                        background:
-                          'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.18), transparent 60%)',
-                      }}
+          >
+            {pillars.map((p) => {
+              const v = PILLAR_VISUAL[p.slug] ?? DEFAULT_PILLAR_VISUAL
+              const percent =
+                p.total > 0 ? Math.round((p.studied / p.total) * 100) : 0
+              return (
+                <div key={p.slug} className="contents">
+                  <RailItem widthClassName="w-[19rem] md:w-[24rem]">
+                    <PillarPosterCard
+                      slug={p.slug}
+                      title={p.title}
+                      studied={p.studied}
+                      total={p.total}
+                      percent={percent}
+                      visual={v}
                     />
-                    <div className="relative h-full flex flex-col justify-between p-5 md:p-6">
-                      <div className="flex items-start justify-between gap-3">
-                        <div
-                          className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                          style={{
-                            background: 'rgba(0,0,0,0.3)',
-                            border: '1px solid rgba(255,255,255,0.2)',
-                          }}
-                        >
-                          <Icon className="w-7 h-7 text-white" />
-                        </div>
-                        <span
-                          className="text-xs px-2.5 py-1 rounded-full"
-                          style={{
-                            background: 'rgba(0,0,0,0.35)',
-                            color: 'white',
-                            fontFamily: 'var(--font-body)',
-                            fontWeight: 600,
-                          }}
-                        >
-                          {percent}%
-                        </span>
-                      </div>
-                      <div>
-                        <h3
-                          className="text-2xl md:text-3xl"
-                          style={{
-                            fontFamily: 'var(--font-display)',
-                            color: 'white',
-                            textShadow: '0 2px 8px rgba(0,0,0,0.4)',
-                          }}
-                        >
-                          {p.title}
-                        </h3>
-                        <div className="flex items-center justify-between mt-3">
-                          <span
-                            className="text-xs"
-                            style={{
-                              color: 'rgba(255,255,255,0.85)',
-                              fontFamily: 'var(--font-body)',
-                            }}
-                          >
-                            {p.studied}/{p.total} estudados
-                          </span>
-                          <ArrowRight className="w-4 h-4 text-white opacity-80 group-hover:translate-x-1 transition-transform" />
-                        </div>
-                        {/* progress bar */}
-                        <div
-                          className="mt-2 h-1 rounded-full overflow-hidden"
-                          style={{ background: 'rgba(0,0,0,0.3)' }}
-                        >
-                          <div
-                            className="h-full transition-all duration-700"
-                            style={{
-                              width: `${percent}%`,
-                              background: 'white',
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          )}
-        </section>
+                  </RailItem>
+                </div>
+              )
+            })}
+          </ContentRail>
+        )}
 
         {/* ─── 4. PROVAS + SELOS ──────────────────────────────────── */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
@@ -286,17 +252,17 @@ function HeroSection({
       style={{
         minHeight: 220,
         background:
-          'linear-gradient(135deg, #1a1612 0%, #0f0e0c 60%, #2a1d10 100%)',
+          'linear-gradient(135deg, #0f0e0c 0%, #14080b 60%, #0f0e0c 100%)',
         borderBottom: '1px solid var(--border-1)',
       }}
     >
-      {/* Glow decorativo */}
+      {/* Glow decorativo — dourado + acento vinho sutil */}
       <div
         aria-hidden
         className="absolute inset-0"
         style={{
           background:
-            'radial-gradient(ellipse 800px 300px at 20% 100%, rgba(201,168,76,0.18), transparent 70%)',
+            'radial-gradient(ellipse 800px 300px at 20% 100%, rgba(201,168,76,0.22), transparent 70%), radial-gradient(ellipse 400px 200px at 90% 0%, rgba(139,49,69,0.18), transparent 70%)',
         }}
       />
       <div className="relative max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-12">
@@ -597,6 +563,214 @@ function SelosCard({
         </div>
       )}
     </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Poster cards (estilo módulo Netflix)
+// ──────────────────────────────────────────────────────────────────────
+
+/** Cor de label de dificuldade (paleta sacra). */
+const DIFFICULTY_BG: Record<Trail['difficulty'], string> = {
+  Iniciante:
+    'color-mix(in srgb, var(--accent) 18%, transparent)',
+  Intermediário:
+    'color-mix(in srgb, #C9A876 22%, transparent)',
+  Avançado:
+    'color-mix(in srgb, var(--wine-light) 28%, transparent)',
+}
+
+function TrailPosterCard({ trail }: { trail: Trail }) {
+  return (
+    <Link
+      href="/educa/trilhas"
+      className="group block rounded-3xl overflow-hidden active:scale-[0.99] transition-transform"
+      style={{
+        aspectRatio: '4 / 5',
+        background: `linear-gradient(180deg, ${trail.color}33 0%, var(--surface-2) 60%, var(--surface-1) 100%)`,
+        border: `1px solid color-mix(in srgb, ${trail.color} 30%, transparent)`,
+        boxShadow: `0 6px 22px -8px ${trail.color}40`,
+      }}
+    >
+      <div className="relative h-full p-4 md:p-5 flex flex-col">
+        {/* Topo: ícone + nivel */}
+        <div className="flex items-center justify-between mb-3">
+          <div
+            className="w-12 h-12 rounded-2xl flex items-center justify-center"
+            style={{
+              background: `${trail.color}26`,
+              border: `1px solid ${trail.color}55`,
+            }}
+          >
+            <GraduationCap
+              className="w-6 h-6"
+              style={{ color: trail.color }}
+            />
+          </div>
+          <span
+            className="text-[10px] tracking-wider uppercase px-2 py-1 rounded-full"
+            style={{
+              background: DIFFICULTY_BG[trail.difficulty],
+              color: trail.color,
+              fontFamily: 'var(--font-body)',
+              fontWeight: 600,
+            }}
+          >
+            {DIFFICULTY_LABEL[trail.difficulty]}
+          </span>
+        </div>
+
+        {/* Meio: título + descrição */}
+        <div className="flex-1 min-h-0">
+          <h3
+            className="text-lg md:text-xl leading-tight mb-1"
+            style={{
+              fontFamily: 'var(--font-display)',
+              color: 'var(--text-1)',
+            }}
+          >
+            {trail.title}
+          </h3>
+          <p
+            className="text-[11px] mb-3 opacity-80"
+            style={{
+              color: trail.color,
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            {trail.subtitle}
+          </p>
+          <p
+            className="text-xs leading-relaxed line-clamp-3"
+            style={{
+              color: 'var(--text-2)',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            {trail.description}
+          </p>
+        </div>
+
+        {/* Rodapé: steps preview + CTA */}
+        <div
+          className="mt-3 pt-3 flex items-center justify-between"
+          style={{
+            borderTop: '1px solid var(--border-1)',
+          }}
+        >
+          <span
+            className="text-[11px] inline-flex items-center gap-1"
+            style={{
+              color: 'var(--text-3)',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            <Check className="w-3 h-3" />
+            {trail.steps.length} etapas
+          </span>
+          <ArrowRight
+            className="w-4 h-4 group-hover:translate-x-1 transition-transform"
+            style={{ color: trail.color }}
+          />
+        </div>
+      </div>
+    </Link>
+  )
+}
+
+function PillarPosterCard({
+  slug,
+  title,
+  studied,
+  total,
+  percent,
+  visual,
+}: {
+  slug: string
+  title: string
+  studied: number
+  total: number
+  percent: number
+  visual: { gradient: string; icon: React.ElementType; color: string }
+}) {
+  const Icon = visual.icon
+  return (
+    <Link
+      href={`/estudo/${slug}`}
+      className="group relative block rounded-3xl overflow-hidden active:scale-[0.99] transition-transform"
+      style={{
+        aspectRatio: '16 / 10',
+        background: visual.gradient,
+        border: '1px solid var(--border-1)',
+        boxShadow: `0 6px 24px -8px ${visual.color}55`,
+      }}
+    >
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-30"
+        style={{
+          background:
+            'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.18), transparent 60%)',
+        }}
+      />
+      <div className="relative h-full flex flex-col justify-between p-5 md:p-6">
+        <div className="flex items-start justify-between gap-3">
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center"
+            style={{
+              background: 'rgba(0,0,0,0.35)',
+              border: '1px solid rgba(255,255,255,0.18)',
+            }}
+          >
+            <Icon className="w-7 h-7 text-white" />
+          </div>
+          <span
+            className="text-xs px-2.5 py-1 rounded-full"
+            style={{
+              background: 'rgba(0,0,0,0.4)',
+              color: 'white',
+              fontFamily: 'var(--font-body)',
+              fontWeight: 600,
+            }}
+          >
+            {percent}%
+          </span>
+        </div>
+        <div>
+          <h3
+            className="text-2xl md:text-3xl"
+            style={{
+              fontFamily: 'var(--font-display)',
+              color: 'white',
+              textShadow: '0 2px 8px rgba(0,0,0,0.4)',
+            }}
+          >
+            {title}
+          </h3>
+          <div className="flex items-center justify-between mt-3">
+            <span
+              className="text-xs"
+              style={{
+                color: 'rgba(255,255,255,0.85)',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              {studied}/{total} estudados
+            </span>
+            <ArrowRight className="w-4 h-4 text-white opacity-80 group-hover:translate-x-1 transition-transform" />
+          </div>
+          <div
+            className="mt-2 h-1 rounded-full overflow-hidden"
+            style={{ background: 'rgba(0,0,0,0.3)' }}
+          >
+            <div
+              className="h-full transition-all duration-700"
+              style={{ width: `${percent}%`, background: 'white' }}
+            />
+          </div>
+        </div>
+      </div>
+    </Link>
   )
 }
 
