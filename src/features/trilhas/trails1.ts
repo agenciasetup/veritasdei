@@ -13,6 +13,9 @@ export interface Trail {
   color: string
   iconName: string
   steps: TrailStep[]
+  /** Capa opcional (Fase B do Educa). Quando definida, sobrepõe o gradient
+   *  por cor nos cards posters. Vinda de `trails.cover_url` no banco. */
+  coverUrl?: string | null
 }
 
 export const TRAILS_1: Trail[] = [

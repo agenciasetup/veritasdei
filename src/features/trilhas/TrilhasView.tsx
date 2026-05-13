@@ -32,6 +32,7 @@ interface DBTrail {
   color: string
   icon_name: string
   sort_order: number
+  cover_url: string | null
 }
 
 interface DBTrailStep {
@@ -144,9 +145,10 @@ export default function TrilhasView({ hideHeader, limit }: TrilhasViewProps = {}
         title: t.title,
         subtitle: t.subtitle || '',
         description: t.description || '',
-        difficulty: t.difficulty,
+        difficulty: t.difficulty as Trail['difficulty'],
         color: t.color,
         iconName: t.icon_name,
+        coverUrl: t.cover_url ?? null,
         steps: (stepsByTrail[t.id] || []).map(s => ({
           label: s.label,
           description: s.description || '',
