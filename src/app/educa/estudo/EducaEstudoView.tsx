@@ -17,6 +17,7 @@
  * Nada novo no banco — só composição visual sobre os hooks existentes.
  */
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   ArrowRight,
@@ -36,7 +37,9 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useMyStudyRecent } from '@/lib/study/useMyStudyRecent'
 import { useLastStudied } from '@/lib/content/useLastStudied'
 import { useReliquias } from '@/lib/gamification/useReliquias'
+import { createClient } from '@/lib/supabase/client'
 import ContentRail, { RailItem } from '@/components/educa/ContentRail'
+import BannerSlider from '@/components/educa/BannerSlider'
 import { RARITY_META } from '@/types/gamification'
 import { TRAILS_1 } from '@/features/trilhas/trails1'
 import { TRAILS_2 } from '@/features/trilhas/trails2'
@@ -77,13 +80,87 @@ const DEFAULT_PILLAR_VISUAL = {
   color: '#B8AFA2',
 }
 
-// Catálogo de trilhas (estático — fallback do TrilhasView quando o DB
-// não tem trails). Usamos só pra renderizar o rail; a abertura/detalhe
-// continua acontecendo em /educa/trilhas.
-const ALL_TRAILS: Trail[] = [
+// Catálogo de trilhas estático — fallback quando o DB não tem trails
+// cadastradas. Quando o admin cadastra `trails` no banco (com
+// `cover_url`), o rail prefere essas e mostra a capa real.
+const STATIC_TRAILS: Trail[] = [
   ...TRAILS_1, ...TRAILS_2, ...TRAILS_3,
   ...TRAILS_4, ...TRAILS_5, ...TRAILS_6,
 ]
+
+/** Carrega trilhas do DB (com cover_url), fallback no estático. */
+function useEducaTrails(): { trails: Trail[]; loading: boolean } {
+  const [trails, setTrails] = useState<Trail[]>(STATIC_TRAILS)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) {
+      setLoading(false)
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      const { data, error } = await supabase
+        .from('trails')
+        .select('id, title, subtitle, description, difficulty, color, icon_name, cover_url')
+        .eq('visible', true)
+        .order('sort_order')
+      if (cancelled) return
+      if (!error && Array.isArray(data) && data.length > 0) {
+        setTrails(
+          data.map((t) => ({
+            id: t.id as string,
+            title: (t.title as string) ?? '',
+            subtitle: (t.subtitle as string) ?? '',
+            description: (t.description as string) ?? '',
+            difficulty: (t.difficulty as Trail['difficulty']) ?? 'Iniciante',
+            color: (t.color as string) ?? '#C9A84C',
+            iconName: (t.icon_name as string) ?? 'GraduationCap',
+            steps: [],
+            coverUrl: (t.cover_url as string | null) ?? null,
+          })),
+        )
+      }
+      setLoading(false)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  return { trails, loading }
+}
+
+/** Carrega cover_url dos pilares (content_groups) indexado por slug. */
+function usePillarCovers(): Record<string, string> {
+  const [covers, setCovers] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) return
+    let cancelled = false
+    ;(async () => {
+      const { data } = await supabase
+        .from('content_groups')
+        .select('slug, cover_url')
+        .eq('visible', true)
+      if (cancelled || !Array.isArray(data)) return
+      const map: Record<string, string> = {}
+      for (const row of data) {
+        const slug = row.slug as string | null
+        const url = row.cover_url as string | null
+        if (slug && url) map[slug] = url
+      }
+      setCovers(map)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  return covers
+}
 
 const DIFFICULTY_LABEL: Record<Trail['difficulty'], string> = {
   Iniciante: 'Iniciante',
@@ -96,11 +173,16 @@ export default function EducaEstudoView() {
   const { last, loading: lastLoading } = useLastStudied(user?.id)
   const { attempts, pillars, loading: recentLoading } = useMyStudyRecent()
   const { catalog, unlockedIds, loading: relLoading } = useReliquias(user?.id)
+  const { trails } = useEducaTrails()
+  const pillarCovers = usePillarCovers()
 
   const unlockedSelos = catalog.filter((r) => unlockedIds.has(r.id))
 
   return (
     <main className="pb-24 md:pb-16">
+      {/* ─── 0. BANNER SLIDER (admin) ───────────────────────────────── */}
+      <BannerSlider />
+
       {/* ─── 1. HERO ─────────────────────────────────────────────────── */}
       <HeroSection
         loading={lastLoading}
@@ -122,7 +204,7 @@ export default function EducaEstudoView() {
           subtitle="Caminhos estruturados pra estudar com método."
           cta={{ label: 'Ver todas', href: '/educa/trilhas' }}
         >
-          {ALL_TRAILS.map((t) => (
+          {trails.map((t) => (
             <div key={t.id} className="contents">
               <RailItem widthClassName="w-72 md:w-80">
                 <TrailPosterCard trail={t} />
@@ -167,6 +249,7 @@ export default function EducaEstudoView() {
                       total={p.total}
                       percent={percent}
                       visual={v}
+                      coverUrl={pillarCovers[p.slug] ?? null}
                     />
                   </RailItem>
                 </div>
@@ -581,24 +664,49 @@ const DIFFICULTY_BG: Record<Trail['difficulty'], string> = {
 }
 
 function TrailPosterCard({ trail }: { trail: Trail }) {
+  const hasCover = Boolean(trail.coverUrl)
   return (
     <Link
       href="/educa/trilhas"
-      className="group block rounded-3xl overflow-hidden active:scale-[0.99] transition-transform"
+      className="group block rounded-3xl overflow-hidden active:scale-[0.99] transition-transform relative"
       style={{
         aspectRatio: '4 / 5',
-        background: `linear-gradient(180deg, ${trail.color}33 0%, var(--surface-2) 60%, var(--surface-1) 100%)`,
+        background: hasCover
+          ? 'var(--surface-2)'
+          : `linear-gradient(180deg, ${trail.color}33 0%, var(--surface-2) 60%, var(--surface-1) 100%)`,
         border: `1px solid color-mix(in srgb, ${trail.color} 30%, transparent)`,
         boxShadow: `0 6px 22px -8px ${trail.color}40`,
       }}
     >
+      {/* Cover image (se houver) — preenche todo o card como fundo */}
+      {hasCover && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={trail.coverUrl as string}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
+          />
+          {/* Overlay gradient pra texto ficar legível */}
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                'linear-gradient(180deg, rgba(15,14,12,0.35) 0%, rgba(15,14,12,0.55) 55%, rgba(15,14,12,0.95) 100%)',
+            }}
+          />
+        </>
+      )}
+
       <div className="relative h-full p-4 md:p-5 flex flex-col">
         {/* Topo: ícone + nivel */}
         <div className="flex items-center justify-between mb-3">
           <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center"
+            className="w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur"
             style={{
-              background: `${trail.color}26`,
+              background: hasCover ? 'rgba(0,0,0,0.45)' : `${trail.color}26`,
               border: `1px solid ${trail.color}55`,
             }}
           >
@@ -608,9 +716,11 @@ function TrailPosterCard({ trail }: { trail: Trail }) {
             />
           </div>
           <span
-            className="text-[10px] tracking-wider uppercase px-2 py-1 rounded-full"
+            className="text-[10px] tracking-wider uppercase px-2 py-1 rounded-full backdrop-blur"
             style={{
-              background: DIFFICULTY_BG[trail.difficulty],
+              background: hasCover
+                ? 'rgba(0,0,0,0.45)'
+                : DIFFICULTY_BG[trail.difficulty],
               color: trail.color,
               fontFamily: 'var(--font-body)',
               fontWeight: 600,
@@ -620,59 +730,88 @@ function TrailPosterCard({ trail }: { trail: Trail }) {
           </span>
         </div>
 
-        {/* Meio: título + descrição */}
-        <div className="flex-1 min-h-0">
-          <h3
-            className="text-lg md:text-xl leading-tight mb-1"
-            style={{
-              fontFamily: 'var(--font-display)',
-              color: 'var(--text-1)',
-            }}
-          >
-            {trail.title}
-          </h3>
-          <p
-            className="text-[11px] mb-3 opacity-80"
-            style={{
-              color: trail.color,
-              fontFamily: 'var(--font-body)',
-            }}
-          >
-            {trail.subtitle}
-          </p>
-          <p
-            className="text-xs leading-relaxed line-clamp-3"
-            style={{
-              color: 'var(--text-2)',
-              fontFamily: 'var(--font-body)',
-            }}
-          >
-            {trail.description}
-          </p>
-        </div>
+        {/* Empurra conteúdo pra base quando há cover (visual netflix-poster) */}
+        {hasCover && <div className="flex-1" />}
 
-        {/* Rodapé: steps preview + CTA */}
-        <div
-          className="mt-3 pt-3 flex items-center justify-between"
-          style={{
-            borderTop: '1px solid var(--border-1)',
-          }}
-        >
-          <span
-            className="text-[11px] inline-flex items-center gap-1"
+        {/* Meio (sem cover): título + descrição. Com cover: só título + subtítulo na base */}
+        {!hasCover ? (
+          <div className="flex-1 min-h-0">
+            <h3
+              className="text-lg md:text-xl leading-tight mb-1"
+              style={{
+                fontFamily: 'var(--font-display)',
+                color: 'var(--text-1)',
+              }}
+            >
+              {trail.title}
+            </h3>
+            <p
+              className="text-[11px] mb-3 opacity-80"
+              style={{
+                color: trail.color,
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              {trail.subtitle}
+            </p>
+            <p
+              className="text-xs leading-relaxed line-clamp-3"
+              style={{
+                color: 'var(--text-2)',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              {trail.description}
+            </p>
+          </div>
+        ) : (
+          <div className="mt-auto">
+            <h3
+              className="text-xl md:text-2xl leading-tight mb-1"
+              style={{
+                fontFamily: 'var(--font-display)',
+                color: 'var(--text-1)',
+                textShadow: '0 2px 10px rgba(0,0,0,0.6)',
+              }}
+            >
+              {trail.title}
+            </h3>
+            <p
+              className="text-[11px] opacity-90"
+              style={{
+                color: trail.color,
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              {trail.subtitle}
+            </p>
+          </div>
+        )}
+
+        {/* Rodapé: steps + CTA */}
+        {!hasCover && (
+          <div
+            className="mt-3 pt-3 flex items-center justify-between"
             style={{
-              color: 'var(--text-3)',
-              fontFamily: 'var(--font-body)',
+              borderTop: '1px solid var(--border-1)',
             }}
           >
-            <Check className="w-3 h-3" />
-            {trail.steps.length} etapas
-          </span>
-          <ArrowRight
-            className="w-4 h-4 group-hover:translate-x-1 transition-transform"
-            style={{ color: trail.color }}
-          />
-        </div>
+            <span
+              className="text-[11px] inline-flex items-center gap-1"
+              style={{
+                color: 'var(--text-3)',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              <Check className="w-3 h-3" />
+              {trail.steps.length} etapas
+            </span>
+            <ArrowRight
+              className="w-4 h-4 group-hover:translate-x-1 transition-transform"
+              style={{ color: trail.color }}
+            />
+          </div>
+        )}
       </div>
     </Link>
   )
@@ -685,6 +824,7 @@ function PillarPosterCard({
   total,
   percent,
   visual,
+  coverUrl,
 }: {
   slug: string
   title: string
@@ -692,27 +832,50 @@ function PillarPosterCard({
   total: number
   percent: number
   visual: { gradient: string; icon: React.ElementType; color: string }
+  coverUrl?: string | null
 }) {
   const Icon = visual.icon
+  const hasCover = Boolean(coverUrl)
   return (
     <Link
       href={`/estudo/${slug}`}
       className="group relative block rounded-3xl overflow-hidden active:scale-[0.99] transition-transform"
       style={{
         aspectRatio: '16 / 10',
-        background: visual.gradient,
+        background: hasCover ? 'var(--surface-2)' : visual.gradient,
         border: '1px solid var(--border-1)',
         boxShadow: `0 6px 24px -8px ${visual.color}55`,
       }}
     >
-      <div
-        aria-hidden
-        className="absolute inset-0 opacity-30"
-        style={{
-          background:
-            'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.18), transparent 60%)',
-        }}
-      />
+      {hasCover && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={coverUrl as string}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
+          />
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                'linear-gradient(180deg, rgba(15,14,12,0.25) 0%, rgba(15,14,12,0.55) 70%, rgba(15,14,12,0.85) 100%)',
+            }}
+          />
+        </>
+      )}
+      {!hasCover && (
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-30"
+          style={{
+            background:
+              'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.18), transparent 60%)',
+          }}
+        />
+      )}
       <div className="relative h-full flex flex-col justify-between p-5 md:p-6">
         <div className="flex items-start justify-between gap-3">
           <div
