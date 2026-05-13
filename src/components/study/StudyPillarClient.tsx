@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { notFound } from 'next/navigation'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ArrowRight, BookOpen } from 'lucide-react'
 import {
   useContentItems,
   type ContentSubtopic,
@@ -13,6 +13,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import StudyReader from './StudyReader'
 import StudyLayout from './StudyLayout'
 import StudyLessonsSidebar from './StudyLessonsSidebar'
+import CinematicHero from '@/components/educa/CinematicHero'
+import ContentRail, { RailItem } from '@/components/educa/ContentRail'
 import StudyMobileChip from './StudyMobileChip'
 import StudyNavBar from './StudyNavBar'
 import StudyTopicQuizCard from './StudyTopicQuizCard'
@@ -130,48 +132,177 @@ function PillarTopicGrid({
   topics,
 }: {
   pillarSlug: string
-  group: { title: string; subtitle: string | null; description: string | null }
+  group: {
+    title: string
+    subtitle: string | null
+    description: string | null
+    cover_url?: string | null
+  }
   topics: PillarTreeNode[]
 }) {
+  const firstTopic = topics[0]
   return (
     <div className="flex flex-col min-h-screen relative">
-      <PillarHero title={group.title} subtitle={group.description || group.subtitle || ''} />
-      <main className="relative z-10 flex-1 pb-16">
-        <div className="max-w-[1200px] mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
-          {topics.map((topic, i) => (
-            <Link
-              key={topic.id}
-              href={`/estudo/${pillarSlug}/${topic.slug}`}
-              className="text-left p-5 rounded-2xl fade-in active:scale-[0.99] transition-transform"
-              style={{ ...CARD_STYLE, animationDelay: `${i * 0.06}s` }}
-            >
-              {topic.sort_order > 0 && topic.subtitle ? (
-                <span
-                  className="text-xs tracking-[0.15em] uppercase block mb-3"
-                  style={{ color: 'var(--accent)', fontFamily: 'var(--font-body)' }}
-                >
-                  {topic.subtitle}
-                </span>
-              ) : null}
-              <h3
-                className="text-base font-semibold leading-snug mb-2 tracking-[0.04em]"
-                style={{ fontFamily: 'var(--font-display)', color: 'var(--text-1)' }}
-              >
-                {topic.title}
-              </h3>
-              {topic.description ? (
-                <p
-                  className="text-sm leading-relaxed line-clamp-2"
-                  style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
-                >
-                  {topic.description}
-                </p>
-              ) : null}
-            </Link>
-          ))}
+      {/* Hero cinematográfico — usa cover_url do pilar quando houver */}
+      <CinematicHero
+        eyebrow={group.subtitle || 'Pilar de estudo'}
+        title={group.title}
+        subtitle={group.description ?? undefined}
+        imageUrl={group.cover_url ?? null}
+        primary={
+          firstTopic
+            ? {
+                label: 'Começar',
+                href: `/estudo/${pillarSlug}/${firstTopic.slug}`,
+              }
+            : undefined
+        }
+      />
+
+      <main
+        className="relative z-10 flex-1 pb-16 -mt-16 md:-mt-24"
+        style={{ background: 'var(--surface-1)' }}
+      >
+        <div className="max-w-6xl mx-auto px-4 md:px-8">
+          <ContentRail
+            title="Tópicos"
+            subtitle="Escolha por onde começar — ou avance em sequência."
+          >
+            {topics.map((topic) => (
+              <div key={topic.id} className="contents">
+                <RailItem widthClassName="w-72 md:w-80">
+                  <TopicPosterCard
+                    href={`/estudo/${pillarSlug}/${topic.slug}`}
+                    title={topic.title}
+                    subtitle={topic.subtitle ?? undefined}
+                    description={topic.description ?? undefined}
+                    coverUrl={topic.cover_url ?? null}
+                  />
+                </RailItem>
+              </div>
+            ))}
+          </ContentRail>
         </div>
       </main>
     </div>
+  )
+}
+
+function TopicPosterCard({
+  href,
+  title,
+  subtitle,
+  description,
+  coverUrl,
+}: {
+  href: string
+  title: string
+  subtitle?: string
+  description?: string
+  coverUrl?: string | null
+}) {
+  const hasCover = Boolean(coverUrl)
+  return (
+    <Link
+      href={href}
+      className="group relative block rounded-3xl overflow-hidden active:scale-[0.99] transition-transform"
+      style={{
+        aspectRatio: '4 / 5',
+        background: hasCover
+          ? 'var(--surface-2)'
+          : 'linear-gradient(180deg, color-mix(in srgb, var(--accent) 18%, var(--surface-2)) 0%, var(--surface-1) 100%)',
+        border: '1px solid color-mix(in srgb, var(--accent) 15%, transparent)',
+        boxShadow: '0 8px 32px -12px rgba(0,0,0,0.6)',
+      }}
+    >
+      {hasCover ? (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={coverUrl as string}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
+          />
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                'linear-gradient(180deg, rgba(15,14,12,0.3) 0%, rgba(15,14,12,0.55) 55%, rgba(15,14,12,0.95) 100%)',
+            }}
+          />
+        </>
+      ) : (
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-25"
+          style={{
+            background:
+              'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.18), transparent 60%)',
+          }}
+        />
+      )}
+
+      <div className="relative h-full p-4 md:p-5 flex flex-col">
+        {/* Ícone topo (se não há cover, fica visível; com cover, fica subtle) */}
+        <div
+          className="w-11 h-11 md:w-12 md:h-12 rounded-2xl flex items-center justify-center backdrop-blur"
+          style={{
+            background: hasCover ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.3)',
+            border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
+          }}
+        >
+          <BookOpen
+            className="w-5 h-5 md:w-6 md:h-6"
+            style={{ color: 'var(--accent)' }}
+          />
+        </div>
+
+        <div className="flex-1" />
+
+        <div>
+          {subtitle && (
+            <p
+              className="text-[10px] tracking-[0.2em] uppercase mb-1 opacity-90"
+              style={{
+                color: 'var(--accent)',
+                fontFamily: 'var(--font-display)',
+              }}
+            >
+              {subtitle}
+            </p>
+          )}
+          <h3
+            className="text-lg md:text-xl leading-tight mb-1"
+            style={{
+              fontFamily: 'var(--font-display)',
+              color: 'var(--text-1)',
+              textShadow: hasCover ? '0 2px 10px rgba(0,0,0,0.6)' : 'none',
+            }}
+          >
+            {title}
+          </h3>
+          {description && (
+            <p
+              className="text-xs leading-relaxed line-clamp-2 mt-1"
+              style={{
+                color: 'rgba(232,226,216,0.78)',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              {description}
+            </p>
+          )}
+          <div className="flex items-center justify-end mt-2">
+            <ArrowRight
+              className="w-4 h-4 group-hover:translate-x-1 transition-transform"
+              style={{ color: 'var(--accent)' }}
+            />
+          </div>
+        </div>
+      </div>
+    </Link>
   )
 }
 
