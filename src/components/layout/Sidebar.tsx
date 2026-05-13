@@ -14,7 +14,7 @@ import {
   ChevronLeft, ChevronRight, Church, Droplets, ScrollText,
   Tablets, BookOpen, Scale, Heart, GraduationCap, MapPin, Map,
   LogIn, User, LogOut, Shield, Users, Cross, ClipboardCheck, BookMarked,
-  Calendar, Library, Network, CalendarHeart,
+  Calendar, Library, Network, CalendarHeart, Sparkles,
 } from 'lucide-react'
 
 /* ─── Navigation structure with groups ─── */
@@ -122,8 +122,10 @@ export default function Sidebar() {
   const pathname = usePathname()
   const { isAuthenticated, profile, signOut, isLoading, user } = useAuth()
   const { product } = useProduct()
-  const { hasFeature, loading: subLoading } = useSubscription()
+  const { hasFeature, loading: subLoading, isPremium } = useSubscription()
   const level = useUserLevel(user?.id) ?? 1
+  // CTA "Assinar Premium" só pra logado + entitlement carregada + não-premium.
+  const showSubscribeCTA = isAuthenticated && !subLoading && !isPremium
 
   const avatarUrl = profile?.profile_image_url
 
@@ -216,6 +218,16 @@ export default function Sidebar() {
           <>
             {isAuthenticated && profile ? (
               <>
+                {/* CTA Assinar — só pra não-premium. Some quando assinar. */}
+                {showSubscribeCTA && (
+                  <SidebarLink
+                    item={{ href: '/planos', icon: Sparkles, label: 'Assinar Premium' }}
+                    pathname={pathname}
+                    expanded={expanded}
+                    forceGold
+                  />
+                )}
+
                 {/* Admin */}
                 {profile.role === 'admin' && (
                   <SidebarLink

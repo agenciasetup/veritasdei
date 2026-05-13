@@ -287,6 +287,53 @@ export async function getSubscription(id: string): Promise<AsaasSubscription> {
   return request<AsaasSubscription>('GET', `/subscriptions/${id}`)
 }
 
+/**
+ * Atualiza dados da subscription. Campos não enviados ficam como estão.
+ *
+ * Use pra:
+ *  - trocar data de cobrança: `{ nextDueDate: 'YYYY-MM-DD' }`
+ *  - trocar método: `{ billingType: 'PIX' | 'BOLETO' | 'CREDIT_CARD' }`
+ *    (CREDIT_CARD exige também `creditCard` + `creditCardHolderInfo` ou
+ *    `creditCardToken` — Asaas rejeita PUT sem cartão se billingType=CREDIT_CARD
+ *    e a sub ainda não tem cartão tokenizado)
+ *  - trocar valor: `{ value: number }` (pouco usado; preço aqui é nosso)
+ */
+export type UpdateSubscriptionInput = {
+  billingType?: AsaasBillingType
+  value?: number
+  nextDueDate?: string
+  cycle?: AsaasCycle
+  description?: string
+  creditCard?: AsaasCreditCard
+  creditCardHolderInfo?: AsaasCreditCardHolderInfo
+  creditCardToken?: string
+  remoteIp?: string
+  updatePendingPayments?: boolean
+}
+
+export async function updateSubscription(
+  id: string,
+  input: UpdateSubscriptionInput,
+): Promise<AsaasSubscription> {
+  return request<AsaasSubscription>('PUT', `/subscriptions/${id}`, input)
+}
+
+/**
+ * Lista cobranças de um customer. Usado pra histórico no painel
+ * "Minha assinatura". Retorna paginado (limit/offset).
+ */
+export async function listCustomerPayments(
+  customerId: string,
+  opts: { limit?: number; offset?: number } = {},
+): Promise<{ data: AsaasPayment[]; hasMore: boolean; totalCount: number }> {
+  const limit = opts.limit ?? 20
+  const offset = opts.offset ?? 0
+  return request<{ data: AsaasPayment[]; hasMore: boolean; totalCount: number }>(
+    'GET',
+    `/payments?customer=${encodeURIComponent(customerId)}&limit=${limit}&offset=${offset}`,
+  )
+}
+
 // --------------------------------------------------------------------------
 // Helpers (cycle ↔ intervalo do nosso enum)
 // --------------------------------------------------------------------------

@@ -15,6 +15,7 @@ import { type ReactNode } from 'react'
 import EducaTopBar from './EducaTopBar'
 import EducaSidebar from './EducaSidebar'
 import EducaBottomNav from './EducaBottomNav'
+import SubscribeBanner from '@/components/payments/SubscribeBanner'
 
 export default function EducaShell({ children }: { children: ReactNode }) {
   return (
@@ -30,6 +31,7 @@ export default function EducaShell({ children }: { children: ReactNode }) {
         id="main-content"
         className="md:ml-16 pb-bottom-nav"
       >
+        <SubscribeBanner />
         {children}
       </div>
 

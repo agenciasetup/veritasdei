@@ -10,14 +10,32 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, BookOpen, Cross, User } from 'lucide-react'
+import { Home, BookOpen, Cross, User, Sparkles } from 'lucide-react'
+import { useSubscription } from '@/contexts/SubscriptionContext'
+import { useAuth } from '@/contexts/AuthContext'
 
-const NAV_ITEMS = [
+type NavItem = {
+  href: string
+  icon: typeof Home
+  label: string
+  highlight?: boolean
+}
+
+const BASE_NAV_ITEMS: readonly NavItem[] = [
   { href: '/educa',          icon: Home,          label: 'Início' },
   { href: '/educa/estudo',   icon: BookOpen,      label: 'Estudo' },
   { href: '/rosario',        icon: Cross,         label: 'Rosário' },
   { href: '/perfil',         icon: User,          label: 'Perfil' },
-] as const
+]
+
+// Item exibido somente quando o usuário está logado e ainda não é premium.
+// Quando assinar, some — não vira lixo visual permanente.
+const SUBSCRIBE_ITEM: NavItem = {
+  href: '/educa/assine',
+  icon: Sparkles,
+  label: 'Assinar',
+  highlight: true,
+}
 
 function isActive(pathname: string, href: string): boolean {
   if (href === '/educa') return pathname === '/educa'
@@ -33,6 +51,15 @@ function isActive(pathname: string, href: string): boolean {
 
 export default function EducaSidebar() {
   const pathname = usePathname()
+  const { isAuthenticated } = useAuth()
+  const { isPremium, loading: subLoading } = useSubscription()
+
+  // Insere "Assinar" antes do Perfil quando logado e ainda não tem premium.
+  // Enquanto carrega a entitlement, não mostra — evita pisca-pisca.
+  const navItems: readonly NavItem[] =
+    isAuthenticated && !subLoading && !isPremium
+      ? [...BASE_NAV_ITEMS.slice(0, 3), SUBSCRIBE_ITEM, BASE_NAV_ITEMS[3]]
+      : BASE_NAV_ITEMS
 
   return (
     <nav
@@ -43,9 +70,10 @@ export default function EducaSidebar() {
         borderRight: '1px solid var(--border-1)',
       }}
     >
-      {NAV_ITEMS.map((item) => {
+      {navItems.map((item) => {
         const active = isActive(pathname, item.href)
         const Icon = item.icon
+        const isHighlight = item.highlight && !active
         return (
           <Link
             key={item.href}
@@ -53,8 +81,15 @@ export default function EducaSidebar() {
             title={item.label}
             className="relative w-12 h-12 flex items-center justify-center rounded-xl transition-colors group"
             style={{
-              background: active ? 'var(--accent-soft)' : 'transparent',
-              color: active ? 'var(--accent)' : 'var(--text-3)',
+              background: active
+                ? 'var(--accent-soft)'
+                : isHighlight
+                  ? 'color-mix(in srgb, var(--accent) 18%, transparent)'
+                  : 'transparent',
+              color: active || isHighlight ? 'var(--accent)' : 'var(--text-3)',
+              border: isHighlight
+                ? '1px solid color-mix(in srgb, var(--accent) 30%, transparent)'
+                : undefined,
             }}
           >
             <Icon className="w-5 h-5" />
