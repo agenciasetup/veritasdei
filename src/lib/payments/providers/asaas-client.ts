@@ -265,6 +265,20 @@ export async function createSubscription(
   return request<AsaasSubscription>('POST', '/subscriptions', input)
 }
 
+/**
+ * Lista as cobranças (payments) geradas por uma subscription. Útil pra
+ * pegar o primeiro invoice (PIX) recém-criado e exibir o QR.
+ */
+export async function listSubscriptionPayments(
+  subscriptionId: string,
+  limit = 5,
+): Promise<{ data: AsaasPayment[] }> {
+  return request<{ data: AsaasPayment[] }>(
+    'GET',
+    `/subscriptions/${subscriptionId}/payments?limit=${limit}`,
+  )
+}
+
 export async function cancelSubscription(id: string): Promise<{ deleted: boolean }> {
   return request<{ deleted: boolean }>('DELETE', `/subscriptions/${id}`)
 }
