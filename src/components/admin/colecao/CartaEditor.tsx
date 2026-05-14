@@ -795,7 +795,7 @@ export default function CartaEditor({
               Preview ao vivo
             </span>
           </div>
-          <CartaView carta={preview} showDetails width={280} />
+          <CartaView carta={preview} width={280} />
         </div>
       </div>
     </div>

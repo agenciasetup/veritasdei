@@ -98,10 +98,11 @@ export interface CartaColecao extends Carta {
 }
 
 // --- Metadados visuais por raridade -----------------------------------------
-// `cobertura` controla quanto da carta a ilustração ocupa:
-//   half  → metade superior (clean, estilo "comum")
-//   full  → cobre até atrás do texto
-//   bleed → cobre tudo, sangrando até a borda (estilo "lendária/suprema")
+// `artMode` controla como a ilustração ocupa a carta:
+//   janela → arte numa janela superior (`artFracao` da altura), texto em
+//            painel sólido abaixo — estilo limpo das cartas comuns/raras
+//   cheia  → arte cobre a carta inteira (full-bleed), texto sobre um véu
+//            no rodapé — estilo épica/lendária/suprema
 export interface RaridadeMeta {
   label: string
   /** Cor de destaque padrão (admin pode sobrescrever via cor_accent). */
@@ -109,58 +110,65 @@ export interface RaridadeMeta {
   borda: string
   /** Brilho/glow ao redor da carta — '' = sem brilho. */
   glow: string
-  cobertura: 'half' | 'full' | 'bleed'
+  artMode: 'janela' | 'cheia'
+  /** Fração da altura ocupada pela arte no modo 'janela' (0–1). */
+  artFracao: number
   /** Efeito holográfico que segue o cursor. */
   holo: boolean
-  /** Peso visual da moldura (0–3). */
-  ornamento: number
+  /** Intensidade da moldura ornamental (1 = simples, 3 = ricamente ornada). */
+  molduraForca: number
 }
 
 export const RARIDADE_META: Record<CartaRaridade, RaridadeMeta> = {
   comum: {
     label: 'Comum',
-    cor: '#B8AFA7',
-    borda: 'rgba(184,175,167,0.35)',
+    cor: '#C2B7A6',
+    borda: 'rgba(194,183,166,0.5)',
     glow: '',
-    cobertura: 'half',
+    artMode: 'janela',
+    artFracao: 0.54,
     holo: false,
-    ornamento: 0,
+    molduraForca: 1,
   },
   rara: {
     label: 'Rara',
-    cor: '#C9A84C',
-    borda: 'rgba(201,168,76,0.45)',
-    glow: '',
-    cobertura: 'full',
+    cor: '#7FB5D6',
+    borda: 'rgba(127,181,214,0.6)',
+    glow: '0 0 20px rgba(127,181,214,0.22)',
+    artMode: 'janela',
+    artFracao: 0.66,
     holo: false,
-    ornamento: 1,
+    molduraForca: 2,
   },
   epica: {
     label: 'Épica',
-    cor: '#A78BFA',
-    borda: 'rgba(167,139,250,0.55)',
-    glow: '0 0 28px rgba(167,139,250,0.25)',
-    cobertura: 'full',
+    cor: '#B98BE6',
+    borda: 'rgba(185,139,230,0.75)',
+    glow: '0 0 34px rgba(185,139,230,0.4)',
+    artMode: 'cheia',
+    artFracao: 1,
     holo: false,
-    ornamento: 2,
+    molduraForca: 2,
   },
   lendaria: {
     label: 'Lendária',
     cor: '#E8C766',
-    borda: 'rgba(232,199,102,0.7)',
-    glow: '0 0 38px rgba(232,199,102,0.35)',
-    cobertura: 'bleed',
+    borda: 'rgba(232,199,102,0.9)',
+    glow: '0 0 44px rgba(232,199,102,0.5)',
+    artMode: 'cheia',
+    artFracao: 1,
     holo: true,
-    ornamento: 3,
+    molduraForca: 3,
   },
   suprema: {
     label: 'Supremo',
-    cor: '#F2D98A',
-    borda: 'rgba(242,217,138,0.85)',
-    glow: '0 0 48px rgba(242,217,138,0.5)',
-    cobertura: 'bleed',
+    cor: '#F4DE96',
+    borda: 'rgba(244,222,150,1)',
+    glow: '0 0 58px rgba(244,222,150,0.62)',
+    artMode: 'cheia',
+    artFracao: 1,
     holo: true,
-    ornamento: 3,
+    molduraForca: 3,
   },
 }
 
