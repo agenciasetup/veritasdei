@@ -18,15 +18,57 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse
   }
 
-  // Skip auth refresh for public API routes, auth routes, and public pages.
-  // Keep refresh for /api/verbum/ and /api/admin/ to prevent stale tokens.
   const path = request.nextUrl.pathname
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Trava do Veritas Dei (domínio principal)
+  //
+  // Enquanto o foco do produto é o Veritas Educa, o domínio principal
+  // (veritasdei.com.br) fica travado: toda navegação de PÁGINA é
+  // encaminhada pro subdomínio educa.* preservando o path.
+  //
+  // Rotas operacionais continuam funcionando no domínio principal pra
+  // não quebrar integrações externas:
+  //   - /api/*      → webhooks de pagamento (Asaas/Stripe), cron, etc.
+  //   - /auth/*     → callbacks de OAuth / magic link
+  //   - /checkout/* → retorno dos provedores de pagamento
+  //
+  // Desligar a trava (quando o Veritas Dei full voltar a ser usado):
+  // env LOCK_VERITAS_DEI=false. Ver docs/VERITAS-DEI-LOCK.md.
+  // ─────────────────────────────────────────────────────────────────────
+  if (product === 'veritas-dei' && process.env.LOCK_VERITAS_DEI !== 'false') {
+    const stayOnMainDomain =
+      path.startsWith('/api/') ||
+      path.startsWith('/auth/') ||
+      path === '/checkout' ||
+      path.startsWith('/checkout/')
+    if (!stayOnMainDomain) {
+      const host = request.headers.get('host') ?? ''
+      const educaHost = host.startsWith('educa.')
+        ? host
+        : `educa.${host.replace(/^www\./, '')}`
+      if (host && educaHost !== host) {
+        const target = new URL(
+          `${request.nextUrl.pathname}${request.nextUrl.search}`,
+          `${request.nextUrl.protocol}//${educaHost}`,
+        )
+        return NextResponse.redirect(target, 307)
+      }
+    }
+  }
+
+  // Skip auth refresh for public API routes, auth routes, and public pages.
+  // Keep refresh for /api/verbum/, /api/admin/, /api/comunidade/ and for
+  // QUALQUER mutação (POST/PUT/PATCH/DELETE) — sem isso, salvar carta /
+  // perfil podia falhar com token expirado e só voltava após reload.
   const isProtectedApi =
     path.startsWith('/api/verbum/')
     || path.startsWith('/api/admin/')
     || path.startsWith('/api/comunidade/')
+  const isMutation =
+    request.method !== 'GET' && request.method !== 'HEAD'
   if (
-    (path.startsWith('/api/') && !isProtectedApi) ||
+    (path.startsWith('/api/') && !isProtectedApi && !isMutation) ||
     path.startsWith('/auth/') ||
     path === '/privacidade' ||
     path === '/termos' ||
@@ -61,12 +103,15 @@ export async function updateSession(request: NextRequest) {
 
   // getUser() validates the session server-side and refreshes tokens if needed.
   // This is critical — without it, server components see stale/expired sessions.
+  let authedUser: { id: string } | null = null
   try {
-    await supabase.auth.getUser()
+    const { data } = await supabase.auth.getUser()
+    authedUser = data.user
   } catch {
     // Retry once on failure before giving up
     try {
-      await supabase.auth.getUser()
+      const { data } = await supabase.auth.getUser()
+      authedUser = data.user
     } catch (retryErr) {
       console.error('[Middleware] Auth refresh failed after retry:', retryErr)
     }
@@ -84,6 +129,63 @@ export async function updateSession(request: NextRequest) {
   // - Demais paths fora da whitelist → 307 redirect pra /educa.
   // ─────────────────────────────────────────────────────────────────────
   if (product === 'veritas-educa') {
+    // ───────────────────────────────────────────────────────────────────
+    // Gate de assinatura
+    //
+    // No Veritas Educa, o usuário logado sem assinatura ativa só pode
+    // acessar a tela de assinatura e o próprio perfil. Todo o resto —
+    // inclusive a raiz e a dashboard — é encaminhado pra /educa/assine.
+    // A trava real continua server-side; isto é só o pedágio na borda.
+    // ───────────────────────────────────────────────────────────────────
+    if (authedUser) {
+      let isPremium = false
+      try {
+        const { data: entData } = await supabase.rpc('get_user_entitlement', {
+          uid: authedUser.id,
+        })
+        const row = Array.isArray(entData) ? entData[0] : entData
+        isPremium = !!(row as { ativo?: boolean } | null)?.ativo
+      } catch (err) {
+        // Fail-open: um erro transitório de DB não pode trancar quem já
+        // paga. O conteúdo premium ainda tem gates server-side próprios.
+        console.error('[Middleware] entitlement check failed:', err)
+        isPremium = true
+      }
+
+      if (!isPremium) {
+        const allowedForFree =
+          path === '/educa/assine' ||
+          path === '/perfil' ||
+          path.startsWith('/perfil/') ||
+          path === '/login' ||
+          path.startsWith('/auth/') ||
+          path.startsWith('/api/') ||
+          // Admin tem gate de role próprio no AdminLayout.
+          path === '/admin' ||
+          path.startsWith('/admin/') ||
+          path === '/checkout' ||
+          path.startsWith('/checkout/') ||
+          path === '/privacidade' ||
+          path === '/termos' ||
+          path === '/diretrizes' ||
+          path === '/cookies' ||
+          path === '/dmca' ||
+          path === '/consentimento-parental' ||
+          path === '/excluir-conta'
+
+        if (!allowedForFree) {
+          const url = request.nextUrl.clone()
+          url.pathname = '/educa/assine'
+          url.search = ''
+          const redirectResponse = NextResponse.redirect(url, 307)
+          for (const setCookie of supabaseResponse.headers.getSetCookie()) {
+            redirectResponse.headers.append('set-cookie', setCookie)
+          }
+          return redirectResponse
+        }
+      }
+    }
+
     const isAllowedInEduca =
       path === '/educa' ||
       path.startsWith('/educa/') ||

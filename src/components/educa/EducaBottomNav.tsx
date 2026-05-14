@@ -3,21 +3,36 @@
 /**
  * EducaBottomNav — bottom nav mobile do Veritas Educa.
  *
- * 4 itens. Sem haptic, sem hide-on-scroll, sem detecção de teclado —
- * a UX do Educa é leitura/foco, então a barra fica simples e fixa.
+ * Assinante: 5 itens (Início / Estudo / Rosário / Coleção / Perfil).
+ * Logado sem assinatura: só Assinar + Perfil — é o único acesso liberado
+ * até assinar (o middleware encaminha o resto pra /educa/assine).
  */
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, BookOpen, Cross, User, Layers } from 'lucide-react'
+import { Home, BookOpen, Cross, User, Layers, Sparkles } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
+import { useSubscription } from '@/contexts/SubscriptionContext'
 
-const NAV_ITEMS = [
-  { href: '/educa',          icon: Home,          label: 'Início' },
-  { href: '/educa/estudo',   icon: BookOpen,      label: 'Estudo' },
-  { href: '/rosario',        icon: Cross,         label: 'Rosário' },
-  { href: '/colecao',        icon: Layers,        label: 'Coleção' },
-  { href: '/perfil',         icon: User,          label: 'Perfil' },
-] as const
+type NavItem = {
+  href: string
+  icon: typeof Home
+  label: string
+  highlight?: boolean
+}
+
+const PREMIUM_NAV: readonly NavItem[] = [
+  { href: '/educa',        icon: Home,     label: 'Início' },
+  { href: '/educa/estudo', icon: BookOpen, label: 'Estudo' },
+  { href: '/rosario',      icon: Cross,    label: 'Rosário' },
+  { href: '/colecao',      icon: Layers,   label: 'Coleção' },
+  { href: '/perfil',       icon: User,     label: 'Perfil' },
+]
+
+const FREE_NAV: readonly NavItem[] = [
+  { href: '/educa/assine', icon: Sparkles, label: 'Assinar', highlight: true },
+  { href: '/perfil',       icon: User,     label: 'Perfil' },
+]
 
 function isActive(pathname: string, href: string): boolean {
   if (href === '/educa') return pathname === '/educa'
@@ -34,6 +49,13 @@ function isActive(pathname: string, href: string): boolean {
 
 export default function EducaBottomNav() {
   const pathname = usePathname()
+  const { isAuthenticated } = useAuth()
+  const { isPremium, loading: subLoading } = useSubscription()
+
+  // Enquanto a entitlement carrega, mostra a nav completa pra não piscar
+  // a versão reduzida na cara de quem é assinante.
+  const navItems: readonly NavItem[] =
+    isAuthenticated && !subLoading && !isPremium ? FREE_NAV : PREMIUM_NAV
 
   return (
     <nav
@@ -46,9 +68,10 @@ export default function EducaBottomNav() {
         backdropFilter: 'blur(8px)',
       }}
     >
-      {NAV_ITEMS.map((item) => {
+      {navItems.map((item) => {
         const active = isActive(pathname, item.href)
         const Icon = item.icon
+        const isHighlight = item.highlight && !active
         return (
           <Link
             key={item.href}
@@ -56,7 +79,9 @@ export default function EducaBottomNav() {
             aria-label={item.label}
             aria-current={active ? 'page' : undefined}
             className="relative flex flex-col items-center justify-center gap-0.5 py-3 px-2 flex-1 active:scale-95 transition-transform"
-            style={{ color: active ? 'var(--accent)' : 'var(--text-3)' }}
+            style={{
+              color: active || isHighlight ? 'var(--accent)' : 'var(--text-3)',
+            }}
           >
             {active && (
               <span
