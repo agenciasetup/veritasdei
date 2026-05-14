@@ -65,13 +65,7 @@ export default function StudyGroupsClient() {
   return (
     <AuthGuard>
       <div className="min-h-screen" style={{ background: 'var(--surface-1)' }}>
-        <main
-          className="
-            max-w-2xl mx-auto px-4 pt-5 pb-28
-            md:py-10
-            lg:max-w-[1100px] lg:px-8 lg:pt-10 lg:pb-16
-          "
-        >
+        <main className="max-w-2xl mx-auto px-4 pt-5 pb-28 md:py-10 lg:max-w-[1100px] lg:px-8 lg:pt-10 lg:pb-16">
           <Link
             href="/educa/estudo"
             className="inline-flex items-center gap-1.5 text-xs mb-8 hover:opacity-80 transition-opacity"
