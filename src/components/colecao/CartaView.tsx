@@ -148,7 +148,7 @@ export default function CartaView({
     <div
       className="flex flex-col"
       style={{
-        padding: `${big ? 12 : 9}px ${big ? 14 : 10}px ${big ? 14 : 11}px`,
+        padding: `${big ? 16 : 11}px ${big ? 20 : 14}px ${big ? 18 : 13}px`,
         gap: big ? 5 : 3,
       }}
     >
@@ -474,65 +474,70 @@ function Moldura({
     )
   }
 
-  // ornamentada
-  const cantosL = [
-    { top: 8, left: 8, bt: true, bl: true },
-    { top: 8, right: 8, bt: true, br: true },
-    { bottom: 8, left: 8, bb: true, bl: true },
-    { bottom: 8, right: 8, bb: true, br: true },
-  ] as const
-  const cantosFlor = [
-    { top: 1, left: 5 },
-    { top: 1, right: 5 },
-    { bottom: 1, left: 5 },
-    { bottom: 1, right: 5 },
-  ] as const
+  // ornamentada — moldura retangular dupla, dourada e brilhante, com 8
+  // losangos: 4 nos cantos + 4 nos meios das bordas (estes formam os
+  // quatro pontos de uma cruz).
+  const D = 14 // tamanho do losango
+  const FRAME = 12 // recuo da moldura externa
+  const OFF = FRAME - D / 2 // recuo do losango p/ centralizar na linha
+  const losango = (extra: CSSProperties): CSSProperties => ({
+    position: 'absolute',
+    width: D,
+    height: D,
+    background: accent,
+    boxShadow: `0 0 8px ${accent}, 0 0 2px ${accent}`,
+    ...extra,
+  })
   return (
     <div className={wrap}>
+      {/* moldura externa — linha forte com brilho */}
       <div
-        className="absolute rounded-[14px]"
-        style={{ inset: 4, border: `2px solid ${accent}` }}
+        className="absolute rounded-[6px]"
+        style={{
+          inset: FRAME,
+          border: `1.5px solid ${accent}`,
+          boxShadow: `0 0 10px ${accent}55, inset 0 0 10px ${accent}22`,
+        }}
       />
+      {/* moldura interna — fio fino */}
       <div
-        className="absolute rounded-[10px]"
-        style={{ inset: 9, border: `1px solid ${accent}66` }}
+        className="absolute rounded-[4px]"
+        style={{ inset: FRAME + 4, border: `1px solid ${accent}AA` }}
       />
-      {cantosL.map((c, i) => (
-        <span
-          key={`l${i}`}
-          className="absolute"
-          style={{
-            width: 17,
-            height: 17,
-            top: 'top' in c ? c.top : undefined,
-            bottom: 'bottom' in c ? c.bottom : undefined,
-            left: 'left' in c ? c.left : undefined,
-            right: 'right' in c ? c.right : undefined,
-            borderTop: 'bt' in c && c.bt ? `2px solid ${accent}` : undefined,
-            borderBottom: 'bb' in c && c.bb ? `2px solid ${accent}` : undefined,
-            borderLeft: 'bl' in c && c.bl ? `2px solid ${accent}` : undefined,
-            borderRight: 'br' in c && c.br ? `2px solid ${accent}` : undefined,
-          }}
-        />
-      ))}
-      {cantosFlor.map((c, i) => (
-        <span
-          key={`f${i}`}
-          className="absolute"
-          style={{
-            color: accent,
-            fontSize: 11,
-            lineHeight: 1,
-            top: 'top' in c ? c.top : undefined,
-            bottom: 'bottom' in c ? c.bottom : undefined,
-            left: 'left' in c ? c.left : undefined,
-            right: 'right' in c ? c.right : undefined,
-            textShadow: `0 0 6px ${accent}`,
-          }}
-        >
-          ✦
-        </span>
-      ))}
+      {/* 4 cantos */}
+      <span style={losango({ top: OFF, left: OFF, transform: 'rotate(45deg)' })} />
+      <span style={losango({ top: OFF, right: OFF, transform: 'rotate(45deg)' })} />
+      <span style={losango({ bottom: OFF, left: OFF, transform: 'rotate(45deg)' })} />
+      <span style={losango({ bottom: OFF, right: OFF, transform: 'rotate(45deg)' })} />
+      {/* 4 meios — pontos da cruz */}
+      <span
+        style={losango({
+          top: OFF,
+          left: '50%',
+          transform: 'translateX(-50%) rotate(45deg)',
+        })}
+      />
+      <span
+        style={losango({
+          bottom: OFF,
+          left: '50%',
+          transform: 'translateX(-50%) rotate(45deg)',
+        })}
+      />
+      <span
+        style={losango({
+          left: OFF,
+          top: '50%',
+          transform: 'translateY(-50%) rotate(45deg)',
+        })}
+      />
+      <span
+        style={losango({
+          right: OFF,
+          top: '50%',
+          transform: 'translateY(-50%) rotate(45deg)',
+        })}
+      />
     </div>
   )
 }
