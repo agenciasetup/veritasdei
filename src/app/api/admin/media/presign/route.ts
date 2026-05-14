@@ -104,6 +104,10 @@ export async function POST(req: NextRequest) {
   const publicBaseUrl = getR2PublicBaseUrl()
   const today = new Date().toISOString().slice(0, 10)
 
+  const trimmedBase = publicBaseUrl.endsWith('/')
+    ? publicBaseUrl.slice(0, -1)
+    : publicBaseUrl
+
   const items = await Promise.all(validation.items.map(async (item) => {
     const safeName = sanitizeFilename(item.filename)
     const ext = pickExtension(safeName, item.mime_type)
@@ -111,9 +115,14 @@ export async function POST(req: NextRequest) {
     const objectKey = `${prefix}/${today}/${variantTag}${randomUUID()}.${ext}`
     const uploadUrl = await createR2PutUrl({ objectKey, mimeType: item.mime_type })
 
+    // public_url é a URL crua do R2 (sem /cdn-cgi/image/transform). Usado
+    // pelos uploads admin (capas/banners) onde não queremos o redimensiona-
+    // mento da Cloudflare — a fonte é entregue como está. `variants` segue
+    // disponível pra usos onde o transform faz sentido (posts da comunidade).
     return {
       upload_url: uploadUrl,
       object_key: objectKey,
+      public_url: `${trimmedBase}/${objectKey}`,
       filename: item.filename,
       mime_type: item.mime_type,
       bytes: item.bytes,

@@ -14,7 +14,6 @@ import StudyReader from './StudyReader'
 import StudyLayout from './StudyLayout'
 import StudyLessonsSidebar from './StudyLessonsSidebar'
 import CinematicHero from '@/components/educa/CinematicHero'
-import ContentRail, { RailItem } from '@/components/educa/ContentRail'
 import InlineEditOverlay from '@/components/admin/InlineEditOverlay'
 import StudyMobileChip from './StudyMobileChip'
 import StudyNavBar from './StudyNavBar'
@@ -174,28 +173,91 @@ function PillarTopicGrid({
         className="relative z-10 flex-1 pb-16 pt-8 md:pt-12"
         style={{ background: 'var(--surface-1)' }}
       >
-        <div className="max-w-6xl mx-auto px-4 md:px-8">
-          <ContentRail
-            title="Tópicos"
-            subtitle="Escolha por onde começar — ou avance em sequência."
-          >
-            {topics.map((topic) => (
-              <div key={topic.id} className="contents">
-                <RailItem widthClassName="w-72 md:w-80">
-                  <TopicPosterCard
-                    href={`/estudo/${pillarSlug}/${topic.slug}`}
-                    title={topic.title}
-                    subtitle={topic.subtitle ?? undefined}
-                    description={topic.description ?? undefined}
-                    coverUrl={topic.cover_url ?? null}
-                  />
-                </RailItem>
-              </div>
-            ))}
-          </ContentRail>
+        <div className="max-w-6xl mx-auto px-4 md:px-8 space-y-12 md:space-y-16">
+          {chunkInto(topics, 4).map((sessionTopics, idx) => (
+            <PillarSession
+              key={idx}
+              index={idx}
+              total={Math.ceil(topics.length / 4)}
+              topics={sessionTopics}
+              pillarSlug={pillarSlug}
+            />
+          ))}
         </div>
       </main>
     </div>
+  )
+}
+
+/**
+ * Quebra um array em pedaços de tamanho fixo. Usado pra renderizar tópicos
+ * em "sessões" de no máximo 4 módulos cada — evita o slider único interminável
+ * em pilares com muitos tópicos.
+ */
+function chunkInto<T>(items: T[], size: number): T[][] {
+  if (size <= 0) return [items]
+  const out: T[][] = []
+  for (let i = 0; i < items.length; i += size) {
+    out.push(items.slice(i, i + size))
+  }
+  return out
+}
+
+/**
+ * Sessão de até 4 módulos do pilar. Cabeçalho minimalista numerado +
+ * grid responsiva (1 col mobile, 2 cols tablet, 4 cols desktop).
+ */
+function PillarSession({
+  index,
+  total,
+  topics,
+  pillarSlug,
+}: {
+  index: number
+  total: number
+  topics: PillarTreeNode[]
+  pillarSlug: string
+}) {
+  const sessionNumber = index + 1
+  return (
+    <section>
+      <div className="flex items-baseline gap-3 mb-4 md:mb-6">
+        <span
+          className="text-[10px] tracking-[0.22em] uppercase"
+          style={{
+            color: 'var(--text-3)',
+            fontFamily: 'var(--font-body)',
+          }}
+        >
+          {total > 1 ? `Sessão ${sessionNumber} de ${total}` : 'Sessão'}
+        </span>
+        <span
+          className="text-xs"
+          style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+        >
+          ·
+        </span>
+        <span
+          className="text-xs"
+          style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+        >
+          {topics.length} {topics.length === 1 ? 'módulo' : 'módulos'}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+        {topics.map((topic) => (
+          <TopicPosterCard
+            key={topic.id}
+            href={`/estudo/${pillarSlug}/${topic.slug}`}
+            title={topic.title}
+            subtitle={topic.subtitle ?? undefined}
+            description={topic.description ?? undefined}
+            coverUrl={topic.cover_url ?? null}
+          />
+        ))}
+      </div>
+    </section>
   )
 }
 
@@ -498,30 +560,67 @@ function PillarTopicView({
             topicTitle={topic.title}
           />
 
-          {/* Rail de subtópicos */}
-          <ContentRail
-            title="Lições"
-            subtitle={`${subtopics.length} ${subtopics.length === 1 ? 'lição' : 'lições'} neste tópico`}
-          >
-            {subtopics.map((sub, i) => {
-              const studied = isStudied(sub.id)
-              return (
-                <div key={sub.id} className="contents">
-                  <RailItem widthClassName="w-72 md:w-80">
-                    <SubtopicPosterCard
-                      href={`/estudo/${pillarSlug}/${topicSlug}/${sub.slug}`}
-                      lessonNumber={i + 1}
-                      title={sub.title}
-                      subtitle={sub.subtitle ?? undefined}
-                      description={sub.description ?? undefined}
-                      coverUrl={sub.cover_url ?? null}
-                      studied={studied}
-                    />
-                  </RailItem>
+          {/* Sessões de lições — quebradas em chunks de 4 pra evitar
+           *  o slider único interminável. Mantém a numeração contínua
+           *  entre sessões. */}
+          {chunkInto(subtopics, 4).map((sessionSubs, sessionIdx) => {
+            const totalSessions = Math.ceil(subtopics.length / 4)
+            const sessionStart = sessionIdx * 4
+            return (
+              <section key={sessionIdx}>
+                <div className="flex items-baseline gap-3 mb-4 md:mb-6">
+                  <span
+                    className="text-[10px] tracking-[0.22em] uppercase"
+                    style={{
+                      color: 'var(--text-3)',
+                      fontFamily: 'var(--font-body)',
+                    }}
+                  >
+                    {totalSessions > 1
+                      ? `Sessão ${sessionIdx + 1} de ${totalSessions}`
+                      : 'Lições'}
+                  </span>
+                  <span
+                    className="text-xs"
+                    style={{
+                      color: 'var(--text-3)',
+                      fontFamily: 'var(--font-body)',
+                    }}
+                  >
+                    ·
+                  </span>
+                  <span
+                    className="text-xs"
+                    style={{
+                      color: 'var(--text-3)',
+                      fontFamily: 'var(--font-body)',
+                    }}
+                  >
+                    {sessionSubs.length}{' '}
+                    {sessionSubs.length === 1 ? 'lição' : 'lições'}
+                  </span>
                 </div>
-              )
-            })}
-          </ContentRail>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+                  {sessionSubs.map((sub, i) => {
+                    const studied = isStudied(sub.id)
+                    return (
+                      <SubtopicPosterCard
+                        key={sub.id}
+                        href={`/estudo/${pillarSlug}/${topicSlug}/${sub.slug}`}
+                        lessonNumber={sessionStart + i + 1}
+                        title={sub.title}
+                        subtitle={sub.subtitle ?? undefined}
+                        description={sub.description ?? undefined}
+                        coverUrl={sub.cover_url ?? null}
+                        studied={studied}
+                      />
+                    )
+                  })}
+                </div>
+              </section>
+            )
+          })}
         </div>
       </main>
     </div>

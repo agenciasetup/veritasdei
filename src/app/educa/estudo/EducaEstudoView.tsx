@@ -211,14 +211,14 @@ export default function EducaEstudoView({
             title={last.subtopicTitle}
             subtitle={last.groupTitle}
             primary={{ label: 'Continuar', href: `/estudo/${last.groupSlug}` }}
-            secondary={{ label: 'Ver detalhes', href: '/educa/trilhas' }}
+            secondary={{ label: 'Ver pilares', href: '/estudo/dogmas' }}
           />
         ) : (
           <CinematicHero
             eyebrow="Veritas Educa"
             title="Aprofunde sua fé católica com método."
             subtitle="Trilhas, IA católica, debate apologético e mais."
-            primary={{ label: 'Começar agora', href: '/educa/trilhas' }}
+            primary={{ label: 'Começar agora', href: '/estudo/dogmas' }}
           />
         )
       )}

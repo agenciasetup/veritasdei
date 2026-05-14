@@ -26,6 +26,7 @@
  */
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { Pencil, Save, X, Loader2, ExternalLink } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
@@ -318,12 +319,19 @@ function EditDrawer({
     onSaved()
   }
 
-  return (
+  // Renderiza no body via portal pra escapar de qualquer ancestor com
+  // `transform`/`filter`/`perspective` (e do `position:relative` do wrapper),
+  // que cria novo stacking context e quebra o `position:fixed` aqui dentro.
+  // Sintoma observado: o overlay ficava "preso" dentro do bloco de capa
+  // em vez de cobrir a viewport inteira.
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-label={label}
-      className="fixed inset-0 z-[1000] flex items-end md:items-center justify-center"
+      className="fixed inset-0 z-[2147483646] flex items-end md:items-center justify-center"
       style={{
         background: 'rgba(0,0,0,0.65)',
         backdropFilter: 'blur(8px)',
@@ -492,7 +500,8 @@ function EditDrawer({
           </button>
         </footer>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
