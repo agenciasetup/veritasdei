@@ -27,10 +27,14 @@ import {
   Copy,
   Crown,
   Flame,
+  Link2,
   Loader2,
+  MessageCircle,
   Pencil,
+  Pin,
   Plus,
   Quote,
+  Send,
   Sparkles,
   Target,
   Trash2,
@@ -46,6 +50,10 @@ import {
   useStudyGroupTrail,
   type StudyGroupPick,
 } from '@/lib/study/useStudyGroupTrail'
+import {
+  useStudyGroupPosts,
+  type StudyGroupPost,
+} from '@/lib/study/useStudyGroupPosts'
 import StudyGroupTrailPicker from '@/components/study/StudyGroupTrailPicker'
 
 type GroupInfo = {
@@ -136,9 +144,11 @@ export default function GroupDashboard({ groupId }: { groupId: string }) {
 
   const trail = useStudyGroupTrail(groupId)
   const pact = useStudyGroupPact(groupId)
+  const posts = useStudyGroupPosts(groupId)
 
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pactOpen, setPactOpen] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
 
   const load = useCallback(async () => {
     if (!supabase) return
@@ -225,6 +235,28 @@ export default function GroupDashboard({ groupId }: { groupId: string }) {
       setTimeout(() => setCopied(false), 2000)
     } catch {
       /* ok */
+    }
+  }
+
+  async function copyInviteLink() {
+    if (!info) return
+    const origin =
+      typeof window !== 'undefined' ? window.location.origin : ''
+    const link = `${origin}/estudo/grupos?convite=${info.invite_code}`
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `Grupo de estudo: ${info.name}`,
+          text: `Entre no nosso grupo de estudo no Veritas Educa.`,
+          url: link,
+        })
+        return
+      }
+      await navigator.clipboard.writeText(link)
+      setLinkCopied(true)
+      setTimeout(() => setLinkCopied(false), 2000)
+    } catch {
+      /* ok — share cancelado ou clipboard indisponível */
     }
   }
 
@@ -364,22 +396,43 @@ export default function GroupDashboard({ groupId }: { groupId: string }) {
                 ) : null}
               </div>
             </div>
-            <button
-              type="button"
-              onClick={copyCode}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-xs tabular-nums flex-shrink-0 transition-colors"
-              style={{
-                background: 'var(--surface-2)',
-                border: '1px solid rgba(255,255,255,0.06)',
-                color: copied ? 'var(--success)' : 'var(--text-2)',
-                fontFamily: 'var(--font-body)',
-                letterSpacing: '0.14em',
-              }}
-              aria-label="Copiar código de convite"
-            >
-              {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              {info.invite_code}
-            </button>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                type="button"
+                onClick={copyCode}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-xs tabular-nums transition-colors"
+                style={{
+                  background: 'var(--surface-2)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  color: copied ? 'var(--success)' : 'var(--text-2)',
+                  fontFamily: 'var(--font-body)',
+                  letterSpacing: '0.14em',
+                }}
+                aria-label="Copiar código de convite"
+              >
+                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                {info.invite_code}
+              </button>
+              <button
+                type="button"
+                onClick={copyInviteLink}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs transition-colors"
+                style={{
+                  background: 'rgba(201,168,76,0.10)',
+                  border: '1px solid rgba(201,168,76,0.25)',
+                  color: linkCopied ? 'var(--success)' : 'var(--accent)',
+                  fontFamily: 'var(--font-body)',
+                }}
+                aria-label="Compartilhar link de convite"
+              >
+                {linkCopied ? (
+                  <Check className="w-3.5 h-3.5" />
+                ) : (
+                  <Link2 className="w-3.5 h-3.5" />
+                )}
+                {linkCopied ? 'Link copiado' : 'Convidar'}
+              </button>
+            </div>
           </div>
         </header>
 
@@ -416,8 +469,43 @@ export default function GroupDashboard({ groupId }: { groupId: string }) {
             />
           </div>
 
-          {/* Membros (7 col) */}
+          {/* Mural de reflexões (7 col) */}
           <div className="lg:col-span-7">
+            <MuralCard
+              posts={posts.posts}
+              loading={posts.loading}
+              isOwner={isOwner}
+              onCreate={posts.create}
+              onRemove={posts.remove}
+              onTogglePin={posts.togglePin}
+            />
+          </div>
+
+          {/* Feed (5 col) */}
+          <div className="lg:col-span-5">
+            <SectionTitle icon={Flame} label="Atividade recente" />
+            <div className="p-5 md:p-6" style={CARD_STYLE}>
+              {feed.length === 0 ? (
+                <p
+                  className="text-sm text-center py-4"
+                  style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+                >
+                  Sem atividade recente.
+                </p>
+              ) : (
+                <ul className="space-y-3.5">
+                  {feed.slice(0, 14).map((f, i) => (
+                    <li key={`${f.kind}-${f.ref_id}-${i}`}>
+                      <FeedRow item={f} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          {/* Membros (12 col) */}
+          <div className="lg:col-span-12">
             <SectionTitle icon={Users} label="Membros" hint={`${members.length}`} />
             <div className="p-2 md:p-3" style={CARD_STYLE}>
               {members.length === 0 ? (
@@ -437,29 +525,6 @@ export default function GroupDashboard({ groupId }: { groupId: string }) {
                         isFollowing={followedIds.has(m.user_id)}
                         onFollow={() => handleFollowToggle(m.user_id)}
                       />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-
-          {/* Feed (5 col) */}
-          <div className="lg:col-span-5">
-            <SectionTitle icon={Flame} label="Atividade recente" />
-            <div className="p-5 md:p-6" style={CARD_STYLE}>
-              {feed.length === 0 ? (
-                <p
-                  className="text-sm text-center py-4"
-                  style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
-                >
-                  Sem atividade recente.
-                </p>
-              ) : (
-                <ul className="space-y-3.5">
-                  {feed.slice(0, 14).map((f, i) => (
-                    <li key={`${f.kind}-${f.ref_id}-${i}`}>
-                      <FeedRow item={f} />
                     </li>
                   ))}
                 </ul>
@@ -551,10 +616,25 @@ function PactoCard({
   const goal = pact?.goal_subtopics ?? 25
   const done = pact?.weekly_subtopics_done ?? 0
   const pct = Math.min(100, Math.round((done / Math.max(1, goal)) * 100))
+  const fulfilled = done >= goal && goal > 0
   return (
     <>
       <SectionTitle icon={Target} label="Pacto da semana" />
       <div className="p-6 md:p-7 relative" style={CARD_STYLE}>
+        {fulfilled ? (
+          <div
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] mb-3"
+            style={{
+              background: 'rgba(106,170,98,0.10)',
+              border: '1px solid rgba(106,170,98,0.28)',
+              color: 'var(--success)',
+              fontFamily: 'var(--font-body)',
+              fontWeight: 500,
+            }}
+          >
+            <Check className="w-3 h-3" /> Pacto cumprido nesta semana
+          </div>
+        ) : null}
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="min-w-0 flex-1">
             {pact?.motto ? (
@@ -645,7 +725,10 @@ function PactoCard({
         >
           <div
             className="h-full rounded-full transition-all duration-500"
-            style={{ width: `${pct}%`, background: 'var(--accent)' }}
+            style={{
+              width: `${pct}%`,
+              background: fulfilled ? 'var(--success)' : 'var(--accent)',
+            }}
           />
         </div>
 
@@ -751,6 +834,211 @@ function RankRow({ rank, entry }: { rank: number; entry: WeeklyEntry }) {
     return <Link href={href} className="block hover:opacity-90 transition-opacity">{content}</Link>
   }
   return content
+}
+
+function MuralCard({
+  posts,
+  loading,
+  isOwner,
+  onCreate,
+  onRemove,
+  onTogglePin,
+}: {
+  posts: StudyGroupPost[]
+  loading: boolean
+  isOwner: boolean
+  onCreate: (body: string) => Promise<boolean>
+  onRemove: (id: string) => Promise<boolean>
+  onTogglePin: (id: string) => Promise<boolean>
+}) {
+  const [draft, setDraft] = useState('')
+  const [sending, setSending] = useState(false)
+
+  async function submit() {
+    const body = draft.trim()
+    if (!body || sending) return
+    setSending(true)
+    const ok = await onCreate(body)
+    setSending(false)
+    if (ok) setDraft('')
+  }
+
+  return (
+    <>
+      <SectionTitle icon={MessageCircle} label="Reflexões do grupo" />
+      <div className="p-5 md:p-6" style={CARD_STYLE}>
+        {/* Composer */}
+        <div
+          className="rounded-2xl p-3 mb-4"
+          style={{
+            background: 'rgba(0,0,0,0.25)',
+            border: '1px solid rgba(255,255,255,0.04)',
+          }}
+        >
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={2}
+            maxLength={2000}
+            placeholder="Compartilhe uma reflexão, intenção ou pergunta com o grupo…"
+            className="w-full bg-transparent outline-none text-sm resize-none"
+            style={{ color: 'var(--text-1)', fontFamily: 'var(--font-body)' }}
+          />
+          <div className="flex items-center justify-between mt-1.5">
+            <span
+              className="text-[10px] tabular-nums"
+              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+            >
+              {draft.length}/2000
+            </span>
+            <button
+              onClick={submit}
+              disabled={sending || !draft.trim()}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs disabled:opacity-40 transition-opacity"
+              style={{
+                background: 'rgba(201,168,76,0.10)',
+                border: '1px solid rgba(201,168,76,0.25)',
+                color: 'var(--accent)',
+                fontFamily: 'var(--font-body)',
+                fontWeight: 500,
+              }}
+            >
+              {sending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Send className="w-3.5 h-3.5" />
+              )}
+              Publicar
+            </button>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="py-6 text-center">
+            <Loader2
+              className="w-4 h-4 mx-auto animate-spin"
+              style={{ color: 'var(--accent)' }}
+            />
+          </div>
+        ) : posts.length === 0 ? (
+          <p
+            className="text-sm text-center py-4"
+            style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+          >
+            Ainda não há reflexões. Seja o primeiro a compartilhar.
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {posts.map((p) => (
+              <li key={p.id}>
+                <MuralPost
+                  post={p}
+                  isOwner={isOwner}
+                  onRemove={onRemove}
+                  onTogglePin={onTogglePin}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </>
+  )
+}
+
+function MuralPost({
+  post,
+  isOwner,
+  onRemove,
+  onTogglePin,
+}: {
+  post: StudyGroupPost
+  isOwner: boolean
+  onRemove: (id: string) => Promise<boolean>
+  onTogglePin: (id: string) => Promise<boolean>
+}) {
+  const href = profileHref({ public_handle: post.public_handle })
+  return (
+    <div
+      className="rounded-2xl p-3.5"
+      style={{
+        background: post.pinned ? 'rgba(201,168,76,0.05)' : 'rgba(0,0,0,0.2)',
+        border: post.pinned
+          ? '1px solid rgba(201,168,76,0.18)'
+          : '1px solid rgba(255,255,255,0.04)',
+      }}
+    >
+      <div className="flex items-start gap-2.5">
+        <Avatar url={post.profile_image_url} size={32} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            {href ? (
+              <Link
+                href={href}
+                className="text-sm font-medium hover:opacity-80 truncate"
+                style={{ color: 'var(--text-1)', fontFamily: 'var(--font-body)' }}
+              >
+                {post.name ?? 'Anônimo'}
+              </Link>
+            ) : (
+              <span
+                className="text-sm font-medium truncate"
+                style={{ color: 'var(--text-1)', fontFamily: 'var(--font-body)' }}
+              >
+                {post.name ?? 'Anônimo'}
+              </span>
+            )}
+            {post.pinned ? (
+              <Pin
+                className="w-3 h-3 flex-shrink-0"
+                style={{ color: 'var(--accent)' }}
+              />
+            ) : null}
+            <span
+              className="text-[10px] flex-shrink-0"
+              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+            >
+              · {relativeTime(post.created_at)}
+            </span>
+          </div>
+          <p
+            className="text-sm mt-1 whitespace-pre-wrap break-words"
+            style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}
+          >
+            {post.body}
+          </p>
+        </div>
+        {(isOwner || post.can_delete) ? (
+          <div className="flex items-center gap-0.5 flex-shrink-0">
+            {isOwner ? (
+              <button
+                onClick={() => void onTogglePin(post.id)}
+                className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/5 transition-colors"
+                style={{ color: post.pinned ? 'var(--accent)' : 'var(--text-3)' }}
+                title={post.pinned ? 'Desafixar' : 'Fixar no topo'}
+              >
+                <Pin className="w-3.5 h-3.5" />
+              </button>
+            ) : null}
+            {post.can_delete ? (
+              <button
+                onClick={() => {
+                  if (window.confirm('Apagar esta reflexão?')) {
+                    void onRemove(post.id)
+                  }
+                }}
+                className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/5 transition-colors"
+                style={{ color: 'var(--text-3)' }}
+                title="Apagar"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  )
 }
 
 function TrailCard({

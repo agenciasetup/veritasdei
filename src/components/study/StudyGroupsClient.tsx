@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Users, Plus, LogIn, Copy, Check, Crown, LogOut, ArrowLeft, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import AuthGuard from '@/components/auth/AuthGuard'
@@ -20,6 +20,20 @@ export default function StudyGroupsClient() {
   const [newDesc, setNewDesc] = useState('')
   const [joinCode, setJoinCode] = useState('')
   const [feedback, setFeedback] = useState<{ tone: 'ok' | 'err'; msg: string } | null>(null)
+
+  // Prefill do código quando o usuário chega por um link de convite
+  // (/estudo/grupos?convite=ABC123).
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const code = new URLSearchParams(window.location.search)
+      .get('convite')
+      ?.trim()
+      .toUpperCase()
+    if (code) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setJoinCode(code)
+    }
+  }, [])
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
