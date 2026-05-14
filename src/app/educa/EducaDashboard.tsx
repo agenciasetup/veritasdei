@@ -29,7 +29,7 @@ import ContinueHeroCard from '@/components/educa/ContinueHeroCard'
 import TrilhasProgressCard from '@/components/educa/TrilhasProgressCard'
 import RosarioDoDiaCard from '@/components/educa/RosarioDoDiaCard'
 import DashboardLiturgiaCard from '@/components/educa/DashboardLiturgiaCard'
-import DashboardSelosStrip from '@/components/educa/DashboardSelosStrip'
+import DashboardCartasStrip from '@/components/educa/DashboardCartasStrip'
 import CommunityModule from '@/components/educa/CommunityModule'
 import InviteCard from '@/components/educa/InviteCard'
 
@@ -96,7 +96,7 @@ export default function EducaDashboard() {
             <DebateCard />
           </div>
           <div className="col-span-4">
-            <DashboardSelosStrip />
+            <DashboardCartasStrip />
           </div>
 
           {/* Zona 3 — Comunidade */}

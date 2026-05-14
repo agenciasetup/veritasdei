@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import type { Carta, CartaColecao, Personagem } from '@/types/codex'
+import type { Carta, CartaColecao, Personagem } from '@/types/colecao'
 
 // Coleção do usuário. A RLS de `cartas` só revela cartas desbloqueadas, então
 // a query de user_cartas já traz exatamente o que a pessoa conquistou — o

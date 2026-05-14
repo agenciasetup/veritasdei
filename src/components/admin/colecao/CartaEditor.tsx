@@ -1,11 +1,18 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Loader2, Save, X, Eye, FlaskConical } from 'lucide-react'
+import {
+  Loader2,
+  Save,
+  X,
+  Eye,
+  FlaskConical,
+  Image as ImageIcon,
+} from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import ImageUploader, { type ImageSpec } from '@/components/admin/ImageUploader'
-import CartaView from '@/components/codex/CartaView'
+import CartaView from '@/components/colecao/CartaView'
 import RuleBuilder from './RuleBuilder'
 import {
   REGRAS_VAZIA,
@@ -15,8 +22,8 @@ import {
   type CartaRaridade,
   type CartaRegras,
   type CartaStatus,
-} from '@/types/codex'
-import type { CodexCatalogo } from '@/lib/codex/useCodexCatalog'
+} from '@/types/colecao'
+import type { CodexCatalogo } from '@/lib/colecao/useCodexCatalog'
 
 const ILUSTRACAO_WEB_SPEC: ImageSpec = {
   recommendedWidth: 1024,
@@ -71,6 +78,7 @@ interface FormState {
   ilustracao_mobile_url: string
   moldura: CartaMoldura
   cor_accent: string
+  escala_fonte: number
   dica_desbloqueio: string
   regras: CartaRegras
   status: CartaStatus
@@ -109,6 +117,7 @@ function fromCarta(c: Carta): FormState {
     ilustracao_mobile_url: c.ilustracao_mobile_url ?? '',
     moldura: c.moldura,
     cor_accent: c.cor_accent ?? '',
+    escala_fonte: c.escala_fonte ?? 1,
     dica_desbloqueio: c.dica_desbloqueio ?? '',
     regras: c.regras ?? REGRAS_VAZIA,
     status: c.status,
@@ -138,6 +147,7 @@ const EMPTY: FormState = {
   ilustracao_mobile_url: '',
   moldura: 'classica',
   cor_accent: '',
+  escala_fonte: 1,
   dica_desbloqueio: '',
   regras: REGRAS_VAZIA,
   status: 'rascunho',
@@ -204,6 +214,7 @@ export default function CartaEditor({
       ilustracao_mobile_url: form.ilustracao_mobile_url || null,
       moldura: form.moldura,
       cor_accent: form.cor_accent || null,
+      escala_fonte: form.escala_fonte,
       dica_desbloqueio: form.dica_desbloqueio || null,
       regras: form.regras,
       status: form.status,
@@ -254,6 +265,7 @@ export default function CartaEditor({
       ilustracao_mobile_url: form.ilustracao_mobile_url.trim() || null,
       moldura: form.moldura,
       cor_accent: form.cor_accent.trim() || null,
+      escala_fonte: form.escala_fonte,
       dica_desbloqueio: form.dica_desbloqueio.trim() || null,
       regras: form.regras,
       status: form.status,
@@ -276,7 +288,7 @@ export default function CartaEditor({
     // Carta publicada: reavalia todos para que quem já cumpriu a regra receba.
     if (form.status === 'publicado') {
       try {
-        await fetch('/api/admin/codex', {
+        await fetch('/api/admin/colecao', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'reevaluate-all' }),
@@ -601,6 +613,63 @@ export default function CartaEditor({
                 onWebChange={(v) => set('ilustracao_url', v.url)}
                 onMobileChange={(v) => set('ilustracao_mobile_url', v.url)}
               />
+
+              <Campo label="Escala da fonte (diagramação dos textos)">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      set(
+                        'escala_fonte',
+                        Math.max(0.5, Math.round((form.escala_fonte - 0.05) * 100) / 100),
+                      )
+                    }
+                    className="w-9 h-9 rounded-lg text-lg flex items-center justify-center"
+                    style={{
+                      background: 'rgba(201,168,76,0.1)',
+                      border: '1px solid rgba(201,168,76,0.25)',
+                      color: '#C9A84C',
+                    }}
+                    aria-label="Diminuir fonte"
+                  >
+                    A−
+                  </button>
+                  <span
+                    className="text-sm tabular-nums"
+                    style={{ color: '#C9C2B4', fontFamily: 'Poppins, sans-serif', minWidth: 48, textAlign: 'center' }}
+                  >
+                    {Math.round(form.escala_fonte * 100)}%
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      set(
+                        'escala_fonte',
+                        Math.min(2, Math.round((form.escala_fonte + 0.05) * 100) / 100),
+                      )
+                    }
+                    className="w-9 h-9 rounded-lg text-lg flex items-center justify-center"
+                    style={{
+                      background: 'rgba(201,168,76,0.1)',
+                      border: '1px solid rgba(201,168,76,0.25)',
+                      color: '#C9A84C',
+                    }}
+                    aria-label="Aumentar fonte"
+                  >
+                    A+
+                  </button>
+                  {form.escala_fonte !== 1 && (
+                    <button
+                      type="button"
+                      onClick={() => set('escala_fonte', 1)}
+                      className="text-xs"
+                      style={{ color: '#8A8378' }}
+                    >
+                      resetar
+                    </button>
+                  )}
+                </div>
+              </Campo>
             </div>
           )}
 
@@ -686,6 +755,23 @@ export default function CartaEditor({
             >
               Cancelar
             </button>
+            {carta && (
+              <a
+                href={`/api/colecao/carta/${carta.id}/imagem`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm"
+                style={{
+                  background: 'rgba(201,168,76,0.12)',
+                  border: '1px solid rgba(201,168,76,0.25)',
+                  color: '#C9A84C',
+                  fontFamily: 'Poppins, sans-serif',
+                }}
+              >
+                <ImageIcon className="w-4 h-4" />
+                Salvar como imagem
+              </a>
+            )}
           </div>
 
           {/* Ferramenta de teste — só para cartas já salvas */}
@@ -733,7 +819,7 @@ function TestUnlock({
     setLoading(true)
     onError('')
     try {
-      const res = await fetch('/api/admin/codex', {
+      const res = await fetch('/api/admin/colecao', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

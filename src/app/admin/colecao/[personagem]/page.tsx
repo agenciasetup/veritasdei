@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * /admin/codex/[personagem] — gestão das cartas de um personagem.
+ * /admin/colecao/[personagem] — gestão das cartas de um personagem da Coleção.
  *
  * Lista as cartas (com preview), abre o <CartaEditor> para criar/editar e
  * permite excluir. O editor traz o construtor visual de regras e o preview
@@ -13,10 +13,10 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { ArrowLeft, Plus, Pencil, Trash2, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { useCodexCatalogo } from '@/lib/codex/useCodexCatalog'
-import CartaView from '@/components/codex/CartaView'
-import CartaEditor from '@/components/admin/codex/CartaEditor'
-import type { Carta, Personagem } from '@/types/codex'
+import { useCodexCatalogo } from '@/lib/colecao/useCodexCatalog'
+import CartaView from '@/components/colecao/CartaView'
+import CartaEditor from '@/components/admin/colecao/CartaEditor'
+import type { Carta, Personagem } from '@/types/colecao'
 
 export default function AdminPersonagemCartasPage() {
   const params = useParams<{ personagem: string }>()
@@ -82,7 +82,7 @@ export default function AdminPersonagemCartasPage() {
   return (
     <div className="max-w-5xl mx-auto">
       <Link
-        href="/admin/codex"
+        href="/admin/colecao"
         className="inline-flex items-center gap-2 text-sm mb-4"
         style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}
       >

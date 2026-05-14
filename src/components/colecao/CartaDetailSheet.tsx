@@ -3,7 +3,7 @@
 import { Heart } from 'lucide-react'
 import { Sheet } from '@/components/ui/Sheet'
 import CartaView from './CartaView'
-import { RARIDADE_META, type CartaColecao } from '@/types/codex'
+import { RARIDADE_META, type CartaColecao } from '@/types/colecao'
 
 // Detalhe completo de uma carta desbloqueada: a face grande + lore, autoridade
 // doutrinária, recompensas e o botão de favoritar (vitrine do perfil).

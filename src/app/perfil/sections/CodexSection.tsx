@@ -2,12 +2,12 @@
 
 import { Sparkles } from 'lucide-react'
 import { SectionTitle } from './shared'
-import CodexShowcase from '@/components/codex/CodexShowcase'
+import CodexShowcase from '@/components/colecao/CodexShowcase'
 
 export default function CodexSection() {
   return (
     <div className="space-y-4">
-      <SectionTitle icon={Sparkles} title="Códex Veritas" />
+      <SectionTitle icon={Sparkles} title="Coleção" />
       <p
         className="text-sm"
         style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}

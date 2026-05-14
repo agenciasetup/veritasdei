@@ -1,5 +1,5 @@
 /**
- * /api/codex/reavaliar — reavalia as cartas do próprio usuário autenticado.
+ * /api/colecao/reavaliar — reavalia as cartas do próprio usuário autenticado.
  *
  * Útil quando o app sabe que algo mudou e quer forçar a checagem sem esperar
  * um trigger (ex.: o usuário acabou de cumprir uma condição cuja origem não
