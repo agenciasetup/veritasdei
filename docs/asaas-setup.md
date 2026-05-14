@@ -177,6 +177,46 @@ descrição. O plano nasce vazio — depois adicione preços nele.
 
 ---
 
+## Pix Automático — habilitar PIX recorrente
+
+PIX **comum** (estático/dinâmico) só funciona em **pagamento único**.
+Para usar PIX em assinatura recorrente, é preciso ativar o **Pix
+Automático** do Banco Central — produto que a Asaas oferece como
+integração separada.
+
+Sem isso ativo, criar uma subscription com `billingType=PIX` falha com:
+
+> *"A forma de pagamento não é permitida para assinaturas."*
+
+O checkout já trata esse erro e mostra mensagem amigável pro cliente.
+
+### Como ativar (passo-a-passo no painel Asaas)
+
+1. Painel Asaas → **Integrações → Pix Automático → "Solicitar ativação"**.
+2. Preencha o formulário (CNPJ, dados do responsável, tipo de cobrança).
+3. Aguarde aprovação — normalmente **algumas horas a 2 dias úteis**.
+4. Quando aprovado, o badge "Pix Automático ativo" aparece no painel.
+5. Pronto: subscriptions com PIX passam a funcionar sem mudança de código.
+
+### Como o cliente paga (UX)
+
+1. No checkout, cliente escolhe PIX e clica **"Gerar PIX"**.
+2. Aparece um QR Code da **solicitação de Pix Automático** (formato BCB).
+3. Cliente escaneia → app do banco mostra a tela de **"Autorizar débito
+   recorrente"**.
+4. Cliente autoriza uma vez. As próximas cobranças mensais saem
+   automaticamente da conta dele, sem precisar interação.
+5. Pra revogar, cliente vai no app do banco → "Pagamentos automáticos"
+   → revogar.
+
+### Enquanto não estiver ativo
+
+- O checkout mostra o erro amigável citado acima.
+- Você pode esconder a opção PIX em `/admin/checkout` desligando
+  `allow_pix` enquanto a aprovação não sai. Quando ativar, religue.
+
+---
+
 ## Order bumps (add-ons no checkout)
 
 Você pode oferecer add-ons opcionais que o cliente marca **antes** de
