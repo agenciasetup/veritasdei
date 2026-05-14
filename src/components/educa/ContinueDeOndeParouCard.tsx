@@ -3,13 +3,16 @@
 /**
  * ContinueDeOndeParouCard — card de retomada da última trilha estudada.
  *
- * Tenta enriquecer com uma imagem do banner ativo de `educa_banners` cujo
- * `link_url` aponte pra essa trilha (`/estudo/{groupSlug}`). Se houver, a
- * imagem vira fundo do card; senão, fallback é o card só-ícone original.
+ * Fontes de imagem (ordem de preferência):
+ *  1. `content_groups.cover_url(_mobile)` — campo dedicado, já preenchido
+ *     pelo admin no /admin/educa/trilhas.
+ *  2. `educa_banners` cujo `link_url ILIKE` aponte pra essa trilha
+ *     (fallback de compatibilidade — banners genéricos do slider).
+ *  3. Card só-ícone — quando nenhum dos dois retornar.
  *
- * Cuidado: o match é por `link_url ILIKE`, não por um campo dedicado —
- * intencional pra reusar a tabela existente sem migração. Se vários
- * banners apontarem pra mesma trilha, pega o de menor `ordem`.
+ * O JOIN do `useLastStudied` já traz a cover_url pronta, então no caminho
+ * feliz não temos round-trip extra. O fallback de banners só dispara
+ * quando cover_url é null.
  */
 
 import Link from 'next/link'
@@ -19,15 +22,23 @@ import { createClient } from '@/lib/supabase/client'
 import type { LastStudied } from '@/lib/content/useLastStudied'
 import GlassCard from './GlassCard'
 
+interface CoverImage {
+  desktop: string
+  mobile: string | null
+}
+
 interface BannerHit {
   image_url: string
   image_url_mobile: string | null
 }
 
-function useBannerForGroup(groupSlug: string | undefined): BannerHit | null {
+function useBannerFallback(
+  groupSlug: string | undefined,
+  enabled: boolean,
+): BannerHit | null {
   const [hit, setHit] = useState<BannerHit | null>(null)
   useEffect(() => {
-    if (!groupSlug) {
+    if (!enabled || !groupSlug) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setHit(null)
       return
@@ -50,7 +61,7 @@ function useBannerForGroup(groupSlug: string | undefined): BannerHit | null {
     return () => {
       cancelled = true
     }
-  }, [groupSlug])
+  }, [groupSlug, enabled])
   return hit
 }
 
@@ -59,9 +70,22 @@ interface Props {
 }
 
 export default function ContinueDeOndeParouCard({ lastStudied }: Props) {
-  const banner = useBannerForGroup(lastStudied.groupSlug)
+  const directCover = lastStudied.groupCoverUrl
+  const bannerFallback = useBannerFallback(
+    lastStudied.groupSlug,
+    !directCover,
+  )
 
-  if (banner) {
+  const cover: CoverImage | null = directCover
+    ? { desktop: directCover, mobile: lastStudied.groupCoverUrlMobile }
+    : bannerFallback
+      ? {
+          desktop: bannerFallback.image_url,
+          mobile: bannerFallback.image_url_mobile,
+        }
+      : null
+
+  if (cover) {
     return (
       <Link
         href={`/estudo/${lastStudied.groupSlug}`}
@@ -69,11 +93,10 @@ export default function ContinueDeOndeParouCard({ lastStudied }: Props) {
       >
         <GlassCard variant="default" interactive className="h-full">
           <div className="relative h-full flex flex-col md:flex-row md:items-stretch overflow-hidden">
-            {/* Imagem: cover no mobile, thumbnail à esquerda no desktop */}
             <div
               className="relative w-full h-40 md:w-[40%] md:h-auto md:min-h-[160px] flex-shrink-0 overflow-hidden"
               style={{
-                backgroundImage: `url(${banner.image_url_mobile || banner.image_url})`,
+                backgroundImage: `url(${cover.mobile || cover.desktop})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
               }}
@@ -120,7 +143,6 @@ export default function ContinueDeOndeParouCard({ lastStudied }: Props) {
               </div>
             </div>
 
-            {/* Texto */}
             <div className="flex-1 p-5 md:p-6 flex flex-col justify-center min-w-0">
               <p
                 className="text-[10px] tracking-[0.2em] uppercase mb-1"
@@ -163,7 +185,6 @@ export default function ContinueDeOndeParouCard({ lastStudied }: Props) {
     )
   }
 
-  // Fallback: card só-ícone (mesmo visual do antigo)
   return (
     <Link href={`/estudo/${lastStudied.groupSlug}`} className="block h-full">
       <GlassCard variant="default" padded interactive className="h-full">

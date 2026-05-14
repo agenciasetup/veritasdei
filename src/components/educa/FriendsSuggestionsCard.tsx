@@ -1,16 +1,18 @@
 'use client'
 
 /**
- * FriendsSuggestionsCard — sugestões de pessoas pra seguir, priorizando
- * mesma paróquia, depois mesma diocese. Exclui o próprio usuário e quem
- * já segue.
+ * FriendsSuggestionsCard — sugestões de pessoas pra seguir, em ordem:
  *
- * Seguir é feito via POST /api/comunidade/follows/[userId] (já existente,
- * com rate-limit e gate de premium). Em caso de gate (status 403/402),
- * redireciona pra /educa/assine.
+ *   1. Mesma paróquia (mais relevante)
+ *   2. Mesma diocese
+ *   3. Amigos-de-amigos (RPC `find_friend_suggestions`)
  *
- * Se o perfil do usuário ainda não tem paróquia/diocese, mostra CTA
- * pra completar o perfil em /perfil.
+ * Pra cada um exibe um chip "X amigos em comum" (quando aplicável). Quando
+ * o usuário não tem paróquia/diocese cadastradas E ainda não segue ninguém,
+ * mostra CTA pra completar o perfil.
+ *
+ * Seguir é feito via POST /api/comunidade/follows/[userId] (rate-limit +
+ * gate de premium). Em 403/402 redireciona pra /educa/assine.
  */
 
 import Link from 'next/link'
@@ -29,19 +31,22 @@ interface SuggestedProfile {
   paroquia: string | null
   diocese: string | null
   verified: boolean
+  /** Quantos amigos em comum (só presente em sugestões de 2º grau) */
+  mutual_count?: number
 }
+
+const MAX_SUGGESTIONS = 5
 
 export default function FriendsSuggestionsCard() {
   const { user, profile } = useAuth()
   const [suggestions, setSuggestions] = useState<SuggestedProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set())
+  const [hasContext, setHasContext] = useState(false)
 
   const userParoquia = profile?.paroquia ?? null
   const userDiocese = profile?.diocese ?? null
   const myId = user?.id ?? null
-
-  const hasContext = Boolean(userParoquia) || Boolean(userDiocese)
 
   useEffect(() => {
     let cancelled = false
@@ -52,29 +57,19 @@ export default function FriendsSuggestionsCard() {
         setLoading(false)
         return
       }
-      if (!hasContext) {
-        setSuggestions([])
-        setLoading(false)
-        return
-      }
 
       const supabase = createClient()
       if (!supabase) return
 
-      // Quem eu já sigo: subquery em vd_follows
       const { data: followsRows } = await supabase
         .from('vd_follows')
         .select('followed_user_id')
         .eq('follower_user_id', myId)
-      const alreadyFollowing = new Set<string>(
-        ((followsRows ?? []) as Array<{ followed_user_id: string }>).map(
-          (r) => r.followed_user_id,
-        ),
-      )
+      const followedIds = ((followsRows ?? []) as Array<{
+        followed_user_id: string
+      }>).map((r) => r.followed_user_id)
+      const alreadyFollowing = new Set<string>(followedIds)
 
-      // Busca perfis: paróquia primeiro (mais relevante), depois diocese
-      // (sem duplicatas — a lib JS faz dedup). Limita 12 antes do filtro
-      // local de alreadyFollowing + self, e mostra até 5.
       const out: SuggestedProfile[] = []
       const seen = new Set<string>([myId])
       alreadyFollowing.forEach((id) => seen.add(id))
@@ -98,24 +93,45 @@ export default function FriendsSuggestionsCard() {
             seen.add(r.id)
             out.push(r)
           }
-          if (out.length >= 5) break
+          if (out.length >= MAX_SUGGESTIONS) break
         }
       }
-      if (out.length < 5 && userDiocese) {
+      if (out.length < MAX_SUGGESTIONS && userDiocese) {
         const rows = await fetchByField('diocese', userDiocese)
         for (const r of rows) {
           if (!seen.has(r.id)) {
             seen.add(r.id)
             out.push(r)
           }
-          if (out.length >= 5) break
+          if (out.length >= MAX_SUGGESTIONS) break
         }
       }
 
-      if (!cancelled) {
-        setSuggestions(out)
-        setLoading(false)
+      // 3º grau: amigos-de-amigos via RPC. Roda quando ainda faltam vagas
+      // e quando o usuário tem alguém pra puxar conexões (seguindo ao menos 1).
+      if (out.length < MAX_SUGGESTIONS && followedIds.length > 0) {
+        const { data: rpcRows } = await supabase.rpc(
+          'find_friend_suggestions',
+          { p_limit: 12 },
+        )
+        const rows = (rpcRows ?? []) as SuggestedProfile[]
+        for (const r of rows) {
+          if (!seen.has(r.id)) {
+            seen.add(r.id)
+            out.push(r)
+          }
+          if (out.length >= MAX_SUGGESTIONS) break
+        }
       }
+
+      if (cancelled) return
+      setSuggestions(out)
+      setHasContext(
+        Boolean(userParoquia) ||
+          Boolean(userDiocese) ||
+          followedIds.length > 0,
+      )
+      setLoading(false)
     }
 
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -124,13 +140,12 @@ export default function FriendsSuggestionsCard() {
     return () => {
       cancelled = true
     }
-  }, [myId, userParoquia, userDiocese, hasContext])
+  }, [myId, userParoquia, userDiocese])
 
   const handleFollow = useCallback(
     async (targetId: string) => {
       if (!myId) return
       if (followingIds.has(targetId)) return
-      // optimistic
       setFollowingIds((prev) => {
         const next = new Set(prev)
         next.add(targetId)
@@ -145,7 +160,6 @@ export default function FriendsSuggestionsCard() {
             window.location.href = '/educa/assine'
             return
           }
-          // rollback
           setFollowingIds((prev) => {
             const next = new Set(prev)
             next.delete(targetId)
@@ -205,7 +219,7 @@ export default function FriendsSuggestionsCard() {
     )
   }
 
-  if (!hasContext) {
+  if (suggestions.length === 0 && !hasContext) {
     return (
       <Link href="/perfil" className="block">
         <GlassCard variant="default" padded interactive>
@@ -243,8 +257,8 @@ export default function FriendsSuggestionsCard() {
           className="text-xs py-2"
           style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
         >
-          Ainda não temos sugestões pra você na sua paróquia ou diocese.
-          Convide alguém pra entrar no Veritas!
+          Ainda não temos sugestões pra você. Volte mais tarde — ou convide
+          alguém pra entrar no Veritas!
         </p>
       </GlassCard>
     )
@@ -281,7 +295,10 @@ function SuggestionRow({
     : profile.user_number
       ? `/comunidade/p/${profile.user_number}`
       : '/comunidade'
-  const sub = profile.paroquia || profile.diocese || '—'
+  const sub =
+    typeof profile.mutual_count === 'number' && profile.mutual_count > 0
+      ? `${profile.mutual_count} amigo${profile.mutual_count === 1 ? '' : 's'} em comum`
+      : (profile.paroquia || profile.diocese || '—')
   return (
     <div className="flex items-center gap-3">
       <Link href={profileHref} className="flex items-center gap-3 flex-1 min-w-0">
@@ -373,4 +390,3 @@ function SuggestionRow({
     </div>
   )
 }
-

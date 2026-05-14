@@ -10,7 +10,7 @@
  *   Row 2 — Continue de onde parou (8) + Rosário (4)
  *   Row 3 — Liturgia (4) + Magistério (4) + Sequência (4)
  *   Row 4 — Estudo + Debate (sub-grid, 8) + Selos (4)
- *   Row 5 — Amigos sugeridos                          (12)
+ *   Row 5 — Sua rede hoje (4) + Amigos sugeridos (8)
  *   Row 6 — Meus grupos                                (12)
  *   Row 7 — CTA Assine (só free)                       (12)
  *
@@ -32,6 +32,7 @@ import DashboardGruposStrip from '@/components/educa/DashboardGruposStrip'
 import RosarioDoDiaCard from '@/components/educa/RosarioDoDiaCard'
 import ContinueDeOndeParouCard from '@/components/educa/ContinueDeOndeParouCard'
 import FriendsSuggestionsCard from '@/components/educa/FriendsSuggestionsCard'
+import FriendsActivityCard from '@/components/educa/FriendsActivityCard'
 
 export default function EducaDashboard() {
   const { user } = useAuth()
@@ -243,8 +244,13 @@ export default function EducaDashboard() {
             <DashboardSelosStrip />
           </div>
 
-          {/* 9. Amigos sugeridos (paróquia/diocese) */}
-          <div className="lg:col-span-12">
+          {/* 9. Sua rede hoje (prova social) */}
+          <div className="lg:col-span-4">
+            <FriendsActivityCard />
+          </div>
+
+          {/* 10. Amigos sugeridos (paróquia/diocese/2º grau) */}
+          <div className="lg:col-span-8">
             <FriendsSuggestionsCard />
           </div>
 

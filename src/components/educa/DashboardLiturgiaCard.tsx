@@ -1,17 +1,20 @@
 'use client'
 
 /**
- * DashboardLiturgiaCard — versão compacta do dia litúrgico em GlassCard,
- * pra plugar na grid da dashboard /educa (col-span-4 no desktop).
+ * DashboardLiturgiaCard — versão compacta do dia litúrgico em GlassCard.
  *
- * Renderização própria pra encaixar no design system glass dourado (em vez
- * de reusar `LiturgiaHojeCard` que tem outro shell — `ios-surface-hero`).
- * Dados continuam do mesmo `getLiturgicalDay()` local.
+ * Camada 1 (sempre disponível): cor / grade / título calculados localmente
+ *   por `getLiturgicalDay()` — não depende de rede.
+ * Camada 2 (best-effort): puxa a referência do Evangelho do dia da
+ *   `/api/liturgia/hoje` (cacheada 24h no DB + 1h no Next). Quando volta,
+ *   exibe inline. Se falha ou demora, o card já estava útil sem isso.
  */
 
 import Link from 'next/link'
-import { ArrowRight } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ArrowRight, BookMarked } from 'lucide-react'
 import { getLiturgicalDay } from '@/lib/liturgical-calendar'
+import type { LiturgiaDia } from '@/types/liturgia'
 import GlassCard from './GlassCard'
 
 const COLOR_DOT: Record<string, string> = {
@@ -30,8 +33,26 @@ const GRADE_LABELS: Record<string, string> = {
   feria: 'Féria',
 }
 
+function useLiturgiaHoje(): LiturgiaDia | null {
+  const [data, setData] = useState<LiturgiaDia | null>(null)
+  useEffect(() => {
+    const controller = new AbortController()
+    void fetch('/api/liturgia/hoje', { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json: LiturgiaDia | null) => {
+        if (json) setData(json)
+      })
+      .catch(() => {
+        /* silencioso — temos fallback local */
+      })
+    return () => controller.abort()
+  }, [])
+  return data
+}
+
 export default function DashboardLiturgiaCard() {
   const day = getLiturgicalDay(new Date())
+  const liturgia = useLiturgiaHoje()
   const dot = COLOR_DOT[day.color] ?? COLOR_DOT.verde
   const grade = GRADE_LABELS[day.grade] ?? 'Liturgia diária'
   const hoje = new Date().toLocaleDateString('pt-BR', {
@@ -39,6 +60,12 @@ export default function DashboardLiturgiaCard() {
     day: 'numeric',
     month: 'long',
   })
+
+  // Preferimos o título oficial da liturgia (do scrape) se disponível,
+  // mas como pode chegar com ALL CAPS ou frase longa, mantemos fallback
+  // pro nome calculado localmente quando o scrape ainda não voltou.
+  const heading = liturgia?.titulo ?? day.title ?? day.name
+  const evangelhoRef = liturgia?.evangelho?.referencia ?? null
 
   return (
     <Link href="/liturgia/hoje" className="block h-full">
@@ -91,7 +118,7 @@ export default function DashboardLiturgiaCard() {
               fontWeight: 500,
             }}
           >
-            {day.title || day.name}
+            {heading}
           </p>
 
           <p
@@ -103,6 +130,43 @@ export default function DashboardLiturgiaCard() {
           >
             {hoje}
           </p>
+
+          {evangelhoRef && (
+            <div
+              className="relative mt-3 flex items-start gap-2 px-3 py-2 rounded-xl"
+              style={{
+                background: 'rgba(0,0,0,0.3)',
+                border:
+                  '1px solid color-mix(in srgb, var(--accent) 12%, transparent)',
+              }}
+            >
+              <BookMarked
+                className="w-3.5 h-3.5 flex-shrink-0 mt-0.5"
+                style={{ color: 'var(--accent)' }}
+              />
+              <div className="min-w-0">
+                <p
+                  className="text-[9px] tracking-[0.18em] uppercase"
+                  style={{
+                    color: 'var(--accent)',
+                    fontFamily: 'var(--font-display)',
+                    opacity: 0.85,
+                  }}
+                >
+                  Evangelho
+                </p>
+                <p
+                  className="text-[12px] truncate"
+                  style={{
+                    color: 'var(--text-2)',
+                    fontFamily: 'var(--font-body)',
+                  }}
+                >
+                  {evangelhoRef}
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="relative flex items-center justify-between mt-auto pt-4 gap-2">
             <span
