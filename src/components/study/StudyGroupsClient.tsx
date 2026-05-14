@@ -1,11 +1,16 @@
 'use client'
 
-import { useState } from 'react'
-import { Users, Plus, LogIn, Copy, Check, Crown, LogOut, ArrowLeft } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Users, Plus, LogIn, Copy, Check, Crown, LogOut, ArrowLeft, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { useMyStudyGroups, type StudyGroup } from '@/lib/study/useStudyGroups'
-import GlassCard from '@/components/educa/GlassCard'
+
+const SHELL_STYLE = {
+  background: 'var(--surface-2)',
+  border: '1px solid rgba(255,255,255,0.05)',
+  borderRadius: 24,
+}
 
 export default function StudyGroupsClient() {
   const { groups, loading, createGroup, joinByCode, leaveGroup } = useMyStudyGroups()
@@ -15,6 +20,20 @@ export default function StudyGroupsClient() {
   const [newDesc, setNewDesc] = useState('')
   const [joinCode, setJoinCode] = useState('')
   const [feedback, setFeedback] = useState<{ tone: 'ok' | 'err'; msg: string } | null>(null)
+
+  // Prefill do código quando o usuário chega por um link de convite
+  // (/estudo/grupos?convite=ABC123).
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const code = new URLSearchParams(window.location.search)
+      .get('convite')
+      ?.trim()
+      .toUpperCase()
+    if (code) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setJoinCode(code)
+    }
+  }, [])
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -45,97 +64,77 @@ export default function StudyGroupsClient() {
 
   return (
     <AuthGuard>
-      <div
-        className="min-h-screen relative"
-        style={{
-          background:
-            'radial-gradient(ellipse 700px 500px at 50% -10%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%), radial-gradient(ellipse 500px 400px at 100% 100%, color-mix(in srgb, var(--wine) 14%, transparent), transparent 70%), var(--surface-1)',
-        }}
-      >
-        <main className="max-w-5xl mx-auto px-4 md:px-6 pt-6 pb-32 md:py-10">
+      <div className="min-h-screen" style={{ background: 'var(--surface-1)' }}>
+        <main className="max-w-2xl mx-auto px-4 pt-5 pb-28 md:py-10 lg:max-w-[1100px] lg:px-8 lg:pt-10 lg:pb-16">
           <Link
             href="/educa/estudo"
-            className="inline-flex items-center gap-1 text-xs mb-6"
+            className="inline-flex items-center gap-1.5 text-xs mb-8 hover:opacity-80 transition-opacity"
             style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
           >
             <ArrowLeft className="w-3.5 h-3.5" /> Voltar ao estudo
           </Link>
 
-          {/* Hero */}
-          <header className="text-center mb-8 md:mb-10">
-            <div
-              className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-3xl mb-4"
-              style={{
-                background:
-                  'linear-gradient(135deg, color-mix(in srgb, var(--accent) 32%, rgba(0,0,0,0.4)) 0%, rgba(0,0,0,0.6) 100%)',
-                border:
-                  '1.5px solid color-mix(in srgb, var(--accent) 45%, transparent)',
-                boxShadow:
-                  '0 12px 32px -12px color-mix(in srgb, var(--accent) 35%, transparent), inset 0 1px 0 rgba(255,255,255,0.06)',
-              }}
-            >
-              <Users
-                className="w-7 h-7 md:w-9 md:h-9"
-                style={{ color: 'var(--accent)' }}
-              />
-            </div>
-            <p
-              className="text-[10px] md:text-xs tracking-[0.3em] uppercase mb-2"
-              style={{ color: 'var(--accent)', fontFamily: 'var(--font-display)' }}
-            >
-              Estudo em comunhão
-            </p>
+          {/* Hero editorial — sem brilho, sem eyebrow caixa alta */}
+          <header className="mb-10 md:mb-12">
             <h1
-              className="text-3xl md:text-5xl mb-2"
+              className="text-3xl md:text-5xl leading-tight mb-3"
               style={{
-                fontFamily: 'var(--font-display)',
+                fontFamily: 'var(--font-elegant)',
                 color: 'var(--text-1)',
-                textShadow: '0 2px 12px rgba(0,0,0,0.4)',
+                fontWeight: 500,
               }}
             >
               Grupos de estudo
             </h1>
             <p
-              className="text-sm md:text-base max-w-md mx-auto"
-              style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}
+              className="text-sm md:text-base max-w-xl"
+              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
             >
-              Estude com amigos, compartilhe reflexões e acompanhem juntos a
-              mesma trilha.
+              Estude em comunhão. Crie um grupo pra família, paróquia ou
+              amigos — e caminhem juntos na mesma trilha.
             </p>
           </header>
 
-          {/* Split: criar / entrar */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-6">
-            <GlassCard variant="gold" padded>
-              <form onSubmit={handleCreate}>
-                <div className="flex items-center gap-2 mb-4">
-                  <div
-                    className="w-9 h-9 rounded-xl flex items-center justify-center"
-                    style={{
-                      background: 'rgba(0,0,0,0.45)',
-                      border:
-                        '1px solid color-mix(in srgb, var(--accent) 35%, transparent)',
-                    }}
-                  >
-                    <Plus className="w-4 h-4" style={{ color: 'var(--accent)' }} />
-                  </div>
-                  <h2
-                    className="text-sm tracking-[0.15em] uppercase"
-                    style={{
-                      color: 'var(--accent)',
-                      fontFamily: 'var(--font-display)',
-                    }}
-                  >
-                    Criar grupo
-                  </h2>
+          {/* Criar + Entrar lado a lado, flat */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4 mb-10">
+            <section className="p-6 md:p-7 flex flex-col" style={SHELL_STYLE}>
+              <header className="flex items-center gap-3 mb-5">
+                <div
+                  className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: 'rgba(0,0,0,0.3)',
+                    border: '1px solid rgba(255,255,255,0.05)',
+                  }}
+                >
+                  <Plus className="w-5 h-5" strokeWidth={1.6} style={{ color: 'var(--accent)' }} />
                 </div>
+                <div className="min-w-0">
+                  <h2
+                    className="text-lg leading-tight"
+                    style={{
+                      color: 'var(--text-1)',
+                      fontFamily: 'var(--font-elegant)',
+                      fontWeight: 500,
+                    }}
+                  >
+                    Criar um grupo
+                  </h2>
+                  <p
+                    className="text-xs mt-0.5"
+                    style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+                  >
+                    Você vira o guia da trilha.
+                  </p>
+                </div>
+              </header>
 
-                <Field label="Nome do grupo *">
+              <form onSubmit={handleCreate} className="flex-1 flex flex-col">
+                <Field label="Nome">
                   <input
                     type="text"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    placeholder="Ex: Família Souza"
+                    placeholder="Família Souza, Catequese SS. Coração…"
                     maxLength={60}
                     required
                     className="input"
@@ -157,48 +156,54 @@ export default function StudyGroupsClient() {
                 <button
                   type="submit"
                   disabled={creating || !newName.trim()}
-                  className="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm disabled:opacity-40"
+                  className="mt-5 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full text-sm disabled:opacity-40 transition-opacity"
                   style={{
-                    background:
-                      'linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 70%, black) 100%)',
-                    color: 'var(--accent-contrast)',
+                    background: 'rgba(201,168,76,0.10)',
+                    border: '1px solid rgba(201,168,76,0.25)',
+                    color: 'var(--accent)',
                     fontFamily: 'var(--font-body)',
-                    fontWeight: 600,
-                    boxShadow:
-                      '0 6px 18px -6px color-mix(in srgb, var(--accent) 45%, transparent)',
+                    fontWeight: 500,
                   }}
                 >
-                  <Plus className="w-4 h-4" />
-                  {creating ? 'Criando...' : 'Criar grupo'}
+                  {creating ? 'Criando…' : 'Criar grupo'}
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </form>
-            </GlassCard>
+            </section>
 
-            <GlassCard variant="default" padded>
-              <form onSubmit={handleJoin}>
-                <div className="flex items-center gap-2 mb-4">
-                  <div
-                    className="w-9 h-9 rounded-xl flex items-center justify-center"
-                    style={{
-                      background: 'rgba(0,0,0,0.45)',
-                      border:
-                        '1px solid color-mix(in srgb, var(--accent) 22%, transparent)',
-                    }}
-                  >
-                    <LogIn className="w-4 h-4" style={{ color: 'var(--accent)' }} />
-                  </div>
+            <section className="p-6 md:p-7 flex flex-col" style={SHELL_STYLE}>
+              <header className="flex items-center gap-3 mb-5">
+                <div
+                  className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: 'rgba(0,0,0,0.3)',
+                    border: '1px solid rgba(255,255,255,0.05)',
+                  }}
+                >
+                  <LogIn className="w-5 h-5" strokeWidth={1.6} style={{ color: 'var(--accent)' }} />
+                </div>
+                <div className="min-w-0">
                   <h2
-                    className="text-sm tracking-[0.15em] uppercase"
+                    className="text-lg leading-tight"
                     style={{
-                      color: 'var(--accent)',
-                      fontFamily: 'var(--font-display)',
+                      color: 'var(--text-1)',
+                      fontFamily: 'var(--font-elegant)',
+                      fontWeight: 500,
                     }}
                   >
                     Entrar por convite
                   </h2>
+                  <p
+                    className="text-xs mt-0.5"
+                    style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+                  >
+                    Use o código que te enviaram.
+                  </p>
                 </div>
+              </header>
 
-                <Field label="Código (6 caracteres)">
+              <form onSubmit={handleJoin} className="flex-1 flex flex-col">
+                <Field label="Código de 6 caracteres">
                   <input
                     type="text"
                     value={joinCode}
@@ -206,56 +211,43 @@ export default function StudyGroupsClient() {
                     placeholder="A1B2C3"
                     maxLength={12}
                     required
-                    className="input text-center tabular-nums tracking-[0.3em] uppercase"
+                    className="input text-center tabular-nums tracking-[0.32em] uppercase"
                     style={{ fontSize: 18 }}
                   />
                 </Field>
-                <p
-                  className="text-[11px] mt-2"
-                  style={{
-                    color: 'var(--text-3)',
-                    fontFamily: 'var(--font-body)',
-                  }}
-                >
-                  Alguém do grupo compartilha o código com você.
-                </p>
 
                 <button
                   type="submit"
                   disabled={joining || joinCode.trim().length < 4}
-                  className="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm disabled:opacity-40"
+                  className="mt-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full text-sm disabled:opacity-40 transition-opacity"
                   style={{
-                    background: 'rgba(0,0,0,0.45)',
-                    border:
-                      '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
-                    color: 'var(--accent)',
+                    background: 'rgba(0,0,0,0.3)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    color: 'var(--text-2)',
                     fontFamily: 'var(--font-body)',
-                    fontWeight: 600,
+                    fontWeight: 500,
                   }}
                 >
-                  <LogIn className="w-4 h-4" />
-                  {joining ? 'Entrando...' : 'Entrar'}
+                  {joining ? 'Entrando…' : 'Entrar no grupo'}
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </form>
-            </GlassCard>
+            </section>
           </div>
 
           {feedback && (
             <div
               role="status"
-              className="rounded-2xl px-4 py-3 text-sm mb-6"
+              className="rounded-2xl px-4 py-3 text-sm mb-8"
               style={{
-                background:
-                  feedback.tone === 'ok'
-                    ? 'color-mix(in srgb, var(--success) 14%, transparent)'
-                    : 'color-mix(in srgb, var(--warning) 14%, transparent)',
+                background: 'var(--surface-2)',
                 border: `1px solid ${
                   feedback.tone === 'ok'
-                    ? 'color-mix(in srgb, var(--success) 35%, transparent)'
-                    : 'color-mix(in srgb, var(--warning) 35%, transparent)'
+                    ? 'rgba(106,170,98,0.25)'
+                    : 'rgba(217,79,92,0.25)'
                 }`,
                 color:
-                  feedback.tone === 'ok' ? 'var(--success)' : 'var(--warning)',
+                  feedback.tone === 'ok' ? 'var(--success)' : 'var(--wine-light)',
                 fontFamily: 'var(--font-body)',
               }}
             >
@@ -263,55 +255,74 @@ export default function StudyGroupsClient() {
             </div>
           )}
 
-          {/* Lista de grupos */}
+          {/* Meus grupos */}
           <section>
-            <h2
-              className="text-xs tracking-[0.18em] uppercase mb-3 inline-flex items-center gap-2 px-1"
-              style={{
-                color: 'var(--text-3)',
-                fontFamily: 'var(--font-display)',
-              }}
-            >
-              <Users className="w-3.5 h-3.5" />
-              Meus grupos
-            </h2>
+            <header className="flex items-center justify-between mb-4 px-1">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4" strokeWidth={1.6} style={{ color: 'var(--accent)' }} />
+                <h2
+                  className="text-base"
+                  style={{
+                    color: 'var(--text-1)',
+                    fontFamily: 'var(--font-elegant)',
+                    fontWeight: 500,
+                  }}
+                >
+                  Meus grupos
+                </h2>
+              </div>
+              <span
+                className="text-[11px] tabular-nums"
+                style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
+              >
+                {loading ? '' : `${groups.length} ${groups.length === 1 ? 'grupo' : 'grupos'}`}
+              </span>
+            </header>
+
             {loading ? (
               <p
                 className="text-sm py-6 text-center"
                 style={{ color: 'var(--text-3)' }}
               >
-                Carregando...
+                Carregando…
               </p>
             ) : groups.length === 0 ? (
-              <GlassCard variant="inset" padded className="text-center">
+              <div className="p-8 text-center" style={SHELL_STYLE}>
                 <Users
-                  className="w-6 h-6 mx-auto mb-2"
+                  className="w-6 h-6 mx-auto mb-3 opacity-50"
                   style={{ color: 'var(--text-3)' }}
                 />
                 <p
                   className="text-sm"
                   style={{
+                    color: 'var(--text-2)',
+                    fontFamily: 'var(--font-body)',
+                  }}
+                >
+                  Você ainda não faz parte de nenhum grupo.
+                </p>
+                <p
+                  className="text-xs mt-1"
+                  style={{
                     color: 'var(--text-3)',
                     fontFamily: 'var(--font-body)',
                   }}
                 >
-                  Você ainda não faz parte de nenhum grupo. Crie um ou entre
-                  com um código.
+                  Crie um acima, ou use um código de convite.
                 </p>
-              </GlassCard>
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                 {groups.map((g) => (
-                  <div key={g.id} className="contents">
-                    <GroupCard
-                      group={g}
-                      onLeave={async () => {
-                        if (!window.confirm(`Sair de "${g.name}"?`)) return
-                        await leaveGroup(g.id)
-                        setFeedback({ tone: 'ok', msg: 'Você saiu do grupo.' })
-                      }}
-                    />
-                  </div>
+                  <GroupCard
+                    key={g.id}
+                    group={g}
+                    onLeave={async () => {
+                      if (!window.confirm(`Sair de "${g.name}"?`)) return
+                      await leaveGroup(g.id)
+                      setFeedback({ tone: 'ok', msg: 'Você saiu do grupo.' })
+                    }}
+                  />
                 ))}
               </div>
             )}
@@ -321,18 +332,22 @@ export default function StudyGroupsClient() {
         <style jsx>{`
           .input {
             width: 100%;
-            padding: 0.625rem 0.875rem;
-            border-radius: 0.75rem;
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+            padding: 0.7rem 0.9rem;
+            border-radius: 0.875rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.06);
             color: var(--text-1);
             font-family: var(--font-body);
             font-size: 0.875rem;
             outline: none;
-            transition: border-color 0.15s ease;
+            transition: border-color 0.15s ease, background 0.15s ease;
+          }
+          .input::placeholder {
+            color: var(--text-3);
           }
           .input:focus {
-            border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+            border-color: rgba(201, 168, 76, 0.4);
+            background: rgba(0, 0, 0, 0.4);
           }
         `}</style>
       </div>
@@ -350,10 +365,10 @@ function Field({
   return (
     <label className="block">
       <span
-        className="text-[10px] tracking-[0.18em] uppercase block mb-1.5"
+        className="text-[11px] block mb-1.5"
         style={{
           color: 'var(--text-3)',
-          fontFamily: 'var(--font-display)',
+          fontFamily: 'var(--font-body)',
         }}
       >
         {label}
@@ -368,11 +383,12 @@ function GroupCard({
   onLeave,
 }: {
   group: StudyGroup
-  onViewMembers?: () => void // mantido pra compat; agora o card inteiro é link
   onLeave: () => void
 }) {
   const [copied, setCopied] = useState(false)
-  async function copyCode() {
+  async function copyCode(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
     try {
       await navigator.clipboard.writeText(group.invite_code)
       setCopied(true)
@@ -383,39 +399,26 @@ function GroupCard({
   }
   const isOwner = group.my_role === 'owner'
   return (
-    <GlassCard variant={isOwner ? 'gold' : 'default'} padded>
-      <div className="flex items-start justify-between gap-2">
+    <Link
+      href={`/estudo/grupos/${group.id}`}
+      className="block p-5 md:p-6 transition-colors hover:bg-white/[0.01]"
+      style={SHELL_STYLE}
+    >
+      <div className="flex items-start justify-between gap-3 mb-4">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h3
-              className="text-lg font-medium truncate"
-              style={{
-                color: 'var(--text-1)',
-                fontFamily: 'var(--font-display)',
-              }}
-            >
-              {group.name}
-            </h3>
-            {isOwner && (
-              <span
-                className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full"
-                style={{
-                  background:
-                    'linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 70%, black) 100%)',
-                  color: 'var(--accent-contrast)',
-                  fontFamily: 'var(--font-body)',
-                  fontWeight: 600,
-                }}
-                title="Você criou este grupo"
-              >
-                <Crown className="w-3 h-3" />
-                Dono
-              </span>
-            )}
-          </div>
+          <h3
+            className="text-lg leading-tight truncate"
+            style={{
+              color: 'var(--text-1)',
+              fontFamily: 'var(--font-elegant)',
+              fontWeight: 500,
+            }}
+          >
+            {group.name}
+          </h3>
           {group.description && (
             <p
-              className="text-xs mt-1 line-clamp-2"
+              className="text-xs mt-1.5 line-clamp-2"
               style={{
                 color: 'var(--text-3)',
                 fontFamily: 'var(--font-body)',
@@ -425,49 +428,74 @@ function GroupCard({
             </p>
           )}
         </div>
+        {isOwner && (
+          <span
+            className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full flex-shrink-0"
+            style={{
+              color: 'var(--accent)',
+              background: 'rgba(201,168,76,0.08)',
+              border: '1px solid rgba(201,168,76,0.2)',
+              fontFamily: 'var(--font-body)',
+              fontWeight: 500,
+            }}
+            title="Você criou este grupo"
+          >
+            <Crown className="w-3 h-3" />
+            Dono
+          </span>
+        )}
       </div>
 
-      <div className="flex items-center justify-between gap-2 mt-4">
-        <Link
-          href={`/estudo/grupos/${group.id}`}
-          className="inline-flex items-center gap-1.5 text-xs hover:opacity-80 transition-opacity"
-          style={{ color: 'var(--accent)', fontFamily: 'var(--font-body)' }}
+      <div className="flex items-center justify-between gap-2">
+        <span
+          className="inline-flex items-center gap-1.5 text-xs"
+          style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
         >
           <Users className="w-3.5 h-3.5" />
           {group.member_count}{' '}
-          {group.member_count === 1 ? 'membro' : 'membros'} · abrir
-        </Link>
-        <button
-          type="button"
-          onClick={copyCode}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs tabular-nums"
-          style={{
-            background: 'rgba(0,0,0,0.45)',
-            border:
-              '1px solid color-mix(in srgb, var(--accent) 18%, transparent)',
-            color: copied ? 'var(--success)' : 'var(--accent)',
-            fontFamily: 'var(--font-body)',
-            fontWeight: 600,
-            letterSpacing: '0.12em',
-          }}
-          aria-label="Copiar código de convite"
-        >
-          {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-          {group.invite_code}
-        </button>
+          {group.member_count === 1 ? 'membro' : 'membros'}
+        </span>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={copyCode}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] tabular-nums transition-colors"
+            style={{
+              background: 'rgba(0,0,0,0.3)',
+              border: '1px solid rgba(255,255,255,0.05)',
+              color: copied ? 'var(--success)' : 'var(--text-3)',
+              fontFamily: 'var(--font-body)',
+              letterSpacing: '0.1em',
+            }}
+            aria-label="Copiar código de convite"
+          >
+            {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+            {group.invite_code}
+          </button>
+          <span
+            className="inline-flex items-center justify-center w-7 h-7 rounded-full"
+            style={{ color: 'var(--accent)' }}
+          >
+            <ArrowRight className="w-3.5 h-3.5" />
+          </span>
+        </div>
       </div>
 
-      <div className="flex justify-end mt-3">
+      <div className="mt-3 pt-3 border-t flex justify-end" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
         <button
           type="button"
-          onClick={onLeave}
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            onLeave()
+          }}
           className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md transition-colors hover:bg-white/5"
-          style={{ color: 'var(--wine-light)', fontFamily: 'var(--font-body)' }}
+          style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
         >
           <LogOut className="w-3 h-3" />
-          Sair
+          Sair do grupo
         </button>
       </div>
-    </GlassCard>
+    </Link>
   )
 }
