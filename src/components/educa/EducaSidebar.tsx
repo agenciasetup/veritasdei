@@ -10,7 +10,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, BookOpen, Cross, User, Sparkles } from 'lucide-react'
+import { Home, BookOpen, Cross, User, Sparkles, Layers } from 'lucide-react'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -25,6 +25,7 @@ const BASE_NAV_ITEMS: readonly NavItem[] = [
   { href: '/educa',          icon: Home,          label: 'Início' },
   { href: '/educa/estudo',   icon: BookOpen,      label: 'Estudo' },
   { href: '/rosario',        icon: Cross,         label: 'Rosário' },
+  { href: '/colecao',        icon: Layers,        label: 'Coleção' },
   { href: '/perfil',         icon: User,          label: 'Perfil' },
 ]
 
@@ -54,11 +55,16 @@ export default function EducaSidebar() {
   const { isAuthenticated } = useAuth()
   const { isPremium, loading: subLoading } = useSubscription()
 
-  // Insere "Assinar" antes do Perfil quando logado e ainda não tem premium.
-  // Enquanto carrega a entitlement, não mostra — evita pisca-pisca.
+  // Insere "Assinar" antes do Perfil (último item) quando logado e ainda
+  // não tem premium. Enquanto carrega a entitlement, não mostra — evita
+  // pisca-pisca.
   const navItems: readonly NavItem[] =
     isAuthenticated && !subLoading && !isPremium
-      ? [...BASE_NAV_ITEMS.slice(0, 3), SUBSCRIBE_ITEM, BASE_NAV_ITEMS[3]]
+      ? [
+          ...BASE_NAV_ITEMS.slice(0, -1),
+          SUBSCRIBE_ITEM,
+          BASE_NAV_ITEMS[BASE_NAV_ITEMS.length - 1],
+        ]
       : BASE_NAV_ITEMS
 
   return (
