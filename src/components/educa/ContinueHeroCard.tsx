@@ -66,7 +66,19 @@ const SHELL_STYLE = {
 export default function ContinueHeroCard() {
   const { user } = useAuth()
   const { last: lastStudied } = useLastStudied(user?.id)
-  const directCover = lastStudied?.groupCoverUrl ?? null
+  // Cover prefere subtopic > topic > group (mais específico → mais geral).
+  // Cada nível pode ter web + mobile separados. Fallback final: banner da
+  // tabela educa_banners cujo link aponte pra essa trilha.
+  const directCover =
+    lastStudied?.subtopicCoverUrl
+    ?? lastStudied?.topicCoverUrl
+    ?? lastStudied?.groupCoverUrl
+    ?? null
+  const directCoverMobile =
+    lastStudied?.subtopicCoverUrlMobile
+    ?? lastStudied?.topicCoverUrlMobile
+    ?? lastStudied?.groupCoverUrlMobile
+    ?? null
   const bannerFallback = useBannerFallback(
     lastStudied?.groupSlug,
     !!lastStudied && !directCover,
@@ -130,7 +142,7 @@ export default function ContinueHeroCard() {
   }
 
   const cover = directCover
-    ? { desktop: directCover, mobile: lastStudied.groupCoverUrlMobile }
+    ? { desktop: directCover, mobile: directCoverMobile }
     : bannerFallback
       ? {
           desktop: bannerFallback.image_url,

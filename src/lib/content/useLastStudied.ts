@@ -7,6 +7,12 @@ export interface LastStudied {
   subtopicId: string
   subtopicTitle: string
   subtopicSlug: string | null
+  subtopicCoverUrl: string | null
+  subtopicCoverUrlMobile: string | null
+  topicSlug: string | null
+  topicTitle: string | null
+  topicCoverUrl: string | null
+  topicCoverUrlMobile: string | null
   groupSlug: string
   groupTitle: string
   groupCoverUrl: string | null
@@ -16,18 +22,21 @@ export interface LastStudied {
 
 /**
  * Retorna o último subtópico que o usuário estudou, enriquecido com
- * o nome do subtópico e o grupo ao qual pertence.
+ * o subtópico, tópico e grupo aos quais pertence (cada um com sua cover).
  *
- * Antes: 4 round-trips sequenciais (user_content_progress → content_subtopics
- * → content_topics → content_groups). No 3G/4G médio do Brasil isso
- * gerava ~1.2s só pra renderizar o card "Continue de onde parou".
+ * Estratégia de query em 2 passos (mais resiliente que o JOIN aninhado
+ * com !inner que tínhamos antes — se qualquer coluna nova não existir
+ * em produção, o JOIN inteiro falhava silenciosamente e o card "Continue"
+ * sumia):
  *
- * Agora: 1 query com JOIN aninhado do PostgREST + cache em sessionStorage
- * com TTL curto (60s) — perceptivelmente instantâneo na navegação
- * dentro do EDUCA, sem ficar "preso" caso o admin altere algo.
+ *   1. user_content_progress (sem joins) → última entrada do user
+ *   2. content_subtopics + relacionados → enriquecimento
+ *
+ * Se o passo 2 falhar, ainda devolvemos o passo 1 com `content_type` como
+ * groupSlug (não perde a navegação, só fica sem capa/título bonito).
  */
 
-const CACHE_KEY = 'vd.educa.lastStudied.v2'
+const CACHE_KEY = 'vd.educa.lastStudied.v3'
 const CACHE_TTL_MS = 60_000
 
 interface CacheEntry {
@@ -63,7 +72,6 @@ function writeCache(userId: string, value: LastStudied | null) {
 }
 
 export function useLastStudied(userId: string | undefined) {
-  // Hidratamos imediatamente do cache pra evitar o flash de "Sem progresso".
   const cached = userId ? readCache(userId) : null
   const [last, setLast] = useState<LastStudied | null>(cached?.value ?? null)
   const [loading, setLoading] = useState<boolean>(!cached || !cached.fresh)
@@ -75,7 +83,6 @@ export function useLastStudied(userId: string | undefined) {
       return
     }
 
-    // Se temos cache fresco, não precisa nem disparar a query.
     const c = readCache(userId)
     if (c?.fresh) {
       setLast(c.value)
@@ -93,13 +100,11 @@ export function useLastStudied(userId: string | undefined) {
       }
 
       try {
-        // 1 round-trip com joins aninhados — PostgREST traduz pra um único
-        // SELECT com LATERAL joins no Postgres.
-        const { data } = await supabase
+        // PASSO 1 — entrada mais recente, sem joins (resiliente a colunas
+        // ausentes em joined tables).
+        const { data: progress } = await supabase
           .from('user_content_progress')
-          .select(
-            'subtopic_id, content_type, studied_at, content_subtopics!inner(id, slug, title, content_topics!inner(group_id, content_groups(slug, title, cover_url, cover_url_mobile)))',
-          )
+          .select('subtopic_id, content_type, studied_at')
           .eq('user_id', userId!)
           .order('studied_at', { ascending: false })
           .limit(1)
@@ -107,24 +112,64 @@ export function useLastStudied(userId: string | undefined) {
 
         if (cancelled) return
 
-        if (!data) {
+        if (!progress) {
           writeCache(userId!, null)
           setLast(null)
           setLoading(false)
           return
         }
 
-        // PostgREST pode devolver relações como array OU objeto dependendo
-        // da cardinalidade inferida — normalizamos ambos.
-        const subRaw = (data as { content_subtopics: unknown }).content_subtopics
-        const sub = (Array.isArray(subRaw) ? subRaw[0] : subRaw) as
-          | {
+        const p = progress as {
+          subtopic_id: string
+          content_type: string
+          studied_at: string
+        }
+
+        // Fallback "esqueleto" — usa só dados do progresso. Aplicamos
+        // imediatamente pra dar resposta rápida (sem flash de empty state)
+        // e refinamos com o enriquecimento embaixo se vier.
+        const skeleton: LastStudied = {
+          subtopicId: p.subtopic_id,
+          subtopicTitle: p.subtopic_id,
+          subtopicSlug: null,
+          subtopicCoverUrl: null,
+          subtopicCoverUrlMobile: null,
+          topicSlug: null,
+          topicTitle: null,
+          topicCoverUrl: null,
+          topicCoverUrlMobile: null,
+          groupSlug: p.content_type,
+          groupTitle: p.content_type,
+          groupCoverUrl: null,
+          groupCoverUrlMobile: null,
+          studiedAt: p.studied_at,
+        }
+
+        // PASSO 2 — enriquece com subtopic + topic + group em uma query.
+        // Sem !inner pra não cancelar tudo se algum nível faltar.
+        let enriched = skeleton
+        try {
+          const { data: sub } = await supabase
+            .from('content_subtopics')
+            .select(
+              'id, slug, title, cover_url, cover_url_mobile, content_topics(slug, title, cover_url, cover_url_mobile, content_groups(slug, title, cover_url, cover_url_mobile))',
+            )
+            .eq('id', p.subtopic_id)
+            .maybeSingle()
+
+          if (sub) {
+            const subRow = sub as {
               id: string
               slug: string | null
               title: string
+              cover_url: string | null
+              cover_url_mobile: string | null
               content_topics:
                 | {
-                    group_id: string | null
+                    slug: string | null
+                    title: string | null
+                    cover_url: string | null
+                    cover_url_mobile: string | null
                     content_groups:
                       | {
                           slug: string
@@ -141,7 +186,10 @@ export function useLastStudied(userId: string | undefined) {
                       | null
                   }
                 | {
-                    group_id: string | null
+                    slug: string | null
+                    title: string | null
+                    cover_url: string | null
+                    cover_url_mobile: string | null
                     content_groups:
                       | {
                           slug: string
@@ -159,35 +207,37 @@ export function useLastStudied(userId: string | undefined) {
                   }[]
                 | null
             }
-          | undefined
+            const topicRaw = subRow.content_topics
+            const topic = Array.isArray(topicRaw) ? topicRaw[0] : topicRaw
+            const groupRaw = topic?.content_groups
+            const group = Array.isArray(groupRaw) ? groupRaw[0] : groupRaw
 
-        if (!sub) {
-          writeCache(userId!, null)
-          setLast(null)
-          setLoading(false)
-          return
+            enriched = {
+              subtopicId: subRow.id,
+              subtopicTitle: subRow.title,
+              subtopicSlug: subRow.slug ?? null,
+              subtopicCoverUrl: subRow.cover_url ?? null,
+              subtopicCoverUrlMobile: subRow.cover_url_mobile ?? null,
+              topicSlug: topic?.slug ?? null,
+              topicTitle: topic?.title ?? null,
+              topicCoverUrl: topic?.cover_url ?? null,
+              topicCoverUrlMobile: topic?.cover_url_mobile ?? null,
+              groupSlug: group?.slug ?? p.content_type,
+              groupTitle: group?.title ?? p.content_type,
+              groupCoverUrl: group?.cover_url ?? null,
+              groupCoverUrlMobile: group?.cover_url_mobile ?? null,
+              studiedAt: p.studied_at,
+            }
+          }
+        } catch {
+          // mantém skeleton — degradação ainda gracosa.
         }
 
-        const topicRaw = sub.content_topics
-        const topic = Array.isArray(topicRaw) ? topicRaw[0] : topicRaw
-        const groupRaw = topic?.content_groups
-        const group = Array.isArray(groupRaw) ? groupRaw[0] : groupRaw
-
-        const value: LastStudied = {
-          subtopicId: sub.id,
-          subtopicTitle: sub.title,
-          subtopicSlug: sub.slug ?? null,
-          groupSlug: group?.slug ?? (data as { content_type: string }).content_type,
-          groupTitle: group?.title ?? (data as { content_type: string }).content_type,
-          groupCoverUrl: group?.cover_url ?? null,
-          groupCoverUrlMobile: group?.cover_url_mobile ?? null,
-          studiedAt: (data as { studied_at: string }).studied_at,
-        }
-
-        writeCache(userId!, value)
-        setLast(value)
+        if (cancelled) return
+        writeCache(userId!, enriched)
+        setLast(enriched)
       } catch {
-        // degrada silenciosamente
+        // erro fatal no passo 1 — não cacheia null pra permitir retry depois.
       } finally {
         if (!cancelled) setLoading(false)
       }
