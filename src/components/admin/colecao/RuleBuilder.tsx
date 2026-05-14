@@ -6,8 +6,8 @@ import {
   type CartaCondicao,
   type CartaCondicaoTipo,
   type CartaRegras,
-} from '@/types/codex'
-import type { CodexCatalogo } from '@/lib/codex/useCodexCatalog'
+} from '@/types/colecao'
+import type { CodexCatalogo } from '@/lib/colecao/useCodexCatalog'
 
 // Construtor visual da regra de desbloqueio. O admin nunca toca em JSON cru —
 // escolhe "Todas / Qualquer" e compõe condições de um catálogo fechado. O shape

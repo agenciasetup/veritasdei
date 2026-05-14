@@ -14,7 +14,7 @@ import {
   ChevronLeft, ChevronRight, Church, Droplets, ScrollText,
   Tablets, BookOpen, Scale, Heart, GraduationCap, MapPin, Map,
   LogIn, User, LogOut, Shield, Users, Cross, ClipboardCheck, BookMarked,
-  Calendar, Library, Network, CalendarHeart, Sparkles,
+  Calendar, Library, Network, CalendarHeart, Sparkles, Layers,
 } from 'lucide-react'
 
 /* ─── Navigation structure with groups ─── */
@@ -238,6 +238,13 @@ export default function Sidebar() {
                     forceGold
                   />
                 )}
+
+                {/* Coleção */}
+                <SidebarLink
+                  item={{ href: '/colecao', icon: Layers, label: 'Coleção' }}
+                  pathname={pathname}
+                  expanded={expanded}
+                />
 
                 {/* Profile */}
                 <Link

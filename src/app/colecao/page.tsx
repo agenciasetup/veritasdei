@@ -1,7 +1,7 @@
 'use client'
 
 import AuthGuard from '@/components/auth/AuthGuard'
-import CodexShowcase from '@/components/codex/CodexShowcase'
+import CodexShowcase from '@/components/colecao/CodexShowcase'
 
 export default function CodexPage() {
   return (
@@ -14,7 +14,7 @@ export default function CodexPage() {
               className="text-2xl font-bold tracking-wider uppercase"
               style={{ fontFamily: 'Cinzel, serif', color: '#C9A84C' }}
             >
-              Códex Veritas
+              Coleção
             </h1>
             <p
               className="text-sm mt-1"

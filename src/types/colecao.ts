@@ -72,6 +72,8 @@ export interface Carta {
   ilustracao_mobile_url: string | null
   moldura: CartaMoldura
   cor_accent: string | null
+  /** Multiplicador de fonte p/ diagramação (0.5–2.0, padrão 1.0). */
+  escala_fonte: number
   dica_desbloqueio: string | null
   regras: CartaRegras
   status: CartaStatus

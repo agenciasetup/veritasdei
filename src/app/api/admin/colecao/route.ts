@@ -1,5 +1,5 @@
 /**
- * /api/admin/codex — ações administrativas do Códex Veritas.
+ * /api/admin/colecao — ações administrativas do Códex Veritas.
  *
  * - test-unlock:    força o desbloqueio de uma carta para um usuário (por
  *                   e-mail), para o admin conferir a carta sem cumprir a regra.

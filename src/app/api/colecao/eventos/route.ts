@@ -1,5 +1,5 @@
 /**
- * /api/codex/eventos — emissão de eventos especiais do Códex (server-to-server).
+ * /api/colecao/eventos — emissão de eventos especiais do Códex (server-to-server).
  *
  * Rota INTERNA. Não deve ser chamada pelo browser — é o ponto por onde outras
  * features (modo debate, micro-eventos litúrgicos, etc.) registram contadores

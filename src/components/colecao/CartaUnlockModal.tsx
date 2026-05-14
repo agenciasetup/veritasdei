@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion'
 import { Sparkles, X } from 'lucide-react'
 import CartaView from './CartaView'
-import { RARIDADE_META, type Carta } from '@/types/codex'
+import { RARIDADE_META, type Carta } from '@/types/colecao'
 
 // Momento da recompensa: a carta surge, gira e brilha. Quanto mais rara, mais
 // intensa a celebração (glow puxado de RARIDADE_META).

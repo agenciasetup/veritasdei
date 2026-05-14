@@ -49,7 +49,7 @@ const ALL_TABS: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: 'conta',        label: 'Conta',         icon: User },
   { key: 'propositos',   label: 'Propósitos',    icon: Target },
   { key: 'reliquias',    label: 'Selos',         icon: Gem },
-  { key: 'codex',        label: 'Códex',         icon: Layers },
+  { key: 'codex',        label: 'Coleção',         icon: Layers },
   { key: 'notificacoes', label: 'Notificações',  icon: Bell },
   { key: 'assinatura',   label: 'Assinatura',    icon: Sparkles },
   { key: 'carteirinha',  label: 'Carteirinha',   icon: CreditCard },

@@ -1,10 +1,10 @@
 'use client'
 
 /**
- * /admin/codex — gestão dos personagens do Códex Veritas.
+ * /admin/colecao — gestão dos personagens da Coleção.
  *
  * Cada personagem agrupa variações de carta. Daqui o admin entra em
- * /admin/codex/[slug] para gerenciar as cartas daquele personagem.
+ * /admin/colecao/[slug] para gerenciar as cartas daquele personagem.
  *
  * Acesso: AdminLayout gateia por role=admin; a RLS de `personagens`
  * reaplica a checagem.
@@ -27,7 +27,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import ImageUploader, { type ImageSpec } from '@/components/admin/ImageUploader'
-import type { Personagem } from '@/types/codex'
+import type { Personagem } from '@/types/colecao'
 
 const ICONE_SPEC: ImageSpec = {
   recommendedWidth: 512,
@@ -187,7 +187,7 @@ export default function AdminCodexPage() {
               className="text-xl font-bold"
               style={{ fontFamily: 'Cinzel, serif', color: '#F2EDE4' }}
             >
-              Códex Veritas · Personagens
+              Coleção · Personagens
             </h1>
           </div>
           <p
@@ -447,7 +447,7 @@ export default function AdminCodexPage() {
                   <Trash2 className="w-4 h-4" />
                 </button>
                 <Link
-                  href={`/admin/codex/${p.slug}`}
+                  href={`/admin/colecao/${p.slug}`}
                   className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs"
                   style={{
                     background: 'rgba(201,168,76,0.12)',

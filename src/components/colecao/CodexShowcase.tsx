@@ -4,13 +4,13 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { Sparkles, Loader2, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { useCodex, type PersonagemColecao } from '@/lib/codex/useCodex'
+import { useCodex, type PersonagemColecao } from '@/lib/colecao/useCodex'
 import { Sheet } from '@/components/ui/Sheet'
 import CartaView from './CartaView'
 import CartaSlotBloqueada from './CartaSlotBloqueada'
 import CartaDetailSheet from './CartaDetailSheet'
 import CartaUnlockModal from './CartaUnlockModal'
-import type { CartaColecao } from '@/types/codex'
+import type { CartaColecao } from '@/types/colecao'
 
 // Vitrine da coleção: grade de personagens → ao tocar, abre o carrossel de
 // variações (desbloqueadas + silhuetas seladas) → ao tocar numa carta, o

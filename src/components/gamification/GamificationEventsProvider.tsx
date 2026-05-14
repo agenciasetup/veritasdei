@@ -6,11 +6,14 @@ import { useAuth } from '@/contexts/AuthContext'
 import { XpToastStack, type XpToastItem } from './XpToast'
 import LevelUpModal from './LevelUpModal'
 import ReliquiaUnlockModal, { type ReliquiaUnlockData } from './ReliquiaUnlockModal'
+import CartaUnlockModal from '@/components/colecao/CartaUnlockModal'
+import type { Carta } from '@/types/colecao'
 
 type Baseline = {
   totalXp: number
   level: number
   reliquiaIds: Set<string>
+  cartaIds: Set<string>
 }
 
 export default function GamificationEventsProvider({
@@ -22,6 +25,7 @@ export default function GamificationEventsProvider({
   const [toasts, setToasts] = useState<XpToastItem[]>([])
   const [levelUp, setLevelUp] = useState<number | null>(null)
   const [reliquia, setReliquia] = useState<ReliquiaUnlockData | null>(null)
+  const [carta, setCarta] = useState<Carta | null>(null)
   const baseline = useRef<Baseline | null>(null)
   const toastSeq = useRef(0)
 
@@ -35,13 +39,14 @@ export default function GamificationEventsProvider({
     let cancelled = false
 
     async function loadBaseline() {
-      const [gamiRes, relRes] = await Promise.all([
+      const [gamiRes, relRes, cartaRes] = await Promise.all([
         supabase
           .from('user_gamification')
           .select('total_xp, current_level')
           .eq('user_id', user!.id)
           .maybeSingle(),
         supabase.from('user_reliquias').select('reliquia_id').eq('user_id', user!.id),
+        supabase.from('user_cartas').select('carta_id').eq('user_id', user!.id),
       ])
       if (cancelled) return
       baseline.current = {
@@ -49,6 +54,9 @@ export default function GamificationEventsProvider({
         level: gamiRes.data?.current_level ?? 1,
         reliquiaIds: new Set(
           (relRes.data || []).map((r: { reliquia_id: string }) => r.reliquia_id),
+        ),
+        cartaIds: new Set(
+          (cartaRes.data || []).map((r: { carta_id: string }) => r.carta_id),
         ),
       }
     }
@@ -109,6 +117,29 @@ export default function GamificationEventsProvider({
           if (data) setReliquia(data as ReliquiaUnlockData)
         },
       )
+      .on(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        'postgres_changes' as any,
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'user_cartas',
+          filter: `user_id=eq.${user.id}`,
+        },
+        async (payload: RealtimePayload) => {
+          const cartaId = (payload.new as { carta_id: string }).carta_id
+          if (!baseline.current) return
+          if (baseline.current.cartaIds.has(cartaId)) return
+          baseline.current.cartaIds.add(cartaId)
+
+          const { data } = await supabase
+            .from('cartas')
+            .select('*')
+            .eq('id', cartaId)
+            .maybeSingle()
+          if (data) setCarta(data as Carta)
+        },
+      )
       .subscribe()
 
     return () => {
@@ -121,6 +152,20 @@ export default function GamificationEventsProvider({
     setToasts((prev) => prev.filter((t) => t.id !== id))
   }
 
+  // Ao fechar o popup da carta, marca como vista pra não reaparecer
+  // na vitrine da Coleção.
+  async function dismissCarta() {
+    const atual = carta
+    setCarta(null)
+    if (!atual || !user?.id) return
+    const supabase = createClient()
+    await supabase
+      .from('user_cartas')
+      .update({ vista: true })
+      .eq('user_id', user.id)
+      .eq('carta_id', atual.id)
+  }
+
   return (
     <>
       {children}
@@ -128,6 +173,9 @@ export default function GamificationEventsProvider({
       {levelUp ? <LevelUpModal level={levelUp} onClose={() => setLevelUp(null)} /> : null}
       {reliquia ? (
         <ReliquiaUnlockModal reliquia={reliquia} onClose={() => setReliquia(null)} />
+      ) : null}
+      {carta ? (
+        <CartaUnlockModal carta={carta} onClose={dismissCarta} />
       ) : null}
     </>
   )
