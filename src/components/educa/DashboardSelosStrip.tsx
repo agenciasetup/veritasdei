@@ -42,19 +42,24 @@ export default function DashboardSelosStrip() {
 
   return (
     <Link href="/perfil#selos" className="block h-full">
-      <GlassCard variant="default" interactive className="h-full">
+      <GlassCard variant="flat" interactive className="h-full">
         <div className="p-5 md:p-6 h-full flex flex-col">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Gem className="w-4 h-4" style={{ color: 'var(--accent)' }} />
+              <Gem
+                className="w-4 h-4"
+                strokeWidth={1.6}
+                style={{ color: 'var(--accent)' }}
+              />
               <h3
-                className="text-[11px] tracking-[0.18em] uppercase"
+                className="text-sm"
                 style={{
-                  color: 'var(--accent)',
-                  fontFamily: 'var(--font-display)',
+                  color: 'var(--text-1)',
+                  fontFamily: 'var(--font-elegant)',
+                  fontWeight: 500,
                 }}
               >
-                Selos de devoção
+                Selos
               </h3>
             </div>
             <span

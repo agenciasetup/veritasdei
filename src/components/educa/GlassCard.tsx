@@ -15,7 +15,7 @@
 
 import { forwardRef, type CSSProperties, type ReactNode } from 'react'
 
-type Variant = 'default' | 'gold' | 'wine' | 'inset'
+type Variant = 'default' | 'gold' | 'wine' | 'inset' | 'flat'
 
 const VARIANT_STYLE: Record<Variant, CSSProperties> = {
   default: {
@@ -42,6 +42,12 @@ const VARIANT_STYLE: Record<Variant, CSSProperties> = {
   inset: {
     background: 'rgba(10,9,8,0.7)',
     border: '1px solid color-mix(in srgb, var(--accent) 10%, transparent)',
+  },
+  // 'flat' — direção editorial nova: superfície sólida, sem glass, sem
+  // gradient, borda 5% branco. Usado pela dashboard /educa.
+  flat: {
+    background: 'var(--surface-2)',
+    border: '1px solid rgba(255,255,255,0.05)',
   },
 }
 
@@ -72,11 +78,16 @@ const GlassCard = forwardRef<HTMLDivElement, Props>(function GlassCard(
   } = props
   const Tag = as as 'div'
   const variantStyle: CSSProperties = VARIANT_STYLE[variant as Variant]
+  const isFlat = variant === 'flat'
   const merged: CSSProperties = {
     ...variantStyle,
-    backdropFilter: 'blur(18px) saturate(140%)',
-    WebkitBackdropFilter: 'blur(18px) saturate(140%)',
-    borderRadius: 24,
+    ...(isFlat
+      ? {}
+      : {
+          backdropFilter: 'blur(18px) saturate(140%)',
+          WebkitBackdropFilter: 'blur(18px) saturate(140%)',
+        }),
+    borderRadius: isFlat ? 24 : 24,
     ...style,
   }
   return (

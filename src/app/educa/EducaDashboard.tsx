@@ -1,31 +1,31 @@
 'use client'
 
 /**
- * Dashboard do Veritas Educa.
+ * Dashboard do Veritas Educa — versão flat editorial.
  *
- * Mobile (< lg): coluna única, glass cards generosos em ar.
+ * Mobile (< lg): coluna única, blocos compactos individuais.
  *
- * Desktop (lg+): grid de 12 colunas (max-w 1400px) com hierarquia:
- *   Row 1 — LevelHeroExpanded                          (12)
- *   Row 2 — Continue de onde parou (8) + Rosário (4)
- *   Row 3 — Liturgia (4) + Magistério (4) + Sequência (4)
- *   Row 4 — Estudo + Debate (sub-grid, 8) + Selos (4)
- *   Row 5 — Sua rede hoje (4) + Amigos sugeridos (8)
- *   Row 6 — Meus grupos                                (12)
- *   Row 7 — CTA Assine (só free)                       (12)
+ * Desktop (lg+): grid 12-col até max-w-[1400px].
+ *   Row 1 — Hero 4:5 (col-span-4)  +  TodayStack (col-span-8)
+ *   Row 2 — Estudo · Debate · Magistério · Sequência  (4 × col-3)
+ *   Row 3 — Selos (4) · Sua rede hoje (4) · Grupos (4)
+ *   Row 4 — Pessoas pra seguir  (col-span-12)
+ *   Row 5 — CTA Assine (só free)  (col-span-12)
  *
- * Quando o usuário ainda não tem progresso (sem `lastStudied`), o card
- * "Continue" some e o Rosário promove pra col-span-12 na sua linha.
+ * Direção visual: superfícies sólidas (sem gradient/glass), bordas 5%
+ * branco, dourado só em números / sublinhe / "Retomar →". Sem eyebrows
+ * ALL CAPS gritando. Tipografia serifa pra hierarquia. HubSpot Kit
+ * filtrado pelo léxico sacro.
  */
 
 import Link from 'next/link'
-import { ArrowRight, BookOpen, Lock, Search, Sparkles, Swords } from 'lucide-react'
+import { ArrowRight, BookOpen, Lock, Sparkles, Swords } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLastStudied } from '@/lib/content/useLastStudied'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import LevelHeroExpanded from '@/components/educa/LevelHeroExpanded'
 import DailyCheckin from '@/components/educa/DailyCheckin'
-import GlassCard from '@/components/educa/GlassCard'
+import TodayStack from '@/components/educa/TodayStack'
 import DashboardLiturgiaCard from '@/components/educa/DashboardLiturgiaCard'
 import DashboardSelosStrip from '@/components/educa/DashboardSelosStrip'
 import DashboardGruposStrip from '@/components/educa/DashboardGruposStrip'
@@ -42,10 +42,7 @@ export default function EducaDashboard() {
   return (
     <div
       className="relative min-h-screen"
-      style={{
-        background:
-          'radial-gradient(ellipse 800px 500px at 50% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 70%), radial-gradient(ellipse 500px 400px at 90% 30%, color-mix(in srgb, var(--wine) 12%, transparent), transparent 70%), var(--surface-1)',
-      }}
+      style={{ background: 'var(--surface-1)' }}
     >
       <main
         className="
@@ -54,252 +51,229 @@ export default function EducaDashboard() {
           lg:max-w-[1400px] lg:px-8 lg:pt-10 lg:pb-16
         "
       >
-        <div
-          className="
-            space-y-3
-            md:space-y-4
-            lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-5
-          "
-        >
-          {/* 1. Hero — mobile compacto / desktop expandido */}
-          <div className="lg:col-span-12">
+        {/* MOBILE — flow vertical natural */}
+        <div className="lg:hidden space-y-3 md:space-y-4">
+          <LevelHeroExpanded />
+          <RosarioDoDiaCard />
+          <DashboardLiturgiaCard />
+          {lastStudied && <ContinueDeOndeParouCard lastStudied={lastStudied} />}
+          <MagisterioCard />
+          <DailyCheckin />
+          <div className="grid grid-cols-2 gap-3">
+            <EstudoCard />
+            <DebateCard />
+          </div>
+          <DashboardSelosStrip />
+          <FriendsActivityCard />
+          <FriendsSuggestionsCard />
+          <DashboardGruposStrip />
+          {!subLoading && !isPremium && <AssineCard />}
+        </div>
+
+        {/* DESKTOP — grid editorial flat */}
+        <div className="hidden lg:grid lg:grid-cols-12 lg:gap-5">
+          {/* Row 1: Hero 4:5 + Stack de ações */}
+          <div className="lg:col-span-4">
             <LevelHeroExpanded />
           </div>
-
-          {/* 2. Continue de onde parou (com banner se houver) */}
-          {lastStudied && (
-            <div className="lg:col-span-8">
-              <ContinueDeOndeParouCard lastStudied={lastStudied} />
-            </div>
-          )}
-
-          {/* 3. Rosário do dia — promove pra 12 se não tem Continue */}
-          <div className={lastStudied ? 'lg:col-span-4' : 'lg:col-span-12'}>
-            <RosarioDoDiaCard />
+          <div className="lg:col-span-8">
+            <TodayStack />
           </div>
 
-          {/* 4. Liturgia do dia */}
-          <div className="lg:col-span-4">
-            <DashboardLiturgiaCard />
+          {/* Row 2: 4 cards de navegação iguais */}
+          <div className="lg:col-span-3">
+            <EstudoCard />
           </div>
-
-          {/* 5. Pergunte ao Magistério */}
-          <div className="lg:col-span-4">
-            <Link href="/educa/magisterio" className="block h-full">
-              <GlassCard variant="default" padded interactive className="h-full">
-                <div className="flex items-center gap-3 md:gap-4 h-full">
-                  <div
-                    className="w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center flex-shrink-0 relative"
-                    style={{
-                      background:
-                        'linear-gradient(135deg, color-mix(in srgb, var(--accent) 32%, rgba(0,0,0,0.4)) 0%, rgba(0,0,0,0.5) 100%)',
-                      border:
-                        '1px solid color-mix(in srgb, var(--accent) 45%, transparent)',
-                      boxShadow:
-                        '0 0 18px color-mix(in srgb, var(--accent) 28%, transparent)',
-                    }}
-                  >
-                    <Sparkles
-                      className="w-5 h-5 md:w-6 md:h-6"
-                      style={{ color: 'var(--accent)' }}
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className="text-[10px] tracking-[0.2em] uppercase mb-0.5"
-                      style={{
-                        color: 'var(--accent)',
-                        fontFamily: 'var(--font-display)',
-                      }}
-                    >
-                      IA Católica
-                    </p>
-                    <p
-                      className="text-sm md:text-base font-medium"
-                      style={{
-                        color: 'var(--text-1)',
-                        fontFamily: 'var(--font-body)',
-                      }}
-                    >
-                      Pergunte ao Magistério
-                    </p>
-                    <p
-                      className="text-[11px] mt-0.5 truncate flex items-center gap-1"
-                      style={{
-                        color: 'var(--text-3)',
-                        fontFamily: 'var(--font-body)',
-                      }}
-                    >
-                      <Search className="w-3 h-3" />
-                      Bíblia, Magistério, Padres da Igreja
-                    </p>
-                  </div>
-                  <ArrowRight
-                    className="w-4 h-4 flex-shrink-0"
-                    style={{ color: 'var(--accent)' }}
-                  />
-                </div>
-              </GlassCard>
-            </Link>
+          <div className="lg:col-span-3">
+            <DebateCard />
           </div>
-
-          {/* 6. Sequência diária */}
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-3">
+            <MagisterioCard />
+          </div>
+          <div className="lg:col-span-3">
             <DailyCheckin />
           </div>
 
-          {/* 7. Estudo + Modo Debate (sub-grid 2 cols) */}
-          <div className="lg:col-span-8">
-            <div className="grid grid-cols-2 gap-3 md:gap-4 h-full">
-              <Link href="/educa/estudo" className="block h-full">
-                <GlassCard variant="default" interactive className="h-full">
-                  <div className="p-4 md:p-5 h-full flex flex-col">
-                    <div
-                      className="w-11 h-11 md:w-12 md:h-12 rounded-2xl flex items-center justify-center mb-3"
-                      style={{
-                        background:
-                          'linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, rgba(0,0,0,0.3)) 0%, rgba(0,0,0,0.45) 100%)',
-                        border:
-                          '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
-                      }}
-                    >
-                      <BookOpen
-                        className="w-5 h-5 md:w-6 md:h-6"
-                        style={{ color: 'var(--accent)' }}
-                      />
-                    </div>
-                    <p
-                      className="text-sm md:text-base font-medium mb-0.5"
-                      style={{
-                        color: 'var(--text-1)',
-                        fontFamily: 'var(--font-body)',
-                      }}
-                    >
-                      Estudo
-                    </p>
-                    <p
-                      className="text-[11px] leading-snug"
-                      style={{
-                        color: 'var(--text-3)',
-                        fontFamily: 'var(--font-body)',
-                      }}
-                    >
-                      Trilhas, pilares, provas e selos.
-                    </p>
-                    <ArrowRight
-                      className="w-4 h-4 mt-auto self-end"
-                      style={{ color: 'var(--accent)' }}
-                    />
-                  </div>
-                </GlassCard>
-              </Link>
-
-              <Link href="/educa/debate" className="block h-full">
-                <GlassCard variant="wine" interactive className="h-full">
-                  <div className="p-4 md:p-5 h-full flex flex-col">
-                    <div
-                      className="w-11 h-11 md:w-12 md:h-12 rounded-2xl flex items-center justify-center mb-3"
-                      style={{
-                        background:
-                          'linear-gradient(135deg, rgba(0,0,0,0.5) 0%, color-mix(in srgb, var(--wine) 40%, rgba(0,0,0,0.4)) 100%)',
-                        border:
-                          '1px solid color-mix(in srgb, var(--accent) 28%, transparent)',
-                      }}
-                    >
-                      <Swords
-                        className="w-5 h-5 md:w-6 md:h-6"
-                        style={{ color: 'var(--accent)' }}
-                      />
-                    </div>
-                    <p
-                      className="text-sm md:text-base font-medium mb-0.5"
-                      style={{
-                        color: 'var(--text-1)',
-                        fontFamily: 'var(--font-body)',
-                      }}
-                    >
-                      Modo Debate
-                    </p>
-                    <p
-                      className="text-[11px] leading-snug"
-                      style={{
-                        color: 'var(--text-2)',
-                        fontFamily: 'var(--font-body)',
-                      }}
-                    >
-                      Treine apologética contra objeções.
-                    </p>
-                    <ArrowRight
-                      className="w-4 h-4 mt-auto self-end"
-                      style={{ color: 'var(--accent)' }}
-                    />
-                  </div>
-                </GlassCard>
-              </Link>
-            </div>
-          </div>
-
-          {/* 8. Selos de devoção */}
+          {/* Row 3: Selos, Rede, Grupos */}
           <div className="lg:col-span-4">
             <DashboardSelosStrip />
           </div>
-
-          {/* 9. Sua rede hoje (prova social) */}
           <div className="lg:col-span-4">
             <FriendsActivityCard />
           </div>
-
-          {/* 10. Amigos sugeridos (paróquia/diocese/2º grau) */}
-          <div className="lg:col-span-8">
-            <FriendsSuggestionsCard />
-          </div>
-
-          {/* 10. Meus grupos */}
-          <div className="lg:col-span-12">
+          <div className="lg:col-span-4">
             <DashboardGruposStrip />
           </div>
 
-          {/* 11. CTA Assine */}
+          {/* Row 4: Sugestões */}
+          <div className="lg:col-span-12">
+            <FriendsSuggestionsCard />
+          </div>
+
+          {/* Row 5: CTA */}
           {!subLoading && !isPremium && (
             <div className="lg:col-span-12">
-              <Link href="/educa/assine" className="block">
-                <GlassCard variant="gold" padded interactive>
-                  <div className="flex items-center gap-3">
-                    <Lock
-                      className="w-5 h-5 flex-shrink-0"
-                      style={{ color: 'var(--accent)' }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className="text-sm font-medium"
-                        style={{
-                          color: 'var(--text-1)',
-                          fontFamily: 'var(--font-body)',
-                        }}
-                      >
-                        Assine o Veritas Educa
-                      </p>
-                      <p
-                        className="text-[11px] mt-0.5"
-                        style={{
-                          color: 'var(--text-2)',
-                          fontFamily: 'var(--font-body)',
-                        }}
-                      >
-                        Desbloqueie trilhas, quizzes e a IA católica.
-                      </p>
-                    </div>
-                    <ArrowRight
-                      className="w-4 h-4"
-                      style={{ color: 'var(--accent)' }}
-                    />
-                  </div>
-                </GlassCard>
-              </Link>
+              <AssineCard />
             </div>
           )}
         </div>
       </main>
     </div>
+  )
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Cards locais (flat) — extraídos do antigo grid pra reuso entre mobile e
+ * desktop, sem o caos de imports condicionais. Cada um é um <Link> com
+ * superfície sólida + borda 5%. Sem gradientes nem eyebrows.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+function FlatNavCard({
+  href,
+  icon,
+  title,
+  hint,
+  accent = false,
+}: {
+  href: string
+  icon: React.ReactNode
+  title: string
+  hint?: string
+  accent?: boolean
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex h-full flex-col rounded-[24px] p-5 transition-colors hover:bg-white/[0.01]"
+      style={{
+        background: accent ? 'rgba(139,36,53,0.18)' : 'var(--surface-2)',
+        border: '1px solid rgba(255,255,255,0.05)',
+        minHeight: 140,
+      }}
+    >
+      <div
+        className="w-11 h-11 rounded-full flex items-center justify-center"
+        style={{
+          background: 'rgba(0,0,0,0.3)',
+          border: '1px solid rgba(255,255,255,0.05)',
+        }}
+      >
+        {icon}
+      </div>
+      <p
+        className="text-base mt-3 leading-tight"
+        style={{
+          color: 'var(--text-1)',
+          fontFamily: 'var(--font-elegant)',
+          fontWeight: 500,
+        }}
+      >
+        {title}
+      </p>
+      {hint && (
+        <p
+          className="text-[11px] mt-0.5"
+          style={{
+            color: 'var(--text-3)',
+            fontFamily: 'var(--font-body)',
+          }}
+        >
+          {hint}
+        </p>
+      )}
+      <ArrowRight
+        className="w-4 h-4 mt-auto self-end"
+        style={{ color: 'var(--accent)' }}
+      />
+    </Link>
+  )
+}
+
+function EstudoCard() {
+  return (
+    <FlatNavCard
+      href="/educa/estudo"
+      icon={<BookOpen className="w-5 h-5" style={{ color: 'var(--accent)' }} strokeWidth={1.6} />}
+      title="Estudo"
+    />
+  )
+}
+
+function DebateCard() {
+  return (
+    <FlatNavCard
+      href="/educa/debate"
+      icon={<Swords className="w-5 h-5" style={{ color: 'var(--accent)' }} strokeWidth={1.6} />}
+      title="Modo Debate"
+      accent
+    />
+  )
+}
+
+function MagisterioCard() {
+  return (
+    <FlatNavCard
+      href="/educa/magisterio"
+      icon={<Sparkles className="w-5 h-5" style={{ color: 'var(--accent)' }} strokeWidth={1.6} />}
+      title="Magistério"
+      hint="Pergunte à IA católica"
+    />
+  )
+}
+
+function AssineCard() {
+  return (
+    <Link
+      href="/educa/assine"
+      className="block rounded-[24px] p-5 transition-colors"
+      style={{
+        background: 'var(--surface-2)',
+        border: '1px solid rgba(201,168,76,0.25)',
+      }}
+    >
+      <div className="flex items-center gap-3">
+        <div
+          className="w-11 h-11 rounded-full flex items-center justify-center"
+          style={{
+            background: 'rgba(0,0,0,0.3)',
+            border: '1px solid rgba(255,255,255,0.05)',
+          }}
+        >
+          <Lock
+            className="w-4 h-4"
+            style={{ color: 'var(--accent)' }}
+            strokeWidth={1.6}
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p
+            className="text-base"
+            style={{
+              color: 'var(--text-1)',
+              fontFamily: 'var(--font-elegant)',
+              fontWeight: 500,
+            }}
+          >
+            Assine o Veritas Educa
+          </p>
+          <p
+            className="text-[11px] mt-0.5"
+            style={{
+              color: 'var(--text-3)',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            Trilhas completas, quizzes e IA católica liberados.
+          </p>
+        </div>
+        <span
+          className="inline-flex items-center gap-1 text-[12px]"
+          style={{ color: 'var(--accent)', fontFamily: 'var(--font-body)' }}
+        >
+          Ver
+          <ArrowRight className="w-3.5 h-3.5" />
+        </span>
+      </div>
+    </Link>
   )
 }

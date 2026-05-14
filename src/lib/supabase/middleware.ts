@@ -95,6 +95,11 @@ export async function updateSession(request: NextRequest) {
       // Rosário (terço solo + sessões compartilhadas + histórico).
       path === '/rosario' ||
       path.startsWith('/rosario/') ||
+      // Liturgia do dia — leitura completa (cor / grade / leituras).
+      // Card da dashboard /educa linka pra /liturgia/hoje; sem essa
+      // entrada o middleware do subdomínio educa empurrava pra /educa.
+      path === '/liturgia' ||
+      path.startsWith('/liturgia/') ||
       // Perfil rico do Veritas: reusado direto no Educa (sem comunidade —
       // a aba "Carteirinha" é escondida no front quando product=educa).
       path === '/perfil' ||

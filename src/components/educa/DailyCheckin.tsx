@@ -5,7 +5,7 @@
  *
  * Versão premium: pílulas circulares pequenas, hoje destacado por glow
  * dourado, dias passados marcam ✓. Mantém glassmorphism externo via
- * <GlassCard variant="inset">.
+ * <GlassCard variant="flat">.
  *
  * Derivado de `current_streak` + `studied_today` (sem nova tabela —
  * quando virmos logs precisos, trocamos por query distinct date).
@@ -69,23 +69,25 @@ export default function DailyCheckin() {
   )
 
   return (
-    <GlassCard variant="inset" padded>
+    <GlassCard variant="flat" padded>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Flame
             className="w-4 h-4"
+            strokeWidth={1.6}
             style={{
               color: gami.currentStreak > 0 ? 'var(--accent)' : 'var(--text-3)',
             }}
           />
           <h3
-            className="text-[11px] tracking-[0.18em] uppercase"
+            className="text-sm"
             style={{
-              color: 'var(--accent)',
-              fontFamily: 'var(--font-display)',
+              color: 'var(--text-1)',
+              fontFamily: 'var(--font-elegant)',
+              fontWeight: 500,
             }}
           >
-            Sequência diária
+            Sequência
           </h3>
         </div>
         <p

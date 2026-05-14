@@ -91,7 +91,7 @@ export default function ContinueDeOndeParouCard({ lastStudied }: Props) {
         href={`/estudo/${lastStudied.groupSlug}`}
         className="block h-full"
       >
-        <GlassCard variant="default" interactive className="h-full">
+        <GlassCard variant="flat" interactive className="h-full">
           <div className="relative h-full flex flex-col md:flex-row md:items-stretch overflow-hidden">
             <div
               className="relative w-full h-40 md:w-[40%] md:h-auto md:min-h-[160px] flex-shrink-0 overflow-hidden"
@@ -187,7 +187,7 @@ export default function ContinueDeOndeParouCard({ lastStudied }: Props) {
 
   return (
     <Link href={`/estudo/${lastStudied.groupSlug}`} className="block h-full">
-      <GlassCard variant="default" padded interactive className="h-full">
+      <GlassCard variant="flat" padded interactive className="h-full">
         <div className="flex items-start gap-3 md:gap-4 h-full">
           <div
             className="w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
