@@ -3,20 +3,23 @@
 /**
  * Dashboard do Veritas Educa.
  *
- * Mobile (< lg): coluna única, glass cards generosos em ar (compatível com a
- * versão anterior).
+ * Mobile (< lg): coluna única, glass cards generosos em ar.
  *
- * Desktop (lg+): grid de 12 colunas (max-w 1400px) com hierarquia visual:
- *   Row 1 — LevelHeroExpanded                      (col-span-12)
- *   Row 2 — Continue de onde parou (8) + Liturgia (4)
- *   Row 3 — Magistério (6) + Sequência diária (6)
- *   Row 4 — Estudo + Debate (sub-grid 2 cols, 8)  + Selos (4)
- *   Row 5 — Meus grupos                            (col-span-12)
- *   Row 6 — CTA Assine (só free)                   (col-span-12)
+ * Desktop (lg+): grid de 12 colunas (max-w 1400px) com hierarquia:
+ *   Row 1 — LevelHeroExpanded                          (12)
+ *   Row 2 — Continue de onde parou (8) + Rosário (4)
+ *   Row 3 — Liturgia (4) + Magistério (4) + Sequência (4)
+ *   Row 4 — Estudo + Debate (sub-grid, 8) + Selos (4)
+ *   Row 5 — Amigos sugeridos                          (12)
+ *   Row 6 — Meus grupos                                (12)
+ *   Row 7 — CTA Assine (só free)                       (12)
+ *
+ * Quando o usuário ainda não tem progresso (sem `lastStudied`), o card
+ * "Continue" some e o Rosário promove pra col-span-12 na sua linha.
  */
 
 import Link from 'next/link'
-import { ArrowRight, BookOpen, Lock, NotebookPen, Search, Sparkles, Swords } from 'lucide-react'
+import { ArrowRight, BookOpen, Lock, Search, Sparkles, Swords } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLastStudied } from '@/lib/content/useLastStudied'
 import { useSubscription } from '@/contexts/SubscriptionContext'
@@ -26,6 +29,9 @@ import GlassCard from '@/components/educa/GlassCard'
 import DashboardLiturgiaCard from '@/components/educa/DashboardLiturgiaCard'
 import DashboardSelosStrip from '@/components/educa/DashboardSelosStrip'
 import DashboardGruposStrip from '@/components/educa/DashboardGruposStrip'
+import RosarioDoDiaCard from '@/components/educa/RosarioDoDiaCard'
+import ContinueDeOndeParouCard from '@/components/educa/ContinueDeOndeParouCard'
+import FriendsSuggestionsCard from '@/components/educa/FriendsSuggestionsCard'
 
 export default function EducaDashboard() {
   const { user } = useAuth()
@@ -47,7 +53,6 @@ export default function EducaDashboard() {
           lg:max-w-[1400px] lg:px-8 lg:pt-10 lg:pb-16
         "
       >
-        {/* Mobile: coluna única (space-y). Desktop: grid 12-col com gap. */}
         <div
           className="
             space-y-3
@@ -60,82 +65,25 @@ export default function EducaDashboard() {
             <LevelHeroExpanded />
           </div>
 
-          {/* 2. Continue de onde parou */}
+          {/* 2. Continue de onde parou (com banner se houver) */}
           {lastStudied && (
             <div className="lg:col-span-8">
-              <Link
-                href={`/estudo/${lastStudied.groupSlug}`}
-                className="block h-full"
-              >
-                <GlassCard variant="default" padded interactive className="h-full">
-                  <div className="flex items-start gap-3 md:gap-4 h-full">
-                    <div
-                      className="w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
-                      style={{
-                        background:
-                          'linear-gradient(135deg, color-mix(in srgb, var(--accent) 28%, rgba(0,0,0,0.4)) 0%, rgba(0,0,0,0.5) 100%)',
-                        border:
-                          '1px solid color-mix(in srgb, var(--accent) 35%, transparent)',
-                      }}
-                    >
-                      <NotebookPen
-                        className="w-5 h-5 md:w-6 md:h-6"
-                        style={{ color: 'var(--accent)' }}
-                      />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p
-                        className="text-[10px] tracking-[0.2em] uppercase mb-1"
-                        style={{
-                          color: 'var(--accent)',
-                          fontFamily: 'var(--font-display)',
-                          opacity: 0.85,
-                        }}
-                      >
-                        Continue de onde parou
-                      </p>
-                      <p
-                        className="text-sm md:text-base font-medium truncate"
-                        style={{
-                          color: 'var(--text-1)',
-                          fontFamily: 'var(--font-body)',
-                        }}
-                      >
-                        {lastStudied.subtopicTitle}
-                      </p>
-                      <p
-                        className="text-[11px] mt-0.5 truncate"
-                        style={{
-                          color: 'var(--text-3)',
-                          fontFamily: 'var(--font-body)',
-                        }}
-                      >
-                        {lastStudied.groupTitle}
-                      </p>
-                    </div>
-                    <ArrowRight
-                      className="w-4 h-4 flex-shrink-0 self-center"
-                      style={{ color: 'var(--accent)' }}
-                    />
-                  </div>
-                </GlassCard>
-              </Link>
+              <ContinueDeOndeParouCard lastStudied={lastStudied} />
             </div>
           )}
 
-          {/* 3. Liturgia do dia */}
-          <div
-            className={
-              lastStudied
-                ? 'lg:col-span-4'
-                : 'lg:col-span-12'
-            }
-          >
+          {/* 3. Rosário do dia — promove pra 12 se não tem Continue */}
+          <div className={lastStudied ? 'lg:col-span-4' : 'lg:col-span-12'}>
+            <RosarioDoDiaCard />
+          </div>
+
+          {/* 4. Liturgia do dia */}
+          <div className="lg:col-span-4">
             <DashboardLiturgiaCard />
           </div>
 
-          {/* 4. Pergunte ao Magistério */}
-          <div className="lg:col-span-6">
+          {/* 5. Pergunte ao Magistério */}
+          <div className="lg:col-span-4">
             <Link href="/educa/magisterio" className="block h-full">
               <GlassCard variant="default" padded interactive className="h-full">
                 <div className="flex items-center gap-3 md:gap-4 h-full">
@@ -182,7 +130,7 @@ export default function EducaDashboard() {
                       }}
                     >
                       <Search className="w-3 h-3" />
-                      Bíblia, Magistério e Padres da Igreja
+                      Bíblia, Magistério, Padres da Igreja
                     </p>
                   </div>
                   <ArrowRight
@@ -194,12 +142,12 @@ export default function EducaDashboard() {
             </Link>
           </div>
 
-          {/* 5. Sequência diária */}
-          <div className="lg:col-span-6">
+          {/* 6. Sequência diária */}
+          <div className="lg:col-span-4">
             <DailyCheckin />
           </div>
 
-          {/* 6. Estudo + Modo Debate (sub-grid 2 cols) */}
+          {/* 7. Estudo + Modo Debate (sub-grid 2 cols) */}
           <div className="lg:col-span-8">
             <div className="grid grid-cols-2 gap-3 md:gap-4 h-full">
               <Link href="/educa/estudo" className="block h-full">
@@ -290,17 +238,22 @@ export default function EducaDashboard() {
             </div>
           </div>
 
-          {/* 7. Selos de devoção */}
+          {/* 8. Selos de devoção */}
           <div className="lg:col-span-4">
             <DashboardSelosStrip />
           </div>
 
-          {/* 8. Meus grupos */}
+          {/* 9. Amigos sugeridos (paróquia/diocese) */}
+          <div className="lg:col-span-12">
+            <FriendsSuggestionsCard />
+          </div>
+
+          {/* 10. Meus grupos */}
           <div className="lg:col-span-12">
             <DashboardGruposStrip />
           </div>
 
-          {/* 9. CTA Assine */}
+          {/* 11. CTA Assine */}
           {!subLoading && !isPremium && (
             <div className="lg:col-span-12">
               <Link href="/educa/assine" className="block">
