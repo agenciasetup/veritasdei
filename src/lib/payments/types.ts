@@ -51,7 +51,11 @@ export type NormalizedEvent =
       type: 'subscription.canceled'
       provider: ProviderId
       providerEventId: string
-      providerSubscriptionId: string
+      // Quando null, o dispatcher casa a assinatura pelo customer. Pix
+      // Automático notifica com o id da autorização (≠ id da subscription),
+      // então a única âncora confiável é o providerCustomerId.
+      providerSubscriptionId: string | null
+      providerCustomerId?: string | null
       canceledAt: string
       raw: unknown
     }

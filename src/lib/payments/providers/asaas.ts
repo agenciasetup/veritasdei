@@ -245,9 +245,48 @@ type AsaasWebhookPayload = {
     | 'SUBSCRIPTION_UPDATED'
     | 'SUBSCRIPTION_DELETED'
     | 'SUBSCRIPTION_INACTIVATED'
+    // Pix Automático (débito recorrente autorizado pelo BCB)
+    | 'PIX_AUTOMATIC_RECURRING_ELIGIBILITY_UPDATED'
+    | 'PIX_AUTOMATIC_RECURRING_AUTHORIZATION_CREATED'
+    | 'PIX_AUTOMATIC_RECURRING_AUTHORIZATION_ACTIVATED'
+    | 'PIX_AUTOMATIC_RECURRING_AUTHORIZATION_CANCELLED'
+    | 'PIX_AUTOMATIC_RECURRING_AUTHORIZATION_EXPIRED'
+    | 'PIX_AUTOMATIC_RECURRING_AUTHORIZATION_REFUSED'
+    | 'PIX_AUTOMATIC_RECURRING_PAYMENT_INSTRUCTION_CREATED'
+    | 'PIX_AUTOMATIC_RECURRING_PAYMENT_INSTRUCTION_SCHEDULED'
+    | 'PIX_AUTOMATIC_RECURRING_PAYMENT_INSTRUCTION_REFUSED'
+    | 'PIX_AUTOMATIC_RECURRING_PAYMENT_INSTRUCTION_CANCELLED'
     | string // tolerante a eventos novos
   payment?: AsaasPayment
   subscription?: AsaasSubscription
+  // Chaves do Pix Automático — só presentes nos eventos PIX_AUTOMATIC_*.
+  eligibility?: AsaasPixAutomaticEligibility
+  authorization?: AsaasPixAutomaticAuthorization
+  paymentInstruction?: AsaasPixAutomaticPaymentInstruction
+}
+
+// Autorização do Pix Automático: o consentimento que o cliente dá no app
+// do banco pra deixar a Asaas debitar a recorrência. `customerId`/`customer`
+// variam conforme o evento — tratamos os dois.
+type AsaasPixAutomaticAuthorization = {
+  id: string
+  status?: string // CREATED | ACTIVE | CANCELLED | EXPIRED | REFUSED
+  customerId?: string
+  customer?: string
+  externalReference?: string | null
+}
+
+type AsaasPixAutomaticPaymentInstruction = {
+  id: string
+  status?: string
+  dueDate?: string
+  payment?: string | { id?: string } | null
+  authorization?: AsaasPixAutomaticAuthorization | string | null
+}
+
+type AsaasPixAutomaticEligibility = {
+  status?: string
+  ineligibleReasons?: unknown[]
 }
 
 function translateAsaasEvent(
@@ -258,17 +297,84 @@ function translateAsaasEvent(
   const subscription = payload.subscription
 
   // Idempotency: Asaas envia `id` único por entrega. Caso ausente, usamos
-  // event + payment/subscription id (suficiente pra dedup).
+  // event + id do objeto relacionado (suficiente pra dedup).
   const providerEventId =
     payload.id ||
     (payment ? `${event}-${payment.id}` : null) ||
     (subscription ? `${event}-${subscription.id}` : null) ||
+    (payload.authorization ? `${event}-${payload.authorization.id}` : null) ||
+    (payload.paymentInstruction
+      ? `${event}-${payload.paymentInstruction.id}`
+      : null) ||
     `asaas-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 
   const base = {
     provider: 'asaas' as const,
     providerEventId,
     raw: payload as unknown,
+  }
+
+  // ===== Pix Automático events =====
+  // Débito recorrente autorizado pelo Banco Central. A ATIVAÇÃO do premium
+  // continua vindo do PAYMENT_RECEIVED da 1ª cobrança (Jornada 3 — o QR
+  // cobra na hora E coleta o consentimento). Aqui só reagimos ao que muda
+  // o estado da assinatura: autorização revogada/expirada/recusada.
+  if (event.startsWith('PIX_AUTOMATIC_RECURRING_')) {
+    const authorization = payload.authorization
+    const instruction = payload.paymentInstruction
+
+    if (
+      event === 'PIX_AUTOMATIC_RECURRING_AUTHORIZATION_CANCELLED' ||
+      event === 'PIX_AUTOMATIC_RECURRING_AUTHORIZATION_EXPIRED' ||
+      event === 'PIX_AUTOMATIC_RECURRING_AUTHORIZATION_REFUSED'
+    ) {
+      // O cliente revogou (ou o banco recusou/expirou) a autorização do
+      // débito recorrente. O evento traz o id da AUTORIZAÇÃO, não o da
+      // subscription Asaas — por isso casamos pelo customer no dispatcher.
+      const customerId =
+        authorization?.customerId ?? authorization?.customer ?? null
+      if (!customerId) {
+        return {
+          ...base,
+          type: 'ignore',
+          reason: `${event} sem customer — não dá pra casar a assinatura`,
+        }
+      }
+      return {
+        ...base,
+        type: 'subscription.canceled',
+        providerSubscriptionId: null,
+        providerCustomerId: customerId,
+        canceledAt: new Date().toISOString(),
+      }
+    }
+
+    if (event === 'PIX_AUTOMATIC_RECURRING_PAYMENT_INSTRUCTION_REFUSED') {
+      // Uma cobrança recorrente do Pix Automático foi recusada (saldo
+      // insuficiente, etc). Tratamos como falha de pagamento.
+      const auth =
+        instruction && typeof instruction.authorization === 'object'
+          ? instruction.authorization
+          : null
+      const paymentRef =
+        instruction && typeof instruction.payment === 'object'
+          ? (instruction.payment?.id ?? null)
+          : ((instruction?.payment as string | undefined) ?? null)
+      return {
+        ...base,
+        type: 'payment.failed',
+        providerSubscriptionId: paymentRef,
+        userId: auth?.externalReference ?? null,
+      }
+    }
+
+    // CREATED / ACTIVATED da autorização, instruções criadas/agendadas/
+    // canceladas e ELIGIBILITY_UPDATED: informativos — sem ação no banco.
+    return {
+      ...base,
+      type: 'ignore',
+      reason: `pix automático informativo: ${event}`,
+    }
   }
 
   // ===== Payment events =====
