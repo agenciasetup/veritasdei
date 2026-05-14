@@ -1,0 +1,91 @@
+/**
+ * Helpers de leitura cacheada do EDUCA (server-only).
+ *
+ * Usa `unstable_cache` do Next pra deduplicar leituras públicas
+ * (banners ativos, capas de pilares) entre requests do mesmo deploy.
+ * Tags permitem revalidate manual após admin alterar (ver
+ * `revalidateTag('educa:banners')`).
+ *
+ * Tudo via `createAdminClient()` porque os SELECTs aqui só leem
+ * registros públicos (banners ativos, content_groups visíveis) — sem
+ * RLS necessário e sem dependência de cookie do usuário, o que
+ * permite cache.
+ */
+import { unstable_cache, revalidateTag } from 'next/cache'
+import { createAdminClient } from '@/lib/supabase/admin'
+
+const TAGS = {
+  banners: 'educa:banners',
+  pillars: 'educa:pillars',
+} as const
+
+export interface EducaBanner {
+  id: string
+  image_url: string
+  image_url_mobile: string | null
+  image_position: string | null
+  image_position_mobile: string | null
+  link_url: string | null
+  title: string | null
+  subtitle: string | null
+}
+
+export interface EducaPillar {
+  id: string
+  slug: string
+  title: string
+  cover_url: string | null
+  cover_url_mobile: string | null
+  cover_position: string | null
+  cover_position_mobile: string | null
+}
+
+export const getActiveBanners = unstable_cache(
+  async (): Promise<EducaBanner[]> => {
+    const supabase = createAdminClient()
+    const { data, error } = await supabase
+      .from('educa_banners')
+      .select(
+        'id, image_url, image_url_mobile, image_position, image_position_mobile, link_url, title, subtitle',
+      )
+      .eq('ativo', true)
+      .order('ordem', { ascending: true })
+    if (error) {
+      console.warn('[educa/server-data] banners error:', error.message)
+      return []
+    }
+    return (data as EducaBanner[]) ?? []
+  },
+  ['educa-active-banners-v2'],
+  { tags: [TAGS.banners], revalidate: 300 },
+)
+
+export const getPillars = unstable_cache(
+  async (): Promise<EducaPillar[]> => {
+    const supabase = createAdminClient()
+    const { data, error } = await supabase
+      .from('content_groups')
+      .select(
+        'id, slug, title, cover_url, cover_url_mobile, cover_position, cover_position_mobile',
+      )
+      .eq('visible', true)
+      .order('sort_order')
+    if (error) {
+      console.warn('[educa/server-data] pillars error:', error.message)
+      return []
+    }
+    return (data as EducaPillar[]) ?? []
+  },
+  ['educa-pillars-v2'],
+  { tags: [TAGS.pillars], revalidate: 300 },
+)
+
+export function revalidateEducaBanners() {
+  // Next 16: 2º argumento exigido. `max` = stale-while-revalidate
+  // (resposta instantânea com versão antiga, rebuild em background).
+  revalidateTag(TAGS.banners, 'max')
+}
+
+export function revalidateEducaPillars() {
+  revalidateTag(TAGS.pillars, 'max')
+}

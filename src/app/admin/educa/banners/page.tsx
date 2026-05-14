@@ -6,8 +6,9 @@
  * Acesso: AdminLayout já gateia por role=admin. Aqui só fazemos CRUD
  * sobre `educa_banners` via RLS (que reaplica a checagem do role).
  *
- * MVP: admin cola URL externa de imagem. Upload via Supabase Storage
- * fica pra próxima iteração.
+ * Imagens: usa o componente <ImageUploader> compartilhado que sobe
+ * direto pra R2 via `/api/admin/media/presign`, com toggle Web|Mobile
+ * e reposicionamento. Admin não precisa mais colar URL externa.
  */
 
 import { useCallback, useEffect, useState } from 'react'
@@ -25,10 +26,26 @@ import {
   ArrowUp,
   ArrowDown,
 } from 'lucide-react'
+import ImageUploader, { type ImageSpec } from '@/components/admin/ImageUploader'
+
+async function revalidateBanners() {
+  try {
+    await fetch('/api/admin/educa/revalidate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target: 'banners' }),
+    })
+  } catch {
+    /* não bloqueia UX se a invalidação falhar */
+  }
+}
 
 type Banner = {
   id: string
   image_url: string
+  image_url_mobile: string | null
+  image_position: string | null
+  image_position_mobile: string | null
   link_url: string | null
   title: string | null
   subtitle: string | null
@@ -38,6 +55,9 @@ type Banner = {
 
 type FormState = {
   image_url: string
+  image_url_mobile: string
+  image_position: string
+  image_position_mobile: string
   link_url: string
   title: string
   subtitle: string
@@ -47,11 +67,32 @@ type FormState = {
 
 const EMPTY_FORM: FormState = {
   image_url: '',
+  image_url_mobile: '',
+  image_position: '',
+  image_position_mobile: '',
   link_url: '',
   title: '',
   subtitle: '',
   ordem: 0,
   ativo: true,
+}
+
+const BANNER_WEB_SPEC: ImageSpec = {
+  recommendedWidth: 2520,
+  recommendedHeight: 1080,
+  aspectRatio: '21 / 9',
+  maxMb: 4,
+  formats: 'JPG, PNG, WebP',
+  hint: 'O título aparece à esquerda da imagem — deixe o foco visual à direita ou no centro pra não competir com o texto.',
+}
+
+const BANNER_MOBILE_SPEC: ImageSpec = {
+  recommendedWidth: 1080,
+  recommendedHeight: 1350,
+  aspectRatio: '4 / 5',
+  maxMb: 3,
+  formats: 'JPG, PNG, WebP',
+  hint: 'Recorte vertical pro slider mobile. Se vazio, o app usa a versão web reposicionada.',
 }
 
 export default function AdminBannersPage() {
@@ -69,7 +110,9 @@ export default function AdminBannersPage() {
     setLoading(true)
     const { data, error } = await supabase
       .from('educa_banners')
-      .select('id, image_url, link_url, title, subtitle, ordem, ativo')
+      .select(
+        'id, image_url, image_url_mobile, image_position, image_position_mobile, link_url, title, subtitle, ordem, ativo',
+      )
       .order('ordem', { ascending: true })
     if (error) {
       setError(error.message)
@@ -80,7 +123,9 @@ export default function AdminBannersPage() {
   }, [supabase])
 
   useEffect(() => {
-    load()
+    // Microtask defere o setState pra fora do body síncrono do effect,
+    // o que satisfaz a regra `react-hooks/set-state-in-effect` do Next 16.
+    queueMicrotask(() => void load())
   }, [load])
 
   function startCreate() {
@@ -94,6 +139,9 @@ export default function AdminBannersPage() {
     setEditingId(b.id)
     setForm({
       image_url: b.image_url,
+      image_url_mobile: b.image_url_mobile ?? '',
+      image_position: b.image_position ?? '',
+      image_position_mobile: b.image_position_mobile ?? '',
       link_url: b.link_url ?? '',
       title: b.title ?? '',
       subtitle: b.subtitle ?? '',
@@ -113,13 +161,16 @@ export default function AdminBannersPage() {
   async function save() {
     if (!supabase) return
     if (!form.image_url.trim()) {
-      setError('URL da imagem é obrigatória.')
+      setError('Envie a imagem desktop antes de salvar.')
       return
     }
     setSaving(true)
     setError(null)
     const payload = {
       image_url: form.image_url.trim(),
+      image_url_mobile: form.image_url_mobile.trim() || null,
+      image_position: form.image_position.trim() || null,
+      image_position_mobile: form.image_position_mobile.trim() || null,
       link_url: form.link_url.trim() || null,
       title: form.title.trim() || null,
       subtitle: form.subtitle.trim() || null,
@@ -138,6 +189,7 @@ export default function AdminBannersPage() {
     setShowForm(false)
     setEditingId(null)
     await load()
+    await revalidateBanners()
   }
 
   async function toggleAtivo(b: Banner) {
@@ -147,7 +199,10 @@ export default function AdminBannersPage() {
       .update({ ativo: !b.ativo })
       .eq('id', b.id)
     if (error) setError(error.message)
-    else await load()
+    else {
+      await load()
+      await revalidateBanners()
+    }
   }
 
   async function moveOrder(b: Banner, dir: -1 | 1) {
@@ -157,7 +212,10 @@ export default function AdminBannersPage() {
       .update({ ordem: b.ordem + dir })
       .eq('id', b.id)
     if (error) setError(error.message)
-    else await load()
+    else {
+      await load()
+      await revalidateBanners()
+    }
   }
 
   async function remove(b: Banner) {
@@ -173,7 +231,10 @@ export default function AdminBannersPage() {
       .delete()
       .eq('id', b.id)
     if (error) setError(error.message)
-    else await load()
+    else {
+      await load()
+      await revalidateBanners()
+    }
   }
 
   return (
@@ -285,7 +346,11 @@ export default function AdminBannersPage() {
                 <img
                   src={b.image_url}
                   alt=""
-                  className="w-full h-full object-cover"
+                  className="w-full h-full"
+                  style={{
+                    objectFit: 'cover',
+                    objectPosition: b.image_position ?? '50% 50%',
+                  }}
                 />
               </div>
 
@@ -302,6 +367,18 @@ export default function AdminBannersPage() {
                   >
                     #{b.ordem}
                   </span>
+                  {b.image_url_mobile && (
+                    <span
+                      className="text-[10px] tracking-wider uppercase px-1.5 py-0.5 rounded-full"
+                      style={{
+                        background: 'rgba(91,143,109,0.18)',
+                        color: '#5B8F6D',
+                        fontFamily: 'Poppins, sans-serif',
+                      }}
+                    >
+                      mobile
+                    </span>
+                  )}
                 </div>
                 <p
                   className="text-sm font-medium truncate"
@@ -371,29 +448,51 @@ function BannerForm({
 }) {
   return (
     <div
-      className="rounded-2xl p-5 mb-6"
+      className="rounded-2xl p-5 mb-6 space-y-5"
       style={{
         background: 'rgba(255,255,255,0.03)',
         border: '1px solid rgba(201,168,76,0.18)',
       }}
     >
       <h2
-        className="text-sm tracking-[0.15em] uppercase mb-4"
+        className="text-sm tracking-[0.15em] uppercase"
         style={{ color: '#C9A84C', fontFamily: 'Cinzel, serif' }}
       >
         {editing ? 'Editar banner' : 'Novo banner'}
       </h2>
 
+      <ImageUploader
+        label="Imagem do banner"
+        description="A imagem ocupa o topo do /educa/estudo. Use uma variante mobile pra preservar o foco em telas estreitas."
+        web={{
+          url: form.image_url,
+          position: form.image_position || undefined,
+          spec: BANNER_WEB_SPEC,
+          prefix: 'educa/banners/web',
+        }}
+        mobile={{
+          url: form.image_url_mobile,
+          position: form.image_position_mobile || undefined,
+          spec: BANNER_MOBILE_SPEC,
+          prefix: 'educa/banners/mobile',
+        }}
+        onWebChange={(v) =>
+          setForm({
+            ...form,
+            image_url: v.url,
+            image_position: v.position ?? '',
+          })
+        }
+        onMobileChange={(v) =>
+          setForm({
+            ...form,
+            image_url_mobile: v.url,
+            image_position_mobile: v.position ?? '',
+          })
+        }
+      />
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="URL da imagem *">
-          <input
-            type="url"
-            value={form.image_url}
-            onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-            placeholder="https://..."
-            className="input"
-          />
-        </Field>
         <Field label="Link (opcional)">
           <input
             type="text"
@@ -448,63 +547,7 @@ function BannerForm({
         </Field>
       </div>
 
-      {/* Preview */}
-      {form.image_url && (
-        <div className="mt-4">
-          <p
-            className="text-[11px] tracking-wider uppercase mb-2"
-            style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}
-          >
-            Preview
-          </p>
-          <div
-            className="relative aspect-[21/9] rounded-xl overflow-hidden"
-            style={{ background: '#1a1612' }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={form.image_url}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover"
-              onError={(e) => {
-                ;(e.target as HTMLImageElement).style.opacity = '0.2'
-              }}
-            />
-            <div
-              aria-hidden
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background:
-                  'linear-gradient(90deg, rgba(15,14,12,0.85) 0%, rgba(15,14,12,0.35) 45%, transparent 70%)',
-              }}
-            />
-            <div className="absolute inset-0 flex flex-col justify-end p-5">
-              {form.subtitle && (
-                <p
-                  className="text-xs tracking-[0.25em] uppercase mb-1"
-                  style={{ color: '#C9A84C', fontFamily: 'Cinzel, serif' }}
-                >
-                  {form.subtitle}
-                </p>
-              )}
-              {form.title && (
-                <h3
-                  className="text-2xl md:text-3xl leading-tight"
-                  style={{
-                    fontFamily: 'Cinzel, serif',
-                    color: '#F2EDE4',
-                    textShadow: '0 2px 12px rgba(0,0,0,0.6)',
-                  }}
-                >
-                  {form.title}
-                </h3>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="flex items-center justify-end gap-2 mt-5">
+      <div className="flex items-center justify-end gap-2">
         <button
           type="button"
           onClick={onCancel}
