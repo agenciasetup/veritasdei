@@ -9,12 +9,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, BookOpen, Cross, User } from 'lucide-react'
+import { Home, BookOpen, Cross, User, Layers } from 'lucide-react'
 
 const NAV_ITEMS = [
   { href: '/educa',          icon: Home,          label: 'Início' },
   { href: '/educa/estudo',   icon: BookOpen,      label: 'Estudo' },
   { href: '/rosario',        icon: Cross,         label: 'Rosário' },
+  { href: '/colecao',        icon: Layers,        label: 'Coleção' },
   { href: '/perfil',         icon: User,          label: 'Perfil' },
 ] as const
 
