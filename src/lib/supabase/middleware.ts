@@ -1,6 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { PRODUCT_HEADER, productFromHostname } from '@/lib/product/types'
+import {
+  readCachedEntitlement,
+  writeCachedEntitlement,
+} from '@/lib/supabase/educa-entitlement-cache'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
@@ -138,18 +142,27 @@ export async function updateSession(request: NextRequest) {
     // A trava real continua server-side; isto é só o pedágio na borda.
     // ───────────────────────────────────────────────────────────────────
     if (authedUser) {
-      let isPremium = false
-      try {
-        const { data: entData } = await supabase.rpc('get_user_entitlement', {
-          uid: authedUser.id,
-        })
-        const row = Array.isArray(entData) ? entData[0] : entData
-        isPremium = !!(row as { ativo?: boolean } | null)?.ativo
-      } catch (err) {
-        // Fail-open: um erro transitório de DB não pode trancar quem já
-        // paga. O conteúdo premium ainda tem gates server-side próprios.
-        console.error('[Middleware] entitlement check failed:', err)
-        isPremium = true
+      // Cache de 60s num cookie assinado evita um RPC de DB por navegação.
+      let isPremium = await readCachedEntitlement(request, authedUser.id)
+      if (isPremium === null) {
+        try {
+          const { data: entData } = await supabase.rpc('get_user_entitlement', {
+            uid: authedUser.id,
+          })
+          const row = Array.isArray(entData) ? entData[0] : entData
+          isPremium = !!(row as { ativo?: boolean } | null)?.ativo
+          // Só cacheia resultado positivo: assim, ao assinar, o acesso é
+          // liberado na navegação seguinte (sem esperar o TTL expirar).
+          // Pra quem já é premium, o cache evita o RPC repetido.
+          if (isPremium) {
+            await writeCachedEntitlement(supabaseResponse, authedUser.id, true)
+          }
+        } catch (err) {
+          // Fail-open: um erro transitório de DB não pode trancar quem já
+          // paga. O conteúdo premium ainda tem gates server-side próprios.
+          console.error('[Middleware] entitlement check failed:', err)
+          isPremium = true
+        }
       }
 
       if (!isPremium) {

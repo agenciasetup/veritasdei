@@ -4,6 +4,15 @@ import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Feather, Loader2, X } from 'lucide-react'
 
+// Traduz o status HTTP do /api/cartas numa mensagem que o usuário entende.
+function messageForStatus(status: number): string {
+  if (status === 401) return 'Sua sessão expirou. Atualize a página e entre de novo.'
+  if (status === 400) return 'Texto inválido. Revise e tente de novo.'
+  if (status === 429) return 'Muitas tentativas. Aguarde um instante.'
+  if (status >= 500) return 'Tivemos um problema ao guardar. Tente novamente.'
+  return 'Não foi possível guardar agora. Tente novamente.'
+}
+
 /**
  * Sheet pra escrever uma carta a um santo — espaço contemplativo privado.
  * Inspiração: Santa Teresinha do Menino Jesus, cartas a Jesus e santos.
@@ -58,12 +67,17 @@ export default function CartaSantoSheet({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ texto: t, santo_id: santoId ?? null }),
       })
-      if (!res.ok) throw new Error(String(res.status))
+      if (!res.ok) throw new Error(messageForStatus(res.status))
       setDone(true)
       onCreated?.()
       setTimeout(() => onClose(), 1400)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro ao salvar')
+      // Falha de rede (fetch rejeita) cai aqui sem status — mensagem genérica.
+      setError(
+        e instanceof Error && e.message
+          ? e.message
+          : 'Não foi possível guardar agora. Tente novamente.',
+      )
     } finally {
       setSaving(false)
     }
