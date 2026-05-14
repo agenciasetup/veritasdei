@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, ArrowRight, BookOpen } from 'lucide-react'
+import { ArrowLeft, BookOpen } from 'lucide-react'
 import {
   useContentItems,
   type ContentSubtopic,
@@ -713,16 +713,9 @@ function SubtopicPosterCard({
       href={href}
       className="group relative block rounded-3xl overflow-hidden active:scale-[0.99] transition-transform"
       style={{
-        aspectRatio: '4 / 5',
-        background: hasCover
-          ? 'var(--surface-2)'
-          : 'linear-gradient(180deg, color-mix(in srgb, var(--accent) 14%, var(--surface-2)) 0%, var(--surface-1) 100%)',
-        border: studied
-          ? '1px solid color-mix(in srgb, var(--accent) 38%, transparent)'
-          : '1px solid color-mix(in srgb, var(--accent) 12%, transparent)',
-        boxShadow: studied
-          ? '0 8px 32px -12px color-mix(in srgb, var(--accent) 30%, transparent)'
-          : '0 8px 32px -12px rgba(0,0,0,0.6)',
+        aspectRatio: '3 / 4',
+        background: hasCover ? 'var(--surface-1)' : 'var(--surface-2)',
+        border: '1px solid rgba(255,255,255,0.05)',
       }}
     >
       {hasCover ? (
@@ -734,12 +727,14 @@ function SubtopicPosterCard({
             className="absolute inset-0 w-full h-full object-cover"
             loading="lazy"
           />
+          {/* Fade bottom-to-top: sólido embaixo, transparente em cima.
+           *  Mesmo padrão dos cards de tópico — consistência visual. */}
           <div
             aria-hidden
             className="absolute inset-0 pointer-events-none"
             style={{
               background:
-                'linear-gradient(180deg, rgba(15,14,12,0.3) 0%, rgba(15,14,12,0.55) 55%, rgba(15,14,12,0.95) 100%)',
+                'linear-gradient(0deg, var(--surface-1) 0%, rgba(15,14,12,0.95) 28%, rgba(15,14,12,0.55) 55%, rgba(15,14,12,0.1) 80%, transparent 100%)',
             }}
           />
         </>
@@ -749,89 +744,95 @@ function SubtopicPosterCard({
           className="absolute inset-0 opacity-25"
           style={{
             background:
-              'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.18), transparent 60%)',
+              'radial-gradient(circle at 80% 20%, rgba(201,168,76,0.18), transparent 60%)',
           }}
         />
       )}
 
-      <div className="relative h-full p-4 md:p-5 flex flex-col">
-        <div className="flex items-start justify-between gap-2">
-          {/* Numero da lição num badge dourado */}
-          <div
-            className="px-3 py-1 rounded-full"
-            style={{
-              background: studied
-                ? 'linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 70%, black) 100%)'
-                : 'rgba(0,0,0,0.45)',
-              border:
-                '1px solid color-mix(in srgb, var(--accent) 35%, transparent)',
-              color: studied ? 'var(--accent-contrast)' : 'var(--accent)',
-              fontFamily: 'var(--font-display)',
-              fontWeight: 700,
-              fontSize: 12,
-              letterSpacing: '0.1em',
-              backdropFilter: 'blur(6px)',
-            }}
-          >
-            LIÇÃO {lessonNumber}
-          </div>
-          {studied && (
-            <span
-              className="text-[10px] tracking-wider uppercase px-2 py-1 rounded-full backdrop-blur"
-              style={{
-                background: 'color-mix(in srgb, var(--accent) 16%, rgba(0,0,0,0.5))',
-                color: 'var(--accent)',
-                fontFamily: 'var(--font-body)',
-                fontWeight: 600,
-                border:
-                  '1px solid color-mix(in srgb, var(--accent) 35%, transparent)',
-              }}
-            >
-              ✓ estudado
-            </span>
-          )}
+      <div className="relative h-full p-5 md:p-6 flex flex-col">
+        <div
+          className="w-10 h-10 rounded-2xl flex items-center justify-center backdrop-blur"
+          style={{
+            background: 'rgba(0,0,0,0.45)',
+            border: '1px solid rgba(255,255,255,0.06)',
+          }}
+        >
+          <BookOpen
+            className="w-4 h-4"
+            style={{ color: 'var(--accent)' }}
+            strokeWidth={1.6}
+          />
         </div>
 
         <div className="flex-1" />
 
         <div>
-          {subtitle && (
-            <p
-              className="text-[10px] tracking-[0.2em] uppercase mb-1 opacity-90"
-              style={{
-                color: 'var(--accent)',
-                fontFamily: 'var(--font-display)',
-              }}
-            >
-              {subtitle}
-            </p>
-          )}
-          <h3
-            className="text-lg md:text-xl leading-tight mb-1"
+          <p
+            className="text-[10px] tracking-[0.16em] uppercase mb-1.5"
             style={{
-              fontFamily: 'var(--font-display)',
+              color: 'var(--text-3)',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            Lição {lessonNumber}
+            {subtitle ? ` · ${subtitle}` : ''}
+          </p>
+          <h3
+            className="text-lg md:text-xl leading-tight"
+            style={{
+              fontFamily: 'var(--font-elegant)',
               color: 'var(--text-1)',
-              textShadow: hasCover ? '0 2px 10px rgba(0,0,0,0.6)' : 'none',
+              fontWeight: 500,
             }}
           >
             {title}
           </h3>
           {description && (
             <p
-              className="text-xs leading-relaxed line-clamp-2 mt-1"
+              className="text-[12px] leading-relaxed line-clamp-2 mt-1.5"
               style={{
-                color: 'rgba(232,226,216,0.78)',
+                color: 'var(--text-3)',
                 fontFamily: 'var(--font-body)',
               }}
             >
               {description}
             </p>
           )}
-          <div className="flex items-center justify-end mt-2">
-            <ArrowRight
-              className="w-4 h-4 group-hover:translate-x-1 transition-transform"
-              style={{ color: 'var(--accent)' }}
-            />
+
+          <div className="mt-4">
+            <div className="flex items-baseline justify-between mb-1.5">
+              <span
+                className="text-[10px]"
+                style={{
+                  color: 'var(--text-3)',
+                  fontFamily: 'var(--font-body)',
+                }}
+              >
+                {studied ? 'Concluída' : 'Não iniciada'}
+              </span>
+              <span
+                className="text-[11px] tabular-nums inline-flex items-center gap-1"
+                style={{
+                  color: studied ? 'var(--accent)' : 'var(--text-3)',
+                  fontFamily: 'var(--font-body)',
+                }}
+              >
+                {studied ? '✓' : ''}
+                {studied ? '1/1' : '0/1'}
+              </span>
+            </div>
+            <div
+              className="h-1 rounded-full overflow-hidden"
+              style={{ background: 'rgba(255,255,255,0.08)' }}
+            >
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{
+                  width: studied ? '100%' : '0%',
+                  background: 'var(--accent)',
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>
