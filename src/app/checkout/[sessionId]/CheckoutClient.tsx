@@ -36,6 +36,7 @@ import {
   Lock,
   Plus,
   QrCode,
+  ShieldCheck,
   Sparkles,
   Trash2,
   Wifi,
@@ -53,6 +54,7 @@ import {
   maxInstallments,
   type Intervalo,
 } from '@/lib/payments/installments'
+import { COMPANY_INFO } from '@/lib/company-info'
 
 // --------------------------------------------------------------------------
 // Tipos
@@ -506,7 +508,19 @@ export default function CheckoutClient({
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Falha ao gerar PIX')
+      if (!res.ok) {
+        // Erro específico: conta Asaas sem Pix Automático ativado.
+        // Mensagem amigável + orientação pra ativar.
+        const msg: string = data.error ?? 'Falha ao gerar PIX'
+        if (/não é permitida para assinatura/i.test(msg)) {
+          throw new Error(
+            'PIX recorrente ainda não está habilitado nesta conta Asaas. ' +
+              'Ative o Pix Automático no painel da Asaas em Integrações → ' +
+              'Pix Automático. Enquanto isso, use cartão ou boleto.',
+          )
+        }
+        throw new Error(msg)
+      }
       if (!data.pix) throw new Error('PIX retornou sem QR. Tente de novo.')
       setPix({
         encodedImage: data.pix.encodedImage,
@@ -1049,10 +1063,75 @@ export default function CheckoutClient({
             >
               {settings.footerText}
             </div>
+
+            <TrustFooter />
           </div>
         </aside>
       </div>
     </main>
+  )
+}
+
+function TrustFooter() {
+  return (
+    <div
+      className="mt-6 pt-5 border-t"
+      style={{
+        borderColor: 'color-mix(in srgb, var(--cks-text) 10%, transparent)',
+      }}
+    >
+      <div
+        className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px]"
+        style={{
+          color: 'color-mix(in srgb, var(--cks-text) 65%, transparent)',
+        }}
+      >
+        <span className="inline-flex items-center gap-1.5">
+          <ShieldCheck
+            className="w-3.5 h-3.5"
+            style={{ color: 'var(--cks-primary)' }}
+          />
+          Pagamento seguro
+        </span>
+        <span
+          aria-hidden
+          style={{
+            width: 3,
+            height: 3,
+            borderRadius: '50%',
+            background:
+              'color-mix(in srgb, var(--cks-text) 25%, transparent)',
+          }}
+        />
+        <span className="inline-flex items-center gap-1.5">
+          Processado por
+          <span
+            className="px-1.5 py-0.5 rounded font-bold tracking-tight"
+            style={{
+              background: '#0066FF',
+              color: '#fff',
+              fontSize: '10px',
+              letterSpacing: '0.02em',
+            }}
+          >
+            asaas
+          </span>
+          <span className="opacity-60">· PCI Level 1</span>
+        </span>
+      </div>
+      <div
+        className="mt-3 text-[10px] text-center leading-relaxed"
+        style={{
+          color: 'color-mix(in srgb, var(--cks-text) 45%, transparent)',
+        }}
+      >
+        <div>
+          {COMPANY_INFO.legalName} · CNPJ {COMPANY_INFO.cnpj}
+        </div>
+        <div>{COMPANY_INFO.shortAddress}</div>
+        <div>{COMPANY_INFO.email}</div>
+      </div>
+    </div>
   )
 }
 
@@ -1660,26 +1739,43 @@ function PixPanel({
 }) {
   if (!pix) {
     return (
-      <button
-        type="button"
-        onClick={onStart}
-        disabled={loading}
-        className="w-full px-5 py-3.5 rounded-xl flex items-center justify-center gap-2 disabled:opacity-60 transition-transform active:scale-[0.99]"
-        style={{
-          background: 'var(--cks-primary)',
-          color: 'var(--cks-accent)',
-          fontWeight: 600,
-        }}
-      >
-        {loading ? (
-          <Loader2 className="w-5 h-5 animate-spin" />
-        ) : (
-          <>
-            <QrCode className="w-4 h-4" />
-            Gerar PIX
-          </>
-        )}
-      </button>
+      <div className="space-y-3">
+        <div
+          className="text-[11px] p-3 rounded-lg"
+          style={{
+            background:
+              'color-mix(in srgb, var(--cks-text) 4%, transparent)',
+            border:
+              '1px solid color-mix(in srgb, var(--cks-text) 12%, transparent)',
+            color:
+              'color-mix(in srgb, var(--cks-text) 70%, transparent)',
+          }}
+        >
+          PIX recorrente (Pix Automático do Banco Central): você
+          autoriza uma vez no app do seu banco e as próximas cobranças
+          são debitadas automaticamente. Pode revogar quando quiser.
+        </div>
+        <button
+          type="button"
+          onClick={onStart}
+          disabled={loading}
+          className="w-full px-5 py-3.5 rounded-xl flex items-center justify-center gap-2 disabled:opacity-60 transition-transform active:scale-[0.99]"
+          style={{
+            background: 'var(--cks-primary)',
+            color: 'var(--cks-accent)',
+            fontWeight: 600,
+          }}
+        >
+          {loading ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <>
+              <QrCode className="w-4 h-4" />
+              Gerar PIX
+            </>
+          )}
+        </button>
+      </div>
     )
   }
   return (
