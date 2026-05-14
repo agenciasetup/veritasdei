@@ -146,14 +146,30 @@ async function markCanceled(
   admin: AdminDb,
   event: Extract<NormalizedEvent, { type: 'subscription.canceled' }>,
 ) {
-  const { error } = await admin
+  let query = admin
     .from('billing_subscriptions')
     .update({
       status: 'canceled',
       canceled_at: event.canceledAt,
     })
     .eq('provider', event.provider)
-    .eq('provider_subscription_id', event.providerSubscriptionId)
+
+  if (event.providerSubscriptionId) {
+    query = query.eq('provider_subscription_id', event.providerSubscriptionId)
+  } else if (event.providerCustomerId) {
+    // Pix Automático: o evento traz o id da autorização, não o da
+    // subscription. Casamos pelo customer e só cancelamos o que ainda
+    // está vigente — evita reescrever rows já encerradas.
+    query = query
+      .eq('provider_customer_id', event.providerCustomerId)
+      .in('status', ['active', 'past_due', 'incomplete', 'trialing'])
+  } else {
+    throw new Error(
+      'subscription.canceled sem identificador (provider_subscription_id ou customer)',
+    )
+  }
+
+  const { error } = await query
   if (error) throw new Error(`cancel subscription: ${error.message}`)
 }
 
