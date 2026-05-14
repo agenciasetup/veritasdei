@@ -1,20 +1,17 @@
 'use client'
 
 /**
- * LevelHero — bloco do topo do /educa.
+ * LevelHero — versão flat compacta pra mobile da dashboard /educa.
  *
- * Variante premium: avatar com aura dourada, saudação + nome, level pill
- * à direita, barra fina de XP embaixo. Mais compacto que a versão
- * anterior — pra deixar o dashboard hierárquico em vez de "lista de
- * cards do mesmo tamanho".
- *
- * Glassmorphism via <GlassCard>.
+ * Mantém o mesmo léxico visual da versão desktop (LevelHeroExpanded):
+ * superfície sólida, bordas 5%, dourado só em acentos. Layout horizontal
+ * compacto em uma linha — avatar redondo à esquerda, nome + barra XP no
+ * meio, level pill à direita.
  */
 
 import { Sparkles, User } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useGamification } from '@/lib/gamification/useGamification'
-import GlassCard from './GlassCard'
 
 function greeting(): string {
   const h = new Date().getHours()
@@ -34,16 +31,19 @@ export default function LevelHero() {
   const equipped = gami.equippedReliquia
 
   return (
-    <GlassCard variant="gold" padded>
-      {/* Topo: avatar + saudação + level pill */}
-      <div className="flex items-center gap-3 md:gap-4">
+    <div
+      className="rounded-[24px] p-5"
+      style={{
+        background: 'var(--surface-2)',
+        border: '1px solid rgba(255,255,255,0.05)',
+      }}
+    >
+      <div className="flex items-center gap-3.5">
         <div
-          className="relative w-14 h-14 md:w-16 md:h-16 rounded-2xl overflow-hidden flex items-center justify-center flex-shrink-0"
+          className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
           style={{
             background: 'rgba(0,0,0,0.4)',
-            border: '1.5px solid var(--accent)',
-            boxShadow:
-              '0 0 24px color-mix(in srgb, var(--accent) 38%, transparent)',
+            border: '1px solid rgba(201,168,76,0.4)',
           }}
         >
           {avatarUrl ? (
@@ -54,76 +54,63 @@ export default function LevelHero() {
               className="w-full h-full object-cover"
             />
           ) : (
-            <User
-              className="w-7 h-7 md:w-8 md:h-8"
-              style={{ color: 'var(--text-3)' }}
-            />
+            <User className="w-6 h-6" style={{ color: 'var(--text-3)' }} />
           )}
         </div>
 
         <div className="min-w-0 flex-1">
           <p
-            className="text-[10px] tracking-[0.22em] uppercase mb-0.5"
+            className="text-[11px]"
             style={{
-              color: 'var(--accent)',
-              fontFamily: 'var(--font-display)',
-              opacity: 0.85,
+              color: 'var(--text-3)',
+              fontFamily: 'var(--font-body)',
             }}
           >
             {greeting()}
           </p>
           <h1
-            className="text-xl md:text-2xl truncate leading-tight"
+            className="text-xl truncate leading-tight mt-0.5"
             style={{
-              fontFamily: 'var(--font-display)',
+              fontFamily: 'var(--font-elegant)',
               color: 'var(--text-1)',
+              fontWeight: 500,
             }}
           >
-            {firstName ? `Olá, ${firstName}` : 'Veritas Educa'}
+            {firstName ? firstName : 'Veritas Educa'}
           </h1>
         </div>
 
-        {/* Level pill */}
-        <div
-          className="flex flex-col items-end flex-shrink-0"
-          style={{ minWidth: 64 }}
-        >
-          <div
-            className="px-3 py-1.5 rounded-full inline-flex items-baseline gap-1"
-            style={{
-              background:
-                'linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 70%, black) 100%)',
-              color: 'var(--accent-contrast)',
-              boxShadow:
-                '0 4px 12px -4px color-mix(in srgb, var(--accent) 50%, transparent)',
-            }}
-          >
+        <div className="flex flex-col items-end flex-shrink-0">
+          <div className="inline-flex items-baseline gap-1.5">
             <span
-              className="text-[9px] tracking-[0.18em] uppercase opacity-80"
-              style={{ fontFamily: 'var(--font-display)' }}
+              className="text-[10px] tracking-[0.16em] uppercase"
+              style={{
+                color: 'var(--text-3)',
+                fontFamily: 'var(--font-body)',
+              }}
             >
-              NV
+              Nv
             </span>
             <span
-              className="text-sm font-bold"
-              style={{ fontFamily: 'var(--font-display)' }}
+              className="text-2xl leading-none"
+              style={{
+                fontFamily: 'var(--font-elegant)',
+                color: 'var(--accent)',
+                fontWeight: 600,
+              }}
             >
               {gami.level}
             </span>
           </div>
           <p
-            className="text-[10px] mt-1"
-            style={{
-              color: 'var(--text-3)',
-              fontFamily: 'var(--font-body)',
-            }}
+            className="text-[10px] mt-0.5"
+            style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
           >
             {gami.totalXp} XP
           </p>
         </div>
       </div>
 
-      {/* Barra de XP fina premium */}
       <div className="mt-4">
         <div
           className="h-1 rounded-full overflow-hidden"
@@ -133,20 +120,18 @@ export default function LevelHero() {
             className="h-full rounded-full transition-all duration-700"
             style={{
               width: `${gami.percentInLevel}%`,
-              background:
-                'linear-gradient(90deg, color-mix(in srgb, var(--accent) 80%, black) 0%, #E5C97A 50%, var(--accent) 100%)',
-              boxShadow:
-                '0 0 10px color-mix(in srgb, var(--accent) 60%, transparent)',
+              background: 'var(--accent)',
             }}
           />
         </div>
         <div
-          className="flex items-center justify-between mt-1.5 text-[10px]"
+          className="flex items-center justify-between mt-1.5 text-[11px]"
           style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
         >
           <span>{gami.xpInLevel} / 100 XP</span>
           {equipped ? (
-            <span className="inline-flex items-center gap-1 truncate max-w-[10rem]"
+            <span
+              className="inline-flex items-center gap-1 truncate max-w-[10rem]"
               style={{ color: 'var(--accent)' }}
               title={equipped.name}
             >
@@ -154,10 +139,10 @@ export default function LevelHero() {
               {equipped.name}
             </span>
           ) : (
-            <span>{gami.xpToNextLevel} até Nv {gami.level + 1}</span>
+            <span>{gami.xpToNextLevel} pro Nv {gami.level + 1}</span>
           )}
         </div>
       </div>
-    </GlassCard>
+    </div>
   )
 }

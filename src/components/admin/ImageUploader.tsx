@@ -114,6 +114,7 @@ async function uploadToR2(file: File, prefix: string, variant: ImageVariantKey):
   const data = (await presignRes.json()) as {
     items: Array<{
       upload_url: string
+      public_url?: string
       variants: { thumb?: string; feed?: string; detail?: string }
     }>
   }
@@ -127,7 +128,16 @@ async function uploadToR2(file: File, prefix: string, variant: ImageVariantKey):
   })
   if (!putRes.ok) throw new Error('Falha no upload para o R2.')
 
-  return item.variants?.detail ?? item.variants?.feed ?? item.upload_url.split('?')[0]
+  // Preferimos a URL crua do R2 (sem cdn-cgi). Capas/banners não precisam
+  // do redimensiona-mento da Cloudflare e o transform endpoint só responde
+  // quando o domínio público está atrás do CF Image Resizing — caso
+  // contrário a imagem aparece quebrada.
+  return (
+    item.public_url
+    ?? item.variants?.detail
+    ?? item.variants?.feed
+    ?? item.upload_url.split('?')[0]
+  )
 }
 
 // ─── Componente principal ────────────────────────────────────────────────────

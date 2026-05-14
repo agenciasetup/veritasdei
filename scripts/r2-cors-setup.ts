@@ -19,6 +19,7 @@ import { S3Client, PutBucketCorsCommand, GetBucketCorsCommand } from '@aws-sdk/c
 const ALLOWED_ORIGINS = [
   'https://www.veritasdei.com.br',
   'https://veritasdei.com.br',
+  'https://educa.veritasdei.com.br',
   'http://localhost:3000',
   'http://localhost:3001',
 ]
