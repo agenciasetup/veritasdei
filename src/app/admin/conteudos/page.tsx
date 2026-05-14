@@ -9,6 +9,7 @@ import {
 import BottomSheet from '@/components/mobile/BottomSheet'
 import { useHaptic } from '@/hooks/useHaptic'
 import { WIPE_CONFIRM_HEADER, WIPE_CONFIRM_VALUE } from '@/lib/api/seed-wipe'
+import ImageUploader, { type ImageSpec } from '@/components/admin/ImageUploader'
 
 type Level = 'groups' | 'topics' | 'subtopics' | 'items'
 
@@ -31,6 +32,48 @@ const BODY_MAX = 10000
 const TITLE_MAX = 120
 const SUBTITLE_MAX = 200
 const DESC_MAX = 500
+
+const COVER_WEB_SPEC: ImageSpec = {
+  recommendedWidth: 1600,
+  recommendedHeight: 1000,
+  aspectRatio: '16 / 10',
+  maxMb: 3,
+  formats: 'JPG, PNG, WebP',
+  hint: 'Capa do pilar/tópico no card poster (16:10). O título sobrepõe o canto inferior — mantenha o foco visual na parte de cima ou no centro.',
+}
+
+const COVER_MOBILE_SPEC: ImageSpec = {
+  recommendedWidth: 1080,
+  recommendedHeight: 1080,
+  aspectRatio: '1 / 1',
+  maxMb: 2,
+  formats: 'JPG, PNG, WebP',
+  hint: 'Variante mobile quadrada — mais legível em telas estreitas. Vazio = usa a web com reposicionamento.',
+}
+
+/** Invalida o cache server-side de pilares (capas + listagem) sempre que
+ *  o admin altera grupos/tópicos/subtópicos. Itens não afetam capas. */
+async function invalidatePillarsCache(level: Level) {
+  if (level === 'items') return
+  try {
+    await fetch('/api/admin/educa/revalidate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target: 'pillars' }),
+    })
+  } catch {
+    /* não bloqueia a UX */
+  }
+}
+
+const ITEM_IMAGE_SPEC: ImageSpec = {
+  recommendedWidth: 1600,
+  recommendedHeight: 1200,
+  aspectRatio: '4 / 3',
+  maxMb: 3,
+  formats: 'JPG, PNG, WebP',
+  hint: 'Imagem ilustrativa do bloco de conteúdo.',
+}
 
 export default function AdminConteudosPage() {
   const supabase = createClient()
@@ -153,18 +196,21 @@ export default function AdminConteudosPage() {
     setSaving(false)
     setEditing(null)
     fetchData()
+    void invalidatePillarsCache(level)
   }
 
   const handleDelete = async (id: string) => {
     if (!supabase || !confirm('Tem certeza? Isso vai deletar todo o conteúdo filho.')) return
     await supabase.from(tableName).delete().eq('id', id)
     fetchData()
+    void invalidatePillarsCache(level)
   }
 
   const handleToggleVisible = async (id: string, current: boolean) => {
     if (!supabase) return
     await supabase.from(tableName).update({ visible: !current }).eq('id', id)
     fetchData()
+    void invalidatePillarsCache(level)
   }
 
   const openCreate = () => {
@@ -436,16 +482,56 @@ export default function AdminConteudosPage() {
                   onChange={v => setEditing({ ...editing, icon: v })} placeholder="Ex: church, book-open" />
               )}
 
-              {/* Cover URL */}
+              {/* Cover (capa) */}
               {'cover_url' in editing && (
-                <ModalField label="URL da Imagem Cover (900x400)" value={(editing.cover_url as string) ?? ''} max={500}
-                  onChange={v => setEditing({ ...editing, cover_url: v })} placeholder="https://..." />
+                <ImageUploader
+                  label="Capa"
+                  description="Capa do pilar/tópico — aparece como poster nas listagens do /educa."
+                  web={{
+                    url: (editing.cover_url as string) ?? '',
+                    position: (editing.cover_position as string) ?? undefined,
+                    spec: COVER_WEB_SPEC,
+                    prefix: 'educa/covers/web',
+                  }}
+                  mobile={
+                    'cover_url_mobile' in editing
+                      ? {
+                          url: (editing.cover_url_mobile as string) ?? '',
+                          position: (editing.cover_position_mobile as string) ?? undefined,
+                          spec: COVER_MOBILE_SPEC,
+                          prefix: 'educa/covers/mobile',
+                        }
+                      : undefined
+                  }
+                  onWebChange={v =>
+                    setEditing({
+                      ...editing,
+                      cover_url: v.url,
+                      cover_position: v.position ?? null,
+                    })
+                  }
+                  onMobileChange={v =>
+                    setEditing({
+                      ...editing,
+                      cover_url_mobile: v.url,
+                      cover_position_mobile: v.position ?? null,
+                    })
+                  }
+                />
               )}
 
-              {/* Image URL (items) */}
+              {/* Image (item content kind=image) */}
               {'image_url' in editing && (
-                <ModalField label="URL da Imagem" value={(editing.image_url as string) ?? ''} max={500}
-                  onChange={v => setEditing({ ...editing, image_url: v })} placeholder="https://..." />
+                <ImageUploader
+                  label="Imagem"
+                  description="Imagem do bloco de conteúdo — usada quando o tipo é 'imagem'."
+                  web={{
+                    url: (editing.image_url as string) ?? '',
+                    spec: ITEM_IMAGE_SPEC,
+                    prefix: 'educa/items',
+                  }}
+                  onWebChange={v => setEditing({ ...editing, image_url: v.url })}
+                />
               )}
 
               {/* Sort order */}

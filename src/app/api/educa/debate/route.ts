@@ -201,7 +201,13 @@ export async function POST(req: NextRequest) {
 
     const raw = completion.choices[0]?.message?.content ?? ''
     const out = parseAiReply(raw)
-    return NextResponse.json(out)
+    return NextResponse.json(out, {
+      headers: {
+        // Resposta personalizada por turno — jamais cachear ou compartilhar
+        // entre usuários. CDNs e Service Workers do PWA respeitam isso.
+        'Cache-Control': 'private, no-store, max-age=0',
+      },
+    })
   } catch (err) {
     console.error('[educa/debate] error:', err)
     return NextResponse.json(

@@ -20,6 +20,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import type { EducaBanner, EducaPillar } from '@/lib/educa/server-data'
 import {
   ArrowRight,
   Book,
@@ -70,41 +71,129 @@ const DEFAULT_PILLAR_VISUAL = {
   color: '#B8AFA2',
 }
 
-/** Carrega cover_url dos pilares (content_groups) indexado por slug. */
-function usePillarCovers(): Record<string, string> {
-  const [covers, setCovers] = useState<Record<string, string>>({})
+/** Carrega cover_url + cover_url_mobile + position dos pilares indexado
+ *  por slug. Cacheia em sessionStorage por 5 min (admin altera raramente). */
+const PILLAR_COVERS_CACHE_KEY = 'vd.educa.pillarCovers.v2'
+const PILLAR_COVERS_TTL_MS = 5 * 60_000
+
+interface PillarCover {
+  url: string
+  urlMobile: string | null
+  position: string | null
+  positionMobile: string | null
+}
+
+function readPillarCoversCache(): Record<string, PillarCover> | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = sessionStorage.getItem(PILLAR_COVERS_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { at: number; data: Record<string, PillarCover> }
+    if (Date.now() - parsed.at > PILLAR_COVERS_TTL_MS) return null
+    return parsed.data
+  } catch {
+    return null
+  }
+}
+
+function writePillarCoversCache(data: Record<string, PillarCover>) {
+  if (typeof window === 'undefined') return
+  try {
+    sessionStorage.setItem(
+      PILLAR_COVERS_CACHE_KEY,
+      JSON.stringify({ at: Date.now(), data }),
+    )
+  } catch {
+    /* ignore */
+  }
+}
+
+function usePillarCovers(
+  initial: Record<string, PillarCover> | null,
+): Record<string, PillarCover> {
+  const [covers, setCovers] = useState<Record<string, PillarCover>>(
+    () => initial ?? readPillarCoversCache() ?? {},
+  )
   useEffect(() => {
+    // Server já forneceu — só atualiza o sessionStorage.
+    if (initial && Object.keys(initial).length > 0) {
+      writePillarCoversCache(initial)
+      return
+    }
+    // Sem dado do server e nada no cache → faz o fetch.
+    if (Object.keys(readPillarCoversCache() ?? {}).length > 0) return
     const supabase = createClient()
     if (!supabase) return
     let cancelled = false
     ;(async () => {
       const { data } = await supabase
         .from('content_groups')
-        .select('slug, cover_url')
+        .select('slug, cover_url, cover_url_mobile, cover_position, cover_position_mobile')
         .eq('visible', true)
       if (cancelled || !Array.isArray(data)) return
-      const map: Record<string, string> = {}
-      for (const row of data) {
-        const slug = row.slug as string | null
-        const url = row.cover_url as string | null
-        if (slug && url) map[slug] = url
+      const map: Record<string, PillarCover> = {}
+      for (const row of data as Array<{
+        slug: string | null
+        cover_url: string | null
+        cover_url_mobile: string | null
+        cover_position: string | null
+        cover_position_mobile: string | null
+      }>) {
+        if (!row.slug || !row.cover_url) continue
+        map[row.slug] = {
+          url: row.cover_url,
+          urlMobile: row.cover_url_mobile,
+          position: row.cover_position,
+          positionMobile: row.cover_position_mobile,
+        }
       }
       setCovers(map)
+      writePillarCoversCache(map)
     })()
     return () => {
       cancelled = true
     }
+  // initial é estável durante o lifetime da página (vem do server prop)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   return covers
 }
 
-export default function EducaEstudoView() {
+interface EducaEstudoViewProps {
+  initialBanners?: EducaBanner[]
+  initialPillars?: EducaPillar[]
+}
+
+export default function EducaEstudoView({
+  initialBanners,
+  initialPillars,
+}: EducaEstudoViewProps = {}) {
   const { user } = useAuth()
   const { last, loading: lastLoading } = useLastStudied(user?.id)
   const { attempts, pillars, loading: recentLoading } = useMyStudyRecent()
   const { catalog, unlockedIds, loading: relLoading } = useReliquias(user?.id)
-  const { banners, loading: bannersLoading } = useActiveBanners()
-  const pillarCovers = usePillarCovers()
+  // Server já hidratou banners — pula loading completamente quando há prop.
+  const fallbackBanners = useActiveBanners()
+  const banners = initialBanners ?? fallbackBanners.banners
+  const bannersLoading = initialBanners ? false : fallbackBanners.loading
+
+  // Server já hidratou capas — converte pillars do server pro shape do hook.
+  const initialCoversMap = initialPillars
+    ? Object.fromEntries(
+        initialPillars
+          .filter((p) => p.cover_url)
+          .map((p) => [
+            p.slug,
+            {
+              url: p.cover_url as string,
+              urlMobile: p.cover_url_mobile,
+              position: p.cover_position,
+              positionMobile: p.cover_position_mobile,
+            } satisfies PillarCover,
+          ]),
+      )
+    : null
+  const pillarCovers = usePillarCovers(initialCoversMap)
 
   const unlockedSelos = catalog.filter((r) => unlockedIds.has(r.id))
   const hasBanners = banners.length > 0
@@ -176,7 +265,7 @@ export default function EducaEstudoView() {
                       total={p.total}
                       percent={percent}
                       visual={v}
-                      coverUrl={pillarCovers[p.slug] ?? null}
+                      cover={pillarCovers[p.slug] ?? null}
                     />
                   </RailItem>
                 </div>
@@ -300,7 +389,7 @@ function PillarPosterCard({
   total,
   percent,
   visual,
-  coverUrl,
+  cover,
 }: {
   slug: string
   title: string
@@ -308,10 +397,12 @@ function PillarPosterCard({
   total: number
   percent: number
   visual: { gradient: string; icon: React.ElementType; color: string }
-  coverUrl?: string | null
+  cover?: PillarCover | null
 }) {
   const Icon = visual.icon
-  const hasCover = Boolean(coverUrl)
+  const hasCover = Boolean(cover?.url)
+  const desktopUrl = cover?.url
+  const mobileUrl = cover?.urlMobile || cover?.url
   return (
     <Link
       href={`/estudo/${slug}`}
@@ -325,12 +416,31 @@ function PillarPosterCard({
     >
       {hasCover && (
         <>
+          {/* MOBILE cover */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={coverUrl as string}
+            src={mobileUrl as string}
             alt=""
-            className="absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full md:hidden"
+            style={{
+              objectFit: 'cover',
+              objectPosition: cover?.positionMobile ?? cover?.position ?? '50% 50%',
+            }}
             loading="lazy"
+            decoding="async"
+          />
+          {/* DESKTOP cover */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={desktopUrl as string}
+            alt=""
+            className="absolute inset-0 w-full h-full hidden md:block"
+            style={{
+              objectFit: 'cover',
+              objectPosition: cover?.position ?? '50% 50%',
+            }}
+            loading="lazy"
+            decoding="async"
           />
           <div
             aria-hidden

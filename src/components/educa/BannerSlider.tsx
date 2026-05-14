@@ -7,6 +7,14 @@
  * `INTERVAL_MS`, permite swipe horizontal mobile (via scroll snap) e
  * mostra dots na base. Estilo cinematográfico, paleta sacra.
  *
+ * Performance:
+ *  - Aceita `banners` via prop (preferido) — quando o consumidor faz
+ *    fetch no servidor, eliminamos um round-trip client e o slider
+ *    renderiza imediatamente.
+ *  - Quando chamado sem props, faz fetch client com cache em
+ *    sessionStorage (TTL curto) pra evitar refetch entre navegações
+ *    soft do app router.
+ *
  * Não renderiza nada quando:
  *  - Loading inicial (evita layout shift)
  *  - Sem banners ativos (admin não cadastrou ainda)
@@ -18,36 +26,79 @@ import { ArrowRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 const INTERVAL_MS = 5500
+const BANNERS_CACHE_KEY = 'vd.educa.banners.v2'
+const BANNERS_CACHE_TTL_MS = 5 * 60_000 // 5 min
 
 export type Banner = {
   id: string
   image_url: string
+  image_url_mobile: string | null
+  image_position: string | null
+  image_position_mobile: string | null
   link_url: string | null
   title: string | null
   subtitle: string | null
 }
 
-/** Hook compartilhado pra puxar banners ativos. Reusado pelo
- *  EducaEstudoView pra decidir entre BannerSlider e CinematicHero. */
+interface CachedBanners {
+  at: number
+  banners: Banner[]
+}
+
+function readBannersCache(): Banner[] | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = sessionStorage.getItem(BANNERS_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as CachedBanners
+    if (!parsed?.banners || !Array.isArray(parsed.banners)) return null
+    if (Date.now() - parsed.at > BANNERS_CACHE_TTL_MS) return null
+    return parsed.banners
+  } catch {
+    return null
+  }
+}
+
+function writeBannersCache(banners: Banner[]) {
+  if (typeof window === 'undefined') return
+  try {
+    sessionStorage.setItem(
+      BANNERS_CACHE_KEY,
+      JSON.stringify({ at: Date.now(), banners } satisfies CachedBanners),
+    )
+  } catch {
+    /* sessionStorage cheio em modo privado — ignorar */
+  }
+}
+
+/** Hook compartilhado pra puxar banners ativos com cache leve em
+ *  sessionStorage. Reutilizado pelo EducaEstudoView pra decidir entre
+ *  BannerSlider e CinematicHero. */
 export function useActiveBanners(): { banners: Banner[]; loading: boolean } {
-  const [banners, setBanners] = useState<Banner[]>([])
-  const [loading, setLoading] = useState(true)
+  const [banners, setBanners] = useState<Banner[]>(() => readBannersCache() ?? [])
+  const [loading, setLoading] = useState<boolean>(() => readBannersCache() === null)
 
   useEffect(() => {
-    const supabase = createClient()
-    if (!supabase) {
-      setLoading(false)
-      return
-    }
     let cancelled = false
     ;(async () => {
+      const supabase = createClient()
+      if (!supabase) {
+        if (!cancelled) setLoading(false)
+        return
+      }
       const { data, error } = await supabase
         .from('educa_banners')
-        .select('id, image_url, link_url, title, subtitle')
+        .select(
+          'id, image_url, image_url_mobile, image_position, image_position_mobile, link_url, title, subtitle',
+        )
         .eq('ativo', true)
         .order('ordem', { ascending: true })
       if (cancelled) return
-      if (!error && Array.isArray(data)) setBanners(data as Banner[])
+      if (!error && Array.isArray(data)) {
+        const list = data as Banner[]
+        setBanners(list)
+        writeBannersCache(list)
+      }
       setLoading(false)
     })()
     return () => {
@@ -58,7 +109,11 @@ export function useActiveBanners(): { banners: Banner[]; loading: boolean } {
   return { banners, loading }
 }
 
-export default function BannerSlider({ banners: bannersProp }: { banners?: Banner[] }) {
+export default function BannerSlider({
+  banners: bannersProp,
+}: {
+  banners?: Banner[]
+}) {
   // Compatibilidade: se for chamado sem props (uso antigo), busca sozinho.
   const fallback = useActiveBanners()
   const banners = bannersProp ?? fallback.banners
@@ -127,9 +182,9 @@ export default function BannerSlider({ banners: bannersProp }: { banners?: Banne
           scrollbarWidth: 'none',
         }}
       >
-        {banners.map((b) => (
+        {banners.map((b, i) => (
           <div key={b.id} className="contents">
-            <BannerSlide banner={b} />
+            <BannerSlide banner={b} eager={i === 0} />
           </div>
         ))}
       </div>
@@ -167,17 +222,40 @@ export default function BannerSlider({ banners: bannersProp }: { banners?: Banne
   )
 }
 
-function BannerSlide({ banner }: { banner: Banner }) {
+function BannerSlide({ banner, eager }: { banner: Banner; eager?: boolean }) {
+  // Renderiza duas <img> e troca a visibilidade via CSS — evita layout shift
+  // ao alternar entre mobile/desktop e mantém o snap-scroll fluido.
+  const desktop = banner.image_url
+  const mobile = banner.image_url_mobile || banner.image_url
   const inner = (
-    <div
-      className="relative w-full aspect-[16/9] md:aspect-[21/9] overflow-hidden"
-    >
+    <div className="relative w-full aspect-[16/9] md:aspect-[21/9] overflow-hidden">
+      {/* MOBILE */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={banner.image_url}
+        src={mobile}
         alt={banner.title ?? ''}
-        className="absolute inset-0 w-full h-full object-cover"
-        loading="lazy"
+        className="absolute inset-0 w-full h-full md:hidden"
+        style={{
+          objectFit: 'cover',
+          objectPosition: banner.image_position_mobile ?? banner.image_position ?? '50% 50%',
+        }}
+        loading={eager ? 'eager' : 'lazy'}
+        fetchPriority={eager ? 'high' : 'auto'}
+        decoding="async"
+      />
+      {/* DESKTOP */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={desktop}
+        alt={banner.title ?? ''}
+        className="absolute inset-0 w-full h-full hidden md:block"
+        style={{
+          objectFit: 'cover',
+          objectPosition: banner.image_position ?? '50% 50%',
+        }}
+        loading={eager ? 'eager' : 'lazy'}
+        fetchPriority={eager ? 'high' : 'auto'}
+        decoding="async"
       />
       {/* Vinheta sacra: escurece bordas + gradiente lateral pra texto legível */}
       <div
