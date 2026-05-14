@@ -57,6 +57,13 @@ type PlanRow = {
   beneficios: string[]
 }
 
+type PriceRow = {
+  id: string
+  intervalo: 'mensal' | 'semestral' | 'anual' | 'unico'
+  amount_cents: number
+  ativo: boolean
+}
+
 export default async function CheckoutPage({
   params,
 }: {
@@ -99,7 +106,7 @@ export default async function CheckoutPage({
     redirect('/planos?status=expired')
   }
 
-  const [settingsRes, planRes] = await Promise.all([
+  const [settingsRes, planRes, pricesRes] = await Promise.all([
     supabase
       .from('billing_checkout_settings')
       .select('*')
@@ -110,6 +117,11 @@ export default async function CheckoutPage({
       .select('id, codigo, nome, descricao, beneficios')
       .eq('id', sess.plan_id)
       .maybeSingle(),
+    supabase
+      .from('billing_prices')
+      .select('id, intervalo, amount_cents, ativo')
+      .eq('plan_id', sess.plan_id)
+      .eq('ativo', true),
   ])
 
   const settings = (settingsRes.data ?? {
@@ -139,11 +151,27 @@ export default async function CheckoutPage({
     .eq('id', user.id)
     .maybeSingle()
 
+  // Ordem natural: mensal < semestral < anual < unico
+  const ordemIntervalo = { mensal: 1, semestral: 2, anual: 3, unico: 4 } as const
+  const prices = ((pricesRes.data ?? []) as PriceRow[])
+    .slice()
+    .sort(
+      (a, b) =>
+        (ordemIntervalo[a.intervalo] ?? 99) -
+        (ordemIntervalo[b.intervalo] ?? 99),
+    )
+
   return (
     <CheckoutClient
       sessionId={sess.id}
       amountCents={sess.amount_cents}
       intervalo={sess.intervalo}
+      priceId={sess.price_id}
+      prices={prices.map(p => ({
+        id: p.id,
+        intervalo: p.intervalo,
+        amountCents: p.amount_cents,
+      }))}
       plan={{
         codigo: plan.codigo,
         nome: plan.nome,

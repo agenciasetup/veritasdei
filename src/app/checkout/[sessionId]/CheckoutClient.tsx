@@ -1,25 +1,29 @@
 'use client'
 
 /**
- * Checkout customizado Veritas — UI client (redesign glassmorphism).
+ * Checkout Veritas — UI client (clean, baixa fricção).
  *
- * Layout:
- *   ESQUERDA: resumo do produto (topo) + dados pessoais (embaixo, em form
- *             flutuante "ao ar" — sem cartão envolvendo).
- *   DIREITA:  método de pagamento + cartão visual (Visa/MC/Elo…) +
- *             confirmação. Glass card aqui, sticky no desktop.
+ * Layout (desktop):
+ *   ┌──────────────────────────┐ ┌────────────────┐
+ *   │ GLASS                    │ │ flat (sem glass)│
+ *   │  produto + preço         │ │  cartão default │
+ *   │  benefícios              │ │  form           │
+ *   │  seletor de plano        │ │  pagar          │
+ *   │  order bumps             │ │                 │
+ *   │  dados pessoais          │ │                 │
+ *   └──────────────────────────┘ └────────────────┘
  *
- * Mobile: stacked na ordem produto → dados → pagamento.
+ * Mobile: stack na ordem do glass primeiro (produto → seletor →
+ * bumps → dados), pagamento por último. Sem brilhos exagerados,
+ * tipografia em sans-serif quase tudo.
  *
- * Glassmorphism: backdrop-filter blur + bordas finas com transparência +
- * radial-gradients no fundo. Os inputs ficam "flutuando" — sem card
- * envolvendo o form de dados pessoais.
+ * Cartão é o método padrão (vinculado é melhor pra retenção que PIX).
  *
- * Cartão visual: detecta bandeira pelo BIN e troca a cor de fundo do
- * cartão preview (Visa azul, Master vermelho, Elo amarelo+preto, etc.).
+ * "Finalize sua assinatura" foi removido — só logo + linha minimalista
+ * de "Pagamento seguro" no rodapé.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import {
   Check,
@@ -27,11 +31,15 @@ import {
   CreditCard,
   FileText,
   Loader2,
+  Lock,
   QrCode,
-  ShieldCheck,
   Sparkles,
   Wifi,
 } from 'lucide-react'
+
+// --------------------------------------------------------------------------
+// Tipos
+// --------------------------------------------------------------------------
 
 type Settings = {
   logoUrl: string | null
@@ -49,10 +57,18 @@ type Settings = {
 }
 
 type Plan = {
+  codigo?: string
   nome: string
   descricao: string | null
   beneficios: string[]
-  codigo?: string
+}
+
+type Intervalo = 'mensal' | 'semestral' | 'anual' | 'unico'
+
+type PriceOption = {
+  id: string
+  intervalo: Intervalo
+  amountCents: number
 }
 
 type UserInfo = { email: string; name: string }
@@ -69,13 +85,15 @@ type OrderBump = {
 type Props = {
   sessionId: string
   amountCents: number
-  intervalo: 'mensal' | 'semestral' | 'anual' | 'unico'
+  intervalo: Intervalo
+  priceId: string
+  prices: PriceOption[]
   plan: Plan
   settings: Settings
   user: UserInfo
 }
 
-type PaymentMethod = 'pix' | 'boleto' | 'credit_card'
+type PaymentMethod = 'credit_card' | 'pix' | 'boleto'
 
 type PixState = {
   encodedImage: string
@@ -101,6 +119,10 @@ type CardBrand =
   | 'diners'
   | 'discover'
   | 'unknown'
+
+// --------------------------------------------------------------------------
+// Helpers
+// --------------------------------------------------------------------------
 
 function detectBrand(number: string): CardBrand {
   const n = number.replace(/\D/g, '')
@@ -156,6 +178,8 @@ const BRAND_THEME: Record<CardBrand, { bg: string; label: string }> = {
   },
 }
 
+const SANS = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+
 function formatBRL(cents: number) {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -163,13 +187,12 @@ function formatBRL(cents: number) {
   }).format(cents / 100)
 }
 
-function intervaloLabel(i: Props['intervalo']) {
-  return {
-    mensal: '/ mês',
-    semestral: '/ 6 meses',
-    anual: '/ ano',
-    unico: 'pagamento único',
-  }[i]
+function intervaloShort(i: Intervalo) {
+  return { mensal: '/mês', semestral: '/6 meses', anual: '/ano', unico: '' }[i]
+}
+
+function intervaloLabel(i: Intervalo) {
+  return { mensal: 'Mensal', semestral: 'Semestral', anual: 'Anual', unico: 'Único' }[i]
 }
 
 function maskCard(v: string) {
@@ -214,23 +237,30 @@ function digitsOnly(v: string) {
   return v.replace(/\D/g, '')
 }
 
+// --------------------------------------------------------------------------
+// Componente principal
+// --------------------------------------------------------------------------
+
 export default function CheckoutClient({
   sessionId,
   amountCents,
-  intervalo,
+  intervalo: initialIntervalo,
+  priceId: initialPriceId,
+  prices,
   plan,
   settings,
   user,
 }: Props) {
+  // Tabs disponíveis. CARTÃO é o default (melhor retenção que PIX).
   const availableTabs: PaymentMethod[] = useMemo(() => {
     const t: PaymentMethod[] = []
+    if (settings.allowCreditCard) t.push('credit_card')
     if (settings.allowPix) t.push('pix')
     if (settings.allowBoleto) t.push('boleto')
-    if (settings.allowCreditCard) t.push('credit_card')
     return t
-  }, [settings.allowPix, settings.allowBoleto, settings.allowCreditCard])
+  }, [settings.allowCreditCard, settings.allowPix, settings.allowBoleto])
 
-  const [tab, setTab] = useState<PaymentMethod>(availableTabs[0] ?? 'pix')
+  const [tab, setTab] = useState<PaymentMethod>(availableTabs[0] ?? 'credit_card')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pix, setPix] = useState<PixState | null>(null)
@@ -241,6 +271,15 @@ export default function CheckoutClient({
     null | 'CONFIRMED' | 'PENDING' | string
   >(null)
 
+  // Plano selecionado (cliente pode trocar entre mensal/semestral/anual)
+  const [currentPriceId, setCurrentPriceId] = useState(initialPriceId)
+  const [currentIntervalo, setCurrentIntervalo] = useState<Intervalo>(initialIntervalo)
+  const [basePriceCents, setBasePriceCents] = useState(
+    prices.find(p => p.id === initialPriceId)?.amountCents ?? amountCents,
+  )
+  const [switchingPrice, setSwitchingPrice] = useState(false)
+
+  // Customer
   const [customer, setCustomer] = useState({
     name: user.name,
     email: user.email,
@@ -248,6 +287,7 @@ export default function CheckoutClient({
     mobilePhone: '',
   })
 
+  // Cartão
   const [card, setCard] = useState({
     holderName: '',
     number: '',
@@ -264,33 +304,30 @@ export default function CheckoutClient({
 
   const brand = useMemo(() => detectBrand(card.number), [card.number])
 
-  // Order bumps disponíveis pro plano + ids selecionados pelo cliente.
-  // currentTotal reflete o que vai ser cobrado (base + bumps).
+  // Bumps
   const [bumps, setBumps] = useState<OrderBump[]>([])
   const [selectedBumps, setSelectedBumps] = useState<Set<string>>(new Set())
-  const [currentTotal, setCurrentTotal] = useState<number>(amountCents)
+  const [bumpsTotal, setBumpsTotal] = useState(0)
   const [applyingBumps, setApplyingBumps] = useState(false)
 
+  const currentTotal = basePriceCents + bumpsTotal
+
+  // Carrega bumps
   useEffect(() => {
     if (!plan.codigo) return
     let cancelled = false
     fetch(`/api/checkout/bumps?planCodigo=${encodeURIComponent(plan.codigo)}`)
       .then(r => r.json())
       .then(data => {
-        if (cancelled) return
-        setBumps((data.bumps ?? []) as OrderBump[])
+        if (!cancelled) setBumps((data.bumps ?? []) as OrderBump[])
       })
-      .catch(() => {
-        // Lista de bumps é opcional — falha silenciosa não bloqueia checkout.
-      })
+      .catch(() => {})
     return () => {
       cancelled = true
     }
   }, [plan.codigo])
 
-  // Quando o cliente liga/desliga um bump, manda pro backend recalcular
-  // amount_cents da session. Usamos AbortController pra cancelar request
-  // anterior se ele clica rápido em vários toggles.
+  // Aplica bumps
   useEffect(() => {
     if (bumps.length === 0) return
     const ctl = new AbortController()
@@ -306,11 +343,9 @@ export default function CheckoutClient({
     })
       .then(r => r.json())
       .then(data => {
-        if (data?.amount_cents) setCurrentTotal(data.amount_cents)
+        if (typeof data?.bumps_cents === 'number') setBumpsTotal(data.bumps_cents)
       })
-      .catch(() => {
-        // ignora abort/falha — UI mantém o último total válido
-      })
+      .catch(() => {})
       .finally(() => setApplyingBumps(false))
     return () => ctl.abort()
   }, [selectedBumps, sessionId, bumps.length])
@@ -342,9 +377,7 @@ export default function CheckoutClient({
             window.location.href = '/perfil?tab=assinatura&status=success'
           }, 1500)
         }
-      } catch {
-        // ignora — tenta no próximo tick
-      }
+      } catch {}
     }
     pollRef.current = setInterval(tick, 3000)
     tick()
@@ -369,6 +402,29 @@ export default function CheckoutClient({
     }
   }
 
+  async function selectPrice(option: PriceOption) {
+    if (option.id === currentPriceId || switchingPrice) return
+    setSwitchingPrice(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/checkout/session/price', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, priceId: option.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Falha ao trocar plano')
+      setCurrentPriceId(option.id)
+      setCurrentIntervalo(option.intervalo)
+      setBasePriceCents(data.base_cents ?? option.amountCents)
+      setBumpsTotal(data.bumps_cents ?? 0)
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setSwitchingPrice(false)
+    }
+  }
+
   async function startPix() {
     setError(null)
     if (!customerValid) {
@@ -388,7 +444,7 @@ export default function CheckoutClient({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Falha ao gerar PIX')
-      if (!data.pix) throw new Error('PIX retornou sem QR. Tente novamente.')
+      if (!data.pix) throw new Error('PIX retornou sem QR. Tente de novo.')
       setPix({
         encodedImage: data.pix.encodedImage,
         payload: data.pix.payload,
@@ -481,9 +537,7 @@ export default function CheckoutClient({
       await navigator.clipboard.writeText(pix.payload)
       setCopyHint(true)
       setTimeout(() => setCopyHint(false), 1800)
-    } catch {
-      // ignora
-    }
+    } catch {}
   }
 
   const cssVars: React.CSSProperties = {
@@ -491,13 +545,10 @@ export default function CheckoutClient({
     ['--cks-accent' as string]: settings.accentColor,
     ['--cks-bg' as string]: settings.backgroundColor,
     ['--cks-text' as string]: settings.textColor,
-    background: `
-      radial-gradient(ellipse 90% 60% at 20% 0%, color-mix(in srgb, ${settings.primaryColor} 12%, transparent), transparent 65%),
-      radial-gradient(ellipse 70% 50% at 90% 30%, color-mix(in srgb, ${settings.primaryColor} 7%, transparent), transparent 70%),
-      ${settings.backgroundColor}
-    `,
+    background: settings.backgroundColor,
     color: settings.textColor,
     minHeight: '100vh',
+    fontFamily: SANS,
   }
 
   if (paid) {
@@ -506,156 +557,168 @@ export default function CheckoutClient({
         style={cssVars}
         className="px-4 py-16 flex items-center justify-center"
       >
-        <GlassPanel className="max-w-md w-full p-8 text-center">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-3 bg-[#66BB6A]/20">
-            <Check className="w-7 h-7" style={{ color: '#66BB6A' }} />
+        <div
+          className="max-w-md w-full p-8 rounded-2xl text-center"
+          style={glassStyle()}
+        >
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full mb-3 bg-emerald-500/15">
+            <Check className="w-6 h-6 text-emerald-400" />
           </div>
           <div
-            className="text-xl mb-1"
-            style={{
-              color: '#66BB6A',
-              fontFamily: 'var(--font-elegant, var(--font-display))',
-              fontWeight: 600,
-            }}
+            className="text-lg mb-1 font-semibold"
+            style={{ color: 'var(--cks-text)' }}
           >
             Pagamento confirmado
           </div>
           <div
             className="text-sm"
             style={{
-              color: 'color-mix(in srgb, var(--cks-text) 75%, transparent)',
-              fontFamily: 'var(--font-body)',
+              color: 'color-mix(in srgb, var(--cks-text) 70%, transparent)',
             }}
           >
             Redirecionando pro seu perfil…
           </div>
-        </GlassPanel>
+        </div>
       </main>
     )
   }
 
   return (
-    <main style={cssVars} className="px-4 py-8 md:py-12 lg:py-16">
+    <main style={cssVars} className="px-4 py-8 lg:py-12">
       <div className="max-w-5xl mx-auto">
-        {/* Topo */}
-        <header className="flex flex-col items-center text-center mb-10 md:mb-14">
+        {/* Topo enxuto: só logo + selo de segurança */}
+        <header className="flex items-center justify-between mb-6 lg:mb-8">
           {settings.logoUrl ? (
             <Image
               src={settings.logoUrl}
               alt="Veritas"
-              width={56}
-              height={56}
-              className="h-14 w-auto object-contain mb-3"
+              width={36}
+              height={36}
+              className="h-9 w-auto object-contain"
               unoptimized
             />
           ) : (
-            <div
-              className="inline-flex items-center justify-center w-12 h-12 rounded-2xl mb-3"
-              style={{
-                background:
-                  'color-mix(in srgb, var(--cks-primary) 18%, transparent)',
-                border:
-                  '1px solid color-mix(in srgb, var(--cks-primary) 35%, transparent)',
-              }}
-            >
-              <Sparkles
-                className="w-5 h-5"
-                style={{ color: 'var(--cks-primary)' }}
-              />
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5" style={{ color: 'var(--cks-primary)' }} />
+              <span
+                className="text-sm font-semibold tracking-wider"
+                style={{ color: 'var(--cks-text)' }}
+              >
+                VERITAS
+              </span>
             </div>
           )}
-          <h1
-            className="text-2xl md:text-3xl mb-1"
+          <div
+            className="inline-flex items-center gap-1.5 text-[11px]"
             style={{
-              fontFamily: 'var(--font-elegant, var(--font-display))',
-              color: 'var(--cks-text)',
+              color: 'color-mix(in srgb, var(--cks-text) 60%, transparent)',
             }}
           >
-            {settings.headerTitle}
-          </h1>
-          <p
-            className="text-sm max-w-md"
-            style={{
-              color: 'color-mix(in srgb, var(--cks-text) 65%, transparent)',
-              fontFamily: 'var(--font-body)',
-            }}
-          >
-            {settings.headerSubtitle}
-          </p>
+            <Lock className="w-3 h-3" />
+            Pagamento seguro
+          </div>
         </header>
 
-        <div className="grid lg:grid-cols-[1.05fr_1fr] gap-8 lg:gap-12 items-start">
-          {/* ─── ESQUERDA ─── */}
-          <div className="space-y-10 order-2 lg:order-1">
-            <ProductSummary
+        <div className="grid lg:grid-cols-[1.1fr_1fr] gap-6 lg:gap-8 items-start">
+          {/* ─── ESQUERDA: GLASS com produto + plano + bumps + dados ─── */}
+          <div
+            className="rounded-2xl p-5 md:p-7 order-1 lg:order-1"
+            style={glassStyle()}
+          >
+            <ProductHeader
               plan={plan}
-              baseCents={amountCents}
               totalCents={currentTotal}
-              intervalo={intervalo}
-              selectedBumps={bumps.filter(b => selectedBumps.has(b.id))}
-              applying={applyingBumps}
+              intervalo={currentIntervalo}
+              switching={switchingPrice || applyingBumps}
             />
 
+            {plan.beneficios.length > 0 && (
+              <ul className="flex flex-col gap-2 mt-5">
+                {plan.beneficios.map((b, i) => (
+                  <li
+                    key={i}
+                    className="flex items-start gap-2 text-[13px]"
+                    style={{
+                      color:
+                        'color-mix(in srgb, var(--cks-text) 82%, transparent)',
+                    }}
+                  >
+                    <Check
+                      className="w-4 h-4 flex-shrink-0 mt-0.5"
+                      style={{ color: 'var(--cks-primary)' }}
+                    />
+                    {b}
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {prices.length > 1 && (
+              <PlanSelector
+                prices={prices}
+                currentPriceId={currentPriceId}
+                onSelect={selectPrice}
+                disabled={switchingPrice}
+              />
+            )}
+
             {bumps.length > 0 && (
-              <OrderBumpsSection
+              <BumpsSection
                 bumps={bumps}
                 selected={selectedBumps}
                 onToggle={toggleBump}
               />
             )}
 
-            {/* Dados pessoais — inputs flutuantes, sem card envolvendo */}
-            <section>
-              <SectionTitle
-                eyebrow="Dados pessoais"
-                title="Quem está assinando"
-              />
-              <div className="space-y-4 mt-5">
-                <FloatField
+            <div className="mt-7">
+              <SectionLabel>Seus dados</SectionLabel>
+              <div className="space-y-3 mt-3">
+                <Field
                   label="Nome completo"
                   type="text"
                   autoComplete="name"
                   value={customer.name}
                   onChange={v => setCustomer(c => ({ ...c, name: v }))}
                 />
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <FloatField
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <Field
                     label="E-mail"
                     type="email"
                     autoComplete="email"
                     value={customer.email}
                     onChange={v => setCustomer(c => ({ ...c, email: v }))}
                   />
-                  <FloatField
+                  <Field
                     label="CPF ou CNPJ"
                     inputMode="numeric"
                     value={maskCpfCnpj(customer.cpfCnpj)}
-                    onChange={v => setCustomer(c => ({ ...c, cpfCnpj: v }))}
+                    onChange={v =>
+                      setCustomer(c => ({ ...c, cpfCnpj: v }))
+                    }
                   />
                 </div>
-                <FloatField
+                <Field
                   label="Celular (opcional)"
                   inputMode="tel"
                   autoComplete="tel"
                   value={maskPhone(customer.mobilePhone)}
-                  onChange={v => setCustomer(c => ({ ...c, mobilePhone: v }))}
+                  onChange={v =>
+                    setCustomer(c => ({ ...c, mobilePhone: v }))
+                  }
                   required={false}
                 />
               </div>
-            </section>
+            </div>
           </div>
 
-          {/* ─── DIREITA ─── */}
-          <aside className="order-1 lg:order-2 lg:sticky lg:top-10">
-            <GlassPanel className="p-6 md:p-7">
-              <SectionTitle
-                eyebrow="Pagamento"
-                title="Como você prefere pagar"
-              />
+          {/* ─── DIREITA: pagamento direto no fundo (sem glass) ─── */}
+          <aside className="order-2 lg:order-2 lg:sticky lg:top-8">
+            <div className="px-1">
+              <SectionLabel>Forma de pagamento</SectionLabel>
 
               {availableTabs.length > 1 && (
                 <div
-                  className="grid gap-2 p-1 rounded-2xl mt-4 mb-5"
+                  className="grid gap-1.5 p-1 rounded-xl mt-3 mb-4"
                   style={{
                     gridTemplateColumns: `repeat(${availableTabs.length}, 1fr)`,
                     background:
@@ -679,15 +742,14 @@ export default function CheckoutClient({
                         key={t}
                         type="button"
                         onClick={() => setTab(t)}
-                        className="px-3 py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all"
+                        className="px-3 py-2.5 rounded-lg text-[13px] flex items-center justify-center gap-1.5 transition-colors"
                         style={{
                           background: active
                             ? 'var(--cks-primary)'
                             : 'transparent',
                           color: active
                             ? 'var(--cks-accent)'
-                            : 'var(--cks-text)',
-                          fontFamily: 'var(--font-body)',
+                            : 'color-mix(in srgb, var(--cks-text) 80%, transparent)',
                           fontWeight: active ? 600 : 500,
                         }}
                       >
@@ -701,34 +763,17 @@ export default function CheckoutClient({
 
               {error && (
                 <div
-                  className="mb-4 p-3 rounded-xl text-sm"
+                  className="mb-3 p-3 rounded-lg text-sm"
                   style={{
-                    background: 'rgba(230,126,34,0.12)',
-                    border: '1px solid rgba(230,126,34,0.35)',
-                    color: '#E67E22',
-                    fontFamily: 'var(--font-body)',
+                    background: 'rgba(239,68,68,0.1)',
+                    border: '1px solid rgba(239,68,68,0.3)',
+                    color: '#ef4444',
                   }}
                 >
                   {error}
                 </div>
               )}
 
-              {tab === 'pix' && (
-                <PixPanel
-                  pix={pix}
-                  loading={loading}
-                  onStart={startPix}
-                  onCopy={copyPayload}
-                  copyHint={copyHint}
-                />
-              )}
-              {tab === 'boleto' && (
-                <BoletoPanel
-                  boleto={boleto}
-                  loading={loading}
-                  onStart={startBoleto}
-                />
-              )}
               {tab === 'credit_card' && (
                 <CardForm
                   card={card}
@@ -745,18 +790,33 @@ export default function CheckoutClient({
                   brand={brand}
                 />
               )}
+              {tab === 'pix' && (
+                <PixPanel
+                  pix={pix}
+                  loading={loading}
+                  onStart={startPix}
+                  onCopy={copyPayload}
+                  copyHint={copyHint}
+                />
+              )}
+              {tab === 'boleto' && (
+                <BoletoPanel
+                  boleto={boleto}
+                  loading={loading}
+                  onStart={startBoleto}
+                />
+              )}
 
               <div
-                className="flex items-center justify-center gap-2 text-[11px] mt-5"
+                className="text-[11px] mt-4 text-center"
                 style={{
-                  color: 'color-mix(in srgb, var(--cks-text) 55%, transparent)',
-                  fontFamily: 'var(--font-body)',
+                  color:
+                    'color-mix(in srgb, var(--cks-text) 50%, transparent)',
                 }}
               >
-                <ShieldCheck className="w-3.5 h-3.5" />
                 {settings.footerText}
               </div>
-            </GlassPanel>
+            </div>
           </aside>
         </div>
       </div>
@@ -768,134 +828,164 @@ export default function CheckoutClient({
 // Subcomponentes
 // --------------------------------------------------------------------------
 
-function ProductSummary({
+function ProductHeader({
   plan,
-  baseCents,
   totalCents,
   intervalo,
-  selectedBumps,
-  applying,
+  switching,
 }: {
   plan: Plan
-  baseCents: number
   totalCents: number
-  intervalo: Props['intervalo']
-  selectedBumps: OrderBump[]
-  applying: boolean
+  intervalo: Intervalo
+  switching: boolean
 }) {
-  const hasExtras = selectedBumps.length > 0
   return (
-    <section>
-      <SectionTitle eyebrow="Resumo da assinatura" title={plan.nome} />
-      {plan.descricao && (
-        <p
-          className="text-sm mt-2 max-w-md"
-          style={{
-            color: 'color-mix(in srgb, var(--cks-text) 70%, transparent)',
-            fontFamily: 'var(--font-body)',
-          }}
-        >
-          {plan.descricao}
-        </p>
-      )}
-
-      <div className="flex items-baseline gap-1.5 mt-5">
+    <div>
+      <div
+        className="text-[10px] uppercase tracking-[0.18em]"
+        style={{
+          color: 'color-mix(in srgb, var(--cks-text) 50%, transparent)',
+        }}
+      >
+        {plan.nome}
+      </div>
+      <div className="flex items-baseline gap-1.5 mt-1">
         <span
-          className="text-4xl md:text-5xl transition-opacity"
+          className="text-3xl md:text-[2.25rem] transition-opacity tabular-nums"
           style={{
-            color: 'var(--cks-primary)',
-            fontFamily: 'var(--font-elegant, var(--font-display))',
+            color: 'var(--cks-text)',
             fontWeight: 700,
             letterSpacing: '-0.02em',
-            opacity: applying ? 0.55 : 1,
+            opacity: switching ? 0.5 : 1,
           }}
         >
           {formatBRL(totalCents)}
         </span>
         <span
-          className="text-xs"
+          className="text-sm"
           style={{
-            color: 'color-mix(in srgb, var(--cks-text) 65%, transparent)',
-            fontFamily: 'var(--font-body)',
+            color: 'color-mix(in srgb, var(--cks-text) 60%, transparent)',
           }}
         >
-          {intervaloLabel(intervalo)}
+          {intervaloShort(intervalo)}
         </span>
       </div>
-
-      {hasExtras && (
-        <div
-          className="mt-4 p-3 rounded-2xl text-xs flex flex-col gap-1.5"
+      {plan.descricao && (
+        <p
+          className="text-sm mt-2 max-w-md"
           style={{
-            background:
-              'color-mix(in srgb, var(--cks-text) 4%, transparent)',
-            border:
-              '1px solid color-mix(in srgb, var(--cks-text) 12%, transparent)',
-            fontFamily: 'var(--font-body)',
-            color:
-              'color-mix(in srgb, var(--cks-text) 80%, transparent)',
+            color: 'color-mix(in srgb, var(--cks-text) 70%, transparent)',
           }}
         >
-          <div className="flex items-center justify-between">
-            <span>Plano</span>
-            <span>{formatBRL(baseCents)}</span>
-          </div>
-          {selectedBumps.map(b => (
-            <div key={b.id} className="flex items-center justify-between">
-              <span className="truncate pr-2">+ {b.titulo}</span>
-              <span>{formatBRL(b.valor_cents)}</span>
-            </div>
-          ))}
-          <div
-            className="flex items-center justify-between pt-1.5 mt-1.5"
-            style={{
-              borderTop:
-                '1px solid color-mix(in srgb, var(--cks-text) 10%, transparent)',
-              color: 'var(--cks-text)',
-              fontWeight: 600,
-            }}
-          >
-            <span>Total</span>
-            <span>{formatBRL(totalCents)}</span>
-          </div>
-        </div>
+          {plan.descricao}
+        </p>
       )}
-
-      {plan.beneficios.length > 0 && (
-        <ul className="flex flex-col gap-2.5 mt-6">
-          {plan.beneficios.map((b, i) => (
-            <li
-              key={i}
-              className="flex items-start gap-2.5 text-sm"
-              style={{
-                color: 'color-mix(in srgb, var(--cks-text) 85%, transparent)',
-                fontFamily: 'var(--font-body)',
-              }}
-            >
-              <span
-                className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                style={{
-                  background:
-                    'color-mix(in srgb, var(--cks-primary) 22%, transparent)',
-                  border:
-                    '1px solid color-mix(in srgb, var(--cks-primary) 38%, transparent)',
-                }}
-              >
-                <Check
-                  className="w-2.5 h-2.5"
-                  style={{ color: 'var(--cks-primary)' }}
-                />
-              </span>
-              {b}
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+    </div>
   )
 }
 
-function OrderBumpsSection({
+function PlanSelector({
+  prices,
+  currentPriceId,
+  onSelect,
+  disabled,
+}: {
+  prices: PriceOption[]
+  currentPriceId: string
+  onSelect: (p: PriceOption) => void
+  disabled: boolean
+}) {
+  const monthly = prices.find(p => p.intervalo === 'mensal')
+  return (
+    <div className="mt-6">
+      <SectionLabel>Periodicidade</SectionLabel>
+      <div
+        className="mt-3 grid gap-2"
+        style={{ gridTemplateColumns: `repeat(${prices.length}, 1fr)` }}
+      >
+        {prices.map(p => {
+          const active = p.id === currentPriceId
+          // Calcula equivalente mensal pra ancorar o desconto
+          const meses =
+            p.intervalo === 'mensal'
+              ? 1
+              : p.intervalo === 'semestral'
+                ? 6
+                : p.intervalo === 'anual'
+                  ? 12
+                  : 1
+          const perMes = p.amountCents / meses
+          const economia =
+            monthly && p.intervalo !== 'mensal' && p.intervalo !== 'unico'
+              ? Math.round(
+                  ((monthly.amountCents * meses - p.amountCents) /
+                    (monthly.amountCents * meses)) *
+                    100,
+                )
+              : 0
+          return (
+            <button
+              key={p.id}
+              type="button"
+              disabled={disabled || active}
+              onClick={() => onSelect(p)}
+              className="text-left p-3 rounded-xl transition-all"
+              style={{
+                background: active
+                  ? 'color-mix(in srgb, var(--cks-primary) 15%, transparent)'
+                  : 'color-mix(in srgb, var(--cks-text) 4%, transparent)',
+                border: active
+                  ? '1.5px solid var(--cks-primary)'
+                  : '1px solid color-mix(in srgb, var(--cks-text) 12%, transparent)',
+                cursor: disabled ? 'wait' : 'pointer',
+                opacity: disabled && !active ? 0.6 : 1,
+              }}
+            >
+              <div
+                className="text-[13px] font-medium"
+                style={{ color: 'var(--cks-text)' }}
+              >
+                {intervaloLabel(p.intervalo)}
+              </div>
+              <div
+                className="text-[15px] font-semibold tabular-nums mt-0.5"
+                style={{ color: 'var(--cks-text)' }}
+              >
+                {formatBRL(p.amountCents)}
+              </div>
+              {p.intervalo !== 'mensal' && p.intervalo !== 'unico' && (
+                <div
+                  className="text-[10.5px] mt-0.5"
+                  style={{
+                    color:
+                      'color-mix(in srgb, var(--cks-text) 60%, transparent)',
+                  }}
+                >
+                  {formatBRL(Math.round(perMes))}/mês
+                </div>
+              )}
+              {economia > 0 && (
+                <div
+                  className="text-[10px] uppercase tracking-wider mt-1.5 inline-block px-1.5 py-0.5 rounded"
+                  style={{
+                    background:
+                      'color-mix(in srgb, var(--cks-primary) 22%, transparent)',
+                    color: 'var(--cks-primary)',
+                    fontWeight: 600,
+                  }}
+                >
+                  −{economia}%
+                </div>
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function BumpsSection({
   bumps,
   selected,
   onToggle,
@@ -905,91 +995,78 @@ function OrderBumpsSection({
   onToggle: (id: string) => void
 }) {
   return (
-    <section>
-      <SectionTitle eyebrow="Adicione ao seu pedido" title="Ofertas exclusivas" />
-      <div className="mt-5 space-y-3">
+    <div className="mt-6">
+      <SectionLabel>Adicione ao pedido</SectionLabel>
+      <div className="mt-3 space-y-2">
         {bumps.map(bump => {
           const isOn = selected.has(bump.id)
           return (
             <label
               key={bump.id}
-              className="block cursor-pointer rounded-2xl p-4 transition-all relative"
+              className="flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors"
               style={{
                 background: isOn
-                  ? 'color-mix(in srgb, var(--cks-primary) 14%, transparent)'
+                  ? 'color-mix(in srgb, var(--cks-primary) 12%, transparent)'
                   : 'color-mix(in srgb, var(--cks-text) 4%, transparent)',
                 border: isOn
-                  ? '1px solid color-mix(in srgb, var(--cks-primary) 50%, transparent)'
+                  ? '1px solid color-mix(in srgb, var(--cks-primary) 40%, transparent)'
                   : '1px solid color-mix(in srgb, var(--cks-text) 12%, transparent)',
               }}
             >
-              {bump.badge && (
-                <span
-                  className="absolute -top-2 left-4 px-2 py-0.5 rounded-full text-[9px] tracking-wider uppercase"
-                  style={{
-                    background: 'var(--cks-primary)',
-                    color: 'var(--cks-accent)',
-                    fontFamily: 'var(--font-body)',
-                    fontWeight: 700,
-                  }}
-                >
-                  {bump.badge}
-                </span>
-              )}
-              <div className="flex items-start gap-3">
-                <span
-                  className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors"
-                  style={{
-                    background: isOn
-                      ? 'var(--cks-primary)'
-                      : 'transparent',
-                    border: isOn
-                      ? '1px solid var(--cks-primary)'
-                      : '1px solid color-mix(in srgb, var(--cks-text) 30%, transparent)',
-                  }}
-                >
-                  {isOn && (
-                    <Check
-                      className="w-3 h-3"
-                      style={{ color: 'var(--cks-accent)' }}
-                    />
-                  )}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span
-                      className="text-sm font-medium"
-                      style={{
-                        color: 'var(--cks-text)',
-                        fontFamily: 'var(--font-body)',
-                      }}
-                    >
-                      {bump.titulo}
-                    </span>
-                    <span
-                      className="text-sm whitespace-nowrap"
-                      style={{
-                        color: 'var(--cks-primary)',
-                        fontFamily: 'var(--font-body)',
-                        fontWeight: 600,
-                      }}
-                    >
-                      + {formatBRL(bump.valor_cents)}
-                    </span>
-                  </div>
-                  {bump.descricao && (
-                    <p
-                      className="text-xs mt-1"
-                      style={{
-                        color:
-                          'color-mix(in srgb, var(--cks-text) 65%, transparent)',
-                        fontFamily: 'var(--font-body)',
-                      }}
-                    >
-                      {bump.descricao}
-                    </p>
-                  )}
+              <span
+                className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors"
+                style={{
+                  background: isOn ? 'var(--cks-primary)' : 'transparent',
+                  border: isOn
+                    ? '1px solid var(--cks-primary)'
+                    : '1px solid color-mix(in srgb, var(--cks-text) 30%, transparent)',
+                }}
+              >
+                {isOn && (
+                  <Check
+                    className="w-3 h-3"
+                    style={{ color: 'var(--cks-accent)' }}
+                  />
+                )}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span
+                    className="text-[13px] font-medium"
+                    style={{ color: 'var(--cks-text)' }}
+                  >
+                    {bump.titulo}
+                  </span>
+                  <span
+                    className="text-[13px] font-semibold tabular-nums whitespace-nowrap"
+                    style={{ color: 'var(--cks-primary)' }}
+                  >
+                    + {formatBRL(bump.valor_cents)}
+                  </span>
                 </div>
+                {bump.descricao && (
+                  <p
+                    className="text-[11.5px] mt-0.5"
+                    style={{
+                      color:
+                        'color-mix(in srgb, var(--cks-text) 65%, transparent)',
+                    }}
+                  >
+                    {bump.descricao}
+                  </p>
+                )}
+                {bump.badge && (
+                  <span
+                    className="inline-block mt-1.5 px-1.5 py-0.5 rounded text-[9px] tracking-wider uppercase"
+                    style={{
+                      background: 'var(--cks-primary)',
+                      color: 'var(--cks-accent)',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {bump.badge}
+                  </span>
+                )}
               </div>
               <input
                 type="checkbox"
@@ -1001,7 +1078,7 @@ function OrderBumpsSection({
           )
         })}
       </div>
-    </section>
+    </div>
   )
 }
 
@@ -1018,10 +1095,7 @@ function CardPreview({
   brand: CardBrand
 }) {
   const theme = BRAND_THEME[brand]
-  const masked = (card.number.replace(/\D/g, '') + '••••••••••••••••').slice(
-    0,
-    16,
-  )
+  const masked = (card.number.replace(/\D/g, '') + '••••••••••••••••').slice(0, 16)
   const groups = [
     masked.slice(0, 4),
     masked.slice(4, 8),
@@ -1033,47 +1107,35 @@ function CardPreview({
   }`
   return (
     <div
-      className="relative w-full aspect-[1.586/1] max-w-[420px] mx-auto rounded-2xl p-5 overflow-hidden text-white shadow-xl transition-all"
+      className="relative w-full aspect-[1.586/1] max-w-[400px] rounded-xl p-4 overflow-hidden text-white shadow-lg transition-all"
       style={{ background: theme.bg }}
     >
-      <div
-        className="absolute inset-0 opacity-30 pointer-events-none"
-        style={{
-          background:
-            'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.35), transparent 50%)',
-        }}
-      />
       <div className="relative flex flex-col h-full justify-between">
         <div className="flex items-start justify-between">
-          <div className="w-9 h-7 rounded-md bg-gradient-to-br from-yellow-300/80 to-yellow-600/80 border border-yellow-500/40" />
-          <Wifi className="w-5 h-5 opacity-80 rotate-90" />
+          <div className="w-8 h-6 rounded bg-gradient-to-br from-yellow-300/80 to-yellow-600/80" />
+          <Wifi className="w-4 h-4 opacity-70 rotate-90" />
         </div>
-        <div
-          className="text-xl md:text-2xl tracking-[0.18em] font-mono"
-          style={{ textShadow: '0 1px 1px rgba(0,0,0,0.4)' }}
-        >
+        <div className="text-lg md:text-xl tracking-[0.16em] font-mono">
           {groups.join(' ')}
         </div>
-        <div className="flex items-end justify-between gap-3">
+        <div className="flex items-end justify-between gap-3 text-xs">
           <div className="min-w-0">
-            <div className="text-[9px] uppercase tracking-widest opacity-70">
+            <div className="text-[8px] uppercase tracking-widest opacity-60">
               Titular
             </div>
-            <div className="text-sm uppercase truncate">
+            <div className="uppercase truncate">
               {card.holderName || 'NOME NO CARTÃO'}
             </div>
           </div>
           <div className="text-right">
-            <div className="text-[9px] uppercase tracking-widest opacity-70">
+            <div className="text-[8px] uppercase tracking-widest opacity-60">
               Validade
             </div>
-            <div className="text-sm">{exp}</div>
+            <div>{exp}</div>
           </div>
           <div
-            className="text-base font-bold italic whitespace-nowrap"
-            style={{
-              letterSpacing: brand === 'visa' ? '0.05em' : undefined,
-            }}
+            className="font-bold whitespace-nowrap text-sm"
+            style={{ letterSpacing: brand === 'visa' ? '0.05em' : undefined }}
           >
             {theme.label}
           </div>
@@ -1102,11 +1164,10 @@ function PixPanel({
         type="button"
         onClick={onStart}
         disabled={loading}
-        className="w-full px-5 py-4 rounded-2xl flex items-center justify-center gap-2 disabled:opacity-60 transition-transform active:scale-[0.99]"
+        className="w-full px-5 py-3.5 rounded-xl flex items-center justify-center gap-2 disabled:opacity-60 transition-transform active:scale-[0.99]"
         style={{
           background: 'var(--cks-primary)',
           color: 'var(--cks-accent)',
-          fontFamily: 'var(--font-body)',
           fontWeight: 600,
         }}
       >
@@ -1115,7 +1176,7 @@ function PixPanel({
         ) : (
           <>
             <QrCode className="w-4 h-4" />
-            Gerar PIX agora
+            Gerar PIX
           </>
         )}
       </button>
@@ -1123,12 +1184,12 @@ function PixPanel({
   }
   return (
     <div className="flex flex-col items-center gap-4">
-      <div className="bg-white p-3 rounded-2xl">
+      <div className="bg-white p-2.5 rounded-xl">
         <Image
           src={`data:image/png;base64,${pix.encodedImage}`}
           alt="QR Code PIX"
-          width={220}
-          height={220}
+          width={200}
+          height={200}
           className="block"
           unoptimized
         />
@@ -1136,7 +1197,7 @@ function PixPanel({
       <div
         className="text-xs text-center max-w-xs"
         style={{
-          color: 'color-mix(in srgb, var(--cks-text) 70%, transparent)',
+          color: 'color-mix(in srgb, var(--cks-text) 65%, transparent)',
         }}
       >
         Aponte a câmera do app do seu banco — ou copie o código abaixo.
@@ -1144,14 +1205,12 @@ function PixPanel({
       <button
         type="button"
         onClick={onCopy}
-        className="w-full px-4 py-3 rounded-2xl text-xs flex items-center justify-center gap-2"
+        className="w-full px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-2"
         style={{
-          background:
-            'color-mix(in srgb, var(--cks-primary) 15%, transparent)',
+          background: 'color-mix(in srgb, var(--cks-primary) 12%, transparent)',
           border:
-            '1px solid color-mix(in srgb, var(--cks-primary) 35%, transparent)',
+            '1px solid color-mix(in srgb, var(--cks-primary) 30%, transparent)',
           color: 'var(--cks-primary)',
-          fontFamily: 'var(--font-body)',
           fontWeight: 500,
         }}
       >
@@ -1170,23 +1229,12 @@ function PixPanel({
       <div
         className="flex items-center gap-2 text-[11px]"
         style={{
-          color: 'color-mix(in srgb, var(--cks-text) 60%, transparent)',
+          color: 'color-mix(in srgb, var(--cks-text) 55%, transparent)',
         }}
       >
         <Loader2 className="w-3 h-3 animate-spin" />
         Aguardando confirmação…
       </div>
-      {pix.invoiceUrl && (
-        <a
-          href={pix.invoiceUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[11px] underline"
-          style={{ color: 'var(--cks-primary)' }}
-        >
-          Abrir fatura completa
-        </a>
-      )}
     </div>
   )
 }
@@ -1206,11 +1254,10 @@ function BoletoPanel({
         type="button"
         onClick={onStart}
         disabled={loading}
-        className="w-full px-5 py-4 rounded-2xl flex items-center justify-center gap-2 disabled:opacity-60 transition-transform active:scale-[0.99]"
+        className="w-full px-5 py-3.5 rounded-xl flex items-center justify-center gap-2 disabled:opacity-60 transition-transform active:scale-[0.99]"
         style={{
           background: 'var(--cks-primary)',
           color: 'var(--cks-accent)',
-          fontFamily: 'var(--font-body)',
           fontWeight: 600,
         }}
       >
@@ -1226,22 +1273,8 @@ function BoletoPanel({
     )
   }
   return (
-    <div className="flex flex-col items-center gap-4 text-center">
-      <div
-        className="w-14 h-14 rounded-2xl flex items-center justify-center"
-        style={{
-          background:
-            'color-mix(in srgb, var(--cks-primary) 15%, transparent)',
-          border:
-            '1px solid color-mix(in srgb, var(--cks-primary) 35%, transparent)',
-        }}
-      >
-        <FileText className="w-6 h-6" style={{ color: 'var(--cks-primary)' }} />
-      </div>
-      <div
-        className="text-sm"
-        style={{ color: 'var(--cks-text)', fontFamily: 'var(--font-body)' }}
-      >
+    <div className="flex flex-col items-center gap-3 text-center">
+      <div className="text-sm" style={{ color: 'var(--cks-text)' }}>
         Boleto gerado.
       </div>
       <div
@@ -1257,11 +1290,10 @@ function BoletoPanel({
           href={boleto.bankSlipUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full px-4 py-3 rounded-2xl text-xs flex items-center justify-center gap-2"
+          className="w-full px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-2"
           style={{
             background: 'var(--cks-primary)',
             color: 'var(--cks-accent)',
-            fontFamily: 'var(--font-body)',
             fontWeight: 600,
           }}
         >
@@ -1272,7 +1304,7 @@ function BoletoPanel({
       <div
         className="flex items-center gap-2 text-[11px]"
         style={{
-          color: 'color-mix(in srgb, var(--cks-text) 60%, transparent)',
+          color: 'color-mix(in srgb, var(--cks-text) 55%, transparent)',
         }}
       >
         <Loader2 className="w-3 h-3 animate-spin" />
@@ -1337,40 +1369,34 @@ function CardForm({
     return (
       <div className="text-center py-8">
         <Loader2
-          className="w-8 h-8 animate-spin mx-auto mb-3"
+          className="w-7 h-7 animate-spin mx-auto mb-3"
           style={{ color: 'var(--cks-primary)' }}
         />
-        <div
-          className="text-sm"
-          style={{
-            color: 'var(--cks-text)',
-            fontFamily: 'var(--font-body)',
-          }}
-        >
+        <div className="text-sm" style={{ color: 'var(--cks-text)' }}>
           Confirmando seu pagamento…
         </div>
       </div>
     )
   }
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    <form onSubmit={onSubmit} className="flex flex-col gap-3">
       <CardPreview card={card} brand={brand} />
 
-      <FloatField
+      <Field
         label="Número do cartão"
         inputMode="numeric"
         autoComplete="cc-number"
         value={card.number}
         onChange={v => setCard(c => ({ ...c, number: maskCard(v) }))}
       />
-      <FloatField
+      <Field
         label="Nome impresso no cartão"
         autoComplete="cc-name"
         value={card.holderName}
         onChange={v => setCard(c => ({ ...c, holderName: v }))}
       />
-      <div className="grid grid-cols-3 gap-3">
-        <FloatField
+      <div className="grid grid-cols-3 gap-2">
+        <Field
           label="Mês"
           inputMode="numeric"
           autoComplete="cc-exp-month"
@@ -1383,7 +1409,7 @@ function CardForm({
             }))
           }
         />
-        <FloatField
+        <Field
           label="Ano"
           inputMode="numeric"
           autoComplete="cc-exp-year"
@@ -1396,44 +1422,33 @@ function CardForm({
             }))
           }
         />
-        <FloatField
+        <Field
           label="CVV"
           inputMode="numeric"
           autoComplete="cc-csc"
           maxLength={4}
           value={card.ccv}
           onChange={v =>
-            setCard(c => ({
-              ...c,
-              ccv: v.replace(/\D/g, '').slice(0, 4),
-            }))
+            setCard(c => ({ ...c, ccv: v.replace(/\D/g, '').slice(0, 4) }))
           }
         />
       </div>
 
-      <div
-        className="text-[10px] uppercase tracking-wider mt-2"
-        style={{
-          color: 'color-mix(in srgb, var(--cks-text) 50%, transparent)',
-          fontFamily: 'var(--font-body)',
-        }}
-      >
-        Endereço de cobrança
-      </div>
-      <div className="grid sm:grid-cols-2 gap-3">
-        <FloatField
+      <SectionLabel className="mt-2">Endereço de cobrança</SectionLabel>
+      <div className="grid sm:grid-cols-2 gap-2">
+        <Field
           label="CEP"
           inputMode="numeric"
           value={maskCep(address.postalCode)}
           onChange={v => setAddress(a => ({ ...a, postalCode: v }))}
         />
-        <FloatField
+        <Field
           label="Número"
           value={address.addressNumber}
           onChange={v => setAddress(a => ({ ...a, addressNumber: v }))}
         />
       </div>
-      <FloatField
+      <Field
         label="Complemento (opcional)"
         value={address.addressComplement}
         onChange={v => setAddress(a => ({ ...a, addressComplement: v }))}
@@ -1441,7 +1456,7 @@ function CardForm({
       />
 
       {installmentsMax > 1 && (
-        <FloatField
+        <Field
           label="Parcelas"
           as="select"
           value={String(installments)}
@@ -1455,17 +1470,16 @@ function CardForm({
               </option>
             )
           })}
-        </FloatField>
+        </Field>
       )}
 
       <button
         type="submit"
         disabled={loading}
-        className="w-full mt-3 px-5 py-4 rounded-2xl flex items-center justify-center gap-2 disabled:opacity-60 transition-transform active:scale-[0.99]"
+        className="w-full mt-3 px-5 py-3.5 rounded-xl flex items-center justify-center gap-2 disabled:opacity-60 transition-transform active:scale-[0.99]"
         style={{
           background: 'var(--cks-primary)',
           color: 'var(--cks-accent)',
-          fontFamily: 'var(--font-body)',
           fontWeight: 600,
         }}
       >
@@ -1473,7 +1487,7 @@ function CardForm({
           <Loader2 className="w-5 h-5 animate-spin" />
         ) : (
           <>
-            <CreditCard className="w-4 h-4" />
+            <Lock className="w-4 h-4" />
             Pagar {formatBRL(amountCents)}
           </>
         )}
@@ -1486,7 +1500,18 @@ function CardForm({
 // UI utilitários
 // --------------------------------------------------------------------------
 
-function GlassPanel({
+function glassStyle(): React.CSSProperties {
+  return {
+    background:
+      'linear-gradient(155deg, color-mix(in srgb, var(--cks-text) 7%, transparent), color-mix(in srgb, var(--cks-text) 2%, transparent))',
+    border:
+      '1px solid color-mix(in srgb, var(--cks-text) 12%, transparent)',
+    backdropFilter: 'blur(14px) saturate(140%)',
+    WebkitBackdropFilter: 'blur(14px) saturate(140%)',
+  }
+}
+
+function SectionLabel({
   children,
   className = '',
 }: {
@@ -1495,16 +1520,9 @@ function GlassPanel({
 }) {
   return (
     <div
-      className={`rounded-3xl ${className}`}
+      className={`text-[10px] uppercase tracking-[0.18em] font-medium ${className}`}
       style={{
-        background:
-          'linear-gradient(140deg, color-mix(in srgb, var(--cks-text) 8%, transparent), color-mix(in srgb, var(--cks-text) 3%, transparent))',
-        border:
-          '1px solid color-mix(in srgb, var(--cks-text) 14%, transparent)',
-        backdropFilter: 'blur(18px) saturate(140%)',
-        WebkitBackdropFilter: 'blur(18px) saturate(140%)',
-        boxShadow:
-          '0 12px 40px -16px color-mix(in srgb, var(--cks-primary) 25%, transparent), 0 1px 0 0 color-mix(in srgb, var(--cks-text) 8%, transparent) inset',
+        color: 'color-mix(in srgb, var(--cks-text) 55%, transparent)',
       }}
     >
       {children}
@@ -1512,39 +1530,7 @@ function GlassPanel({
   )
 }
 
-function SectionTitle({
-  eyebrow,
-  title,
-}: {
-  eyebrow: string
-  title: string
-}) {
-  return (
-    <div>
-      <p
-        className="text-[10px] uppercase tracking-[0.22em] mb-1.5"
-        style={{
-          color: 'var(--cks-primary)',
-          fontFamily: 'var(--font-body)',
-        }}
-      >
-        {eyebrow}
-      </p>
-      <h2
-        className="text-xl md:text-2xl"
-        style={{
-          fontFamily: 'var(--font-elegant, var(--font-display))',
-          color: 'var(--cks-text)',
-          letterSpacing: '-0.01em',
-        }}
-      >
-        {title}
-      </h2>
-    </div>
-  )
-}
-
-type FloatFieldProps = {
+type FieldProps = {
   label: string
   value: string
   onChange: (v: string) => void
@@ -1557,7 +1543,7 @@ type FloatFieldProps = {
   children?: React.ReactNode
 }
 
-function FloatField({
+function Field({
   label,
   value,
   onChange,
@@ -1568,22 +1554,33 @@ function FloatField({
   required = true,
   as = 'input',
   children,
-}: FloatFieldProps) {
-  const hasValue = value !== ''
+}: FieldProps) {
+  const id = useId()
   return (
-    <label className="block relative">
+    <div>
+      <label
+        htmlFor={id}
+        className="block text-[11px] mb-1"
+        style={{
+          color: 'color-mix(in srgb, var(--cks-text) 60%, transparent)',
+        }}
+      >
+        {label}
+      </label>
       {as === 'select' ? (
         <select
+          id={id}
           value={value}
           onChange={e => onChange(e.target.value)}
           required={required}
-          className="w-full px-4 pt-5 pb-2 rounded-2xl outline-none focus:outline-none"
+          className="w-full px-3 py-2.5 rounded-lg outline-none text-[14px]"
           style={inputStyle()}
         >
           {children}
         </select>
       ) : (
         <input
+          id={id}
           type={type}
           inputMode={inputMode}
           autoComplete={autoComplete}
@@ -1591,26 +1588,11 @@ function FloatField({
           required={required}
           value={value}
           onChange={e => onChange(e.target.value)}
-          placeholder=" "
-          className="w-full px-4 pt-5 pb-2 rounded-2xl outline-none focus:outline-none"
+          className="w-full px-3 py-2.5 rounded-lg outline-none text-[14px]"
           style={inputStyle()}
         />
       )}
-      <span
-        className="pointer-events-none absolute left-4 transition-all"
-        style={{
-          top: hasValue ? '6px' : '50%',
-          transform: hasValue ? 'none' : 'translateY(-50%)',
-          fontSize: hasValue ? '10px' : '13px',
-          letterSpacing: hasValue ? '0.05em' : 'normal',
-          textTransform: hasValue ? 'uppercase' : 'none',
-          color: 'color-mix(in srgb, var(--cks-text) 55%, transparent)',
-          fontFamily: 'var(--font-body)',
-        }}
-      >
-        {label}
-      </span>
-    </label>
+    </div>
   )
 }
 
@@ -1619,8 +1601,7 @@ function inputStyle(): React.CSSProperties {
     background: 'color-mix(in srgb, var(--cks-text) 4%, transparent)',
     border: '1px solid color-mix(in srgb, var(--cks-text) 14%, transparent)',
     color: 'var(--cks-text)',
-    fontFamily: 'var(--font-body)',
-    transition: 'border-color 0.15s ease, background 0.15s ease',
-    minHeight: '54px',
+    fontFamily: SANS,
+    transition: 'border-color 0.15s ease',
   }
 }
