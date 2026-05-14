@@ -18,6 +18,7 @@ import {
   Users,
   Gem,
   Gavel,
+  Layers,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 
@@ -40,13 +41,15 @@ import NotificacoesSection from './sections/NotificacoesSection'
 import AssinaturaSection from './sections/AssinaturaSection'
 import CarteirinhaSection from './sections/CarteirinhaSection'
 import ReliquiasSection from './sections/ReliquiasSection'
+import CodexSection from './sections/CodexSection'
 
-type Tab = 'conta' | 'propositos' | 'reliquias' | 'notificacoes' | 'assinatura' | 'carteirinha'
+type Tab = 'conta' | 'propositos' | 'reliquias' | 'codex' | 'notificacoes' | 'assinatura' | 'carteirinha'
 
 const ALL_TABS: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: 'conta',        label: 'Conta',         icon: User },
   { key: 'propositos',   label: 'Propósitos',    icon: Target },
   { key: 'reliquias',    label: 'Selos',         icon: Gem },
+  { key: 'codex',        label: 'Códex',         icon: Layers },
   { key: 'notificacoes', label: 'Notificações',  icon: Bell },
   { key: 'assinatura',   label: 'Assinatura',    icon: Sparkles },
   { key: 'carteirinha',  label: 'Carteirinha',   icon: CreditCard },
@@ -81,6 +84,7 @@ function PerfilContent() {
       t === 'conta' ||
       t === 'propositos' ||
       t === 'reliquias' ||
+      t === 'codex' ||
       t === 'notificacoes' ||
       t === 'assinatura' ||
       (t === 'carteirinha' && !isEduca)
@@ -254,6 +258,7 @@ function RenderTab({ tab }: { tab: Tab }) {
   if (tab === 'conta') return <ContaSection />
   if (tab === 'propositos') return <PropositosSection />
   if (tab === 'reliquias') return <ReliquiasSection />
+  if (tab === 'codex') return <CodexSection />
   if (tab === 'notificacoes') return <NotificacoesSection />
   if (tab === 'assinatura') return <AssinaturaSection />
   if (tab === 'carteirinha') return <CarteirinhaSection />

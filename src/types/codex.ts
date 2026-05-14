@@ -88,11 +88,8 @@ export interface UserCarta {
   favorita: boolean
 }
 
-/** Carta + estado de coleção do usuário (join cartas × user_cartas). */
-export interface CartaComEstado extends Carta {
-  desbloqueada: boolean
-  desbloqueada_em: string | null
-  vista: boolean
+/** Carta desbloqueada + estado de coleção do usuário (join cartas × user_cartas). */
+export interface CartaColecao extends Carta {
   favorita: boolean
 }
 
