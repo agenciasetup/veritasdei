@@ -148,7 +148,7 @@ export default function CartaView({
     <div
       className="flex flex-col"
       style={{
-        padding: `${big ? 16 : 11}px ${big ? 20 : 14}px ${big ? 18 : 13}px`,
+        padding: `${big ? 16 : 11}px ${big ? 24 : 16}px ${big ? 20 : 14}px`,
         gap: big ? 5 : 3,
       }}
     >
@@ -297,8 +297,11 @@ export default function CartaView({
         />
       )}
 
-      {/* Topo: raridade + estrelas + número */}
-      <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between p-2.5">
+      {/* Topo: raridade + estrelas + número — recuado pra dentro da moldura */}
+      <div
+        className="absolute inset-x-0 top-0 z-10 flex items-start justify-between"
+        style={{ padding: big ? 18 : 12 }}
+      >
         <div className="flex flex-col gap-1">
           <span
             className="font-semibold uppercase tracking-[0.14em]"
@@ -376,13 +379,16 @@ export default function CartaView({
 }
 
 /**
- * Moldura — frame ornamental sobreposto. O ESTILO é definido pelo admin
- * (campo `moldura`); a cor vem do accent da carta. Quatro estilos bem
- * distintos:
+ * Moldura — frame ornamental. O ESTILO é definido pelo admin (campo
+ * `moldura`); a cor vem do accent. Renderizada ABAIXO do conteúdo
+ * (z-8) — nunca cobre textos, badge ou número.
+ *
  *   minimalista → fio único fino
  *   classica    → fio duplo limpo
- *   vitral      → fio + "joias" nos cantos e meios das bordas
- *   ornamentada → fio duplo + cantos em "L" dourados + florões ✦
+ *   vitral      → fio + "joias" nas bordas
+ *   ornamentada → moldura dupla + cantos em quarto-de-círculo (fecham a
+ *                 moldura) + 4 losangos formando uma cruz (laterais
+ *                 elevados, na travessa)
  *
  * `compact` (cartas miniatura) reduz tudo a um fio só.
  */
@@ -395,7 +401,7 @@ function Moldura({
   accent: string
   compact?: boolean
 }) {
-  const wrap = 'absolute inset-0 pointer-events-none z-[15]'
+  const wrap = 'absolute inset-0 pointer-events-none z-[8]'
 
   if (compact) {
     return (
@@ -435,7 +441,6 @@ function Moldura({
   }
 
   if (tipo === 'vitral') {
-    // "joias" nos 4 cantos + 4 meios de borda
     const joias = [
       { top: 7, left: 7 },
       { top: 7, right: 7 },
@@ -466,7 +471,11 @@ function Moldura({
               left: 'left' in j ? j.left : undefined,
               right: 'right' in j ? j.right : undefined,
               transform:
-                'mx' in j ? 'translateX(-50%)' : 'my' in j ? 'translateY(-50%)' : undefined,
+                'mx' in j
+                  ? 'translateX(-50%)'
+                  : 'my' in j
+                    ? 'translateY(-50%)'
+                    : undefined,
             }}
           />
         ))}
@@ -474,42 +483,91 @@ function Moldura({
     )
   }
 
-  // ornamentada — moldura retangular dupla, dourada e brilhante, com 8
-  // losangos: 4 nos cantos + 4 nos meios das bordas (estes formam os
-  // quatro pontos de uma cruz).
-  const D = 14 // tamanho do losango
-  const FRAME = 12 // recuo da moldura externa
-  const OFF = FRAME - D / 2 // recuo do losango p/ centralizar na linha
+  // ornamentada
+  const D = 13 // losango
+  const FRAME = 11 // recuo da moldura externa
+  const R = 22 // raio dos cantos (quarto-de-círculo que fecha a moldura)
+  const ARC = 22 // tamanho do reforço de canto
+  const OFF = FRAME - D / 2 // centraliza o losango na linha da moldura
   const losango = (extra: CSSProperties): CSSProperties => ({
     position: 'absolute',
     width: D,
     height: D,
     background: accent,
-    boxShadow: `0 0 8px ${accent}, 0 0 2px ${accent}`,
+    boxShadow: `0 0 9px ${accent}, 0 0 3px ${accent}`,
     ...extra,
   })
   return (
     <div className={wrap}>
-      {/* moldura externa — linha forte com brilho */}
+      {/* moldura externa — linha forte e brilhante */}
       <div
-        className="absolute rounded-[6px]"
+        className="absolute"
         style={{
           inset: FRAME,
           border: `1.5px solid ${accent}`,
-          boxShadow: `0 0 10px ${accent}55, inset 0 0 10px ${accent}22`,
+          borderRadius: R,
+          boxShadow: `0 0 12px ${accent}55, inset 0 0 12px ${accent}22`,
         }}
       />
       {/* moldura interna — fio fino */}
       <div
-        className="absolute rounded-[4px]"
-        style={{ inset: FRAME + 4, border: `1px solid ${accent}AA` }}
+        className="absolute"
+        style={{
+          inset: FRAME + 4,
+          border: `1px solid ${accent}AA`,
+          borderRadius: R - 4,
+        }}
       />
-      {/* 4 cantos */}
-      <span style={losango({ top: OFF, left: OFF, transform: 'rotate(45deg)' })} />
-      <span style={losango({ top: OFF, right: OFF, transform: 'rotate(45deg)' })} />
-      <span style={losango({ bottom: OFF, left: OFF, transform: 'rotate(45deg)' })} />
-      <span style={losango({ bottom: OFF, right: OFF, transform: 'rotate(45deg)' })} />
-      {/* 4 meios — pontos da cruz */}
+      {/* cantos em quarto-de-círculo — reforçam e "fecham" a moldura */}
+      <span
+        className="absolute"
+        style={{
+          top: FRAME,
+          left: FRAME,
+          width: ARC,
+          height: ARC,
+          borderTop: `2.5px solid ${accent}`,
+          borderLeft: `2.5px solid ${accent}`,
+          borderTopLeftRadius: R,
+        }}
+      />
+      <span
+        className="absolute"
+        style={{
+          top: FRAME,
+          right: FRAME,
+          width: ARC,
+          height: ARC,
+          borderTop: `2.5px solid ${accent}`,
+          borderRight: `2.5px solid ${accent}`,
+          borderTopRightRadius: R,
+        }}
+      />
+      <span
+        className="absolute"
+        style={{
+          bottom: FRAME,
+          left: FRAME,
+          width: ARC,
+          height: ARC,
+          borderBottom: `2.5px solid ${accent}`,
+          borderLeft: `2.5px solid ${accent}`,
+          borderBottomLeftRadius: R,
+        }}
+      />
+      <span
+        className="absolute"
+        style={{
+          bottom: FRAME,
+          right: FRAME,
+          width: ARC,
+          height: ARC,
+          borderBottom: `2.5px solid ${accent}`,
+          borderRight: `2.5px solid ${accent}`,
+          borderBottomRightRadius: R,
+        }}
+      />
+      {/* 4 losangos formando a cruz — laterais elevados (na travessa) */}
       <span
         style={losango({
           top: OFF,
@@ -527,14 +585,14 @@ function Moldura({
       <span
         style={losango({
           left: OFF,
-          top: '50%',
+          top: '34%',
           transform: 'translateY(-50%) rotate(45deg)',
         })}
       />
       <span
         style={losango({
           right: OFF,
-          top: '50%',
+          top: '34%',
           transform: 'translateY(-50%) rotate(45deg)',
         })}
       />
