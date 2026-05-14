@@ -26,6 +26,8 @@ const TIPOS: CartaCondicaoTipo[] = [
   'quiz_gabaritado',
   'nivel',
   'streak',
+  'nota_contem_frase',
+  'grupo_estudo_tamanho',
   'contador',
 ]
 
@@ -255,13 +257,18 @@ function CondicaoCampos({
 
     case 'nivel':
     case 'streak':
+    case 'grupo_estudo_tamanho':
       return (
         <label className="flex items-center gap-2">
           <span
             className="text-xs"
             style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}
           >
-            {cond.tipo === 'nivel' ? 'Nível mínimo' : 'Dias consecutivos'}
+            {cond.tipo === 'nivel'
+              ? 'Nível mínimo'
+              : cond.tipo === 'streak'
+                ? 'Dias consecutivos'
+                : 'Membros no grupo'}
           </span>
           <input
             type="number"
@@ -272,6 +279,25 @@ function CondicaoCampos({
             }
             className="input"
             style={{ width: 100 }}
+          />
+        </label>
+      )
+
+    case 'nota_contem_frase':
+      return (
+        <label className="flex flex-col gap-1">
+          <span
+            className="text-[10px] uppercase tracking-wide"
+            style={{ color: '#8A8378', fontFamily: 'Poppins, sans-serif' }}
+          >
+            Frase a procurar nas anotações (sem diferenciar maiúsculas)
+          </span>
+          <input
+            type="text"
+            value={cond.ref ?? ''}
+            onChange={(e) => onChange({ ref: e.target.value })}
+            placeholder="ex.: Verbum caro factum est"
+            className="input"
           />
         </label>
       )

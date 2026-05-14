@@ -17,6 +17,8 @@ export type CartaCondicaoTipo =
   | 'nivel'
   | 'streak'
   | 'quiz_gabaritado'
+  | 'nota_contem_frase'
+  | 'grupo_estudo_tamanho'
   | 'contador'
 
 export interface CartaCondicao {
@@ -176,6 +178,8 @@ export const CONDICAO_LABEL: Record<CartaCondicaoTipo, string> = {
   nivel: 'Atingir um nível',
   streak: 'Atingir uma sequência de dias',
   quiz_gabaritado: 'Gabaritar um quiz (100%)',
+  nota_contem_frase: 'Escrever uma frase numa anotação (carta-segredo)',
+  grupo_estudo_tamanho: 'Grupo de estudo atingir N membros',
   contador: 'Atingir um contador de evento',
 }
 
