@@ -4,7 +4,7 @@ import { useRef, useState, type CSSProperties } from 'react'
 import Image from 'next/image'
 import { Lock, Star } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
-import { RARIDADE_META, type Carta } from '@/types/colecao'
+import { RARIDADE_META, type Carta, type CartaMoldura } from '@/types/colecao'
 
 interface Props {
   carta: Carta
@@ -105,7 +105,7 @@ export default function CartaView({
             {carta.dica_desbloqueio}
           </p>
         )}
-        <Moldura forca={1} accent="rgba(242,237,228,0.12)" />
+        <Moldura tipo="classica" accent="rgba(242,237,228,0.18)" compact={width < 140} />
       </div>
     )
     return onClick ? (
@@ -347,8 +347,8 @@ export default function CartaView({
       {/* Texto: ancorado no rodapé */}
       <div className="absolute inset-x-0 bottom-0 z-10">{textoZona}</div>
 
-      {/* Moldura ornamental */}
-      <Moldura forca={meta.molduraForca} accent={accent} />
+      {/* Moldura ornamental — estilo definido pelo admin */}
+      <Moldura tipo={carta.moldura} accent={accent} compact={width < 140} />
 
       {/* Holográfico (lendária / suprema) */}
       {meta.holo && (
@@ -376,82 +376,163 @@ export default function CartaView({
 }
 
 /**
- * Moldura — frame ornamental sobreposto. A intensidade escala com a raridade:
- *   1 → fio interno simples
- *   2 → fio duplo + cantos em "L" dourados
- *   3 → fio duplo + cantos em "L" + florões ✦ nos quatro cantos
+ * Moldura — frame ornamental sobreposto. O ESTILO é definido pelo admin
+ * (campo `moldura`); a cor vem do accent da carta. Quatro estilos bem
+ * distintos:
+ *   minimalista → fio único fino
+ *   classica    → fio duplo limpo
+ *   vitral      → fio + "joias" nos cantos e meios das bordas
+ *   ornamentada → fio duplo + cantos em "L" dourados + florões ✦
+ *
+ * `compact` (cartas miniatura) reduz tudo a um fio só.
  */
-function Moldura({ forca, accent }: { forca: number; accent: string }) {
-  const cantosL = [
-    { top: 9, left: 9, bt: true, bl: true },
-    { top: 9, right: 9, bt: true, br: true },
-    { bottom: 9, left: 9, bb: true, bl: true },
-    { bottom: 9, right: 9, bb: true, br: true },
-  ] as const
-  const cantosFlor = [
-    { top: 2, left: 6 },
-    { top: 2, right: 6 },
-    { bottom: 2, left: 6 },
-    { bottom: 2, right: 6 },
-  ] as const
+function Moldura({
+  tipo,
+  accent,
+  compact,
+}: {
+  tipo: CartaMoldura
+  accent: string
+  compact?: boolean
+}) {
+  const wrap = 'absolute inset-0 pointer-events-none z-[15]'
 
-  return (
-    <div className="absolute inset-0 pointer-events-none z-[15]">
-      {/* fio interno */}
-      <div
-        className="absolute rounded-[12px]"
-        style={{
-          inset: 5,
-          border: `1px solid ${accent}${forca >= 2 ? '99' : '55'}`,
-        }}
-      />
-      {/* fio duplo */}
-      {forca >= 2 && (
+  if (compact) {
+    return (
+      <div className={wrap}>
         <div
-          className="absolute rounded-[9px]"
-          style={{ inset: 9, border: `1px solid ${accent}33` }}
+          className="absolute rounded-[12px]"
+          style={{ inset: 5, border: `1px solid ${accent}66` }}
         />
-      )}
-      {/* cantos em L */}
-      {forca >= 2 &&
-        cantosL.map((c, i) => (
+      </div>
+    )
+  }
+
+  if (tipo === 'minimalista') {
+    return (
+      <div className={wrap}>
+        <div
+          className="absolute rounded-[12px]"
+          style={{ inset: 7, border: `1px solid ${accent}88` }}
+        />
+      </div>
+    )
+  }
+
+  if (tipo === 'classica') {
+    return (
+      <div className={wrap}>
+        <div
+          className="absolute rounded-[13px]"
+          style={{ inset: 5, border: `1.5px solid ${accent}` }}
+        />
+        <div
+          className="absolute rounded-[10px]"
+          style={{ inset: 9, border: `1px solid ${accent}44` }}
+        />
+      </div>
+    )
+  }
+
+  if (tipo === 'vitral') {
+    // "joias" nos 4 cantos + 4 meios de borda
+    const joias = [
+      { top: 7, left: 7 },
+      { top: 7, right: 7 },
+      { bottom: 7, left: 7 },
+      { bottom: 7, right: 7 },
+      { top: 5, left: '50%', mx: true },
+      { bottom: 5, left: '50%', mx: true },
+      { left: 5, top: '50%', my: true },
+      { right: 5, top: '50%', my: true },
+    ] as const
+    return (
+      <div className={wrap}>
+        <div
+          className="absolute rounded-[12px]"
+          style={{ inset: 6, border: `2px solid ${accent}AA` }}
+        />
+        {joias.map((j, i) => (
           <span
-            key={`l${i}`}
-            className="absolute"
+            key={i}
+            className="absolute rounded-full"
             style={{
-              width: 16,
-              height: 16,
-              top: 'top' in c ? c.top : undefined,
-              bottom: 'bottom' in c ? c.bottom : undefined,
-              left: 'left' in c ? c.left : undefined,
-              right: 'right' in c ? c.right : undefined,
-              borderTop: 'bt' in c && c.bt ? `2px solid ${accent}` : undefined,
-              borderBottom: 'bb' in c && c.bb ? `2px solid ${accent}` : undefined,
-              borderLeft: 'bl' in c && c.bl ? `2px solid ${accent}` : undefined,
-              borderRight: 'br' in c && c.br ? `2px solid ${accent}` : undefined,
+              width: 7,
+              height: 7,
+              background: accent,
+              boxShadow: `0 0 6px ${accent}`,
+              top: 'top' in j ? j.top : undefined,
+              bottom: 'bottom' in j ? j.bottom : undefined,
+              left: 'left' in j ? j.left : undefined,
+              right: 'right' in j ? j.right : undefined,
+              transform:
+                'mx' in j ? 'translateX(-50%)' : 'my' in j ? 'translateY(-50%)' : undefined,
             }}
           />
         ))}
-      {/* florões nos cantos */}
-      {forca >= 3 &&
-        cantosFlor.map((c, i) => (
-          <span
-            key={`f${i}`}
-            className="absolute"
-            style={{
-              color: accent,
-              fontSize: 12,
-              lineHeight: 1,
-              top: 'top' in c ? c.top : undefined,
-              bottom: 'bottom' in c ? c.bottom : undefined,
-              left: 'left' in c ? c.left : undefined,
-              right: 'right' in c ? c.right : undefined,
-              textShadow: `0 0 6px ${accent}`,
-            }}
-          >
-            ✦
-          </span>
-        ))}
+      </div>
+    )
+  }
+
+  // ornamentada
+  const cantosL = [
+    { top: 8, left: 8, bt: true, bl: true },
+    { top: 8, right: 8, bt: true, br: true },
+    { bottom: 8, left: 8, bb: true, bl: true },
+    { bottom: 8, right: 8, bb: true, br: true },
+  ] as const
+  const cantosFlor = [
+    { top: 1, left: 5 },
+    { top: 1, right: 5 },
+    { bottom: 1, left: 5 },
+    { bottom: 1, right: 5 },
+  ] as const
+  return (
+    <div className={wrap}>
+      <div
+        className="absolute rounded-[14px]"
+        style={{ inset: 4, border: `2px solid ${accent}` }}
+      />
+      <div
+        className="absolute rounded-[10px]"
+        style={{ inset: 9, border: `1px solid ${accent}66` }}
+      />
+      {cantosL.map((c, i) => (
+        <span
+          key={`l${i}`}
+          className="absolute"
+          style={{
+            width: 17,
+            height: 17,
+            top: 'top' in c ? c.top : undefined,
+            bottom: 'bottom' in c ? c.bottom : undefined,
+            left: 'left' in c ? c.left : undefined,
+            right: 'right' in c ? c.right : undefined,
+            borderTop: 'bt' in c && c.bt ? `2px solid ${accent}` : undefined,
+            borderBottom: 'bb' in c && c.bb ? `2px solid ${accent}` : undefined,
+            borderLeft: 'bl' in c && c.bl ? `2px solid ${accent}` : undefined,
+            borderRight: 'br' in c && c.br ? `2px solid ${accent}` : undefined,
+          }}
+        />
+      ))}
+      {cantosFlor.map((c, i) => (
+        <span
+          key={`f${i}`}
+          className="absolute"
+          style={{
+            color: accent,
+            fontSize: 11,
+            lineHeight: 1,
+            top: 'top' in c ? c.top : undefined,
+            bottom: 'bottom' in c ? c.bottom : undefined,
+            left: 'left' in c ? c.left : undefined,
+            right: 'right' in c ? c.right : undefined,
+            textShadow: `0 0 6px ${accent}`,
+          }}
+        >
+          ✦
+        </span>
+      ))}
     </div>
   )
 }

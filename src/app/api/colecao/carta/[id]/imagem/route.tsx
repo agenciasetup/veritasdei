@@ -1,12 +1,15 @@
 /**
  * GET /api/colecao/carta/[id]/imagem — renderiza a carta como PNG (next/og).
  *
- * Usado pelo botão "Salvar como imagem" do editor admin e pode servir para
- * compartilhamento. Gate: admin, OU o usuário desbloqueou a carta, OU a carta
- * está publicada e visível.
+ * Usado pelo botão "Salvar como imagem" do editor admin e para
+ * compartilhamento. Gate: admin, OU o usuário desbloqueou a carta, OU a
+ * carta está publicada e visível.
  *
- * O layout é uma versão fiel (porém simplificada p/ o Satori) da CartaView:
- * metade superior = ilustração, metade inferior = painel de texto.
+ * Notas técnicas (Satori / next/og):
+ *  - Satori NÃO renderiza WebP. As ilustrações são .webp no R2, então
+ *    pedimos um JPEG via Cloudflare Image Resizing (/cdn-cgi/image/...).
+ *  - Glifos exóticos (★ ✦ ✛) viram quadrados sem fonte própria — as
+ *    estrelas são SVG inline e os ornamentos são formas desenhadas.
  */
 import { ImageResponse } from 'next/og'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
@@ -18,6 +21,32 @@ export const dynamic = 'force-dynamic'
 
 const W = 600
 const H = 840
+
+/** Converte a URL .webp do R2 num JPEG via Cloudflare Image Resizing. */
+function comoJpeg(url: string): string {
+  try {
+    const u = new URL(url)
+    if (u.hostname === 'media.veritasdei.com.br') {
+      return `${u.origin}/cdn-cgi/image/format=jpeg,quality=86,width=900${u.pathname}`
+    }
+  } catch {
+    /* url inválida — devolve como veio */
+  }
+  return url
+}
+
+function Estrela({ on, cor }: { on: boolean; cor: string }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24">
+      <path
+        d="M12 2.5l2.9 6.1 6.6.9-4.8 4.5 1.2 6.6L12 17.9 6.1 21.1l1.2-6.6L2.5 9.9l6.6-.9z"
+        fill={on ? cor : 'rgba(0,0,0,0.45)'}
+        stroke={on ? cor : 'rgba(255,255,255,0.15)'}
+        strokeWidth="1"
+      />
+    </svg>
+  )
+}
 
 export async function GET(
   _req: Request,
@@ -67,8 +96,7 @@ export async function GET(
 
   const meta = RARIDADE_META[carta.raridade]
   const accent = carta.cor_accent || meta.cor
-  const estrelas =
-    '★'.repeat(carta.estrelas) + '☆'.repeat(Math.max(0, 5 - carta.estrelas))
+  const artUrl = carta.ilustracao_url ? comoJpeg(carta.ilustracao_url) : null
 
   return new ImageResponse(
     (
@@ -78,12 +106,13 @@ export async function GET(
           height: H,
           display: 'flex',
           flexDirection: 'column',
-          background: 'linear-gradient(160deg, #181510 0%, #0c0b09 100%)',
-          border: `4px solid ${meta.borda.replace(/[\d.]+\)$/, '0.9)')}`,
-          borderRadius: 28,
+          background: 'linear-gradient(160deg, #1b1812 0%, #0b0a08 100%)',
+          border: `4px solid ${accent}`,
+          borderRadius: 30,
+          position: 'relative',
         }}
       >
-        {/* Metade superior — ilustração */}
+        {/* Ilustração — metade superior */}
         <div
           style={{
             display: 'flex',
@@ -93,10 +122,10 @@ export async function GET(
             overflow: 'hidden',
           }}
         >
-          {carta.ilustracao_url ? (
+          {artUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={carta.ilustracao_url}
+              src={artUrl}
               alt=""
               width={W}
               height={H / 2}
@@ -108,17 +137,11 @@ export async function GET(
                 display: 'flex',
                 width: '100%',
                 height: '100%',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 140,
-                color: accent,
-                opacity: 0.4,
+                background:
+                  'radial-gradient(circle at 50% 40%, rgba(242,237,228,0.08), rgba(0,0,0,0) 70%)',
               }}
-            >
-              {carta.simbolo || '✛'}
-            </div>
+            />
           )}
-          {/* fade */}
           <div
             style={{
               display: 'flex',
@@ -126,9 +149,9 @@ export async function GET(
               left: 0,
               right: 0,
               bottom: 0,
-              height: 150,
+              height: 160,
               background:
-                'linear-gradient(to bottom, rgba(12,11,9,0), rgba(12,11,9,1))',
+                'linear-gradient(to bottom, rgba(11,10,8,0), rgba(11,10,8,1))',
             }}
           />
           {/* overlays */}
@@ -136,9 +159,10 @@ export async function GET(
             style={{
               display: 'flex',
               position: 'absolute',
-              top: 18,
-              left: 18,
+              top: 20,
+              left: 20,
               flexDirection: 'column',
+              gap: 8,
             }}
           >
             <div
@@ -155,8 +179,10 @@ export async function GET(
             >
               {meta.label.toUpperCase()}
             </div>
-            <div style={{ display: 'flex', color: accent, fontSize: 24, marginTop: 6 }}>
-              {estrelas}
+            <div style={{ display: 'flex', gap: 2 }}>
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Estrela key={i} on={i < carta.estrelas} cor={accent} />
+              ))}
             </div>
           </div>
           {carta.numero != null && (
@@ -164,7 +190,7 @@ export async function GET(
               style={{
                 display: 'flex',
                 position: 'absolute',
-                top: 18,
+                top: 20,
                 right: 22,
                 color: accent,
                 fontSize: 26,
@@ -175,36 +201,47 @@ export async function GET(
           )}
         </div>
 
-        {/* Metade inferior — painel */}
+        {/* Painel — metade inferior */}
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
             width: '100%',
             height: H / 2,
-            background: 'linear-gradient(180deg, #201b14 0%, #120f0b 100%)',
+            background: 'linear-gradient(180deg, #221d15 0%, #120f0b 100%)',
             borderTop: `2px solid ${accent}`,
-            padding: '26px 30px',
+            padding: '24px 30px',
           }}
         >
+          {/* divisor ornamental desenhado */}
           <div
             style={{
               display: 'flex',
+              alignItems: 'center',
               justifyContent: 'center',
-              color: accent,
-              fontSize: 16,
-              marginBottom: 14,
+              gap: 10,
+              marginBottom: 16,
             }}
           >
-            ✦ ─────────── ✦
+            <div
+              style={{ display: 'flex', width: 90, height: 1, background: `${accent}88` }}
+            />
+            <div
+              style={{
+                display: 'flex',
+                width: 7,
+                height: 7,
+                background: accent,
+                transform: 'rotate(45deg)',
+              }}
+            />
+            <div
+              style={{ display: 'flex', width: 90, height: 1, background: `${accent}88` }}
+            />
           </div>
+
           <div
-            style={{
-              display: 'flex',
-              color: '#F4EFE3',
-              fontSize: 40,
-              fontWeight: 700,
-            }}
+            style={{ display: 'flex', color: '#F6F1E5', fontSize: 40, fontWeight: 700 }}
           >
             {carta.nome}
           </div>
@@ -213,7 +250,7 @@ export async function GET(
               style={{
                 display: 'flex',
                 color: accent,
-                fontSize: 18,
+                fontSize: 17,
                 letterSpacing: 2,
                 marginTop: 4,
               }}
@@ -233,11 +270,25 @@ export async function GET(
                 borderRadius: 8,
               }}
             >
-              <div style={{ display: 'flex', color: '#E8E2D6', fontSize: 22, fontStyle: 'italic' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  color: '#EBE5D8',
+                  fontSize: 22,
+                  fontStyle: 'italic',
+                }}
+              >
                 “{carta.frase_central}”
               </div>
               {carta.frase_referencia && (
-                <div style={{ display: 'flex', color: '#8A8378', fontSize: 15, marginTop: 4 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    color: '#9A9388',
+                    fontSize: 15,
+                    marginTop: 4,
+                  }}
+                >
                   {carta.frase_referencia}
                 </div>
               )}
@@ -245,38 +296,48 @@ export async function GET(
           )}
           {carta.efeito_simbolico && (
             <div style={{ display: 'flex', flexDirection: 'column', marginTop: 16 }}>
-              <div style={{ display: 'flex', color: accent, fontSize: 14, letterSpacing: 2 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  color: accent,
+                  fontSize: 14,
+                  letterSpacing: 2,
+                }}
+              >
                 EFEITO
               </div>
-              <div style={{ display: 'flex', color: '#C9C2B4', fontSize: 18, marginTop: 2 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  color: '#C9C2B4',
+                  fontSize: 18,
+                  marginTop: 2,
+                }}
+              >
                 {carta.efeito_simbolico}
               </div>
             </div>
           )}
           <div style={{ display: 'flex', flex: 1 }} />
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              color: '#8A8378',
-              fontSize: 15,
-              letterSpacing: 2,
-            }}
-          >
-            <div style={{ display: 'flex' }}>{(carta.categoria || '').toUpperCase()}</div>
-            <div style={{ display: 'flex', color: accent, fontSize: 22 }}>
-              {carta.simbolo || ''}
+          {carta.categoria && (
+            <div
+              style={{
+                display: 'flex',
+                color: '#8A8378',
+                fontSize: 15,
+                letterSpacing: 2,
+              }}
+            >
+              {carta.categoria.toUpperCase()}
             </div>
-          </div>
+          )}
         </div>
       </div>
     ),
     {
       width: W,
       height: H,
-      headers: {
-        'Cache-Control': 'public, max-age=300',
-      },
+      headers: { 'Cache-Control': 'public, max-age=300' },
     },
   )
 }
