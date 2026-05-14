@@ -37,6 +37,20 @@ export default function DashboardSelosStrip() {
       .slice(0, PREVIEW_COUNT)
   }, [catalog, unlockedIds])
 
+  // Próximo selo a desbloquear — o mais "alcançável" (comum primeiro).
+  // Dá direção: em vez de caixas vazias, mostra um objetivo concreto.
+  const nextLocked = useMemo(() => {
+    const locked = catalog.filter((r) => !unlockedIds.has(r.id))
+    return locked
+      .slice()
+      .sort((a, b) => {
+        const aR = RARITY_ORDER.indexOf(a.rarity)
+        const bR = RARITY_ORDER.indexOf(b.rarity)
+        if (aR !== bR) return bR - aR
+        return a.sort_order - b.sort_order
+      })[0]
+  }, [catalog, unlockedIds])
+
   const unlockedCount = unlockedIds.size
   const totalCount = catalog.length
 
@@ -84,14 +98,60 @@ export default function DashboardSelosStrip() {
               ))}
             </div>
           ) : previewItems.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 py-4">
-              <Sparkles className="w-8 h-8" style={{ color: 'var(--accent)', opacity: 0.6 }} />
-              <p
-                className="text-xs"
-                style={{ color: 'var(--text-2)', fontFamily: 'var(--font-body)' }}
-              >
-                Estude e reze pra desbloquear seus primeiros selos.
-              </p>
+            <div className="flex-1 flex items-center gap-3 py-2">
+              {nextLocked ? (
+                <>
+                  <div style={{ opacity: 0.5 }}>
+                    <ReliquiaIcon reliquia={nextLocked} size="md" />
+                  </div>
+                  <div className="min-w-0">
+                    <p
+                      className="text-[10px] tracking-[0.14em] uppercase"
+                      style={{
+                        color: 'var(--accent)',
+                        fontFamily: 'var(--font-body)',
+                      }}
+                    >
+                      Próximo selo
+                    </p>
+                    <p
+                      className="text-sm leading-tight"
+                      style={{
+                        color: 'var(--text-1)',
+                        fontFamily: 'var(--font-elegant)',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {nextLocked.name}
+                    </p>
+                    <p
+                      className="text-[11px] mt-0.5 line-clamp-2"
+                      style={{
+                        color: 'var(--text-3)',
+                        fontFamily: 'var(--font-body)',
+                      }}
+                    >
+                      {nextLocked.description}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Sparkles
+                    className="w-6 h-6"
+                    style={{ color: 'var(--accent)', opacity: 0.6 }}
+                  />
+                  <p
+                    className="text-xs"
+                    style={{
+                      color: 'var(--text-2)',
+                      fontFamily: 'var(--font-body)',
+                    }}
+                  >
+                    Estude e reze pra desbloquear seus primeiros selos.
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex-1 grid grid-cols-3 gap-2 content-start justify-items-center">
@@ -101,14 +161,31 @@ export default function DashboardSelosStrip() {
             </div>
           )}
 
-          <div className="flex items-center justify-end mt-3 gap-1">
+          <div className="flex items-center justify-between mt-3 gap-2">
+            {previewItems.length > 0 && nextLocked ? (
+              <span
+                className="text-[11px] truncate"
+                style={{
+                  color: 'var(--text-3)',
+                  fontFamily: 'var(--font-body)',
+                }}
+              >
+                Próximo: {nextLocked.name}
+              </span>
+            ) : (
+              <span />
+            )}
             <span
-              className="text-[11px]"
-              style={{ color: 'var(--accent)', fontFamily: 'var(--font-body)' }}
+              className="inline-flex items-center gap-1 flex-shrink-0"
             >
-              Ver coleção
+              <span
+                className="text-[11px]"
+                style={{ color: 'var(--accent)', fontFamily: 'var(--font-body)' }}
+              >
+                Ver coleção
+              </span>
+              <ArrowRight className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
             </span>
-            <ArrowRight className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
           </div>
         </div>
       </GlassCard>

@@ -1,36 +1,37 @@
 'use client'
 
 /**
- * Dashboard do Veritas Educa — versão flat editorial unificada.
+ * Dashboard do Veritas Educa — redesenho por zonas (UX).
  *
- * Mobile e desktop usam EXATAMENTE os mesmos componentes. Mobile = stack
- * vertical natural; desktop = grid 12-col (max-w-[1400px]).
+ * Antes: 13 cards de peso visual idêntico, mobile = web empilhado inteiro.
+ * Agora: layouts DEDICADOS (desktop x mobile) organizados em 4 zonas com
+ * hierarquia clara.
  *
- * Hierarquia (todas as larguras lg+):
- *   Row 1 — Hero 4:5 (4)  +  ContinueHeroCard com banner (8)        ← destaque
- *   Row 2 — Rosário (4)   +  Liturgia (4)        +  Magistério (4)
- *   Row 3 — Estudo (4)    +  Debate (4)          +  Sequência (4)
- *   Row 4 — Selos (4)     +  Sua rede hoje (4)   +  Grupos (4)
- *   Row 5 — Pessoas pra seguir (12)
- *   Row 6 — CTA Assine (12, só free)
+ *   ZONA 1 — HOJE        → Continuar + bloco "Hoje" (missão/sequência/XP)
+ *   ZONA 2 — ESTUDAR     → Trilhas (pilares) + ferramentas + devocional
+ *   ZONA 3 — COMUNIDADE  → módulo único + convite
+ *   + Conversão          → Assine (só free)
+ *
+ * Desktop: grid 12-col (max-w-[1400px]). Mobile: stack curto e priorizado
+ * — corta o que não serve numa sessão de celular (selos cheios, lista de
+ * mistérios, sugestões de seguir).
  *
  * Visual: superfícies sólidas em --surface-2, bordas 5% branco, dourado
- * só em acentos (números, barras, "Continuar →"). Tipografia serifa nos
- * títulos. Sem gradientes, sem eyebrows ALL CAPS.
+ * só em acentos. Tipografia serifa nos títulos.
  */
 
 import Link from 'next/link'
-import { ArrowRight, BookOpen, Lock, Sparkles, Swords } from 'lucide-react'
+import { ArrowRight, Lock, Sparkles, Swords } from 'lucide-react'
 import { useSubscription } from '@/contexts/SubscriptionContext'
-import LevelHeroExpanded from '@/components/educa/LevelHeroExpanded'
-import DailyCheckin from '@/components/educa/DailyCheckin'
+import GreetingStrip from '@/components/educa/GreetingStrip'
+import TodayCard from '@/components/educa/TodayCard'
 import ContinueHeroCard from '@/components/educa/ContinueHeroCard'
+import TrilhasProgressCard from '@/components/educa/TrilhasProgressCard'
+import RosarioDoDiaCard from '@/components/educa/RosarioDoDiaCard'
 import DashboardLiturgiaCard from '@/components/educa/DashboardLiturgiaCard'
 import DashboardSelosStrip from '@/components/educa/DashboardSelosStrip'
-import DashboardGruposStrip from '@/components/educa/DashboardGruposStrip'
-import RosarioDoDiaCard from '@/components/educa/RosarioDoDiaCard'
-import FriendsSuggestionsCard from '@/components/educa/FriendsSuggestionsCard'
-import FriendsActivityCard from '@/components/educa/FriendsActivityCard'
+import CommunityModule from '@/components/educa/CommunityModule'
+import InviteCard from '@/components/educa/InviteCard'
 
 const SHELL_STYLE = {
   background: 'var(--surface-2)',
@@ -39,76 +40,76 @@ const SHELL_STYLE = {
 
 export default function EducaDashboard() {
   const { isPremium, loading: subLoading } = useSubscription()
+  const showAssine = !subLoading && !isPremium
 
   return (
-    <div
-      className="relative min-h-screen"
-      style={{ background: 'var(--surface-1)' }}
-    >
-      <main
-        className="
-          max-w-2xl mx-auto px-4 pt-5 pb-28
-          md:py-10
-          lg:max-w-[1400px] lg:px-8 lg:pt-10 lg:pb-16
-        "
-      >
-        <div
-          className="
-            space-y-3
-            md:space-y-4
-            lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-5
-          "
-        >
-          {/* Row 1: Hero 4:5 + ContinueHero (altura travada no desktop pra
-           *  evitar cards esticados em colunas largas). */}
-          <div className="lg:col-span-4 lg:h-[440px]">
-            <LevelHeroExpanded />
-          </div>
-          <div className="lg:col-span-8 lg:h-[440px]">
+    <div className="relative min-h-screen" style={{ background: 'var(--surface-1)' }}>
+      {/* ───────────── MOBILE ───────────── */}
+      <main className="lg:hidden max-w-2xl mx-auto px-4 pt-5 pb-28 space-y-4">
+        <GreetingStrip />
+        <ContinueHeroCard />
+        <TodayCard />
+        <TrilhasProgressCard compact />
+
+        <div className="grid grid-cols-2 gap-3">
+          <RosarioDoDiaCard compact />
+          <DashboardLiturgiaCard compact />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <MagisterioCard compact />
+          <DebateCard compact />
+        </div>
+
+        <CommunityModule compact />
+        <InviteCard compact />
+
+        {showAssine && <AssineCard />}
+      </main>
+
+      {/* ───────────── DESKTOP ───────────── */}
+      <main className="hidden lg:block max-w-[1400px] mx-auto px-8 pt-8 pb-16">
+        <GreetingStrip />
+
+        <div className="mt-6 grid grid-cols-12 gap-5">
+          {/* Zona 1 — Hoje */}
+          <div className="col-span-8">
             <ContinueHeroCard />
           </div>
+          <div className="col-span-4">
+            <TodayCard />
+          </div>
 
-          {/* Row 2: Rosário + Liturgia + Magistério */}
-          <div className="lg:col-span-4">
-            <RosarioDoDiaCard />
+          {/* Zona 2 — Estudar */}
+          <div className="col-span-8">
+            <TrilhasProgressCard />
           </div>
-          <div className="lg:col-span-4">
-            <DashboardLiturgiaCard />
+          <div className="col-span-4 flex flex-col gap-5">
+            <RosarioDoDiaCard compact />
+            <DashboardLiturgiaCard compact />
           </div>
-          <div className="lg:col-span-4">
+
+          <div className="col-span-4">
             <MagisterioCard />
           </div>
-
-          {/* Row 3: Estudo + Debate + Sequência */}
-          <div className="lg:col-span-4">
-            <EstudoCard />
-          </div>
-          <div className="lg:col-span-4">
+          <div className="col-span-4">
             <DebateCard />
           </div>
-          <div className="lg:col-span-4">
-            <DailyCheckin />
-          </div>
-
-          {/* Row 4: Selos + Rede + Grupos */}
-          <div className="lg:col-span-4">
+          <div className="col-span-4">
             <DashboardSelosStrip />
           </div>
-          <div className="lg:col-span-4">
-            <FriendsActivityCard />
+
+          {/* Zona 3 — Comunidade */}
+          <div className="col-span-8">
+            <CommunityModule />
           </div>
-          <div className="lg:col-span-4">
-            <DashboardGruposStrip />
+          <div className="col-span-4">
+            <InviteCard />
           </div>
 
-          {/* Row 5: Pessoas pra seguir */}
-          <div className="lg:col-span-12">
-            <FriendsSuggestionsCard />
-          </div>
-
-          {/* Row 6: CTA Assine (só free) */}
-          {!subLoading && !isPremium && (
-            <div className="lg:col-span-12">
+          {/* Conversão */}
+          {showAssine && (
+            <div className="col-span-12">
               <AssineCard />
             </div>
           )}
@@ -119,7 +120,7 @@ export default function EducaDashboard() {
 }
 
 /* ────────────────────────────────────────────────────────────────────────
- * Cards locais flat. Estrutura idêntica entre eles pra manter ritmo.
+ * Cards de navegação locais (ferramentas de estudo).
  * ──────────────────────────────────────────────────────────────────────── */
 
 function NavCard({
@@ -127,20 +128,22 @@ function NavCard({
   icon,
   title,
   hint,
+  compact = false,
 }: {
   href: string
   icon: React.ReactNode
   title: string
   hint?: string
+  compact?: boolean
 }) {
   return (
     <Link
       href={href}
-      className="flex h-full flex-col rounded-[24px] p-6 transition-colors hover:bg-white/[0.01]"
-      style={{ ...SHELL_STYLE, minHeight: 160 }}
+      className="flex h-full flex-col rounded-[24px] p-5 lg:p-6 transition-colors hover:bg-white/[0.01]"
+      style={{ ...SHELL_STYLE, minHeight: compact ? 0 : 150 }}
     >
       <div
-        className="w-11 h-11 rounded-full flex items-center justify-center"
+        className="w-10 h-10 lg:w-11 lg:h-11 rounded-full flex items-center justify-center"
         style={{
           background: 'rgba(0,0,0,0.3)',
           border: '1px solid rgba(255,255,255,0.05)',
@@ -149,7 +152,7 @@ function NavCard({
         {icon}
       </div>
       <p
-        className="text-lg mt-3 leading-tight"
+        className="text-base lg:text-lg mt-3 leading-tight"
         style={{
           color: 'var(--text-1)',
           fontFamily: 'var(--font-elegant)',
@@ -160,61 +163,25 @@ function NavCard({
       </p>
       {hint && (
         <p
-          className="text-xs mt-1"
-          style={{
-            color: 'var(--text-3)',
-            fontFamily: 'var(--font-body)',
-          }}
+          className="text-[11px] lg:text-xs mt-1"
+          style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
         >
           {hint}
         </p>
       )}
       <ArrowRight
-        className="w-4 h-4 mt-auto self-end"
+        className="w-4 h-4 mt-auto pt-3 self-end"
         style={{ color: 'var(--accent)' }}
       />
     </Link>
   )
 }
 
-function EstudoCard() {
-  return (
-    <NavCard
-      href="/educa/estudo"
-      icon={
-        <BookOpen
-          className="w-5 h-5"
-          style={{ color: 'var(--accent)' }}
-          strokeWidth={1.6}
-        />
-      }
-      title="Estudo"
-      hint="Trilhas, pilares e provas"
-    />
-  )
-}
-
-function DebateCard() {
-  return (
-    <NavCard
-      href="/educa/debate"
-      icon={
-        <Swords
-          className="w-5 h-5"
-          style={{ color: 'var(--accent)' }}
-          strokeWidth={1.6}
-        />
-      }
-      title="Modo Debate"
-      hint="Treine apologética com IA"
-    />
-  )
-}
-
-function MagisterioCard() {
+function MagisterioCard({ compact = false }: { compact?: boolean }) {
   return (
     <NavCard
       href="/educa/magisterio"
+      compact={compact}
       icon={
         <Sparkles
           className="w-5 h-5"
@@ -224,6 +191,24 @@ function MagisterioCard() {
       }
       title="Magistério"
       hint="Pergunte à IA católica"
+    />
+  )
+}
+
+function DebateCard({ compact = false }: { compact?: boolean }) {
+  return (
+    <NavCard
+      href="/educa/debate"
+      compact={compact}
+      icon={
+        <Swords
+          className="w-5 h-5"
+          style={{ color: 'var(--accent)' }}
+          strokeWidth={1.6}
+        />
+      }
+      title="Modo Debate"
+      hint="Treine apologética com IA"
     />
   )
 }
@@ -265,10 +250,7 @@ function AssineCard() {
           </p>
           <p
             className="text-xs mt-1"
-            style={{
-              color: 'var(--text-3)',
-              fontFamily: 'var(--font-body)',
-            }}
+            style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
           >
             Trilhas completas, quizzes e IA católica liberados.
           </p>

@@ -79,7 +79,11 @@ const META: Record<
   },
 }
 
-export default function RosarioDoDiaCard() {
+export default function RosarioDoDiaCard({
+  compact = false,
+}: {
+  compact?: boolean
+}) {
   const today = new Date()
   const tipo = TIPO_POR_DIA[today.getDay()]
   const meta = META[tipo]
@@ -87,7 +91,7 @@ export default function RosarioDoDiaCard() {
   return (
     <Link
       href="/rosario"
-      className="block h-full rounded-[24px] p-6 lg:p-7 transition-colors hover:bg-white/[0.01]"
+      className="block h-full rounded-[24px] p-5 lg:p-7 transition-colors hover:bg-white/[0.01]"
       style={{
         background: 'var(--surface-2)',
         border: '1px solid rgba(255,255,255,0.05)',
@@ -128,7 +132,7 @@ export default function RosarioDoDiaCard() {
         </div>
 
         <p
-          className="text-xl lg:text-2xl leading-tight mt-3"
+          className="text-lg lg:text-2xl leading-tight mt-3"
           style={{
             color: 'var(--text-1)',
             fontFamily: 'var(--font-elegant)',
@@ -138,6 +142,30 @@ export default function RosarioDoDiaCard() {
           {meta.label}
         </p>
 
+        {compact ? (
+          <div className="mt-auto pt-4 flex items-center justify-between">
+            <span
+              className="text-[11px]"
+              style={{
+                color: 'var(--text-3)',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              5 dezenas · ~20 min
+            </span>
+            <span
+              className="inline-flex items-center gap-1.5 text-sm"
+              style={{
+                color: 'var(--accent)',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              Rezar
+              <ArrowRight className="w-3.5 h-3.5" />
+            </span>
+          </div>
+        ) : (
+          <>
         <ol className="mt-4 space-y-1.5">
           {meta.itens.map((item, idx) => (
             <li key={idx} className="flex items-baseline gap-2.5">
@@ -185,6 +213,8 @@ export default function RosarioDoDiaCard() {
             <ArrowRight className="w-3.5 h-3.5" />
           </span>
         </div>
+          </>
+        )}
       </div>
     </Link>
   )
