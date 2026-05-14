@@ -59,11 +59,12 @@ export default function EducaDashboard() {
             lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-5
           "
         >
-          {/* Row 1: Hero 4:5 + ContinueHero (mesma altura no desktop) */}
-          <div className="lg:col-span-4">
+          {/* Row 1: Hero 4:5 + ContinueHero (altura travada no desktop pra
+           *  evitar cards esticados em colunas largas). */}
+          <div className="lg:col-span-4 lg:h-[440px]">
             <LevelHeroExpanded />
           </div>
-          <div className="lg:col-span-8">
+          <div className="lg:col-span-8 lg:h-[440px]">
             <ContinueHeroCard />
           </div>
 

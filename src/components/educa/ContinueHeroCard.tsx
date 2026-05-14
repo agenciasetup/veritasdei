@@ -66,23 +66,31 @@ const SHELL_STYLE = {
 export default function ContinueHeroCard() {
   const { user } = useAuth()
   const { last: lastStudied } = useLastStudied(user?.id)
-  // Cover prefere subtopic > topic > group (mais específico → mais geral).
-  // Cada nível pode ter web + mobile separados. Fallback final: banner da
-  // tabela educa_banners cujo link aponte pra essa trilha.
+  // Cover prefere a do subtópico (a aula em si). Topic vem como fallback
+  // próximo, mas NÃO usamos a capa do grupo/pilar aqui — ela é genérica
+  // demais pra representar a aula que o user parou. Se nem subtopic nem
+  // topic têm capa, caímos pro layout sem imagem (ainda dá pra retomar).
   const directCover =
     lastStudied?.subtopicCoverUrl
     ?? lastStudied?.topicCoverUrl
-    ?? lastStudied?.groupCoverUrl
     ?? null
   const directCoverMobile =
     lastStudied?.subtopicCoverUrlMobile
     ?? lastStudied?.topicCoverUrlMobile
-    ?? lastStudied?.groupCoverUrlMobile
     ?? null
   const bannerFallback = useBannerFallback(
     lastStudied?.groupSlug,
     !!lastStudied && !directCover,
   )
+
+  // URL completa da aula quando temos topic + subtopic; senão volta pro
+  // pilar (último caso — só pra não dar 404 se a hierarquia estiver
+  // incompleta).
+  const continueHref = lastStudied
+    ? lastStudied.topicSlug && lastStudied.subtopicSlug
+      ? `/estudo/${lastStudied.groupSlug}/${lastStudied.topicSlug}/${lastStudied.subtopicSlug}`
+      : `/estudo/${lastStudied.groupSlug}`
+    : '/educa/estudo'
 
   // Estado 3: usuário novo, sem progresso → CTA editorial
   if (!lastStudied) {
@@ -152,14 +160,14 @@ export default function ContinueHeroCard() {
 
   return (
     <Link
-      href={`/estudo/${lastStudied.groupSlug}`}
+      href={continueHref}
       className="block h-full rounded-[24px] overflow-hidden transition-colors hover:bg-white/[0.01]"
       style={SHELL_STYLE}
     >
       <div className="h-full flex flex-col">
         {cover ? (
           <div
-            className="relative w-full aspect-[16/9] flex-shrink-0"
+            className="relative w-full h-44 lg:h-[260px] flex-shrink-0"
             style={{
               backgroundImage: `url(${cover.desktop})`,
               backgroundSize: 'cover',
