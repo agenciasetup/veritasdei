@@ -180,12 +180,17 @@ export default function FriendsSuggestionsCard() {
   const header = (
     <div className="flex items-center justify-between mb-3">
       <div className="flex items-center gap-2">
-        <Users2 className="w-4 h-4" style={{ color: 'var(--accent)' }} />
+        <Users2
+          className="w-4 h-4"
+          strokeWidth={1.6}
+          style={{ color: 'var(--accent)' }}
+        />
         <h3
-          className="text-[11px] tracking-[0.18em] uppercase"
+          className="text-sm"
           style={{
-            color: 'var(--accent)',
-            fontFamily: 'var(--font-display)',
+            color: 'var(--text-1)',
+            fontFamily: 'var(--font-elegant)',
+            fontWeight: 500,
           }}
         >
           Pessoas pra seguir
@@ -204,7 +209,7 @@ export default function FriendsSuggestionsCard() {
 
   if (loading) {
     return (
-      <GlassCard variant="default" padded>
+      <GlassCard variant="flat" padded>
         {header}
         <div className="space-y-2">
           {[0, 1, 2].map((i) => (
@@ -222,7 +227,7 @@ export default function FriendsSuggestionsCard() {
   if (suggestions.length === 0 && !hasContext) {
     return (
       <Link href="/perfil" className="block">
-        <GlassCard variant="default" padded interactive>
+        <GlassCard variant="flat" padded interactive>
           {header}
           <div className="flex items-center gap-3 py-2">
             <div
@@ -251,7 +256,7 @@ export default function FriendsSuggestionsCard() {
 
   if (suggestions.length === 0) {
     return (
-      <GlassCard variant="default" padded>
+      <GlassCard variant="flat" padded>
         {header}
         <p
           className="text-xs py-2"
@@ -265,7 +270,7 @@ export default function FriendsSuggestionsCard() {
   }
 
   return (
-    <GlassCard variant="default" padded>
+    <GlassCard variant="flat" padded>
       {header}
       <div className="space-y-2">
         {suggestions.map((s) => (

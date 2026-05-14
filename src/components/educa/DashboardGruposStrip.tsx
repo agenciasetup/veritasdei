@@ -21,7 +21,7 @@ export default function DashboardGruposStrip() {
 
   if (loading) {
     return (
-      <GlassCard variant="default" padded>
+      <GlassCard variant="flat" padded>
         <div
           className="h-20 rounded-xl animate-pulse"
           style={{ background: 'rgba(255,255,255,0.03)' }}
@@ -33,7 +33,7 @@ export default function DashboardGruposStrip() {
   if (groups.length === 0) {
     return (
       <Link href="/estudo/grupos" className="block">
-        <GlassCard variant="default" padded interactive>
+        <GlassCard variant="flat" padded interactive>
           <div className="flex items-center gap-3 md:gap-4">
             <div
               className="w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
@@ -92,12 +92,17 @@ export default function DashboardGruposStrip() {
     <div>
       <div className="flex items-center justify-between mb-3 px-1">
         <div className="flex items-center gap-2">
-          <Users className="w-4 h-4" style={{ color: 'var(--accent)' }} />
+          <Users
+            className="w-4 h-4"
+            strokeWidth={1.6}
+            style={{ color: 'var(--accent)' }}
+          />
           <h3
-            className="text-[11px] tracking-[0.18em] uppercase"
+            className="text-sm"
             style={{
-              color: 'var(--accent)',
-              fontFamily: 'var(--font-display)',
+              color: 'var(--text-1)',
+              fontFamily: 'var(--font-elegant)',
+              fontWeight: 500,
             }}
           >
             Meus grupos
@@ -120,7 +125,7 @@ export default function DashboardGruposStrip() {
             href={`/estudo/grupos/${g.id}`}
             className="flex-shrink-0 w-[220px]"
           >
-            <GlassCard variant="default" interactive>
+            <GlassCard variant="flat" interactive>
               <div className="p-4 h-full">
                 <div className="flex items-center justify-between mb-2">
                   <div

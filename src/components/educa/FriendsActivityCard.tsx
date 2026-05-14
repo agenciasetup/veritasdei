@@ -153,12 +153,17 @@ export default function FriendsActivityCard() {
   const header = (
     <div className="flex items-center justify-between mb-3">
       <div className="flex items-center gap-2">
-        <Users2 className="w-4 h-4" style={{ color: 'var(--accent)' }} />
+        <Users2
+          className="w-4 h-4"
+          strokeWidth={1.6}
+          style={{ color: 'var(--accent)' }}
+        />
         <h3
-          className="text-[11px] tracking-[0.18em] uppercase"
+          className="text-sm"
           style={{
-            color: 'var(--accent)',
-            fontFamily: 'var(--font-display)',
+            color: 'var(--text-1)',
+            fontFamily: 'var(--font-elegant)',
+            fontWeight: 500,
           }}
         >
           Sua rede hoje
@@ -169,7 +174,7 @@ export default function FriendsActivityCard() {
 
   if (loading) {
     return (
-      <GlassCard variant="default" padded>
+      <GlassCard variant="flat" padded>
         {header}
         <div
           className="h-12 rounded-xl animate-pulse"
@@ -182,7 +187,7 @@ export default function FriendsActivityCard() {
   if (!hasNetwork) {
     return (
       <Link href="/comunidade" className="block">
-        <GlassCard variant="default" padded interactive>
+        <GlassCard variant="flat" padded interactive>
           {header}
           <div className="flex items-center gap-3 py-1">
             <p
@@ -203,7 +208,7 @@ export default function FriendsActivityCard() {
 
   if (friends.length === 0) {
     return (
-      <GlassCard variant="default" padded>
+      <GlassCard variant="flat" padded>
         {header}
         <p
           className="text-xs"
@@ -225,7 +230,7 @@ export default function FriendsActivityCard() {
 
   return (
     <Link href="/comunidade" className="block">
-      <GlassCard variant="default" padded interactive>
+      <GlassCard variant="flat" padded interactive>
         {header}
         <div className="flex items-center gap-3">
           <div className="flex -space-x-2 flex-shrink-0">

@@ -62,7 +62,7 @@ export default function RosarioDoDiaCard() {
 
   return (
     <Link href="/rosario" className="block h-full">
-      <GlassCard variant="default" interactive className="h-full">
+      <GlassCard variant="flat" interactive className="h-full">
         <div className="relative p-5 md:p-6 h-full flex flex-col">
           <span
             aria-hidden
