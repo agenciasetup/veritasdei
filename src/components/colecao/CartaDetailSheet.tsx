@@ -26,7 +26,7 @@ export default function CartaDetailSheet({
     <Sheet open={open} onDismiss={onClose} label="Detalhe da carta" detents={[0.92]}>
       {carta && (
         <div className="flex flex-col items-center gap-5 px-4 pb-8">
-          <CartaView carta={carta} showDetails width={300} />
+          <CartaView carta={carta} width={300} />
 
           {onToggleFavorita && (
             <button

@@ -104,6 +104,10 @@ export async function updateSession(request: NextRequest) {
       // a aba "Carteirinha" é escondida no front quando product=educa).
       path === '/perfil' ||
       path.startsWith('/perfil/') ||
+      // Coleção (Códex de cartas) — desbloqueada via estudo, faz parte
+      // da experiência do Educa.
+      path === '/colecao' ||
+      path.startsWith('/colecao/') ||
       // Painel admin — o gate de role=admin já é feito no AdminLayout.
       // Admin precisa acessar /admin/educa/banners de dentro do subdomínio,
       // e o atalho "Admin" no perfil leva pra cá.
