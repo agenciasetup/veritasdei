@@ -18,12 +18,18 @@
  * — posiciona um botão lápis no canto superior direito que abre o drawer
  * de edição. RLS no banco garante que apenas admin consegue salvar
  * (mesmo se alguém tentar burlar o front).
+ *
+ * Quando `cover_url` está entre os campos, o drawer abre o <ImageUploader>
+ * unificado (web+mobile, drag&drop, specs, crop por reposicionamento,
+ * upload direto pro R2) e salva também as colunas `cover_url_mobile`,
+ * `cover_position` e `cover_position_mobile` na mesma operação.
  */
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Pencil, Save, X, Loader2, ExternalLink } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
+import ImageUploader, { type ImageSpec } from '@/components/admin/ImageUploader'
 
 export type EditableField = 'cover_url' | 'video_url' | 'title' | 'description'
 
@@ -46,6 +52,85 @@ type Props = {
    *  a página é recarregada via window.location.reload() pra refletir
    *  o novo estado sem refator do hook que carregou os dados. */
   onSaved?: () => void
+}
+
+// Spec por tabela — escolhemos as proporções de cada superfície do app.
+// Pilar/Grupo/Tópico aparecem como poster 16:10; trilhas como poster 3:4.
+const COVER_SPECS_WEB: Record<EditableTable, ImageSpec> = {
+  content_groups: {
+    recommendedWidth: 1600,
+    recommendedHeight: 1000,
+    aspectRatio: '16 / 10',
+    maxMb: 3,
+    formats: 'JPG, PNG, WebP',
+    hint: 'Capa do pilar no card poster (16:10). O título sobrepõe o canto inferior — deixe o foco visual em cima ou no centro.',
+  },
+  content_topics: {
+    recommendedWidth: 1600,
+    recommendedHeight: 1000,
+    aspectRatio: '16 / 10',
+    maxMb: 3,
+    formats: 'JPG, PNG, WebP',
+    hint: 'Capa do tópico (16:10).',
+  },
+  content_subtopics: {
+    recommendedWidth: 1600,
+    recommendedHeight: 1000,
+    aspectRatio: '16 / 10',
+    maxMb: 3,
+    formats: 'JPG, PNG, WebP',
+    hint: 'Capa do subtópico (16:10).',
+  },
+  trails: {
+    recommendedWidth: 1200,
+    recommendedHeight: 1600,
+    aspectRatio: '3 / 4',
+    maxMb: 3,
+    formats: 'JPG, PNG, WebP',
+    hint: 'Poster da trilha (3:4). Componha como um pôster de filme.',
+  },
+}
+
+const COVER_SPECS_MOBILE: Record<EditableTable, ImageSpec> = {
+  content_groups: {
+    recommendedWidth: 1080,
+    recommendedHeight: 1080,
+    aspectRatio: '1 / 1',
+    maxMb: 2,
+    formats: 'JPG, PNG, WebP',
+    hint: 'Variante mobile quadrada — mais legível em telas estreitas. Vazio = usa a web com reposicionamento.',
+  },
+  content_topics: {
+    recommendedWidth: 1080,
+    recommendedHeight: 1080,
+    aspectRatio: '1 / 1',
+    maxMb: 2,
+    formats: 'JPG, PNG, WebP',
+    hint: 'Variante mobile do tópico. Vazio = usa a web.',
+  },
+  content_subtopics: {
+    recommendedWidth: 1080,
+    recommendedHeight: 1080,
+    aspectRatio: '1 / 1',
+    maxMb: 2,
+    formats: 'JPG, PNG, WebP',
+    hint: 'Variante mobile do subtópico. Vazio = usa a web.',
+  },
+  trails: {
+    recommendedWidth: 1080,
+    recommendedHeight: 1350,
+    aspectRatio: '4 / 5',
+    maxMb: 2,
+    formats: 'JPG, PNG, WebP',
+    hint: 'Poster mobile da trilha (4:5). Vazio = usa a web.',
+  },
+}
+
+const PREFIX_BY_TABLE: Record<EditableTable, string> = {
+  content_groups: 'educa/covers/groups',
+  content_topics: 'educa/covers/topics',
+  content_subtopics: 'educa/covers/subtopics',
+  trails: 'educa/covers/trails',
 }
 
 export default function InlineEditOverlay({
@@ -121,6 +206,14 @@ export default function InlineEditOverlay({
 // Drawer
 // ────────────────────────────────────────────────────────────────────────
 
+/** Quando o usuário pede edição de `cover_url`, o drawer também
+ *  carrega e salva os campos auxiliares (variante mobile + posições). */
+const COVER_EXTRA_FIELDS = [
+  'cover_url_mobile',
+  'cover_position',
+  'cover_position_mobile',
+] as const
+
 function EditDrawer({
   table,
   id,
@@ -141,16 +234,25 @@ function EditDrawer({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const hasCover = fields.includes('cover_url')
+  const selectColumns = [
+    ...fields,
+    ...(hasCover ? COVER_EXTRA_FIELDS : []),
+  ].join(', ')
+
   // Carrega valores atuais
   useEffect(() => {
-    const supabase = createClient()
-    if (!supabase) return
     let cancelled = false
     ;(async () => {
+      const supabase = createClient()
+      if (!supabase) {
+        if (!cancelled) setLoading(false)
+        return
+      }
       setLoading(true)
       const { data, error } = await supabase
         .from(table)
-        .select(fields.join(', '))
+        .select(selectColumns)
         .eq('id', id)
         .maybeSingle()
       if (cancelled) return
@@ -158,7 +260,11 @@ function EditDrawer({
         setError(error.message)
       } else if (data) {
         const next: Record<string, string> = {}
-        for (const f of fields) {
+        const allFields: string[] = [
+          ...fields,
+          ...(hasCover ? COVER_EXTRA_FIELDS : []),
+        ]
+        for (const f of allFields) {
           const v = (data as Record<string, unknown>)[f]
           next[f] = typeof v === 'string' ? v : ''
         }
@@ -169,7 +275,9 @@ function EditDrawer({
     return () => {
       cancelled = true
     }
-  }, [table, id, fields])
+  // selectColumns/fields são estáveis durante o lifetime do drawer.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [table, id, selectColumns])
 
   const set = useCallback((field: string, value: string) => {
     setValues((cur) => ({ ...cur, [field]: value }))
@@ -181,7 +289,11 @@ function EditDrawer({
     setSaving(true)
     setError(null)
     const payload: Record<string, string | null> = {}
-    for (const f of fields) {
+    const allFields: string[] = [
+      ...fields,
+      ...(hasCover ? COVER_EXTRA_FIELDS : []),
+    ]
+    for (const f of allFields) {
       payload[f] = values[f]?.trim() ? values[f].trim() : null
     }
     const { error } = await supabase.from(table).update(payload).eq('id', id)
@@ -189,6 +301,19 @@ function EditDrawer({
     if (error) {
       setError(error.message)
       return
+    }
+    // Após salvar capa, invalida o cache server-side dos pilares pro
+    // /educa/estudo recarregar a versão nova sem esperar o TTL de 5 min.
+    if (hasCover) {
+      try {
+        await fetch('/api/admin/educa/revalidate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ target: 'pillars' }),
+        })
+      } catch {
+        /* não bloqueia */
+      }
     }
     onSaved()
   }
@@ -206,7 +331,7 @@ function EditDrawer({
       onClick={onClose}
     >
       <div
-        className="w-full md:max-w-lg rounded-t-3xl md:rounded-3xl max-h-[90vh] overflow-y-auto"
+        className="w-full md:max-w-2xl rounded-t-3xl md:rounded-3xl max-h-[90vh] overflow-y-auto"
         style={{
           background:
             'linear-gradient(180deg, color-mix(in srgb, var(--accent) 4%, var(--surface-2)) 0%, var(--surface-1) 100%)',
@@ -270,15 +395,40 @@ function EditDrawer({
             </div>
           ) : (
             <>
-              {fields.map((f) => (
-                <div key={f} className="contents">
+              {fields.map((f) => {
+                if (f === 'cover_url') {
+                  return (
+                    <CoverField
+                      key={f}
+                      table={table}
+                      web={{
+                        url: values.cover_url ?? '',
+                        position: values.cover_position ?? '',
+                      }}
+                      mobile={{
+                        url: values.cover_url_mobile ?? '',
+                        position: values.cover_position_mobile ?? '',
+                      }}
+                      onWebChange={(v) => {
+                        set('cover_url', v.url)
+                        set('cover_position', v.position ?? '')
+                      }}
+                      onMobileChange={(v) => {
+                        set('cover_url_mobile', v.url)
+                        set('cover_position_mobile', v.position ?? '')
+                      }}
+                    />
+                  )
+                }
+                return (
                   <FieldEditor
+                    key={f}
                     field={f}
                     value={values[f] ?? ''}
                     onChange={(v) => set(f, v)}
                   />
-                </div>
-              ))}
+                )
+              })}
               {error && (
                 <p
                   className="text-sm px-3 py-2 rounded-xl"
@@ -347,7 +497,50 @@ function EditDrawer({
 }
 
 // ────────────────────────────────────────────────────────────────────────
-// Field editor (cover_url e video_url ganham preview)
+// Cover field (delega ao ImageUploader universal)
+// ────────────────────────────────────────────────────────────────────────
+
+function CoverField({
+  table,
+  web,
+  mobile,
+  onWebChange,
+  onMobileChange,
+}: {
+  table: EditableTable
+  web: { url: string; position: string }
+  mobile: { url: string; position: string }
+  onWebChange: (v: { url: string; position?: string }) => void
+  onMobileChange: (v: { url: string; position?: string }) => void
+}) {
+  const prefix = PREFIX_BY_TABLE[table]
+  const specWeb = COVER_SPECS_WEB[table]
+  const specMobile = COVER_SPECS_MOBILE[table]
+
+  return (
+    <ImageUploader
+      label="Capa"
+      description="Web e mobile separadas. Toggle no canto direito; o preview já mostra a proporção certa."
+      web={{
+        url: web.url,
+        position: web.position || undefined,
+        spec: specWeb,
+        prefix: `${prefix}/web`,
+      }}
+      mobile={{
+        url: mobile.url,
+        position: mobile.position || undefined,
+        spec: specMobile,
+        prefix: `${prefix}/mobile`,
+      }}
+      onWebChange={onWebChange}
+      onMobileChange={onMobileChange}
+    />
+  )
+}
+
+// ────────────────────────────────────────────────────────────────────────
+// Field editor (campos simples: title, description, video_url)
 // ────────────────────────────────────────────────────────────────────────
 
 function FieldEditor({
@@ -359,25 +552,20 @@ function FieldEditor({
   value: string
   onChange: (v: string) => void
 }) {
-  const isCover = field === 'cover_url'
   const isVideo = field === 'video_url'
   const isText = field === 'title' || field === 'description'
 
   const label =
-    field === 'cover_url'
-      ? 'URL da capa'
-      : field === 'video_url'
-        ? 'URL do vídeo (YouTube)'
-        : field === 'title'
-          ? 'Título'
-          : 'Descrição'
+    field === 'video_url'
+      ? 'URL do vídeo (YouTube)'
+      : field === 'title'
+        ? 'Título'
+        : field === 'description'
+          ? 'Descrição'
+          : ''
 
   const placeholder =
-    field === 'cover_url'
-      ? 'https://...'
-      : field === 'video_url'
-        ? 'https://youtube.com/watch?v=...'
-        : ''
+    field === 'video_url' ? 'https://youtube.com/watch?v=...' : ''
 
   return (
     <div>
@@ -434,23 +622,6 @@ function FieldEditor({
         />
       )}
 
-      {/* Preview */}
-      {isCover && value && (
-        <div
-          className="mt-3 rounded-xl overflow-hidden aspect-[21/9]"
-          style={{ background: 'rgba(0,0,0,0.4)' }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={value}
-            alt=""
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              ;(e.target as HTMLImageElement).style.opacity = '0.2'
-            }}
-          />
-        </div>
-      )}
       {isVideo && value && (
         <a
           href={value}
