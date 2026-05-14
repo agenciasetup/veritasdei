@@ -100,7 +100,14 @@ export default function StudyPillarClient({ pillarSlug, topicSlug, subtopicSlug 
   if (!group) return <EmptyPillar pillarSlug={pillarSlug} />
 
   if (!topicSlug) {
-    return <PillarTopicGrid pillarSlug={pillarSlug} group={group} topics={topics} />
+    return (
+      <PillarTopicGrid
+        pillarSlug={pillarSlug}
+        group={group}
+        topics={topics}
+        studiedIds={studiedIds}
+      />
+    )
   }
 
   return (
@@ -130,6 +137,7 @@ function PillarTopicGrid({
   pillarSlug,
   group,
   topics,
+  studiedIds,
 }: {
   pillarSlug: string
   group: {
@@ -140,6 +148,7 @@ function PillarTopicGrid({
     cover_url?: string | null
   }
   topics: PillarTreeNode[]
+  studiedIds: Set<string>
 }) {
   const firstTopic = topics[0]
   return (
@@ -181,6 +190,7 @@ function PillarTopicGrid({
               total={Math.ceil(topics.length / 4)}
               topics={sessionTopics}
               pillarSlug={pillarSlug}
+              studiedIds={studiedIds}
             />
           ))}
         </div>
@@ -212,11 +222,13 @@ function PillarSession({
   total,
   topics,
   pillarSlug,
+  studiedIds,
 }: {
   index: number
   total: number
   topics: PillarTreeNode[]
   pillarSlug: string
+  studiedIds: Set<string>
 }) {
   const sessionNumber = index + 1
   return (
@@ -246,16 +258,25 @@ function PillarSession({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
-        {topics.map((topic) => (
-          <TopicPosterCard
-            key={topic.id}
-            href={`/estudo/${pillarSlug}/${topic.slug}`}
-            title={topic.title}
-            subtitle={topic.subtitle ?? undefined}
-            description={topic.description ?? undefined}
-            coverUrl={topic.cover_url ?? null}
-          />
-        ))}
+        {topics.map((topic) => {
+          const total = topic.subtopics.length
+          const studied = topic.subtopics.reduce(
+            (acc, s) => acc + (studiedIds.has(s.id) ? 1 : 0),
+            0,
+          )
+          return (
+            <TopicPosterCard
+              key={topic.id}
+              href={`/estudo/${pillarSlug}/${topic.slug}`}
+              title={topic.title}
+              subtitle={topic.subtitle ?? undefined}
+              description={topic.description ?? undefined}
+              coverUrl={topic.cover_url ?? null}
+              studied={studied}
+              total={total}
+            />
+          )
+        })}
       </div>
     </section>
   )
@@ -267,25 +288,34 @@ function TopicPosterCard({
   subtitle,
   description,
   coverUrl,
+  studied,
+  total,
 }: {
   href: string
   title: string
   subtitle?: string
   description?: string
   coverUrl?: string | null
+  studied?: number
+  total?: number
 }) {
   const hasCover = Boolean(coverUrl)
+  const hasProgress =
+    typeof studied === 'number' && typeof total === 'number' && total > 0
+  const percent = hasProgress
+    ? Math.min(100, Math.round((studied! / total!) * 100))
+    : 0
+
   return (
     <Link
       href={href}
       className="group relative block rounded-3xl overflow-hidden active:scale-[0.99] transition-transform"
       style={{
-        aspectRatio: '4 / 5',
+        aspectRatio: '3 / 4',
         background: hasCover
-          ? 'var(--surface-2)'
-          : 'linear-gradient(180deg, color-mix(in srgb, var(--accent) 18%, var(--surface-2)) 0%, var(--surface-1) 100%)',
-        border: '1px solid color-mix(in srgb, var(--accent) 15%, transparent)',
-        boxShadow: '0 8px 32px -12px rgba(0,0,0,0.6)',
+          ? 'var(--surface-1)'
+          : 'var(--surface-2)',
+        border: '1px solid rgba(255,255,255,0.05)',
       }}
     >
       {hasCover ? (
@@ -297,12 +327,14 @@ function TopicPosterCard({
             className="absolute inset-0 w-full h-full object-cover"
             loading="lazy"
           />
+          {/* Fade bottom-to-top: sólido embaixo pra leitura do texto,
+           *  transparente em cima pra deixar a imagem respirar. */}
           <div
             aria-hidden
             className="absolute inset-0 pointer-events-none"
             style={{
               background:
-                'linear-gradient(180deg, rgba(15,14,12,0.3) 0%, rgba(15,14,12,0.55) 55%, rgba(15,14,12,0.95) 100%)',
+                'linear-gradient(0deg, var(--surface-1) 0%, rgba(15,14,12,0.95) 28%, rgba(15,14,12,0.55) 55%, rgba(15,14,12,0.1) 80%, transparent 100%)',
             }}
           />
         </>
@@ -312,23 +344,23 @@ function TopicPosterCard({
           className="absolute inset-0 opacity-25"
           style={{
             background:
-              'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.18), transparent 60%)',
+              'radial-gradient(circle at 80% 20%, rgba(201,168,76,0.18), transparent 60%)',
           }}
         />
       )}
 
-      <div className="relative h-full p-4 md:p-5 flex flex-col">
-        {/* Ícone topo (se não há cover, fica visível; com cover, fica subtle) */}
+      <div className="relative h-full p-5 md:p-6 flex flex-col">
         <div
-          className="w-11 h-11 md:w-12 md:h-12 rounded-2xl flex items-center justify-center backdrop-blur"
+          className="w-10 h-10 rounded-2xl flex items-center justify-center backdrop-blur"
           style={{
-            background: hasCover ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.3)',
-            border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
+            background: 'rgba(0,0,0,0.45)',
+            border: '1px solid rgba(255,255,255,0.06)',
           }}
         >
           <BookOpen
-            className="w-5 h-5 md:w-6 md:h-6"
+            className="w-4 h-4"
             style={{ color: 'var(--accent)' }}
+            strokeWidth={1.6}
           />
         </div>
 
@@ -337,42 +369,73 @@ function TopicPosterCard({
         <div>
           {subtitle && (
             <p
-              className="text-[10px] tracking-[0.2em] uppercase mb-1 opacity-90"
+              className="text-[10px] tracking-[0.16em] uppercase mb-1.5"
               style={{
-                color: 'var(--accent)',
-                fontFamily: 'var(--font-display)',
+                color: 'var(--text-3)',
+                fontFamily: 'var(--font-body)',
               }}
             >
               {subtitle}
             </p>
           )}
           <h3
-            className="text-lg md:text-xl leading-tight mb-1"
+            className="text-lg md:text-xl leading-tight"
             style={{
-              fontFamily: 'var(--font-display)',
+              fontFamily: 'var(--font-elegant)',
               color: 'var(--text-1)',
-              textShadow: hasCover ? '0 2px 10px rgba(0,0,0,0.6)' : 'none',
+              fontWeight: 500,
             }}
           >
             {title}
           </h3>
           {description && (
             <p
-              className="text-xs leading-relaxed line-clamp-2 mt-1"
+              className="text-[12px] leading-relaxed line-clamp-2 mt-1.5"
               style={{
-                color: 'rgba(232,226,216,0.78)',
+                color: 'var(--text-3)',
                 fontFamily: 'var(--font-body)',
               }}
             >
               {description}
             </p>
           )}
-          <div className="flex items-center justify-end mt-2">
-            <ArrowRight
-              className="w-4 h-4 group-hover:translate-x-1 transition-transform"
-              style={{ color: 'var(--accent)' }}
-            />
-          </div>
+
+          {hasProgress && (
+            <div className="mt-4">
+              <div className="flex items-baseline justify-between mb-1.5">
+                <span
+                  className="text-[10px]"
+                  style={{
+                    color: 'var(--text-3)',
+                    fontFamily: 'var(--font-body)',
+                  }}
+                >
+                  Progresso
+                </span>
+                <span
+                  className="text-[11px] tabular-nums"
+                  style={{
+                    color: studied! > 0 ? 'var(--accent)' : 'var(--text-3)',
+                    fontFamily: 'var(--font-body)',
+                  }}
+                >
+                  {studied}/{total}
+                </span>
+              </div>
+              <div
+                className="h-1 rounded-full overflow-hidden"
+                style={{ background: 'rgba(255,255,255,0.08)' }}
+              >
+                <div
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{
+                    width: `${percent}%`,
+                    background: 'var(--accent)',
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </Link>
