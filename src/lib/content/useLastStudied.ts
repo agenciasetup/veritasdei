@@ -9,6 +9,8 @@ export interface LastStudied {
   subtopicSlug: string | null
   groupSlug: string
   groupTitle: string
+  groupCoverUrl: string | null
+  groupCoverUrlMobile: string | null
   studiedAt: string
 }
 
@@ -25,7 +27,7 @@ export interface LastStudied {
  * dentro do EDUCA, sem ficar "preso" caso o admin altere algo.
  */
 
-const CACHE_KEY = 'vd.educa.lastStudied.v1'
+const CACHE_KEY = 'vd.educa.lastStudied.v2'
 const CACHE_TTL_MS = 60_000
 
 interface CacheEntry {
@@ -96,7 +98,7 @@ export function useLastStudied(userId: string | undefined) {
         const { data } = await supabase
           .from('user_content_progress')
           .select(
-            'subtopic_id, content_type, studied_at, content_subtopics!inner(id, slug, title, content_topics!inner(group_id, content_groups(slug, title)))',
+            'subtopic_id, content_type, studied_at, content_subtopics!inner(id, slug, title, content_topics!inner(group_id, content_groups(slug, title, cover_url, cover_url_mobile)))',
           )
           .eq('user_id', userId!)
           .order('studied_at', { ascending: false })
@@ -124,15 +126,35 @@ export function useLastStudied(userId: string | undefined) {
                 | {
                     group_id: string | null
                     content_groups:
-                      | { slug: string; title: string }
-                      | { slug: string; title: string }[]
+                      | {
+                          slug: string
+                          title: string
+                          cover_url: string | null
+                          cover_url_mobile: string | null
+                        }
+                      | {
+                          slug: string
+                          title: string
+                          cover_url: string | null
+                          cover_url_mobile: string | null
+                        }[]
                       | null
                   }
                 | {
                     group_id: string | null
                     content_groups:
-                      | { slug: string; title: string }
-                      | { slug: string; title: string }[]
+                      | {
+                          slug: string
+                          title: string
+                          cover_url: string | null
+                          cover_url_mobile: string | null
+                        }
+                      | {
+                          slug: string
+                          title: string
+                          cover_url: string | null
+                          cover_url_mobile: string | null
+                        }[]
                       | null
                   }[]
                 | null
@@ -157,6 +179,8 @@ export function useLastStudied(userId: string | undefined) {
           subtopicSlug: sub.slug ?? null,
           groupSlug: group?.slug ?? (data as { content_type: string }).content_type,
           groupTitle: group?.title ?? (data as { content_type: string }).content_type,
+          groupCoverUrl: group?.cover_url ?? null,
+          groupCoverUrlMobile: group?.cover_url_mobile ?? null,
           studiedAt: (data as { studied_at: string }).studied_at,
         }
 
