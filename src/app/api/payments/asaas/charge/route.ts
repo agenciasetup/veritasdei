@@ -22,12 +22,20 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import {
   AsaasApiError,
   createSubscription,
+  getPayment,
   getPixQrCode,
   intervaloToCycle,
   listSubscriptionPayments,
   updateCustomer,
   type AsaasBillingType,
+  type AsaasCreditCard,
+  type AsaasCreditCardHolderInfo,
 } from '@/lib/payments/providers/asaas-client'
+import {
+  maxInstallments,
+  totalWithInterest,
+  type Intervalo,
+} from '@/lib/payments/installments'
 
 export const runtime = 'nodejs'
 
@@ -63,6 +71,9 @@ const addressSchema = z.object({
   addressComplement: z.string().max(80).optional(),
 })
 
+// Cartão pode vir como dados completos (primeira vez) OU só como token
+// (reuso de cartão salvo). Validamos no handler (não via union) pra
+// preservar inferência de tipo no body.
 const bodySchema = z.discriminatedUnion('method', [
   z.object({
     sessionId: z.string().uuid(),
@@ -78,9 +89,13 @@ const bodySchema = z.discriminatedUnion('method', [
     sessionId: z.string().uuid(),
     method: z.literal('credit_card'),
     customer: customerSchema,
-    card: cardSchema,
-    address: addressSchema,
     installments: z.number().int().min(1).max(12).optional(),
+    card: cardSchema.optional(),
+    address: addressSchema.optional(),
+    // savedCardId é o UUID local da row em billing_saved_cards. O backend
+    // resolve pro token Asaas — nunca expomos o token bruto no client.
+    savedCardId: z.string().uuid().optional(),
+    saveCard: z.boolean().optional(),
   }),
 ])
 
@@ -141,17 +156,19 @@ export async function POST(req: Request) {
     )
   }
 
-  const cycle = intervaloToCycle(sess.intervalo as 'mensal' | 'semestral' | 'anual')
+  const intervalo = sess.intervalo as Intervalo
+  const cycle = intervaloToCycle(intervalo as 'mensal' | 'semestral' | 'anual')
   if (!cycle) {
     return NextResponse.json(
       { error: `Intervalo "${sess.intervalo}" não suporta assinatura recorrente` },
       { status: 400 },
     )
   }
-  const value = (sess.amount_cents as number) / 100
+  const baseCents = sess.amount_cents as number
+  const baseValue = baseCents / 100
   const nextDueDate = new Date(Date.now() + 24 * 60 * 60 * 1000)
     .toISOString()
-    .slice(0, 10) // YYYY-MM-DD (D+1)
+    .slice(0, 10)
 
   const billingType: AsaasBillingType =
     body.method === 'pix'
@@ -160,89 +177,231 @@ export async function POST(req: Request) {
         ? 'BOLETO'
         : 'CREDIT_CARD'
 
+  // Parcelamento: só aplica em cartão. Mensal sempre 1x; semestral até
+  // 6x; anual até 12x. Juros 2,49% ao mês simples repassados ao cliente.
+  const requestedInstallments =
+    body.method === 'credit_card' && typeof body.installments === 'number'
+      ? body.installments
+      : 1
+  const allowedMax =
+    body.method === 'credit_card'
+      ? maxInstallments(intervalo, 12)
+      : 1
+  const installments = Math.max(
+    1,
+    Math.min(requestedInstallments, allowedMax),
+  )
+  const isInstalledPayment = body.method === 'credit_card' && installments > 1
+  const totalCentsForCard =
+    body.method === 'credit_card'
+      ? totalWithInterest(baseCents, installments)
+      : baseCents
+
+  // Cartão pode vir como dados completos OU como token (cartão salvo).
+  type CreditCardData = {
+    fullCard: AsaasCreditCard | null
+    holderInfo: AsaasCreditCardHolderInfo | null
+    cardToken: string | null
+    saveCard: boolean
+  }
+  let cc: CreditCardData = {
+    fullCard: null,
+    holderInfo: null,
+    cardToken: null,
+    saveCard: false,
+  }
+  if (body.method === 'credit_card') {
+    if (body.savedCardId) {
+      // Resolve o token Asaas a partir do registro local. RLS garante que
+      // user só lê os próprios cartões.
+      const { data: savedCard } = await admin
+        .from('billing_saved_cards')
+        .select('asaas_credit_card_token')
+        .eq('id', body.savedCardId)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (!savedCard?.asaas_credit_card_token) {
+        return NextResponse.json(
+          { error: 'Cartão salvo não encontrado' },
+          { status: 404 },
+        )
+      }
+      cc = {
+        fullCard: null,
+        holderInfo: null,
+        cardToken: savedCard.asaas_credit_card_token as string,
+        saveCard: false,
+      }
+    } else if (body.card && body.address) {
+      cc = {
+        fullCard: {
+          holderName: body.card.holderName,
+          number: body.card.number.replace(/\s+/g, ''),
+          expiryMonth: body.card.expiryMonth.padStart(2, '0'),
+          expiryYear:
+            body.card.expiryYear.length === 2
+              ? `20${body.card.expiryYear}`
+              : body.card.expiryYear,
+          ccv: body.card.ccv,
+        },
+        holderInfo: {
+          name: body.customer.name,
+          email: body.customer.email,
+          cpfCnpj: body.customer.cpfCnpj.replace(/\D/g, ''),
+          postalCode: body.address.postalCode.replace(/\D/g, ''),
+          addressNumber: body.address.addressNumber,
+          addressComplement: body.address.addressComplement,
+          mobilePhone:
+            body.customer.mobilePhone?.replace(/\D/g, '') || undefined,
+        },
+        cardToken: null,
+        saveCard: !!body.saveCard,
+      }
+    } else {
+      return NextResponse.json(
+        { error: 'Cartão ou token obrigatório' },
+        { status: 400 },
+      )
+    }
+  }
+
   try {
-    // 4. Atualiza o customer Asaas com os dados que o checkout coletou.
-    // Sem cpfCnpj, qualquer cobrança falha — independente do método.
+    // 4. Atualiza o customer Asaas. Sem cpfCnpj, qualquer cobrança falha.
     await updateCustomer(sess.asaas_customer_id as string, {
       name: body.customer.name,
       email: body.customer.email,
       cpfCnpj: body.customer.cpfCnpj.replace(/\D/g, ''),
       mobilePhone: body.customer.mobilePhone?.replace(/\D/g, '') || undefined,
-      ...(body.method === 'credit_card'
+      ...(body.method === 'credit_card' && cc.holderInfo
         ? {
-            postalCode: body.address.postalCode.replace(/\D/g, ''),
-            addressNumber: body.address.addressNumber,
-            addressComplement: body.address.addressComplement,
+            postalCode: cc.holderInfo.postalCode,
+            addressNumber: cc.holderInfo.addressNumber,
+            addressComplement: cc.holderInfo.addressComplement,
           }
         : {}),
     })
 
-    // 5. Cria subscription no Asaas
-    const sub = await createSubscription({
-      customer: sess.asaas_customer_id as string,
-      billingType,
-      value,
-      nextDueDate,
-      cycle,
-      description: `Assinatura Veritas Dei — ${sess.intervalo}`,
-      externalReference: user.id,
-      ...(body.method === 'credit_card'
-        ? {
-            creditCard: {
-              holderName: body.card.holderName,
-              number: body.card.number.replace(/\s+/g, ''),
-              expiryMonth: body.card.expiryMonth.padStart(2, '0'),
-              expiryYear:
-                body.card.expiryYear.length === 2
-                  ? `20${body.card.expiryYear}`
-                  : body.card.expiryYear,
-              ccv: body.card.ccv,
-            },
-            creditCardHolderInfo: {
-              name: body.customer.name,
-              email: body.customer.email,
-              cpfCnpj: body.customer.cpfCnpj.replace(/\D/g, ''),
-              postalCode: body.address.postalCode.replace(/\D/g, ''),
-              addressNumber: body.address.addressNumber,
-              addressComplement: body.address.addressComplement,
-              mobilePhone:
-                body.customer.mobilePhone?.replace(/\D/g, '') || undefined,
-            },
-            remoteIp: getRemoteIp(req),
-          }
-        : {}),
-    })
-
-    // 5. Pega o primeiro payment dessa sub (o invoice imediato).
-    // O Asaas cria a subscription e o primeiro invoice em duas operações
-    // assíncronas — a 1ª listagem retorna às vezes vazia. Tentamos até
-    // 4x com backoff progressivo antes de desistir (foi a causa de
-    // precisar clicar 2x pra gerar PIX).
+    // 5. Cria a cobrança. Caminho A) parcelado no cartão → PAYMENT único
+    // com installmentCount; Caminho B) demais casos → SUBSCRIPTION
+    // recorrente como antes.
+    let subscriptionId: string | null = null
     let firstPayment: Awaited<
       ReturnType<typeof listSubscriptionPayments>
     >['data'][number] | undefined
-    for (let attempt = 0; attempt < 4; attempt++) {
-      const list = await listSubscriptionPayments(sub.id, 1)
-      firstPayment = list.data[0]
-      if (firstPayment) break
-      await new Promise(r => setTimeout(r, 250 * (attempt + 1)))
+
+    if (isInstalledPayment) {
+      // Importa lazy pra não engordar o bundle no caminho comum.
+      const { createPayment } = await import(
+        '@/lib/payments/providers/asaas-client'
+      )
+      const payment = await createPayment({
+        customer: sess.asaas_customer_id as string,
+        billingType: 'CREDIT_CARD',
+        value: totalCentsForCard / 100 / installments, // Asaas calcula nominal por parcela
+        dueDate: nextDueDate,
+        description: `Veritas Dei — ${sess.intervalo} (${installments}x)`,
+        externalReference: user.id,
+        installmentCount: installments,
+        totalValue: totalCentsForCard / 100,
+        ...(cc.cardToken
+          ? { creditCardToken: cc.cardToken }
+          : {
+              creditCard: cc.fullCard ?? undefined,
+              creditCardHolderInfo: cc.holderInfo ?? undefined,
+              remoteIp: getRemoteIp(req),
+            }),
+      })
+      firstPayment = payment
+    } else {
+      const sub = await createSubscription({
+        customer: sess.asaas_customer_id as string,
+        billingType,
+        value: baseValue,
+        nextDueDate,
+        cycle,
+        description: `Assinatura Veritas Dei — ${sess.intervalo}`,
+        externalReference: user.id,
+        ...(body.method === 'credit_card'
+          ? cc.cardToken
+            ? { creditCardToken: cc.cardToken, remoteIp: getRemoteIp(req) }
+            : {
+                creditCard: cc.fullCard ?? undefined,
+                creditCardHolderInfo: cc.holderInfo ?? undefined,
+                remoteIp: getRemoteIp(req),
+              }
+          : {}),
+      })
+      subscriptionId = sub.id
+
+      // Pega o primeiro invoice (retry: 4x com backoff)
+      for (let attempt = 0; attempt < 4; attempt++) {
+        const list = await listSubscriptionPayments(sub.id, 1)
+        firstPayment = list.data[0]
+        if (firstPayment) break
+        await new Promise(r => setTimeout(r, 250 * (attempt + 1)))
+      }
     }
 
-    // 6. Atualiza session
+    // 6. Salva cartão se solicitado e tiver token retornado pela Asaas.
+    if (
+      body.method === 'credit_card' &&
+      cc.saveCard &&
+      cc.fullCard &&
+      firstPayment
+    ) {
+      // Asaas devolve o token na resposta do payment; em subscription
+      // precisamos consultar o payment recém-criado pra pegar o cartão.
+      try {
+        const fresh = await getPayment(firstPayment.id)
+        const token = fresh.creditCard?.creditCardToken
+        const last4 = fresh.creditCard?.creditCardNumber
+        const brand = fresh.creditCard?.creditCardBrand?.toLowerCase() ?? null
+        if (token && last4) {
+          await admin
+            .from('billing_saved_cards')
+            .upsert(
+              {
+                user_id: user.id,
+                provider: 'asaas',
+                asaas_credit_card_token: token,
+                brand,
+                last4,
+                holder_name: cc.fullCard.holderName,
+                expiry_month: cc.fullCard.expiryMonth,
+                expiry_year: cc.fullCard.expiryYear,
+              },
+              { onConflict: 'user_id,asaas_credit_card_token' },
+            )
+        }
+      } catch (err) {
+        // não bloqueia o checkout — salvar cartão é melhoria, não crítico.
+        console.warn('[asaas/charge] saveCard falhou:', err)
+      }
+    }
+
+    // 7. Atualiza session
     await admin
       .from('billing_checkout_sessions')
       .update({
-        asaas_subscription_id: sub.id,
+        asaas_subscription_id: subscriptionId,
         asaas_payment_id: firstPayment?.id ?? null,
         status: 'awaiting_payment',
+        amount_cents: totalCentsForCard,
         atualizado_em: new Date().toISOString(),
         metadata: {
           ...(sess.metadata as Record<string, unknown>),
           method: body.method,
           billing_type: billingType,
+          installments,
+          base_cents: baseCents,
+          total_cents: totalCentsForCard,
+          card_token_used: cc.cardToken ?? null,
         },
       })
       .eq('id', sess.id)
+
+    // Compat: o resto do código usa "sub.id"; cria um alias.
+    const sub = { id: subscriptionId ?? firstPayment?.id ?? '' }
 
     // 7. PIX: busca QR code (retry — pode demorar ~500ms pra Asaas
     // gerar o QR após o invoice nascer).

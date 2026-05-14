@@ -137,6 +137,13 @@ export type AsaasPayment = {
   bankSlipUrl?: string
   transactionReceiptUrl?: string | null
   externalReference?: string | null
+  // Quando billingType=CREDIT_CARD, a Asaas devolve dados básicos do
+  // cartão usado (sem PAN). Usamos pra exibir "Visa final 1234".
+  creditCard?: {
+    creditCardNumber?: string // últimos 4 dígitos
+    creditCardBrand?: string // VISA, MASTERCARD, ELO, etc.
+    creditCardToken?: string // token reutilizável em futuras cobranças
+  }
 }
 
 export type AsaasSubscription = {
