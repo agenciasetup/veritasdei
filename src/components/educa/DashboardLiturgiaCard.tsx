@@ -48,7 +48,11 @@ function useLiturgiaHoje(): LiturgiaDia | null {
   return data
 }
 
-export default function DashboardLiturgiaCard() {
+export default function DashboardLiturgiaCard({
+  compact = false,
+}: {
+  compact?: boolean
+}) {
   const day = getLiturgicalDay(new Date())
   const liturgia = useLiturgiaHoje()
   const dot = COLOR_DOT[day.color] ?? COLOR_DOT.verde
@@ -65,7 +69,7 @@ export default function DashboardLiturgiaCard() {
   return (
     <Link
       href="/liturgia/hoje"
-      className="block h-full rounded-[24px] p-6 lg:p-7 transition-colors hover:bg-white/[0.01]"
+      className="block h-full rounded-[24px] p-5 lg:p-7 transition-colors hover:bg-white/[0.01]"
       style={{
         background: 'var(--surface-2)',
         border: '1px solid rgba(255,255,255,0.05)',
@@ -103,7 +107,7 @@ export default function DashboardLiturgiaCard() {
         </div>
 
         <p
-          className="text-xl lg:text-2xl leading-tight mt-3 line-clamp-2"
+          className="text-lg lg:text-2xl leading-tight mt-3 line-clamp-2"
           style={{
             color: 'var(--text-1)',
             fontFamily: 'var(--font-elegant)',
@@ -124,7 +128,7 @@ export default function DashboardLiturgiaCard() {
           {grade ? ` · ${grade}` : ''}
         </p>
 
-        {evangelhoRef && (
+        {!compact && evangelhoRef && (
           <div
             className="mt-4 flex items-baseline gap-2"
             style={{
@@ -144,7 +148,7 @@ export default function DashboardLiturgiaCard() {
           </div>
         )}
 
-        <div className="mt-auto pt-5 flex items-center justify-between">
+        <div className="mt-auto pt-4 flex items-center justify-between">
           <span
             className="text-[11px] truncate"
             style={{
@@ -161,7 +165,7 @@ export default function DashboardLiturgiaCard() {
               fontFamily: 'var(--font-body)',
             }}
           >
-            Ler liturgia
+            {compact ? 'Ler' : 'Ler liturgia'}
             <ArrowRight className="w-3.5 h-3.5" />
           </span>
         </div>
