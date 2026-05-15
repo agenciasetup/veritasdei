@@ -18,6 +18,7 @@ import type { Carta } from '@/types/colecao'
 const TAGS = {
   banners: 'educa:banners',
   pillars: 'educa:pillars',
+  destaques: 'educa:landing-destaques',
 } as const
 
 export interface EducaBanner {
@@ -313,3 +314,48 @@ export function revalidateEducaBanners() {
 export function revalidateEducaPillars() {
   revalidateTag(TAGS.pillars, 'max')
 }
+
+export function revalidateEducaDestaques() {
+  revalidateTag(TAGS.destaques, 'max')
+}
+
+// ─── Destaques da landing (faixa "stories") ──────────────────────────────
+
+export interface EducaLandingDestaque {
+  id: string
+  nome: string
+  subtitulo: string | null
+  photoUrl: string
+  linkUrl: string | null
+}
+
+export const getEducaLandingDestaques = unstable_cache(
+  async (): Promise<EducaLandingDestaque[]> => {
+    const supabase = createAdminClient()
+    const { data, error } = await supabase
+      .from('educa_landing_destaques')
+      .select('id, nome, subtitulo, photo_url, link_url')
+      .eq('ativo', true)
+      .order('ordem', { ascending: true })
+    if (error) {
+      console.warn('[educa/server-data] destaques error:', error.message)
+      return []
+    }
+    type Row = {
+      id: string
+      nome: string
+      subtitulo: string | null
+      photo_url: string
+      link_url: string | null
+    }
+    return ((data as Row[]) ?? []).map(r => ({
+      id: r.id,
+      nome: r.nome,
+      subtitulo: r.subtitulo,
+      photoUrl: r.photo_url,
+      linkUrl: r.link_url,
+    }))
+  },
+  ['educa-landing-destaques-v1'],
+  { tags: [TAGS.destaques], revalidate: 300 },
+)
