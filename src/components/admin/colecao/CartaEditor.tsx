@@ -84,6 +84,7 @@ interface FormState {
   status: CartaStatus
   visivel: boolean
   ordem: number
+  landing_featured: boolean
 }
 
 function slugify(s: string): string {
@@ -123,6 +124,7 @@ function fromCarta(c: Carta): FormState {
     status: c.status,
     visivel: c.visivel,
     ordem: c.ordem,
+    landing_featured: c.landing_featured ?? false,
   }
 }
 
@@ -153,6 +155,7 @@ const EMPTY: FormState = {
   status: 'rascunho',
   visivel: true,
   ordem: 0,
+  landing_featured: false,
 }
 
 interface Props {
@@ -220,6 +223,8 @@ export default function CartaEditor({
       status: form.status,
       visivel: form.visivel,
       ordem: form.ordem,
+      landing_featured: form.landing_featured,
+      landing_featured_order: carta?.landing_featured_order ?? null,
       created_by: carta?.created_by ?? null,
       created_at: carta?.created_at ?? new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -718,6 +723,19 @@ export default function CartaEditor({
                 style={{ color: '#C9C2B4', fontFamily: 'Poppins, sans-serif' }}
               >
                 Visível
+              </span>
+            </label>
+            <label className="flex items-center gap-2 pt-6 col-span-2 md:col-span-1">
+              <input
+                type="checkbox"
+                checked={form.landing_featured}
+                onChange={(e) => set('landing_featured', e.target.checked)}
+              />
+              <span
+                className="text-xs"
+                style={{ color: '#C9C2B4', fontFamily: 'Poppins, sans-serif' }}
+              >
+                Destaque na landing
               </span>
             </label>
           </div>

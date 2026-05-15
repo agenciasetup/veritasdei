@@ -218,6 +218,127 @@ export const getEducaSalesPilares = unstable_cache(
   { revalidate: 300 },
 )
 
+// ─── Cartas em destaque na landing ────────────────────────────────────────
+
+export interface EducaSalesCarta {
+  id: string
+  nome: string
+  subtitulo: string | null
+  raridade: string
+  estrelas: number
+  fraseCentral: string | null
+  corAccent: string | null
+  ilustracaoUrl: string | null
+}
+
+/**
+ * Cartas em destaque na página de venda — escolhidas pelo admin via
+ * `cartas.landing_featured = true` (toggle no CartaEditor). Limite de 3.
+ *
+ * Fallback automático quando nenhuma carta está marcada como destaque:
+ * pega as 3 visíveis mais raras (suprema → lendária → epica → rara → comum).
+ */
+export const getEducaSalesCartas = unstable_cache(
+  async (): Promise<EducaSalesCarta[]> => {
+    const supabase = createAdminClient()
+
+    type Raw = {
+      id: string
+      nome: string
+      subtitulo: string | null
+      raridade: string
+      estrelas: number
+      frase_central: string | null
+      cor_accent: string | null
+      ilustracao_url: string | null
+    }
+
+    // 1ª tentativa: cartas marcadas pelo admin
+    const { data: featured } = await supabase
+      .from('cartas')
+      .select(
+        'id, nome, subtitulo, raridade, estrelas, frase_central, cor_accent, ilustracao_url',
+      )
+      .eq('visivel', true)
+      .eq('landing_featured', true)
+      .order('landing_featured_order', { ascending: true, nullsFirst: false })
+      .order('ordem', { ascending: true })
+      .order('numero', { ascending: true })
+      .limit(3)
+
+    const mapRow = (r: Raw): EducaSalesCarta => ({
+      id: r.id,
+      nome: r.nome,
+      subtitulo: r.subtitulo,
+      raridade: r.raridade,
+      estrelas: r.estrelas,
+      fraseCentral: r.frase_central,
+      corAccent: r.cor_accent,
+      ilustracaoUrl: r.ilustracao_url,
+    })
+
+    if (featured && featured.length > 0) {
+      return (featured as Raw[]).map(mapRow)
+    }
+
+    // Fallback: 3 mais raras (peso por raridade no SQL via CASE)
+    const { data: fallback } = await supabase
+      .from('cartas')
+      .select(
+        'id, nome, subtitulo, raridade, estrelas, frase_central, cor_accent, ilustracao_url',
+      )
+      .eq('visivel', true)
+      .order('estrelas', { ascending: false })
+      .order('numero', { ascending: true })
+      .limit(3)
+
+    return ((fallback ?? []) as Raw[]).map(mapRow)
+  },
+  ['educa-sales-cartas-v1'],
+  { revalidate: 300 },
+)
+
+// ─── Totais para os selos do hero ─────────────────────────────────────────
+
+export interface EducaSalesTotals {
+  pilares: number
+  topicos: number
+  subtopicos: number
+  cartas: number
+}
+
+export const getEducaSalesTotals = unstable_cache(
+  async (): Promise<EducaSalesTotals> => {
+    const supabase = createAdminClient()
+    const [pilares, topicos, subtopicos, cartas] = await Promise.all([
+      supabase
+        .from('content_groups')
+        .select('id', { count: 'exact', head: true })
+        .eq('visible', true),
+      supabase
+        .from('content_topics')
+        .select('id', { count: 'exact', head: true })
+        .eq('visible', true),
+      supabase
+        .from('content_subtopics')
+        .select('id', { count: 'exact', head: true })
+        .eq('visible', true),
+      supabase
+        .from('cartas')
+        .select('id', { count: 'exact', head: true })
+        .eq('visivel', true),
+    ])
+    return {
+      pilares: pilares.count ?? 0,
+      topicos: topicos.count ?? 0,
+      subtopicos: subtopicos.count ?? 0,
+      cartas: cartas.count ?? 0,
+    }
+  },
+  ['educa-sales-totals-v1'],
+  { revalidate: 300 },
+)
+
 export function revalidateEducaBanners() {
   // Next 16: 2º argumento exigido. `max` = stale-while-revalidate
   // (resposta instantânea com versão antiga, rebuild em background).

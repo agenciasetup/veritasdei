@@ -1,14 +1,18 @@
 'use client'
 
+import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { ArrowRight, ChevronRight, MapPin, Sparkles } from 'lucide-react'
 import CrossIcon from '@/components/icons/CrossIcon'
 import { HeroDashboardMockup } from './EducaMockups'
+import { getLiturgicalDay } from '@/lib/liturgical-calendar'
+import type { EducaSalesTotals } from '@/lib/educa/server-data'
 
 type Props = {
   isAuthenticated: boolean
   onPrimaryClick: () => void
+  totals: EducaSalesTotals
 }
 
 /**
@@ -18,7 +22,14 @@ type Props = {
  * pulsantes, faíscas douradas e o mockup do app flutuando suavemente.
  * Mobile mostra o mockup empilhado abaixo (em escala reduzida).
  */
-export default function Hero({ isAuthenticated, onPrimaryClick }: Props) {
+export default function Hero({ isAuthenticated, onPrimaryClick, totals }: Props) {
+  // Calcula a liturgia do dia uma vez por mount — usado pra rotular o
+  // mockup do dashboard com o nome real do tempo litúrgico de hoje.
+  const liturgicalLabel = useMemo(() => {
+    const d = getLiturgicalDay(new Date())
+    return d.name || d.title || 'Tempo Comum'
+  }, [])
+
   return (
     <section className="surface-velvet relative min-h-[100svh] md:min-h-screen overflow-hidden">
       {/* ─── Orbs pulsantes (background) ─── */}
@@ -217,10 +228,10 @@ export default function Hero({ isAuthenticated, onPrimaryClick }: Props) {
                 filter: 'drop-shadow(0 30px 60px rgba(0,0,0,0.55))',
               }}
             >
-              <HeroDashboardMockup className="w-full h-auto" />
+              <HeroDashboardMockup className="w-full h-auto" liturgia={liturgicalLabel} />
             </motion.div>
 
-            {/* Mini-card "XP" flutuando à esquerda do phone */}
+            {/* Mini-chip "XP por estudar" flutuando à esquerda do phone */}
             <motion.div
               animate={{ y: [0, 8, 0] }}
               transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
@@ -238,10 +249,10 @@ export default function Hero({ isAuthenticated, onPrimaryClick }: Props) {
               }}
             >
               <Sparkles className="w-3.5 h-3.5" style={{ color: '#C9A84C' }} />
-              +180 XP
+              XP por lição
             </motion.div>
 
-            {/* Mini-card "Sequência" à direita */}
+            {/* Mini-chip "Sequência diária" à direita */}
             <motion.div
               animate={{ y: [0, -8, 0] }}
               transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
@@ -259,22 +270,23 @@ export default function Hero({ isAuthenticated, onPrimaryClick }: Props) {
               }}
             >
               <span
+                aria-hidden
                 style={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: '50%',
-                  background: 'rgba(201,168,76,0.18)',
+                  width: 14,
+                  height: 14,
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#C9A84C',
-                  fontSize: '10px',
-                  fontWeight: 700,
                 }}
               >
-                14
+                <svg viewBox="0 0 24 24" width="14" height="14">
+                  <path
+                    d="M12 4 Q15 8 13 12 Q17 11 17 16 Q17 20 12 20 Q7 20 7 16 Q7 13 9 11 Q11 13 11 10 Q11 7 12 4 Z"
+                    fill="#C9A84C"
+                  />
+                </svg>
               </span>
-              dias seguidos
+              Sequência diária
             </motion.div>
           </motion.div>
         </div>
@@ -289,11 +301,15 @@ export default function Hero({ isAuthenticated, onPrimaryClick }: Props) {
               className="flex items-center gap-5 md:gap-8 pointer-events-auto"
               style={{ fontFamily: 'Cinzel, serif' }}
             >
-              <MiniStat value="3" label="Pilares" />
+              <MiniStat value={String(totals.pilares)} label="Pilares" />
               <span className="w-px h-4" style={{ background: 'rgba(201,168,76,0.3)' }} />
-              <MiniStat value="5" label="Funções" />
+              <MiniStat value={String(totals.topicos)} label="Tópicos" />
               <span className="w-px h-4" style={{ background: 'rgba(201,168,76,0.3)' }} />
-              <MiniStat value="312" label="Cartas" />
+              <MiniStat value={String(totals.subtopicos)} label="Subtópicos" />
+              <span className="hidden sm:inline-block w-px h-4" style={{ background: 'rgba(201,168,76,0.3)' }} />
+              <span className="hidden sm:inline-flex items-baseline gap-2">
+                <MiniStat value={String(totals.cartas)} label={totals.cartas === 1 ? 'Carta' : 'Cartas'} />
+              </span>
             </div>
 
             <span
