@@ -3,12 +3,13 @@
 /**
  * Seção "Estudar" — full-screen estilo Netflix.
  *
- * Recebe as trilhas direto do banco (server fetch em getEducaSalesTrails):
- * título, capa, cor, dificuldade e os steps (label/descrição). Não inventa
- * conteúdo — só usa os módulos reais.
+ * Carrega os pilares de estudo (content_groups) e seus tópicos
+ * (content_topics) direto do banco — o mesmo material disponível em
+ * /estudo. Nada inventado.
  *
- * Clique num poster → abre um Dialog centralizado na viewport mostrando
- * o índice dos subtópicos (sem conteúdo completo).
+ * Cada poster mostra um pilar (com capa, se houver). Clique → abre um
+ * Dialog centralizado na viewport listando os tópicos que vivem dentro
+ * daquele pilar. Sem conteúdo completo — só índice.
  */
 
 import { useRef, useState } from 'react'
@@ -16,6 +17,7 @@ import { motion } from 'framer-motion'
 import * as Dialog from '@radix-ui/react-dialog'
 import {
   BookOpen,
+  BookOpenText,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -23,42 +25,92 @@ import {
   Crown,
   Droplets,
   Flame,
-  Globe,
-  GraduationCap,
   Heart,
   ScrollText,
-  Shield,
+  Scale,
+  Search,
   Sparkles,
   Star,
   X,
   type LucideIcon,
 } from 'lucide-react'
-import type { EducaSalesTrail } from '@/lib/educa/server-data'
+import type { EducaSalesPilar, EducaSalesTopico } from '@/lib/educa/server-data'
 
-const ICONS: Record<string, LucideIcon> = {
-  GraduationCap,
-  Droplets,
-  Church,
-  Heart,
-  Shield,
-  Flame,
-  Crown,
-  Star,
-  Sparkles,
-  ScrollText,
-  BookOpen,
-  Globe,
+// ──────────────────────────────────────────────────────────────────────────
+// Mapeamento de ícones — `content_groups.icon` mistura nomes lucide
+// (lowercase ou PascalCase) e emojis. Renderiza o que couber.
+// ──────────────────────────────────────────────────────────────────────────
+
+const LUCIDE_MAP: Record<string, LucideIcon> = {
+  church: Church,
+  droplets: Droplets,
+  tablets: ScrollText,
+  scrolltext: ScrollText,
+  bookopen: BookOpen,
+  bookopentext: BookOpenText,
+  scale: Scale,
+  heart: Heart,
+  flame: Flame,
+  crown: Crown,
+  star: Star,
+  sparkles: Sparkles,
+  search: Search,
 }
+
+function normalizeIconKey(s: string): string {
+  return s.toLowerCase().replace(/[-_\s]/g, '')
+}
+
+function isEmojiLike(s: string): boolean {
+  if (!s) return false
+  // Qualquer char não-ASCII no começo já indica emoji/símbolo
+  return /[^\x00-\x7F]/.test(s[0])
+}
+
+function PilarIconView({
+  icon,
+  color,
+  size = 18,
+}: {
+  icon: string | null
+  color: string
+  size?: number
+}) {
+  if (!icon) {
+    return <BookOpen style={{ width: size, height: size, color }} />
+  }
+  if (isEmojiLike(icon)) {
+    return (
+      <span style={{ fontSize: size, lineHeight: 1 }} aria-hidden>
+        {icon}
+      </span>
+    )
+  }
+  const Icon = LUCIDE_MAP[normalizeIconKey(icon)] ?? BookOpen
+  return <Icon style={{ width: size, height: size, color }} />
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Paleta de cores cíclica (content_groups não guarda cor própria)
+// ──────────────────────────────────────────────────────────────────────────
+
+const PALETTE = ['#C9A84C', '#8B3145', '#4A90D9', '#7A4C82', '#8B6914']
+
+function colorFor(pilar: EducaSalesPilar): string {
+  return PALETTE[(pilar.sortOrder - 1 + PALETTE.length) % PALETTE.length] ?? '#C9A84C'
+}
+
+// ──────────────────────────────────────────────────────────────────────────
 
 type Props = {
-  trails: EducaSalesTrail[]
+  pilares: EducaSalesPilar[]
 }
 
-export default function EstudarSection({ trails }: Props) {
+export default function EstudarSection({ pilares }: Props) {
   const rowRef = useRef<HTMLDivElement>(null)
-  const [open, setOpen] = useState<EducaSalesTrail | null>(null)
+  const [open, setOpen] = useState<EducaSalesPilar | null>(null)
 
-  const featured = trails[0]
+  const featured = pilares[0]
 
   function scrollRow(dir: 'left' | 'right') {
     const el = rowRef.current
@@ -67,9 +119,11 @@ export default function EstudarSection({ trails }: Props) {
     el.scrollBy({ left: dir === 'left' ? -amount : amount, behavior: 'smooth' })
   }
 
-  if (trails.length === 0) {
+  if (pilares.length === 0) {
     return null
   }
+
+  const totalTopicos = pilares.reduce((sum, p) => sum + p.topicos.length, 0)
 
   return (
     <section
@@ -77,7 +131,6 @@ export default function EstudarSection({ trails }: Props) {
       className="relative min-h-screen overflow-hidden flex flex-col"
       style={{ background: 'var(--surface-1)' }}
     >
-      {/* Background ambient */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -112,17 +165,17 @@ export default function EstudarSection({ trails }: Props) {
               className="display-cormorant text-3xl sm:text-4xl md:text-5xl lg:text-[56px] leading-[1.05] max-w-xl"
               style={{ color: '#F5EFE6', textWrap: 'balance' }}
             >
-              Trilhas guiadas{' '}
+              Todo o material{' '}
               <span className="italic" style={{ color: '#E6D9B5' }}>
-                pelos três pilares da fé.
+                organizado e ao seu alcance.
               </span>
             </h2>
 
             <ul className="flex flex-col gap-2.5 lg:pl-6 lg:border-l" style={{ borderColor: 'rgba(201,168,76,0.2)' }}>
               {[
-                `${trails.length} trilhas reais — toque pra ver as lições de cada uma.`,
-                'Anote dentro do app: suas notas ficam atreladas a cada lição.',
-                'Avaliações ao fim de cada módulo, com XP e conquistas.',
+                `${pilares.length} pilares de estudo, ${totalTopicos} tópicos no total — toque pra ver o que tem dentro.`,
+                'Anote dentro do app: suas notas ficam atreladas a cada tópico.',
+                'Avaliações por módulo, com XP e conquistas.',
               ].map(item => (
                 <li
                   key={item}
@@ -150,7 +203,7 @@ export default function EstudarSection({ trails }: Props) {
         </motion.div>
       </div>
 
-      {/* ─── Featured trail (em destaque, primeira da lista) ─── */}
+      {/* ─── Featured pilar ─── */}
       {featured && (
         <div className="relative z-10 px-5 md:px-10 lg:px-16 max-w-7xl w-full mx-auto mb-6 md:mb-8">
           <motion.div
@@ -163,9 +216,9 @@ export default function EstudarSection({ trails }: Props) {
               className="eyebrow-label mb-3"
               style={{ color: 'rgba(242,237,228,0.55)' }}
             >
-              ◆ Comece por aqui
+              ◆ Em destaque
             </p>
-            <FeaturedCard trail={featured} onOpen={() => setOpen(featured)} />
+            <FeaturedCard pilar={featured} onOpen={() => setOpen(featured)} />
           </motion.div>
         </div>
       )}
@@ -183,7 +236,7 @@ export default function EstudarSection({ trails }: Props) {
               className="eyebrow-label"
               style={{ color: 'rgba(242,237,228,0.55)' }}
             >
-              ◆ Trilhas disponíveis · {trails.length} módulos
+              ◆ Pilares de estudo · {pilares.length}
             </p>
             <div className="hidden md:flex items-center gap-2">
               <RowButton onClick={() => scrollRow('left')} aria-label="Anterior">
@@ -205,13 +258,16 @@ export default function EstudarSection({ trails }: Props) {
             }}
           >
             <style>{`.nflx-row::-webkit-scrollbar { display: none; }`}</style>
-            {trails.map(trail => (
-              <TrailPoster key={trail.id} trail={trail} onOpen={() => setOpen(trail)} />
+            {pilares.map(pilar => (
+              <PilarPoster
+                key={pilar.id}
+                pilar={pilar}
+                onOpen={() => setOpen(pilar)}
+              />
             ))}
             <div className="flex-shrink-0 w-6 md:w-12" aria-hidden />
           </div>
 
-          {/* Fade edge */}
           <div
             className="absolute right-0 top-0 bottom-0 w-12 md:w-16 pointer-events-none hidden md:block"
             style={{
@@ -221,25 +277,25 @@ export default function EstudarSection({ trails }: Props) {
         </motion.div>
       </div>
 
-      {/* ─── Modal com os subtópicos ─── */}
-      <TrailModal trail={open} onClose={() => setOpen(null)} />
+      <PilarModal pilar={open} onClose={() => setOpen(null)} />
     </section>
   )
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// Featured card — destaque pra primeira trilha
+// Card em destaque
 // ──────────────────────────────────────────────────────────────────────────
 
 function FeaturedCard({
-  trail,
+  pilar,
   onOpen,
 }: {
-  trail: EducaSalesTrail
+  pilar: EducaSalesPilar
   onOpen: () => void
 }) {
-  const Icon = ICONS[trail.iconName] ?? GraduationCap
-  const hasCover = !!trail.coverUrl
+  const color = colorFor(pilar)
+  const hasCover = !!pilar.coverUrl
+  const previewTopicos = pilar.topicos.slice(0, 4)
 
   return (
     <button
@@ -249,17 +305,16 @@ function FeaturedCard({
       style={{
         background: hasCover
           ? 'rgba(22,18,14,0.9)'
-          : `linear-gradient(135deg, ${trail.color}40 0%, rgba(22,18,14,0.95) 65%)`,
+          : `linear-gradient(135deg, ${color}40 0%, rgba(22,18,14,0.95) 65%)`,
         border: '1px solid rgba(201,168,76,0.25)',
         boxShadow: '0 30px 80px rgba(0,0,0,0.45)',
       }}
     >
-      {/* Capa de fundo (se existir) */}
       {hasCover && (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={trail.coverUrl ?? ''}
+            src={pilar.coverUrl ?? ''}
             alt=""
             className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-60 transition-opacity"
             aria-hidden
@@ -267,7 +322,7 @@ function FeaturedCard({
           <div
             className="absolute inset-0"
             style={{
-              background: `linear-gradient(135deg, ${trail.color}55 0%, rgba(22,18,14,0.92) 65%)`,
+              background: `linear-gradient(135deg, ${color}55 0%, rgba(22,18,14,0.92) 65%)`,
             }}
           />
         </>
@@ -276,7 +331,7 @@ function FeaturedCard({
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: `radial-gradient(60% 80% at 90% 50%, ${trail.color}25 0%, transparent 60%)`,
+          background: `radial-gradient(60% 80% at 90% 50%, ${color}25 0%, transparent 60%)`,
         }}
       />
 
@@ -286,21 +341,22 @@ function FeaturedCard({
             <span
               className="inline-flex items-center justify-center w-10 h-10 rounded-xl"
               style={{
-                background: `${trail.color}22`,
-                border: `1px solid ${trail.color}55`,
+                background: `${color}22`,
+                border: `1px solid ${color}55`,
               }}
             >
-              <Icon className="w-5 h-5" style={{ color: trail.color }} />
+              <PilarIconView icon={pilar.icon} color={color} size={20} />
             </span>
             <span
               className="text-[10px] uppercase"
               style={{
-                color: trail.color,
+                color,
                 fontFamily: 'Cinzel, serif',
                 letterSpacing: '0.22em',
               }}
             >
-              Trilha · {trail.difficulty}
+              Pilar · {pilar.topicos.length}{' '}
+              {pilar.topicos.length === 1 ? 'tópico' : 'tópicos'}
             </span>
           </div>
 
@@ -308,9 +364,9 @@ function FeaturedCard({
             className="display-cormorant text-3xl md:text-4xl mb-2"
             style={{ color: '#F5EFE6', fontWeight: 600 }}
           >
-            {trail.title}
+            {pilar.title}
           </h3>
-          {trail.subtitle && (
+          {pilar.subtitle && (
             <p
               className="text-sm md:text-base mb-2"
               style={{
@@ -319,10 +375,10 @@ function FeaturedCard({
                 lineHeight: 1.55,
               }}
             >
-              {trail.subtitle}
+              {pilar.subtitle}
             </p>
           )}
-          {trail.description && (
+          {pilar.description && (
             <p
               className="text-sm mb-5 max-w-md"
               style={{
@@ -331,76 +387,76 @@ function FeaturedCard({
                 lineHeight: 1.55,
               }}
             >
-              {trail.description}
+              {pilar.description}
             </p>
           )}
 
-          <div className="flex items-center gap-3 text-xs" style={{ fontFamily: 'var(--font-body)', color: trail.color }}>
+          <div className="flex items-center gap-2 text-xs" style={{ fontFamily: 'var(--font-body)', color }}>
             <BookOpen className="w-4 h-4" />
-            <span>{trail.steps.length} lições</span>
+            <span>{pilar.topicos.length} tópicos</span>
             <span style={{ color: 'rgba(255,255,255,0.2)' }}>·</span>
             <span style={{ color: 'rgba(242,237,228,0.6)' }}>Toque pra ver o índice</span>
           </div>
         </div>
 
-        {/* Pequena prévia das lições (até 4) */}
-        <div
-          className="hidden md:flex flex-col gap-2 p-4 rounded-2xl"
-          style={{
-            background: 'rgba(0,0,0,0.35)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            backdropFilter: 'blur(8px)',
-          }}
-        >
-          {trail.steps.slice(0, 4).map((step, i) => (
-            <div
-              key={i}
-              className="flex items-start gap-2.5 text-xs"
-              style={{ color: 'rgba(242,237,228,0.78)', fontFamily: 'var(--font-body)' }}
-            >
-              <span
-                className="flex-shrink-0 w-5 h-5 rounded-full inline-flex items-center justify-center mt-0.5 text-[10px]"
-                style={{
-                  background: `${trail.color}22`,
-                  border: `1px solid ${trail.color}55`,
-                  color: trail.color,
-                  fontFamily: 'Cinzel, serif',
-                  fontWeight: 600,
-                }}
+        {previewTopicos.length > 0 && (
+          <div
+            className="hidden md:flex flex-col gap-2 p-4 rounded-2xl"
+            style={{
+              background: 'rgba(0,0,0,0.35)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              backdropFilter: 'blur(8px)',
+            }}
+          >
+            {previewTopicos.map((t, i) => (
+              <div
+                key={t.id}
+                className="flex items-start gap-2.5 text-xs"
+                style={{ color: 'rgba(242,237,228,0.78)', fontFamily: 'var(--font-body)' }}
               >
-                {i + 1}
-              </span>
-              <span className="leading-snug">{step.label}</span>
-            </div>
-          ))}
-          {trail.steps.length > 4 && (
-            <p
-              className="text-[10px] text-center mt-1"
-              style={{ color: 'rgba(242,237,228,0.5)', fontFamily: 'var(--font-body)' }}
-            >
-              + {trail.steps.length - 4}{' '}
-              {trail.steps.length - 4 === 1 ? 'lição' : 'lições'}
-            </p>
-          )}
-        </div>
+                <span
+                  className="flex-shrink-0 w-5 h-5 rounded-full inline-flex items-center justify-center mt-0.5 text-[10px]"
+                  style={{
+                    background: `${color}22`,
+                    border: `1px solid ${color}55`,
+                    color,
+                    fontFamily: 'Cinzel, serif',
+                    fontWeight: 600,
+                  }}
+                >
+                  {i + 1}
+                </span>
+                <span className="leading-snug">{t.title}</span>
+              </div>
+            ))}
+            {pilar.topicos.length > previewTopicos.length && (
+              <p
+                className="text-[10px] text-center mt-1"
+                style={{ color: 'rgba(242,237,228,0.5)', fontFamily: 'var(--font-body)' }}
+              >
+                + {pilar.topicos.length - previewTopicos.length} tópicos
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </button>
   )
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// Poster — card pequeno da fileira
+// Poster pequeno (linha Netflix)
 // ──────────────────────────────────────────────────────────────────────────
 
-function TrailPoster({
-  trail,
+function PilarPoster({
+  pilar,
   onOpen,
 }: {
-  trail: EducaSalesTrail
+  pilar: EducaSalesPilar
   onOpen: () => void
 }) {
-  const Icon = ICONS[trail.iconName] ?? BookOpen
-  const hasCover = !!trail.coverUrl
+  const color = colorFor(pilar)
+  const hasCover = !!pilar.coverUrl
 
   return (
     <motion.button
@@ -414,7 +470,7 @@ function TrailPoster({
         aspectRatio: '0.7 / 1',
         background: hasCover
           ? 'rgba(22,18,14,0.9)'
-          : `linear-gradient(165deg, ${trail.color}55 0%, rgba(22,18,14,0.96) 70%)`,
+          : `linear-gradient(165deg, ${color}55 0%, rgba(22,18,14,0.96) 70%)`,
         border: '1px solid rgba(201,168,76,0.18)',
         boxShadow: '0 16px 40px rgba(0,0,0,0.35)',
       }}
@@ -423,7 +479,7 @@ function TrailPoster({
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={trail.coverUrl ?? ''}
+            src={pilar.coverUrl ?? ''}
             alt=""
             className="absolute inset-0 w-full h-full object-cover"
             aria-hidden
@@ -431,7 +487,7 @@ function TrailPoster({
           <div
             className="absolute inset-0"
             style={{
-              background: `linear-gradient(165deg, ${trail.color}55 0%, rgba(22,18,14,0.85) 70%)`,
+              background: `linear-gradient(165deg, ${color}55 0%, rgba(22,18,14,0.85) 70%)`,
             }}
           />
         </>
@@ -440,7 +496,7 @@ function TrailPoster({
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: `radial-gradient(70% 50% at 50% 0%, ${trail.color}30 0%, transparent 60%)`,
+          background: `radial-gradient(70% 50% at 50% 0%, ${color}30 0%, transparent 60%)`,
         }}
       />
 
@@ -449,11 +505,11 @@ function TrailPoster({
           <span
             className="inline-flex items-center justify-center w-9 h-9 rounded-lg"
             style={{
-              background: `${trail.color}25`,
-              border: `1px solid ${trail.color}55`,
+              background: `${color}25`,
+              border: `1px solid ${color}55`,
             }}
           >
-            <Icon className="w-4 h-4" style={{ color: trail.color }} />
+            <PilarIconView icon={pilar.icon} color={color} size={16} />
           </span>
           <span
             className="text-[9px] uppercase px-2 py-0.5 rounded-full"
@@ -465,7 +521,7 @@ function TrailPoster({
               letterSpacing: '0.14em',
             }}
           >
-            {trail.difficulty.slice(0, 3)}
+            Pilar
           </span>
         </div>
 
@@ -476,23 +532,26 @@ function TrailPoster({
             className="display-cormorant text-lg leading-tight mb-1"
             style={{ color: '#F5EFE6', fontWeight: 600, textWrap: 'balance' }}
           >
-            {trail.title}
+            {pilar.title}
           </h4>
-          {trail.subtitle && (
+          {pilar.subtitle && (
             <p
-              className="text-[11px] mb-2"
+              className="text-[11px] mb-2 line-clamp-2"
               style={{
                 color: 'rgba(242,237,228,0.65)',
                 fontFamily: 'var(--font-body)',
                 lineHeight: 1.4,
               }}
             >
-              {trail.subtitle}
+              {pilar.subtitle}
             </p>
           )}
-          <div className="flex items-center gap-1.5 text-[10px]" style={{ color: trail.color, fontFamily: 'var(--font-body)' }}>
+          <div className="flex items-center gap-1.5 text-[10px]" style={{ color, fontFamily: 'var(--font-body)' }}>
             <BookOpen className="w-3 h-3" />
-            <span>{trail.steps.length} lições</span>
+            <span>
+              {pilar.topicos.length}{' '}
+              {pilar.topicos.length === 1 ? 'tópico' : 'tópicos'}
+            </span>
           </div>
         </div>
       </div>
@@ -501,27 +560,24 @@ function TrailPoster({
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// Modal com os subtópicos (Radix Dialog — centraliza na viewport, não no scroll)
+// Modal — Radix Dialog centralizado, lista os tópicos do pilar
 // ──────────────────────────────────────────────────────────────────────────
 
-function TrailModal({
-  trail,
+function PilarModal({
+  pilar,
   onClose,
 }: {
-  trail: EducaSalesTrail | null
+  pilar: EducaSalesPilar | null
   onClose: () => void
 }) {
-  const Icon = trail ? ICONS[trail.iconName] ?? BookOpen : BookOpen
-
   return (
-    <Dialog.Root open={!!trail} onOpenChange={(o) => !o && onClose()}>
+    <Dialog.Root open={!!pilar} onOpenChange={(o) => !o && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay
           className="fixed inset-0 z-[100]"
           style={{
             background: 'rgba(10,8,6,0.78)',
             backdropFilter: 'blur(8px)',
-            animation: 'fadeIn 200ms ease-out',
           }}
         />
         <Dialog.Content
@@ -533,181 +589,220 @@ function TrailModal({
             boxShadow: '0 50px 120px rgba(0,0,0,0.7), 0 0 0 1px rgba(201,168,76,0.08)',
           }}
         >
-          {trail && (
-            <>
-              {/* Header com capa / gradient */}
-              <div
-                className="relative px-6 md:px-8 pt-7 pb-6 flex-shrink-0"
-                style={{
-                  background: trail.coverUrl
-                    ? `linear-gradient(165deg, ${trail.color}55 0%, rgba(22,18,14,0.92) 75%)`
-                    : `linear-gradient(165deg, ${trail.color}45 0%, rgba(22,18,14,0.92) 75%)`,
-                }}
-              >
-                {trail.coverUrl && (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={trail.coverUrl}
-                      alt=""
-                      className="absolute inset-0 w-full h-full object-cover opacity-30"
-                      aria-hidden
-                    />
-                    <div
-                      className="absolute inset-0"
-                      style={{
-                        background: `linear-gradient(165deg, ${trail.color}50 0%, rgba(22,18,14,0.92) 75%)`,
-                      }}
-                    />
-                  </>
-                )}
-
-                <Dialog.Close asChild>
-                  <button
-                    type="button"
-                    aria-label="Fechar"
-                    className="absolute top-4 right-4 w-8 h-8 rounded-full inline-flex items-center justify-center transition-colors"
-                    style={{
-                      background: 'rgba(0,0,0,0.4)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      color: 'rgba(242,237,228,0.8)',
-                    }}
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </Dialog.Close>
-
-                <div className="relative">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span
-                      className="inline-flex items-center justify-center w-10 h-10 rounded-xl"
-                      style={{
-                        background: `${trail.color}30`,
-                        border: `1px solid ${trail.color}66`,
-                      }}
-                    >
-                      <Icon className="w-5 h-5" style={{ color: trail.color }} />
-                    </span>
-                    <span
-                      className="text-[10px] uppercase"
-                      style={{
-                        color: trail.color,
-                        fontFamily: 'Cinzel, serif',
-                        letterSpacing: '0.22em',
-                      }}
-                    >
-                      Trilha · {trail.difficulty}
-                    </span>
-                  </div>
-
-                  <Dialog.Title asChild>
-                    <h3
-                      className="display-cormorant text-2xl md:text-3xl mb-1.5 pr-8"
-                      style={{ color: '#F5EFE6', fontWeight: 600 }}
-                    >
-                      {trail.title}
-                    </h3>
-                  </Dialog.Title>
-
-                  {trail.subtitle && (
-                    <p
-                      className="text-sm"
-                      style={{
-                        color: 'rgba(242,237,228,0.75)',
-                        fontFamily: 'var(--font-body)',
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      {trail.subtitle}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Lista de lições */}
-              <div className="px-6 md:px-8 py-6 overflow-y-auto flex-1">
-                <p
-                  className="eyebrow-label mb-4"
-                  style={{ color: 'rgba(242,237,228,0.55)' }}
-                >
-                  ◆ {trail.steps.length} lições no índice
-                </p>
-
-                {trail.steps.length === 0 ? (
-                  <p
-                    className="text-sm"
-                    style={{ color: 'rgba(242,237,228,0.6)', fontFamily: 'var(--font-body)' }}
-                  >
-                    Esta trilha ainda não tem lições publicadas.
-                  </p>
-                ) : (
-                  <ol className="flex flex-col gap-3">
-                    {trail.steps.map((step, i) => (
-                      <li
-                        key={i}
-                        className="flex items-start gap-3 p-3 rounded-xl"
-                        style={{
-                          background: 'rgba(255,255,255,0.025)',
-                          border: '1px solid rgba(255,255,255,0.05)',
-                        }}
-                      >
-                        <span
-                          className="flex-shrink-0 w-7 h-7 rounded-full inline-flex items-center justify-center text-xs"
-                          style={{
-                            background: `${trail.color}22`,
-                            border: `1px solid ${trail.color}55`,
-                            color: trail.color,
-                            fontFamily: 'Cinzel, serif',
-                            fontWeight: 600,
-                          }}
-                        >
-                          {i + 1}
-                        </span>
-                        <div className="min-w-0">
-                          <p
-                            className="text-sm leading-snug mb-0.5"
-                            style={{ color: '#F5EFE6', fontFamily: 'var(--font-body)', fontWeight: 500 }}
-                          >
-                            {step.label}
-                          </p>
-                          {step.description && (
-                            <p
-                              className="text-xs leading-snug"
-                              style={{
-                                color: 'rgba(242,237,228,0.6)',
-                                fontFamily: 'var(--font-body)',
-                              }}
-                            >
-                              {step.description}
-                            </p>
-                          )}
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
-                )}
-              </div>
-
-              {/* Footer */}
-              <div
-                className="px-6 md:px-8 py-4 flex-shrink-0"
-                style={{
-                  borderTop: '1px solid rgba(255,255,255,0.06)',
-                  background: 'rgba(0,0,0,0.25)',
-                }}
-              >
-                <p
-                  className="text-[11px] text-center"
-                  style={{ color: 'rgba(242,237,228,0.55)', fontFamily: 'var(--font-body)' }}
-                >
-                  Conteúdo completo dentro do app — disponível com a assinatura.
-                </p>
-              </div>
-            </>
-          )}
+          {pilar && <PilarModalBody pilar={pilar} />}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  )
+}
+
+function PilarModalBody({ pilar }: { pilar: EducaSalesPilar }) {
+  const color = colorFor(pilar)
+  return (
+    <>
+      <div
+        className="relative px-6 md:px-8 pt-7 pb-6 flex-shrink-0"
+        style={{
+          background: `linear-gradient(165deg, ${color}45 0%, rgba(22,18,14,0.92) 75%)`,
+        }}
+      >
+        {pilar.coverUrl && (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={pilar.coverUrl}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover opacity-30"
+              aria-hidden
+            />
+            <div
+              className="absolute inset-0"
+              style={{
+                background: `linear-gradient(165deg, ${color}50 0%, rgba(22,18,14,0.92) 75%)`,
+              }}
+            />
+          </>
+        )}
+
+        <Dialog.Close asChild>
+          <button
+            type="button"
+            aria-label="Fechar"
+            className="absolute top-4 right-4 w-8 h-8 rounded-full inline-flex items-center justify-center transition-colors"
+            style={{
+              background: 'rgba(0,0,0,0.4)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: 'rgba(242,237,228,0.8)',
+            }}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </Dialog.Close>
+
+        <div className="relative">
+          <div className="flex items-center gap-2 mb-3">
+            <span
+              className="inline-flex items-center justify-center w-10 h-10 rounded-xl"
+              style={{
+                background: `${color}30`,
+                border: `1px solid ${color}66`,
+              }}
+            >
+              <PilarIconView icon={pilar.icon} color={color} size={20} />
+            </span>
+            <span
+              className="text-[10px] uppercase"
+              style={{
+                color,
+                fontFamily: 'Cinzel, serif',
+                letterSpacing: '0.22em',
+              }}
+            >
+              Pilar · {pilar.topicos.length}{' '}
+              {pilar.topicos.length === 1 ? 'tópico' : 'tópicos'}
+            </span>
+          </div>
+
+          <Dialog.Title asChild>
+            <h3
+              className="display-cormorant text-2xl md:text-3xl mb-1.5 pr-8"
+              style={{ color: '#F5EFE6', fontWeight: 600 }}
+            >
+              {pilar.title}
+            </h3>
+          </Dialog.Title>
+
+          {pilar.subtitle && (
+            <p
+              className="text-sm"
+              style={{
+                color: 'rgba(242,237,228,0.78)',
+                fontFamily: 'var(--font-body)',
+                lineHeight: 1.5,
+              }}
+            >
+              {pilar.subtitle}
+            </p>
+          )}
+          {pilar.description && (
+            <p
+              className="text-sm mt-1.5"
+              style={{
+                color: 'rgba(242,237,228,0.62)',
+                fontFamily: 'var(--font-body)',
+                lineHeight: 1.5,
+              }}
+            >
+              {pilar.description}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="px-6 md:px-8 py-6 overflow-y-auto flex-1">
+        <p
+          className="eyebrow-label mb-4"
+          style={{ color: 'rgba(242,237,228,0.55)' }}
+        >
+          ◆ Tópicos
+        </p>
+
+        {pilar.topicos.length === 0 ? (
+          <p
+            className="text-sm"
+            style={{ color: 'rgba(242,237,228,0.6)', fontFamily: 'var(--font-body)' }}
+          >
+            Este pilar ainda não tem tópicos publicados.
+          </p>
+        ) : (
+          <ol className="flex flex-col gap-3">
+            {pilar.topicos.map((t, i) => (
+              <TopicoRow key={t.id} topico={t} index={i + 1} color={color} />
+            ))}
+          </ol>
+        )}
+      </div>
+
+      <div
+        className="px-6 md:px-8 py-4 flex-shrink-0"
+        style={{
+          borderTop: '1px solid rgba(255,255,255,0.06)',
+          background: 'rgba(0,0,0,0.25)',
+        }}
+      >
+        <p
+          className="text-[11px] text-center"
+          style={{ color: 'rgba(242,237,228,0.55)', fontFamily: 'var(--font-body)' }}
+        >
+          Conteúdo completo dentro do app — disponível com a assinatura.
+        </p>
+      </div>
+    </>
+  )
+}
+
+function TopicoRow({
+  topico,
+  index,
+  color,
+}: {
+  topico: EducaSalesTopico
+  index: number
+  color: string
+}) {
+  const hasCover = !!topico.coverUrl
+  return (
+    <li
+      className="relative flex items-start gap-3 p-3 rounded-xl overflow-hidden"
+      style={{
+        background: 'rgba(255,255,255,0.025)',
+        border: '1px solid rgba(255,255,255,0.05)',
+      }}
+    >
+      {hasCover && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={topico.coverUrl ?? ''}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover opacity-15"
+            aria-hidden
+          />
+          <div className="absolute inset-0" style={{ background: 'rgba(15,14,12,0.55)' }} />
+        </>
+      )}
+      <span
+        className="relative flex-shrink-0 w-7 h-7 rounded-full inline-flex items-center justify-center text-xs"
+        style={{
+          background: `${color}22`,
+          border: `1px solid ${color}55`,
+          color,
+          fontFamily: 'Cinzel, serif',
+          fontWeight: 600,
+        }}
+      >
+        {index}
+      </span>
+      <div className="relative min-w-0">
+        <p
+          className="text-sm leading-snug mb-0.5"
+          style={{ color: '#F5EFE6', fontFamily: 'var(--font-body)', fontWeight: 500 }}
+        >
+          {topico.title}
+        </p>
+        {topico.subtitle && (
+          <p
+            className="text-xs leading-snug"
+            style={{
+              color: 'rgba(242,237,228,0.6)',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            {topico.subtitle}
+          </p>
+        )}
+      </div>
+    </li>
   )
 }
 

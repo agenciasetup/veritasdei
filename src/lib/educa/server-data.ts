@@ -125,78 +125,96 @@ export const getEducaSalesPrices = unstable_cache(
   { revalidate: 300 },
 )
 
-// ─── Trilhas usadas na seção "Estudar" da página de venda ─────────────────
+// ─── Pilares de estudo usados na seção "Estudar" da página de venda ─────
 
-export interface EducaSalesTrailStep {
-  label: string
-  description: string | null
+export interface EducaSalesTopico {
+  id: string
+  slug: string
+  title: string
+  subtitle: string | null
+  coverUrl: string | null
   sortOrder: number
 }
 
-export interface EducaSalesTrail {
+export interface EducaSalesPilar {
   id: string
+  slug: string
   title: string
   subtitle: string | null
   description: string | null
-  difficulty: string
-  color: string
-  iconName: string
-  sortOrder: number
+  icon: string | null
   coverUrl: string | null
-  steps: EducaSalesTrailStep[]
+  sortOrder: number
+  topicos: EducaSalesTopico[]
 }
 
 /**
- * Lista todas as trilhas + seus steps (label/descrição, sem o conteúdo
- * completo) pra montar a seção Estudar da landing.
+ * Lista os pilares de estudo visíveis (content_groups) + seus tópicos
+ * (content_topics) — exatamente o que aparece em /estudo. Usado pela
+ * landing pra montar a fileira Netflix da seção "Estudar".
+ *
+ * Não traz subtópicos/conteúdo: a landing só mostra o índice por pilar
+ * pra deixar a pessoa antever o material. O acesso real ao texto fica
+ * pro app pós-assinatura.
  */
-export const getEducaSalesTrails = unstable_cache(
-  async (): Promise<EducaSalesTrail[]> => {
+export const getEducaSalesPilares = unstable_cache(
+  async (): Promise<EducaSalesPilar[]> => {
     const supabase = createAdminClient()
     const { data, error } = await supabase
-      .from('trails')
+      .from('content_groups')
       .select(
-        'id, title, subtitle, description, difficulty, color, icon_name, sort_order, cover_url, trail_steps(label, description, sort_order)',
+        'id, slug, title, subtitle, description, icon, cover_url, sort_order, content_topics(id, slug, title, subtitle, cover_url, sort_order, visible)',
       )
+      .eq('visible', true)
       .order('sort_order', { ascending: true })
     if (error || !data) {
-      if (error) console.warn('[educa/server-data] trails error:', error.message)
+      if (error) console.warn('[educa/server-data] pilares error:', error.message)
       return []
     }
-    type RawStep = { label: string; description: string | null; sort_order: number }
+    type RawTopic = {
+      id: string
+      slug: string
+      title: string
+      subtitle: string | null
+      cover_url: string | null
+      sort_order: number
+      visible: boolean
+    }
     type Raw = {
       id: string
+      slug: string
       title: string
       subtitle: string | null
       description: string | null
-      difficulty: string
-      color: string
-      icon_name: string
-      sort_order: number
+      icon: string | null
       cover_url: string | null
-      trail_steps: RawStep[] | null
+      sort_order: number
+      content_topics: RawTopic[] | null
     }
-    return (data as Raw[]).map(t => ({
-      id: t.id,
-      title: t.title,
-      subtitle: t.subtitle,
-      description: t.description,
-      difficulty: t.difficulty,
-      color: t.color,
-      iconName: t.icon_name,
-      sortOrder: t.sort_order,
-      coverUrl: t.cover_url,
-      steps: (t.trail_steps ?? [])
+    return (data as Raw[]).map(g => ({
+      id: g.id,
+      slug: g.slug,
+      title: g.title,
+      subtitle: g.subtitle,
+      description: g.description,
+      icon: g.icon,
+      coverUrl: g.cover_url,
+      sortOrder: g.sort_order,
+      topicos: (g.content_topics ?? [])
+        .filter(t => t.visible)
         .slice()
         .sort((a, b) => a.sort_order - b.sort_order)
-        .map(s => ({
-          label: s.label,
-          description: s.description,
-          sortOrder: s.sort_order,
+        .map(t => ({
+          id: t.id,
+          slug: t.slug,
+          title: t.title,
+          subtitle: t.subtitle,
+          coverUrl: t.cover_url,
+          sortOrder: t.sort_order,
         })),
     }))
   },
-  ['educa-sales-trails-v1'],
+  ['educa-sales-pilares-v1'],
   { revalidate: 300 },
 )
 
