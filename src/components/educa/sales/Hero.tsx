@@ -9,21 +9,37 @@
  * resto da página carrega o framer via dynamic import.
  */
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, ChevronRight, MapPin, Sparkles } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { ArrowRight, ChevronRight, LogOut, MapPin, Sparkles, User } from 'lucide-react'
 import CrossIcon from '@/components/icons/CrossIcon'
+import { useAuth } from '@/contexts/AuthContext'
 import { HeroDashboardMockup } from './EducaMockups'
 import { getLiturgicalDay } from '@/lib/liturgical-calendar'
 import type { EducaSalesTotals } from '@/lib/educa/server-data'
 
 type Props = {
   isAuthenticated: boolean
+  userName: string | null
   onPrimaryClick: () => void
   totals: EducaSalesTotals
 }
 
-export default function Hero({ isAuthenticated, onPrimaryClick, totals }: Props) {
+export default function Hero({ isAuthenticated, userName, onPrimaryClick, totals }: Props) {
+  const { signOut } = useAuth()
+  const router = useRouter()
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  async function handleSignOut() {
+    setMenuOpen(false)
+    try {
+      await signOut()
+    } catch {
+      /* segue mesmo se o signOut falhar */
+    }
+    router.refresh()
+  }
   // Calcula a liturgia do dia uma vez por mount — usado pra rotular o
   // mockup do dashboard com o nome real do tempo litúrgico de hoje.
   const liturgicalLabel = useMemo(() => {
@@ -98,17 +114,103 @@ export default function Hero({ isAuthenticated, onPrimaryClick, totals }: Props)
                 Veritas Educa
               </span>
             </div>
-            <Link
-              href="/login?next=/educa"
-              className="text-[10px] uppercase underline-offset-4 hover:underline transition-colors"
-              style={{
-                color: '#D9C077',
-                fontFamily: 'Cinzel, serif',
-                letterSpacing: '0.18em',
-              }}
-            >
-              Entrar
-            </Link>
+            {isAuthenticated ? (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen(o => !o)}
+                  aria-expanded={menuOpen}
+                  className="inline-flex items-center gap-2 text-[10px] uppercase hover:opacity-80 transition-opacity"
+                  style={{
+                    color: '#D9C077',
+                    fontFamily: 'Cinzel, serif',
+                    letterSpacing: '0.18em',
+                  }}
+                >
+                  <User className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline truncate max-w-[140px]">
+                    {(userName ?? 'Conta').split(' ')[0]}
+                  </span>
+                </button>
+                {menuOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-30"
+                      onClick={() => setMenuOpen(false)}
+                      aria-hidden
+                    />
+                    <div
+                      className="absolute right-0 top-full mt-2 z-40 min-w-[200px] rounded-2xl py-2"
+                      style={{
+                        background: 'rgba(15,14,12,0.95)',
+                        border: '1px solid rgba(201,168,76,0.35)',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.55)',
+                        backdropFilter: 'blur(10px)',
+                      }}
+                    >
+                      {userName && (
+                        <p
+                          className="px-4 py-2 text-[11px] truncate"
+                          style={{
+                            color: 'rgba(242,237,228,0.65)',
+                            fontFamily: 'var(--font-body)',
+                            borderBottom: '1px solid rgba(255,255,255,0.06)',
+                          }}
+                        >
+                          {userName}
+                        </p>
+                      )}
+                      <Link
+                        href="/educa/inicio"
+                        onClick={() => setMenuOpen(false)}
+                        className="block px-4 py-2.5 text-[12px] hover:bg-white/5"
+                        style={{
+                          color: '#F5EFE6',
+                          fontFamily: 'var(--font-body)',
+                        }}
+                      >
+                        Ir pro estudo
+                      </Link>
+                      <Link
+                        href="/educa/checkout"
+                        onClick={() => setMenuOpen(false)}
+                        className="block px-4 py-2.5 text-[12px] hover:bg-white/5"
+                        style={{
+                          color: '#F5EFE6',
+                          fontFamily: 'var(--font-body)',
+                        }}
+                      >
+                        Finalizar assinatura
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={handleSignOut}
+                        className="w-full text-left px-4 py-2.5 text-[12px] hover:bg-white/5 inline-flex items-center gap-2"
+                        style={{
+                          color: '#E6A8A8',
+                          fontFamily: 'var(--font-body)',
+                        }}
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        Sair
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <Link
+                href="/login?next=/educa"
+                className="text-[10px] uppercase underline-offset-4 hover:underline transition-colors"
+                style={{
+                  color: '#D9C077',
+                  fontFamily: 'Cinzel, serif',
+                  letterSpacing: '0.18em',
+                }}
+              >
+                Entrar
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -209,7 +311,7 @@ export default function Hero({ isAuthenticated, onPrimaryClick, totals }: Props)
                 onClick={onPrimaryClick}
                 className="btn-gold inline-flex items-center justify-center gap-2 rounded-full px-8 py-4 text-[12px] font-semibold focus-visible:outline-none focus-visible:ring-2"
               >
-                {isAuthenticated ? 'Escolher meu plano' : 'Criar conta e assinar'}
+                {isAuthenticated ? 'Finalizar assinatura' : 'Criar conta e assinar'}
                 <ChevronRight className="w-4 h-4" />
               </button>
 

@@ -5,9 +5,9 @@
  * assinaturas. Aparece a cada ~28s, fica visível por ~6s, somem com
  * transição suave. Sem som, sem badge piscante, sem sensacionalismo.
  *
- * Os nomes vêm de uma lista neutra de primeiros nomes + cidades comuns
- * no Brasil, embaralhada por mount. O texto fica sóbrio: "começou a
- * estudar", "assinou o plano anual". Nada que pareça apelo emocional.
+ * Mostra apenas Nome + Sobrenome (sem cidade — não pedimos endereço
+ * na compra) e o que a pessoa fez. Texto sóbrio: "começou a estudar",
+ * "assinou o plano anual".
  *
  * O usuário pode fechar e o componente respeita: depois de fechado,
  * não volta na mesma sessão.
@@ -20,7 +20,6 @@ type Plan = 'mensal' | 'semestral' | 'anual'
 
 type Entry = {
   name: string
-  city: string
   action:
     | { kind: 'comecou' }
     | { kind: 'assinou'; plano: Plan }
@@ -36,11 +35,11 @@ const FIRST_NAMES = [
   'Vinícius', 'Clara', 'Eduardo', 'Fernanda', 'Carlos', 'Patrícia',
 ]
 
-const CITIES = [
-  'Recife', 'Belo Horizonte', 'Curitiba', 'Salvador', 'São Paulo',
-  'Fortaleza', 'Brasília', 'Porto Alegre', 'Manaus', 'Florianópolis',
-  'Goiânia', 'Vitória', 'Natal', 'Campinas', 'Aracaju', 'Belém',
-  'Maringá', 'Ribeirão Preto', 'Uberlândia', 'Niterói', 'Londrina',
+const LAST_NAMES = [
+  'Silva', 'Santos', 'Oliveira', 'Souza', 'Rodrigues', 'Ferreira',
+  'Almeida', 'Pereira', 'Lima', 'Gomes', 'Costa', 'Ribeiro',
+  'Martins', 'Carvalho', 'Araújo', 'Melo', 'Barbosa', 'Rocha',
+  'Cardoso', 'Nascimento', 'Moreira', 'Dias', 'Cavalcanti',
 ]
 
 function pick<T>(arr: T[]): T {
@@ -48,16 +47,15 @@ function pick<T>(arr: T[]): T {
 }
 
 function buildEntry(): Entry {
-  const name = pick(FIRST_NAMES)
-  const city = pick(CITIES)
+  const name = `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`
   const roll = Math.random()
-  if (roll < 0.4) return { name, city, action: { kind: 'comecou' } }
+  if (roll < 0.4) return { name, action: { kind: 'comecou' } }
   if (roll < 0.75) {
     const planos: Plan[] = ['anual', 'semestral', 'mensal']
-    return { name, city, action: { kind: 'assinou', plano: pick(planos) } }
+    return { name, action: { kind: 'assinou', plano: pick(planos) } }
   }
-  if (roll < 0.9) return { name, city, action: { kind: 'concluiu_licao' } }
-  return { name, city, action: { kind: 'sequencia', dias: 7 + Math.floor(Math.random() * 30) } }
+  if (roll < 0.9) return { name, action: { kind: 'concluiu_licao' } }
+  return { name, action: { kind: 'sequencia', dias: 7 + Math.floor(Math.random() * 30) } }
 }
 
 const PLAN_LABEL: Record<Plan, string> = {
@@ -150,7 +148,7 @@ export default function SignupToastNotifier() {
               fontWeight: 500,
             }}
           >
-            {entry.name}, {entry.city}
+            {entry.name}
           </p>
           <p
             className="text-[11px] leading-tight mt-0.5"

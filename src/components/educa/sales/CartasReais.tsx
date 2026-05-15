@@ -9,6 +9,7 @@
  * fallback automático (3 mais raras) já vem do server.
  */
 
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import CartaView from '@/components/colecao/CartaView'
 import type { Carta } from '@/types/colecao'
@@ -19,8 +20,36 @@ type Props = {
   cartas: Carta[]
 }
 
+type Breakpoint = 'mobile' | 'sm' | 'md'
+
+/**
+ * Hook que reage ao breakpoint do Tailwind (sm=640, md=768) pra que o
+ * CartaView receba a largura correta em px — sem ela, ele renderiza
+ * no design size (145/180) e vaza pra fora do wrapper visual.
+ */
+function useBreakpoint(): Breakpoint {
+  const [bp, setBp] = useState<Breakpoint>('mobile')
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mqMd = window.matchMedia('(min-width: 768px)')
+    const mqSm = window.matchMedia('(min-width: 640px)')
+    function update() {
+      setBp(mqMd.matches ? 'md' : mqSm.matches ? 'sm' : 'mobile')
+    }
+    update()
+    mqSm.addEventListener('change', update)
+    mqMd.addEventListener('change', update)
+    return () => {
+      mqSm.removeEventListener('change', update)
+      mqMd.removeEventListener('change', update)
+    }
+  }, [])
+  return bp
+}
+
 export default function CartasReais({ cartas }: Props) {
   const shown = cartas.slice(0, 3)
+  const bp = useBreakpoint()
 
   if (shown.length === 0) {
     return (
@@ -41,6 +70,15 @@ export default function CartasReais({ cartas }: Props) {
 
   const centerIdx = shown.length === 3 ? 1 : shown.length - 1
 
+  // Tamanho real (em px) que cada slot vai ter, por breakpoint. Mantemos
+  // o total + gaps + rotação dentro do container em qualquer largura.
+  const SIZES: Record<Breakpoint, { center: number; side: number; gap: number }> = {
+    mobile: { center: 92, side: 72, gap: 0 },
+    sm:     { center: 150, side: 130, gap: 10 },
+    md:     { center: 180, side: 145, gap: 14 },
+  }
+  const size = SIZES[bp]
+
   return (
     <div
       className="relative w-full overflow-hidden rounded-3xl"
@@ -58,12 +96,12 @@ export default function CartasReais({ cartas }: Props) {
         Coleção · suas conquistas
       </p>
 
-      {/* Cartas: flex centralizado, centro maior e elevado. Em mobile,
-          ângulos menores e gap menor pra todas caberem sem cortar. */}
-      <div className="flex items-end justify-center gap-1 sm:gap-3 md:gap-4">
+      {/* Cartas: flex centralizado, centro maior e elevado. */}
+      <div className="flex items-end justify-center" style={{ gap: size.gap }}>
         {shown.map((carta, i) => {
           const isCenter = i === centerIdx
           const rotate = i === centerIdx ? 0 : i < centerIdx ? -3 : 3
+          const width = isCenter ? size.center : size.side
           return (
             <motion.div
               key={carta.id}
@@ -72,11 +110,12 @@ export default function CartasReais({ cartas }: Props) {
                 transformOrigin: 'bottom center',
                 transform: `translateY(${isCenter ? '-10px' : '0px'}) rotate(${rotate}deg)`,
                 zIndex: isCenter ? 10 : 1,
+                width,
               }}
               animate={isCenter ? { y: [0, -6, 0] } : undefined}
               transition={isCenter ? { duration: 5, repeat: Infinity, ease: 'easeInOut' } : undefined}
             >
-              <ResponsiveCarta carta={carta} isCenter={isCenter} />
+              <CartaView carta={carta} width={width} />
             </motion.div>
           )
         })}
@@ -92,29 +131,6 @@ export default function CartasReais({ cartas }: Props) {
       >
         Suprema · Lendária · Épica · Rara · Comum
       </p>
-    </div>
-  )
-}
-
-/**
- * CartaView usa width em px e escala internamente.
- * Aqui ajustamos o tamanho conforme o slot (centro maior) e o viewport.
- * Em mobile, cartas laterais menores pra todas caberem.
- */
-function ResponsiveCarta({ carta, isCenter }: { carta: Carta; isCenter: boolean }) {
-  // Mobile (< sm) precisa caber 3 cartas + rotação sem cortar.
-  // Centro ~105px, laterais ~84px. Em tablet/desktop volta ao tamanho cheio.
-  const baseClass = isCenter
-    ? 'w-[105px] sm:w-[160px] md:w-[180px]'
-    : 'w-[84px] sm:w-[140px] md:w-[145px]'
-
-  const designWidth = isCenter ? 180 : 145
-
-  return (
-    <div className={baseClass}>
-      <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-        <CartaView carta={carta} width={designWidth} />
-      </div>
     </div>
   )
 }

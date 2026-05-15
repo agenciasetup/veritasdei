@@ -133,13 +133,57 @@ export async function updateSession(request: NextRequest) {
   // - Demais paths fora da whitelist → 307 redirect pra /educa.
   // ─────────────────────────────────────────────────────────────────────
   if (product === 'veritas-educa') {
+    // Paths sempre públicos no subdomínio: landing, auth, legais e
+    // checkout/assine. Não exigem login pra serem renderizados.
+    const isAlwaysPublic =
+      path === '/educa' ||
+      path === '/educa/assine' ||
+      path === '/educa/checkout' ||
+      path === '/login' ||
+      path.startsWith('/auth/') ||
+      path.startsWith('/api/') ||
+      path === '/privacidade' ||
+      path === '/termos' ||
+      path === '/diretrizes' ||
+      path === '/cookies' ||
+      path === '/dmca' ||
+      path === '/consentimento-parental' ||
+      path === '/excluir-conta'
+
     // ───────────────────────────────────────────────────────────────────
-    // Gate de assinatura
+    // Anônimo: bloqueia conteúdo premium.
     //
-    // No Veritas Educa, o usuário logado sem assinatura ativa só pode
-    // acessar a tela de assinatura e o próprio perfil. Todo o resto —
-    // inclusive a raiz e a dashboard — é encaminhado pra /educa/assine.
-    // A trava real continua server-side; isto é só o pedágio na borda.
+    // Sem login não dá pra entrar em /estudo, /colecao, /rosario etc.
+    // Tudo que não estiver na whitelist pública volta pra /educa, que
+    // mostra a landing com CTA de assinar.
+    // ───────────────────────────────────────────────────────────────────
+    if (!authedUser) {
+      const isPremiumArea =
+        path === '/estudo' || path.startsWith('/estudo/') ||
+        path === '/rosario' || path.startsWith('/rosario/') ||
+        path === '/colecao' || path.startsWith('/colecao/') ||
+        path === '/perfil' || path.startsWith('/perfil/') ||
+        path === '/liturgia' || path.startsWith('/liturgia/') ||
+        (path.startsWith('/educa/') && !isAlwaysPublic) ||
+        path === '/admin' || path.startsWith('/admin/')
+
+      if (isPremiumArea) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/educa'
+        url.search = ''
+        const redirectResponse = NextResponse.redirect(url, 307)
+        for (const setCookie of supabaseResponse.headers.getSetCookie()) {
+          redirectResponse.headers.append('set-cookie', setCookie)
+        }
+        return redirectResponse
+      }
+    }
+
+    // ───────────────────────────────────────────────────────────────────
+    // Gate de assinatura (logado mas sem premium)
+    //
+    // Pode ver landing (/educa) e checkout (/educa/checkout, /educa/assine).
+    // Qualquer rota de conteúdo premium redireciona pro checkout focado.
     // ───────────────────────────────────────────────────────────────────
     if (authedUser) {
       // Cache de 60s num cookie assinado evita um RPC de DB por navegação.
@@ -167,28 +211,16 @@ export async function updateSession(request: NextRequest) {
 
       if (!isPremium) {
         const allowedForFree =
-          path === '/educa/assine' ||
-          path === '/perfil' ||
-          path.startsWith('/perfil/') ||
-          path === '/login' ||
-          path.startsWith('/auth/') ||
-          path.startsWith('/api/') ||
+          isAlwaysPublic ||
           // Admin tem gate de role próprio no AdminLayout.
           path === '/admin' ||
           path.startsWith('/admin/') ||
           path === '/checkout' ||
-          path.startsWith('/checkout/') ||
-          path === '/privacidade' ||
-          path === '/termos' ||
-          path === '/diretrizes' ||
-          path === '/cookies' ||
-          path === '/dmca' ||
-          path === '/consentimento-parental' ||
-          path === '/excluir-conta'
+          path.startsWith('/checkout/')
 
         if (!allowedForFree) {
           const url = request.nextUrl.clone()
-          url.pathname = '/educa/assine'
+          url.pathname = '/educa/checkout'
           url.search = ''
           const redirectResponse = NextResponse.redirect(url, 307)
           for (const setCookie of supabaseResponse.headers.getSetCookie()) {

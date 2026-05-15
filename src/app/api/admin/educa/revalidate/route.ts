@@ -12,13 +12,16 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import {
   revalidateEducaBanners,
+  revalidateEducaDestaques,
   revalidateEducaPillars,
 } from '@/lib/educa/server-data'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-type Target = 'banners' | 'pillars' | 'all'
+type Target = 'banners' | 'pillars' | 'destaques' | 'all'
+
+const VALID_TARGETS: Target[] = ['banners', 'pillars', 'destaques', 'all']
 
 export async function POST(req: Request) {
   const supabase = await createServerSupabaseClient()
@@ -38,7 +41,7 @@ export async function POST(req: Request) {
   let target: Target = 'all'
   try {
     const body = (await req.json()) as { target?: Target }
-    if (body?.target === 'banners' || body?.target === 'pillars' || body?.target === 'all') {
+    if (body?.target && VALID_TARGETS.includes(body.target)) {
       target = body.target
     }
   } catch {
@@ -47,6 +50,7 @@ export async function POST(req: Request) {
 
   if (target === 'banners' || target === 'all') revalidateEducaBanners()
   if (target === 'pillars' || target === 'all') revalidateEducaPillars()
+  if (target === 'destaques' || target === 'all') revalidateEducaDestaques()
 
   return NextResponse.json({ ok: true, target })
 }

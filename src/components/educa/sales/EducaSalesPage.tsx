@@ -27,6 +27,7 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import type {
+  EducaLandingDestaque,
   EducaSalesIntervalo,
   EducaSalesPilar,
   EducaSalesPrice,
@@ -108,6 +109,7 @@ type Props = {
   pilares: EducaSalesPilar[]
   cartas: Carta[]
   totals: EducaSalesTotals
+  destaques: EducaLandingDestaque[]
   isAuthenticated: boolean
   prefillEmail: string | null
   prefillName: string | null
@@ -120,6 +122,7 @@ export default function EducaSalesPage({
   pilares,
   cartas,
   totals,
+  destaques,
   isAuthenticated,
   prefillEmail,
   prefillName,
@@ -159,8 +162,16 @@ export default function EducaSalesPage({
     [prices, intervalo],
   )
 
-  function scrollToSignup() {
-    // Lookup by id pra não depender de ref (componente é dynamic-imported).
+  /**
+   * Comportamento do CTA principal (Hero + Pricing):
+   *   - Logado: vai pro checkout focado, levando o plano selecionado.
+   *   - Anônimo: rola pro form de cadastro inline.
+   */
+  function onPrimaryCta() {
+    if (isAuthenticated) {
+      window.location.href = `/educa/checkout?plan=${intervalo}`
+      return
+    }
     if (typeof document === 'undefined') return
     document.getElementById('cadastro')?.scrollIntoView({
       behavior: 'smooth',
@@ -197,11 +208,13 @@ export default function EducaSalesPage({
     }
   }
 
-  // Retoma o checkout automaticamente quando volta do login Google.
+  // Retoma o checkout automaticamente quando volta do Google. Hoje a
+  // landing recebe o usuário, mas o ?plan= já manda direto pro checkout
+  // focado — sem isso a pessoa ficava perdida na landing depois do OAuth.
   useEffect(() => {
     if (isAuthenticated && autoPlan && !autoFiredRef.current) {
       autoFiredRef.current = true
-      startCheckout(autoPlan)
+      window.location.replace(`/educa/checkout?plan=${autoPlan}`)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -252,7 +265,7 @@ export default function EducaSalesPage({
     setLoading(true)
     const { error: oauthError } = await signInWithOAuth(
       'google',
-      `/educa/assine?plan=${intervalo}`,
+      `/educa/checkout?plan=${intervalo}`,
     )
     if (oauthError) {
       setError(traduzirErro(oauthError))
@@ -264,7 +277,8 @@ export default function EducaSalesPage({
     <div className="theme-lock-dark">
       <Hero
         isAuthenticated={isAuthenticated}
-        onPrimaryClick={scrollToSignup}
+        userName={prefillName}
+        onPrimaryClick={onPrimaryCta}
         totals={totals}
       />
 
@@ -272,13 +286,13 @@ export default function EducaSalesPage({
 
       <Features cartas={cartas} />
 
-      <SocialProofStrip />
+      <SocialProofStrip destaques={destaques} />
 
       <Pricing
         prices={prices}
         selected={intervalo}
         onSelect={setIntervalo}
-        onAssinar={scrollToSignup}
+        onAssinar={onPrimaryCta}
       />
 
       <Faq />
