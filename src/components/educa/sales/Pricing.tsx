@@ -40,12 +40,12 @@ const MESES: Record<EducaSalesIntervalo, number> = {
 }
 
 const INCLUSO = [
-  'Trilhas das 3 áreas: Bíblia, Magistério, Patrística',
-  'Terço em grupo (sala por código)',
-  'Modo debate com IA católica',
-  'Grupos de estudo com metas e progresso',
-  'Coleção de cartas (santos, doutores, marcos)',
-  'Anotações por lição, sequência diária, XP',
+  'Pilares de Dogmas, Sacramentos, Bíblia, Defesa da Fé e outros',
+  'Terço em grupo, em sala fechada por código',
+  'Modo debate com IA católica fiel ao Magistério',
+  'Grupos de estudo com meta semanal e ranking',
+  'Coleção de cartas de santos, doutores e marcos da Igreja',
+  'Anotações por lição, sequência diária e conquistas',
 ]
 
 /**
@@ -98,9 +98,9 @@ export default function Pricing({ prices, selected, onSelect, onAssinar }: Props
               lineHeight: 1.6,
             }}
           >
-            A diferença entre os planos é só por quanto tempo você assina de
-            uma vez. Pague no Pix, cartão (em até 12x) ou boleto. Cancele
-            quando quiser.
+            Todos os planos têm acesso a tudo. A diferença é por quanto
+            tempo você assina de uma vez. Pix, cartão em até 12x ou boleto.
+            Cancele quando quiser.
           </p>
         </motion.div>
 
@@ -310,7 +310,7 @@ export default function Pricing({ prices, selected, onSelect, onAssinar }: Props
             onClick={onAssinar}
             className="btn-gold inline-flex items-center gap-2 rounded-full px-8 py-4 text-[12px] font-semibold"
           >
-            Assinar — {NOMES[selected]}
+            Assinar plano {NOMES[selected]}
           </button>
           <p
             className="text-[11px] inline-flex items-center gap-1.5"

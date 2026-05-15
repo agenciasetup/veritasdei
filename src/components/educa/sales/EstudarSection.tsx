@@ -148,14 +148,14 @@ export default function EstudarSection({ pilares }: Props) {
           viewport={{ once: true, margin: '-80px' }}
           transition={{ duration: 0.7 }}
         >
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-6">
             <span
               className="display-cinzel text-4xl md:text-5xl leading-none"
               style={{ color: '#C9A84C', opacity: 0.85, fontWeight: 600 }}
             >
               01
             </span>
-            <span className="w-12 h-px" style={{ background: 'rgba(201,168,76,0.5)' }} />
+            <span className="hidden sm:block w-12 h-px" style={{ background: 'rgba(201,168,76,0.5)' }} />
             <span className="eyebrow-label" style={{ color: '#D9C077' }}>
               Estudar
             </span>
@@ -174,9 +174,9 @@ export default function EstudarSection({ pilares }: Props) {
 
             <ul className="flex flex-col gap-2.5 lg:pl-6 lg:border-l" style={{ borderColor: 'rgba(201,168,76,0.2)' }}>
               {[
-                `${pilares.length} pilares de estudo, ${totalTopicos} tópicos no total — toque pra ver o que tem dentro.`,
-                'Anote dentro do app: suas notas ficam atreladas a cada tópico.',
-                'Avaliações por módulo, com XP e conquistas.',
+                `${pilares.length} pilares e ${totalTopicos} tópicos. Toque em qualquer um pra ver o índice antes de assinar.`,
+                'Anote dentro do app. Suas notas ficam guardadas em cada tópico.',
+                'Avaliações por módulo, com XP e conquistas pra você medir o que aprendeu.',
               ].map(item => (
                 <li
                   key={item}
@@ -392,7 +392,7 @@ function FeaturedCard({
             <BookOpen className="w-4 h-4" />
             <span>{pilar.topicos.length} tópicos</span>
             <span style={{ color: 'rgba(255,255,255,0.2)' }}>·</span>
-            <span style={{ color: 'rgba(242,237,228,0.6)' }}>Toque pra ver o índice</span>
+            <span style={{ color: 'rgba(242,237,228,0.6)' }}>Toque pra ver o índice completo</span>
           </div>
         </div>
 
@@ -733,7 +733,7 @@ function PilarModalBody({ pilar }: { pilar: EducaSalesPilar }) {
           className="text-[11px] text-center"
           style={{ color: 'rgba(242,237,228,0.55)', fontFamily: 'var(--font-body)' }}
         >
-          Conteúdo completo dentro do app — disponível com a assinatura.
+          Conteúdo completo liberado dentro do app, com a assinatura.
         </p>
       </div>
     </>

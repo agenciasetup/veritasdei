@@ -18,28 +18,36 @@ type Item = {
 
 const FAQ: Item[] = [
   {
+    q: 'O que eu vou aprender, exatamente?',
+    a: 'O que um católico precisa saber pra viver e explicar a fé. Dogmas da Igreja, os sete Sacramentos, os 10 Mandamentos, Orações, Virtudes e Pecados, Obras de Misericórdia, Bíblia, Patrística, Magistério e Defesa da Fé. Dezenas de tópicos e subtópicos divididos em pilares, com fontes citadas em cada lição.',
+  },
+  {
     q: 'Como são as aulas?',
-    a: 'Lições em texto, organizadas em catálogo navegável igual a uma plataforma de streaming. São 14 pilares (Dogmas, Sacramentos, Mandamentos, Orações, Defesa da Fé…) que abrem em 63 tópicos e 136 subtópicos. Você abre o pilar, escolhe o tópico, lê a lição no seu ritmo e o app guarda onde parou.',
+    a: 'Lições em texto, curtas, organizadas em catálogo igual a uma plataforma de streaming. Você abre o pilar, escolhe o tópico, lê no seu ritmo e o app guarda onde parou. Cada lição vem com fontes citadas (Bíblia, Catecismo, documentos do Magistério) pra você conferir.',
   },
   {
     q: 'Vai me ajudar a defender minha fé?',
-    a: 'Vai. Tem três coisas trabalhando juntas: o Modo Debate — uma IA assume o papel de protestante e te questiona sobre Maria, Eucaristia, papado, Bíblia sozinha; você responde e ela mostra um placar do seu argumento. Junto, a trilha de Defesa da Fé (apologética católica) e o pilar de Dogmas te dão a base. No fim, você defende a fé porque entendeu o porquê — não porque decorou frase pronta.',
+    a: 'Vai. Você tem o Modo Debate (uma IA assume o papel de protestante e te questiona sobre Maria, Eucaristia, papado, Sola Scriptura), a trilha de Defesa da Fé com apologética católica e o pilar de Dogmas com a base. No fim, você defende a fé porque entendeu o porquê das coisas, não porque decorou frase pronta.',
+  },
+  {
+    q: 'É fiel ao Magistério da Igreja?',
+    a: 'É. Todo o conteúdo é baseado em Bíblia, Catecismo da Igreja Católica, documentos do Magistério e nos santos doutores. Não há opinião pessoal nem teologia inventada. Quando há posições legítimas diferentes dentro da Igreja, isso é dito claramente.',
   },
   {
     q: 'E se eu não conseguir manter o ritmo?',
-    a: 'O app foi feito pra constância, não pressa. Pode fazer uma lição por semana ou cinco por dia — você decide. O app guarda o ponto onde parou e te lembra de voltar com missões curtas (5 a 10 minutos) pra você não perder o fio sem se sentir cobrado.',
+    a: 'O app foi feito pra constância, não pressa. Você pode fazer uma lição por semana ou cinco por dia, é você quem decide. O app guarda o ponto onde parou e manda missões curtas de 5 a 10 minutos pra você não perder o fio.',
   },
   {
     q: 'Funciona no celular?',
-    a: 'Sim. Abre no navegador do celular como qualquer site — Android ou iPhone, dá no mesmo. Computador também funciona com a mesma conta.',
+    a: 'Sim. Abre direto no navegador do celular (Android ou iPhone) como qualquer site. Funciona também no computador, com a mesma conta.',
   },
   {
     q: 'Quais são as formas de pagamento?',
-    a: 'Pix, cartão de crédito (parcelado em até 12x) ou boleto. Tudo processado pela Asaas, com pagamento seguro.',
+    a: 'Pix, cartão de crédito parcelado em até 12x ou boleto. Tudo processado pela Asaas, com pagamento seguro.',
   },
   {
     q: 'Tem garantia?',
-    a: 'Tem 7 dias. É o prazo do Código de Defesa do Consumidor pra arrependimento — pede o reembolso pelo seu perfil ou pelo suporte e devolvemos integral, sem perguntar o porquê.',
+    a: 'Tem 7 dias de garantia. É o prazo do Código de Defesa do Consumidor. Você pede o reembolso pelo seu perfil ou pelo suporte e devolvemos o valor integral, sem perguntar o porquê.',
   },
 ]
 

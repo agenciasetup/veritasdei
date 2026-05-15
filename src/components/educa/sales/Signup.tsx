@@ -139,7 +139,7 @@ const Signup = function Signup(props: SignupProps) {
           >
             Plano selecionado:{' '}
             <strong style={{ color: '#5A1625' }}>{NOMES[intervalo]}</strong>
-            {selectedPrice ? <> — {formatBRL(selectedPrice.amountCents)}.</> : '.'}{' '}
+            {selectedPrice ? <>{' · '}{formatBRL(selectedPrice.amountCents)}.</> : '.'}{' '}
             {isAuthenticated
               ? 'Confirme abaixo e siga pro pagamento.'
               : 'Em seguida você cai direto no checkout.'}
@@ -299,7 +299,7 @@ function SubscribePanel({
         ) : (
           <>
             <Lock className="w-4 h-4" />
-            Assinar — {NOMES[intervalo]}
+            Assinar plano {NOMES[intervalo]}
             {selectedPrice ? ` · ${formatBRL(selectedPrice.amountCents)}` : ''}
           </>
         )}
