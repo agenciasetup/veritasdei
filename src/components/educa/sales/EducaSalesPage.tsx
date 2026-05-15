@@ -26,12 +26,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import type {
-  EducaSalesCarta,
   EducaSalesIntervalo,
   EducaSalesPilar,
   EducaSalesPrice,
   EducaSalesTotals,
 } from '@/lib/educa/server-data'
+import type { Carta } from '@/types/colecao'
 
 import Hero from './Hero'
 import EstudarSection from './EstudarSection'
@@ -97,7 +97,7 @@ function traduzirErro(error: string): string {
 type Props = {
   prices: EducaSalesPrice[]
   pilares: EducaSalesPilar[]
-  cartas: EducaSalesCarta[]
+  cartas: Carta[]
   totals: EducaSalesTotals
   isAuthenticated: boolean
   prefillEmail: string | null
@@ -248,7 +248,7 @@ export default function EducaSalesPage({
   }
 
   return (
-    <>
+    <div className="theme-lock-dark">
       <Hero
         isAuthenticated={isAuthenticated}
         onPrimaryClick={scrollToSignup}
@@ -304,7 +304,7 @@ export default function EducaSalesPage({
       />
 
       <Footer />
-    </>
+    </div>
   )
 }
 

@@ -164,6 +164,69 @@
 }
 
 /* ═══════════════════════════════════════════════════════
+   THEME LOCK — força paleta escura num pedaço da UI
+   independente do data-theme global.
+
+   Aplicado na página de venda do Educa (LP). Garante que
+   marketing tenha aparência consistente quando o usuário
+   ou o SO escolhem tema claro.
+   ═══════════════════════════════════════════════════════ */
+.theme-lock-dark {
+  /* Semantic */
+  --surface-1:      #0F0E0C;
+  --surface-2:      #141210;
+  --surface-3:      #1C1913;
+  --surface-inset:  rgba(0, 0, 0, 0.35);
+  --text-1:         #F2EDE4;
+  --text-2:         #C0B8B0;
+  --text-3:         #938B80;
+  --text-inverse:   #1C140C;
+  --border-1:       rgba(242, 237, 228, 0.12);
+  --border-2:       rgba(242, 237, 228, 0.06);
+  --accent:         #C9A84C;
+  --accent-hover:   #D9C077;
+  --accent-contrast:#1C140C;
+  --accent-soft:    rgba(201, 168, 76, 0.15);
+  --success:        #66BB6A;
+  --danger:         #D94F5C;
+  --warning:        #E67E22;
+  /* Legacy aliases — usados nas classes .surface-*, .btn-*, etc. */
+  --bg-deep:        #0F0E0C;
+  --bg-surface:     #141210;
+  --bg-card:        rgba(20, 18, 14, 0.72);
+  --bg-card-solid:  #1C1913;
+  --bg-verse:       rgba(22, 18, 14, 0.6);
+  --text-primary:   #F2EDE4;
+  --text-secondary: #C0B8B0;
+  --text-muted:     #938B80;
+  --gold:           #C9A84C;
+  --gold-light:     #D9C077;
+  --gold-dim:       rgba(201, 168, 76, 0.15);
+  --background:     #0F0E0C;
+  --foreground:     #F2EDE4;
+  --accent-primary: #C9A84C;
+  --border-color:   rgba(242, 237, 228, 0.12);
+  --border-gold:    rgba(201, 168, 76, 0.12);
+  --border-subtle:  rgba(242, 237, 228, 0.06);
+  /* Landing parchment/wine — devem ficar nos valores "vinheta escura"
+     mesmo que o usuário esteja em tema claro. */
+  --paper:          #F4EEE4;
+  --paper-2:        #EBE0CE;
+  --paper-deep:     #E3D5BE;
+  --ink:            #2A1D14;
+  --ink-soft:       #6A5846;
+  --ink-muted:      #8F7A64;
+  --wine-soft:      #5A1625;
+  --wine-ink:       #3D0F1A;
+  --hero-vignette:  radial-gradient(120% 90% at 12% 0%, rgba(107,29,42,0.45) 0%, rgba(22,15,13,0.92) 46%, #0A0806 100%);
+  --velvet:         radial-gradient(140% 120% at 50% 0%, rgba(107,29,42,0.35) 0%, rgba(22,15,13,0.95) 55%, #0A0806 100%);
+  /* Browser hint pro form controls / scrollbar */
+  color-scheme: dark;
+  background: var(--surface-1);
+  color: var(--text-1);
+}
+
+/* ═══════════════════════════════════════════════════════
    LITURGICAL SEASON OVERRIDES (opt-in)
    Em Quaresma e Advento, a Igreja usa paramentos roxos —
    o app espelha isso no acento quando

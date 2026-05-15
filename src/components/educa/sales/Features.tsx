@@ -4,7 +4,7 @@ import { motion, type Variants } from 'framer-motion'
 import type { ReactNode } from 'react'
 import { DebateMockup, GrupoMockup, TercoMockup } from './EducaMockups'
 import CartasReais from './CartasReais'
-import type { EducaSalesCarta } from '@/lib/educa/server-data'
+import type { Carta } from '@/types/colecao'
 
 type Tone = 'dark' | 'light' | 'wine'
 
@@ -78,7 +78,7 @@ const FEATURES: Feature[] = [
   },
 ]
 
-function cartasFeature(cartas: EducaSalesCarta[]): Feature {
+function cartasFeature(cartas: Carta[]): Feature {
   return {
     n: 5,
     tone: 'dark',
@@ -103,7 +103,7 @@ const fadeFromSide = (fromLeft: boolean): Variants => ({
  * pra dar ritmo visual à página. O 5º (Cartas) é montado dinamicamente com
  * as cartas reais escolhidas pelo admin.
  */
-export default function Features({ cartas }: { cartas: EducaSalesCarta[] }) {
+export default function Features({ cartas }: { cartas: Carta[] }) {
   const blocks = [...FEATURES, cartasFeature(cartas)]
   return (
     <div id="funcoes">

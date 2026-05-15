@@ -44,7 +44,7 @@ const INCLUSO = [
   'Terço em grupo (sala por código)',
   'Modo debate com IA católica',
   'Grupos de estudo com metas e progresso',
-  'Códex de cartas (santos, doutores, marcos)',
+  'Coleção de cartas (santos, doutores, marcos)',
   'Anotações por lição, sequência diária, XP',
 ]
 

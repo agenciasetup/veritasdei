@@ -1,22 +1,22 @@
 'use client'
 
 /**
- * CartasReais — até 3 cartas reais (de `public.cartas`) renderizadas
- * lado a lado, com a do meio em destaque (maior + elevada).
+ * CartasReais — renderiza até 3 cartas da coleção real usando o
+ * componente `<CartaView>` da página /colecao. Mesma estética visual:
+ * moldura, brilho, holográfico — sem reinventar.
  *
- * Substitui o SVG CartasMockup anterior. Mostra ilustracao_url + nome +
- * subtitulo + raridade + frase_central reais. Escolha das cartas vem do
- * admin via `landing_featured` (com fallback automático).
+ * Escolha pelo admin via `cartas.landing_featured`. Sem nenhuma marcada,
+ * fallback automático (3 mais raras) já vem do server.
  */
 
 import { motion } from 'framer-motion'
-import { RARIDADE_META, type CartaRaridade } from '@/types/colecao'
-import type { EducaSalesCarta } from '@/lib/educa/server-data'
+import CartaView from '@/components/colecao/CartaView'
+import type { Carta } from '@/types/colecao'
 
 const GOLD = '#C9A84C'
 
 type Props = {
-  cartas: EducaSalesCarta[]
+  cartas: Carta[]
 }
 
 export default function CartasReais({ cartas }: Props) {
@@ -25,9 +25,8 @@ export default function CartasReais({ cartas }: Props) {
   if (shown.length === 0) {
     return (
       <div
-        className="relative w-full rounded-2xl flex items-center justify-center text-center px-8"
+        className="relative w-full rounded-2xl flex items-center justify-center text-center px-8 py-12"
         style={{
-          aspectRatio: '420 / 520',
           background: '#14100B',
           border: '1px solid rgba(201,168,76,0.35)',
           color: 'rgba(242,237,228,0.65)',
@@ -40,158 +39,85 @@ export default function CartasReais({ cartas }: Props) {
     )
   }
 
-  // Slot do "destaque" = o do meio quando há 3; quando 1 ou 2, o último.
   const centerIdx = shown.length === 3 ? 1 : shown.length - 1
 
   return (
     <div
-      className="relative w-full rounded-2xl overflow-hidden"
+      className="relative w-full overflow-visible rounded-3xl"
       style={{
-        aspectRatio: '420 / 520',
         background: '#14100B',
         border: '1px solid rgba(201,168,76,0.35)',
+        padding: '32px 12px 32px',
       }}
     >
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 text-center pt-6 px-5 z-20 pointer-events-none">
-        <p
-          className="text-[10px] uppercase tracking-[0.32em]"
-          style={{ color: GOLD, fontFamily: 'Cinzel, serif' }}
-        >
-          Códex · suas conquistas
-        </p>
-      </div>
+      <p
+        className="text-center text-[10px] uppercase tracking-[0.32em] mb-6"
+        style={{ color: GOLD, fontFamily: 'Cinzel, serif' }}
+      >
+        Coleção · suas conquistas
+      </p>
 
-      {/* Grid de cartas: 3 colunas, centro elevado */}
-      <div className="absolute inset-0 grid grid-cols-3 gap-1 items-center px-2 sm:px-3 pt-12 pb-10">
-        {shown.map((carta, i) => (
-          <div key={carta.id} className="flex items-center justify-center">
-            <CartaCard carta={carta} isCenter={i === centerIdx} position={i - centerIdx} />
-          </div>
-        ))}
+      {/* Cartas — flex centralizado, centro maior e elevado */}
+      <div className="flex items-end justify-center gap-1.5 sm:gap-3 md:gap-4 px-1">
+        {shown.map((carta, i) => {
+          const isCenter = i === centerIdx
+          const rotate = i === centerIdx ? 0 : i < centerIdx ? -6 : 6
+          return (
+            <motion.div
+              key={carta.id}
+              className="flex-shrink-0"
+              style={{
+                transformOrigin: 'bottom center',
+                transform: `translateY(${isCenter ? '-12px' : '0px'}) rotate(${rotate}deg)`,
+                zIndex: isCenter ? 10 : 1,
+              }}
+              animate={isCenter ? { y: [0, -6, 0] } : undefined}
+              transition={isCenter ? { duration: 5, repeat: Infinity, ease: 'easeInOut' } : undefined}
+            >
+              <ResponsiveCarta carta={carta} isCenter={isCenter} />
+            </motion.div>
+          )
+        })}
       </div>
 
       {/* Footer */}
-      <div className="absolute bottom-0 left-0 right-0 pb-4 text-center z-20 pointer-events-none">
-        <p
-          className="text-[9px] uppercase tracking-[0.22em]"
-          style={{
-            color: 'rgba(242,237,228,0.5)',
-            fontFamily: 'Cinzel, serif',
-          }}
-        >
-          Suprema · Lendária · Épica · Rara · Comum
-        </p>
-      </div>
+      <p
+        className="text-center text-[9px] uppercase tracking-[0.22em] mt-8"
+        style={{
+          color: 'rgba(242,237,228,0.5)',
+          fontFamily: 'Cinzel, serif',
+        }}
+      >
+        Suprema · Lendária · Épica · Rara · Comum
+      </p>
     </div>
   )
 }
 
-function CartaCard({
-  carta,
-  isCenter,
-  position,
-}: {
-  carta: EducaSalesCarta
-  isCenter: boolean
-  /** -1 = esquerda, 0 = centro, 1 = direita */
-  position: number
-}) {
-  const meta = RARIDADE_META[carta.raridade as CartaRaridade] ?? RARIDADE_META.comum
-  const accent = carta.corAccent || meta.cor
+/**
+ * CartaView usa width em px e escala internamente.
+ * Aqui ajustamos o tamanho conforme o slot (centro maior) e o viewport.
+ * Em mobile, cartas laterais menores pra todas caberem.
+ */
+function ResponsiveCarta({ carta, isCenter }: { carta: Carta; isCenter: boolean }) {
+  // Mobile (< sm): laterais ~95px, centro ~120px
+  // Tablet / desktop: laterais ~145px, centro ~180px
+  const baseClass = isCenter
+    ? 'w-[120px] sm:w-[160px] md:w-[180px]'
+    : 'w-[95px] sm:w-[140px] md:w-[145px]'
 
-  // Rotação leve nos laterais; centro reto. Centro também é maior e fica
-  // por cima (z-index) sem cobrir nome/estrelas das outras.
-  const rotate = position === 0 ? 0 : position < 0 ? -6 : 6
-  const yOffset = isCenter ? -10 : 0
+  // Width que o CartaView usa internamente pra escalar — corresponde
+  // ao tamanho final desejado. Como CartaView aplica `transform: scale()`
+  // ela precisa do width em px. Fixamos no maior breakpoint e o CSS
+  // de width acima cuida do scaling final no container.
+  const designWidth = isCenter ? 180 : 145
 
   return (
-    <motion.div
-      className="relative rounded-xl overflow-hidden"
-      style={{
-        width: isCenter ? '108%' : '92%',
-        aspectRatio: '5 / 7',
-        transform: `translateY(${yOffset}px) rotate(${rotate}deg)`,
-        zIndex: isCenter ? 10 : 1,
-        background: 'linear-gradient(160deg, #1F1810 0%, #0F0E0C 100%)',
-        border: `2px solid ${meta.borda}`,
-        boxShadow: isCenter
-          ? `0 22px 50px rgba(0,0,0,0.55)${meta.glow ? `, ${meta.glow}` : ''}`
-          : '0 14px 30px rgba(0,0,0,0.4)',
-      }}
-      animate={isCenter ? { y: [yOffset, yOffset - 4, yOffset] } : undefined}
-      transition={isCenter ? { duration: 5, repeat: Infinity, ease: 'easeInOut' } : undefined}
-    >
-      {/* Ilustração */}
-      {carta.ilustracaoUrl ? (
-        <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={carta.ilustracaoUrl}
-            alt={carta.nome}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                'linear-gradient(to bottom, rgba(15,14,12,0) 35%, rgba(15,14,12,0.92) 80%, #0F0E0C 100%)',
-            }}
-          />
-        </>
-      ) : (
-        <div
-          className="absolute inset-0 flex items-center justify-center"
-          style={{ background: `radial-gradient(60% 60% at 50% 40%, ${accent}25, transparent)` }}
-        >
-          <span
-            className="text-[10px] uppercase tracking-widest"
-            style={{ color: accent, fontFamily: 'Cinzel, serif' }}
-          >
-            {meta.label}
-          </span>
-        </div>
-      )}
-
-      {/* Conteúdo overlay (parte inferior) */}
-      <div className="absolute bottom-0 left-0 right-0 px-2.5 pb-2.5">
-        <p
-          className="uppercase mb-0.5"
-          style={{
-            color: accent,
-            fontFamily: 'Cinzel, serif',
-            letterSpacing: '0.18em',
-            fontSize: isCenter ? 8.5 : 7.5,
-          }}
-        >
-          {meta.label} · {'★'.repeat(carta.estrelas)}
-        </p>
-        <h3
-          className="leading-tight"
-          style={{
-            color: '#F2EDE4',
-            fontFamily: 'Cormorant Garamond, serif',
-            fontWeight: 600,
-            fontSize: isCenter ? 15 : 12,
-            textWrap: 'balance',
-          }}
-        >
-          {carta.nome}
-        </h3>
-        {carta.subtitulo && (
-          <p
-            className="mt-0.5 italic line-clamp-1"
-            style={{
-              color: 'rgba(242,237,228,0.65)',
-              fontFamily: 'Cormorant Garamond, serif',
-              fontSize: isCenter ? 10.5 : 9,
-              lineHeight: 1.3,
-            }}
-          >
-            {carta.subtitulo}
-          </p>
-        )}
+    <div className={baseClass}>
+      <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+        <CartaView carta={carta} width={designWidth} />
       </div>
-    </motion.div>
+    </div>
   )
 }
