@@ -132,11 +132,11 @@ const Signup = forwardRef<HTMLElement, SignupProps>(function Signup(props, ref) 
             )}
           </h2>
           <p
-            className="text-lg md:text-xl max-w-2xl mx-auto"
+            className="text-base md:text-lg max-w-2xl mx-auto"
             style={{
               color: 'var(--ink-soft)',
-              fontFamily: 'Cormorant Garamond, serif',
-              lineHeight: 1.55,
+              fontFamily: 'var(--font-body)',
+              lineHeight: 1.6,
             }}
           >
             Plano selecionado:{' '}
@@ -342,7 +342,7 @@ function SignupForm({
 }: FormProps) {
   return (
     <div>
-      {/* Google primeiro */}
+      {/* Google primeiro — caminho rápido sem checkboxes */}
       <button
         type="button"
         onClick={onGoogle}
@@ -351,7 +351,7 @@ function SignupForm({
         style={{
           background: '#FFFFFF',
           color: '#1F1F1F',
-          fontFamily: 'Poppins, sans-serif',
+          fontFamily: 'var(--font-body)',
           border: '1px solid rgba(28,20,12,0.12)',
           fontWeight: 500,
         }}
@@ -360,10 +360,18 @@ function SignupForm({
         Continuar com Google
       </button>
       <p
-        className="text-[11px] text-center mt-2"
-        style={{ color: 'var(--ink-muted)', fontFamily: 'Poppins, sans-serif' }}
+        className="text-[11px] text-center mt-2 leading-relaxed"
+        style={{ color: 'var(--ink-muted)', fontFamily: 'var(--font-body)' }}
       >
-        Mais rápido — preenche nome e e-mail automaticamente.
+        Ao continuar com Google, você aceita os{' '}
+        <Link href="/termos" target="_blank" className="underline" style={{ color: '#5A1625' }}>
+          Termos
+        </Link>{' '}
+        e a{' '}
+        <Link href="/privacidade" target="_blank" className="underline" style={{ color: '#5A1625' }}>
+          Política de Privacidade
+        </Link>
+        .
       </p>
 
       <div className="flex items-center gap-3 my-6">

@@ -91,11 +91,11 @@ export default function Pricing({ prices, selected, onSelect, onAssinar }: Props
             </span>
           </h2>
           <p
-            className="text-lg md:text-xl max-w-2xl mx-auto"
+            className="text-base md:text-lg max-w-2xl mx-auto"
             style={{
               color: 'rgba(242,237,228,0.72)',
-              fontFamily: 'Cormorant Garamond, serif',
-              lineHeight: 1.55,
+              fontFamily: 'var(--font-body)',
+              lineHeight: 1.6,
             }}
           >
             A diferença entre os planos é só por quanto tempo você assina de
@@ -290,13 +290,14 @@ export default function Pricing({ prices, selected, onSelect, onAssinar }: Props
             {INCLUSO.map(item => (
               <li
                 key={item}
-                className="flex items-start gap-2.5 text-[15px]"
+                className="flex items-start gap-2.5 text-sm"
                 style={{
                   color: 'rgba(242,237,228,0.82)',
-                  fontFamily: 'Cormorant Garamond, serif',
+                  fontFamily: 'var(--font-body)',
+                  lineHeight: 1.5,
                 }}
               >
-                <Check className="w-4 h-4 flex-shrink-0 mt-1" style={{ color: '#C9A84C' }} />
+                <Check className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#C9A84C' }} />
                 {item}
               </li>
             ))}

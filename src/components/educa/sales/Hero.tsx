@@ -147,11 +147,11 @@ export default function Hero({ isAuthenticated, onPrimaryClick }: Props) {
             </h1>
 
             <p
-              className="text-lg md:text-xl lg:text-2xl max-w-2xl mx-auto lg:mx-0 mb-10"
+              className="text-base md:text-lg lg:text-xl max-w-2xl mx-auto lg:mx-0 mb-10"
               style={{
                 color: '#CEC3B3',
-                fontFamily: 'Cormorant Garamond, serif',
-                lineHeight: 1.55,
+                fontFamily: 'var(--font-body)',
+                lineHeight: 1.6,
               }}
             >
               Trilhas guiadas por Bíblia, Magistério e Patrística. Terço em
