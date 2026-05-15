@@ -29,8 +29,18 @@ const soft = (t: Tone) => (t === 'dark' ? 'rgba(201,168,76,0.06)' : 'rgba(201,16
    public.content_groups / content_topics). Missão exibida é uma das
    variantes de mission_type (`pray_rosary`).
    ────────────────────────────────────────────────────────────────────────── */
-export function HeroDashboardMockup({ className = '' }: MockupProps) {
+type HeroDashboardProps = MockupProps & {
+  /** Nome do tempo litúrgico atual (ex.: "Tempo Comum", "Páscoa"). */
+  liturgia?: string
+}
+
+export function HeroDashboardMockup({
+  className = '',
+  liturgia = 'Tempo Comum',
+}: HeroDashboardProps) {
   const tone: Tone = 'dark'
+  // Limita o rótulo da liturgia pra não quebrar o card no SVG.
+  const liturgiaShort = liturgia.length > 18 ? liturgia.slice(0, 16) + '…' : liturgia
   return (
     <svg viewBox="0 0 360 720" className={className} aria-hidden>
       {/* Phone outer */}
@@ -206,7 +216,7 @@ export function HeroDashboardMockup({ className = '' }: MockupProps) {
         LITURGIA
       </text>
       <text x="202" y="548" fontFamily="Cormorant Garamond, serif" fontSize="13" fill={text(tone)} fontWeight="500">
-        Tempo Comum
+        {liturgiaShort}
       </text>
       <text x="202" y="566" fontFamily="Poppins, sans-serif" fontSize="10" fill={GOLD}>
         Ler hoje →
@@ -617,123 +627,3 @@ export function GrupoMockup({ tone = 'light', className = '' }: MockupProps) {
   )
 }
 
-/* ──────────────────────────────────────────────────────────────────────────
-   5. CARTAS — três cartas santo empilhadas
-   ────────────────────────────────────────────────────────────────────────── */
-export function CartasMockup({ tone = 'dark', className = '' }: MockupProps) {
-  return (
-    <svg viewBox="0 0 420 520" className={className} aria-hidden>
-      <rect x="0" y="0" width="420" height="520" rx="22" fill={bg(tone)} />
-      <rect x="0" y="0" width="420" height="520" rx="22" fill="none" stroke={GOLD} strokeOpacity="0.35" />
-
-      <text x="210" y="44" textAnchor="middle" fontFamily="Cinzel, serif" fontSize="10" fill={GOLD} letterSpacing="2.5">
-        CÓDEX · 47 CARTAS
-      </text>
-      <text x="210" y="72" textAnchor="middle" fontFamily="Cormorant Garamond, serif" fontSize="20" fill={text(tone)} fontWeight="600">
-        Sua coleção cresce
-      </text>
-
-      {/* Back card */}
-      <g transform="rotate(-8 130 270)">
-        <rect x="40" y="116" width="180" height="280" rx="14" fill={tone === 'dark' ? '#1C1610' : '#FFF7E5'} stroke={GOLD} strokeOpacity="0.45" />
-        <text x="130" y="146" textAnchor="middle" fontFamily="Cinzel, serif" fontSize="8" fill={muted(tone)} letterSpacing="1.8">
-          DOUTOR DA IGREJA
-        </text>
-        <circle cx="130" cy="220" r="42" fill="none" stroke={GOLD} strokeOpacity="0.55" />
-        <path d="M130 184 L130 256 M94 220 L166 220" stroke={GOLD} strokeOpacity="0.6" strokeWidth="1.4" />
-        <circle cx="130" cy="220" r="6" fill={WINE} stroke={GOLD} />
-        <text x="130" y="298" textAnchor="middle" fontFamily="Cormorant Garamond, serif" fontSize="16" fill={text(tone)} fontWeight="600">
-          Santo Tomás
-        </text>
-        <text x="130" y="316" textAnchor="middle" fontFamily="Cormorant Garamond, serif" fontSize="11" fill={muted(tone)} fontStyle="italic">
-          de Aquino
-        </text>
-        <text x="130" y="346" textAnchor="middle" fontFamily="Cinzel, serif" fontSize="8" fill={GOLD} letterSpacing="1.6">
-          ◆ ÉPICA ◆
-        </text>
-        <line x1="80" y1="358" x2="180" y2="358" stroke={GOLD} strokeOpacity="0.45" />
-        <text x="130" y="380" textAnchor="middle" fontFamily="Cormorant Garamond, serif" fontSize="11" fill={muted(tone)}>
-          1225 — 1274
-        </text>
-      </g>
-
-      {/* Right back card */}
-      <g transform="rotate(7 290 280)">
-        <rect x="200" y="124" width="180" height="280" rx="14" fill={tone === 'dark' ? '#1C1610' : '#FFF7E5'} stroke={GOLD} strokeOpacity="0.4" />
-        <text x="290" y="154" textAnchor="middle" fontFamily="Cinzel, serif" fontSize="8" fill={muted(tone)} letterSpacing="1.8">
-          MÍSTICA
-        </text>
-        <circle cx="290" cy="226" r="42" fill="none" stroke={GOLD} strokeOpacity="0.55" />
-        <path d="M290 190 L290 262" stroke={GOLD} strokeOpacity="0.6" strokeWidth="1.4" />
-        <path d="M270 220 Q290 200 310 220 Q290 240 270 220" fill="none" stroke={GOLD} strokeOpacity="0.6" />
-        <text x="290" y="306" textAnchor="middle" fontFamily="Cormorant Garamond, serif" fontSize="16" fill={text(tone)} fontWeight="600">
-          Santa Teresa
-        </text>
-        <text x="290" y="324" textAnchor="middle" fontFamily="Cormorant Garamond, serif" fontSize="11" fill={muted(tone)} fontStyle="italic">
-          de Ávila
-        </text>
-        <text x="290" y="354" textAnchor="middle" fontFamily="Cinzel, serif" fontSize="8" fill={GOLD} letterSpacing="1.6">
-          ◆ RARA ◆
-        </text>
-      </g>
-
-      {/* Top center card (highlighted) */}
-      <g>
-        <rect
-          x="120"
-          y="96"
-          width="180"
-          height="320"
-          rx="14"
-          fill="url(#cartaCenterGrad)"
-          stroke={GOLD}
-          strokeWidth="1.8"
-        />
-        <text x="210" y="128" textAnchor="middle" fontFamily="Cinzel, serif" fontSize="9" fill={GOLD} letterSpacing="2">
-          PADRE DA IGREJA
-        </text>
-        <circle cx="210" cy="220" r="56" fill="none" stroke={GOLD} strokeOpacity="0.85" strokeWidth="1.5" />
-        <circle cx="210" cy="220" r="44" fill="none" stroke={GOLD} strokeOpacity="0.4" />
-        <path d="M210 168 L210 272 M158 220 L262 220" stroke={GOLD} strokeWidth="1.6" />
-        <circle cx="210" cy="220" r="10" fill={WINE} stroke={GOLD} strokeWidth="1.2" />
-        <text x="210" y="310" textAnchor="middle" fontFamily="Cormorant Garamond, serif" fontSize="20" fill="#F2EDE4" fontWeight="700">
-          Santo Agostinho
-        </text>
-        <text x="210" y="332" textAnchor="middle" fontFamily="Cormorant Garamond, serif" fontSize="12" fill="#E6D9B5" fontStyle="italic">
-          de Hipona
-        </text>
-        <text x="210" y="362" textAnchor="middle" fontFamily="Cinzel, serif" fontSize="9" fill={GOLD} letterSpacing="2">
-          ◆ LENDÁRIA ◆
-        </text>
-        <line x1="150" y1="376" x2="270" y2="376" stroke={GOLD} strokeOpacity="0.65" />
-        <text x="210" y="398" textAnchor="middle" fontFamily="Cormorant Garamond, serif" fontSize="11" fill="#E6D9B5">
-          354 — 430 d.C.
-        </text>
-      </g>
-
-      {/* Just unlocked badge */}
-      <g transform="translate(330 100)">
-        <circle r="28" fill={GOLD} />
-        <text y="3" textAnchor="middle" fontFamily="Cinzel, serif" fontSize="8" fill="#1C140C" fontWeight="700" letterSpacing="1.2">
-          NOVA
-        </text>
-        <text y="15" textAnchor="middle" fontFamily="Cinzel, serif" fontSize="6" fill="#1C140C" letterSpacing="1">
-          DESBLOQUEADA
-        </text>
-      </g>
-
-      <text x="210" y="464" textAnchor="middle" fontFamily="Cinzel, serif" fontSize="9" fill={muted(tone)} letterSpacing="2">
-        47 DE 312 NA SUA COLEÇÃO
-      </text>
-      <rect x="60" y="478" width="300" height="6" rx="3" fill={line(tone)} />
-      <rect x="60" y="478" width={Math.round(300 * (47 / 312))} height="6" rx="3" fill={GOLD} />
-
-      <defs>
-        <linearGradient id="cartaCenterGrad" x1="120" y1="96" x2="300" y2="416" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#1F1810" />
-          <stop offset="100%" stopColor="#0F0E0C" />
-        </linearGradient>
-      </defs>
-    </svg>
-  )
-}

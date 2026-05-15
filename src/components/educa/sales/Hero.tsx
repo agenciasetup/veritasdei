@@ -1,14 +1,18 @@
 'use client'
 
+import { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { ArrowRight, ChevronRight, MapPin, Sparkles } from 'lucide-react'
 import CrossIcon from '@/components/icons/CrossIcon'
 import { HeroDashboardMockup } from './EducaMockups'
+import { getLiturgicalDay } from '@/lib/liturgical-calendar'
+import type { EducaSalesTotals } from '@/lib/educa/server-data'
 
 type Props = {
   isAuthenticated: boolean
   onPrimaryClick: () => void
+  totals: EducaSalesTotals
 }
 
 /**
@@ -18,7 +22,14 @@ type Props = {
  * pulsantes, faíscas douradas e o mockup do app flutuando suavemente.
  * Mobile mostra o mockup empilhado abaixo (em escala reduzida).
  */
-export default function Hero({ isAuthenticated, onPrimaryClick }: Props) {
+export default function Hero({ isAuthenticated, onPrimaryClick, totals }: Props) {
+  // Calcula a liturgia do dia uma vez por mount — usado pra rotular o
+  // mockup do dashboard com o nome real do tempo litúrgico de hoje.
+  const liturgicalLabel = useMemo(() => {
+    const d = getLiturgicalDay(new Date())
+    return d.name || d.title || 'Tempo Comum'
+  }, [])
+
   return (
     <section className="surface-velvet relative min-h-[100svh] md:min-h-screen overflow-hidden">
       {/* ─── Orbs pulsantes (background) ─── */}
@@ -217,7 +228,7 @@ export default function Hero({ isAuthenticated, onPrimaryClick }: Props) {
                 filter: 'drop-shadow(0 30px 60px rgba(0,0,0,0.55))',
               }}
             >
-              <HeroDashboardMockup className="w-full h-auto" />
+              <HeroDashboardMockup className="w-full h-auto" liturgia={liturgicalLabel} />
             </motion.div>
 
             {/* Mini-chip "XP por estudar" flutuando à esquerda do phone */}
@@ -290,11 +301,15 @@ export default function Hero({ isAuthenticated, onPrimaryClick }: Props) {
               className="flex items-center gap-5 md:gap-8 pointer-events-auto"
               style={{ fontFamily: 'Cinzel, serif' }}
             >
-              <MiniStat value="3" label="Pilares" />
+              <MiniStat value={String(totals.pilares)} label="Pilares" />
               <span className="w-px h-4" style={{ background: 'rgba(201,168,76,0.3)' }} />
-              <MiniStat value="5" label="Funções" />
+              <MiniStat value={String(totals.topicos)} label="Tópicos" />
               <span className="w-px h-4" style={{ background: 'rgba(201,168,76,0.3)' }} />
-              <MiniStat value="312" label="Cartas" />
+              <MiniStat value={String(totals.subtopicos)} label="Subtópicos" />
+              <span className="hidden sm:inline-block w-px h-4" style={{ background: 'rgba(201,168,76,0.3)' }} />
+              <span className="hidden sm:inline-flex items-baseline gap-2">
+                <MiniStat value={String(totals.cartas)} label={totals.cartas === 1 ? 'Carta' : 'Cartas'} />
+              </span>
             </div>
 
             <span

@@ -26,15 +26,18 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import type {
+  EducaSalesCarta,
   EducaSalesIntervalo,
   EducaSalesPilar,
   EducaSalesPrice,
+  EducaSalesTotals,
 } from '@/lib/educa/server-data'
 
 import Hero from './Hero'
 import EstudarSection from './EstudarSection'
 import Features from './Features'
 import Pricing from './Pricing'
+import Faq from './Faq'
 import Signup from './Signup'
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -94,6 +97,8 @@ function traduzirErro(error: string): string {
 type Props = {
   prices: EducaSalesPrice[]
   pilares: EducaSalesPilar[]
+  cartas: EducaSalesCarta[]
+  totals: EducaSalesTotals
   isAuthenticated: boolean
   prefillEmail: string | null
   prefillName: string | null
@@ -104,6 +109,8 @@ type Props = {
 export default function EducaSalesPage({
   prices,
   pilares,
+  cartas,
+  totals,
   isAuthenticated,
   prefillEmail,
   prefillName,
@@ -242,11 +249,15 @@ export default function EducaSalesPage({
 
   return (
     <>
-      <Hero isAuthenticated={isAuthenticated} onPrimaryClick={scrollToSignup} />
+      <Hero
+        isAuthenticated={isAuthenticated}
+        onPrimaryClick={scrollToSignup}
+        totals={totals}
+      />
 
       <EstudarSection pilares={pilares} />
 
-      <Features />
+      <Features cartas={cartas} />
 
       <Pricing
         prices={prices}
@@ -254,6 +265,8 @@ export default function EducaSalesPage({
         onSelect={setIntervalo}
         onAssinar={scrollToSignup}
       />
+
+      <Faq />
 
       <Signup
         ref={signupRef}

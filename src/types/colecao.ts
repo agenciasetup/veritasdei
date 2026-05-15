@@ -79,6 +79,10 @@ export interface Carta {
   status: CartaStatus
   visivel: boolean
   ordem: number
+  /** Marca a carta pra aparecer destacada na página de venda do Educa. */
+  landing_featured: boolean
+  /** Ordem entre as cartas marcadas como `landing_featured`. NULL = fim. */
+  landing_featured_order: number | null
   created_by: string | null
   created_at: string
   updated_at: string

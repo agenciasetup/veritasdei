@@ -2,12 +2,9 @@
 
 import { motion, type Variants } from 'framer-motion'
 import type { ReactNode } from 'react'
-import {
-  CartasMockup,
-  DebateMockup,
-  GrupoMockup,
-  TercoMockup,
-} from './EducaMockups'
+import { DebateMockup, GrupoMockup, TercoMockup } from './EducaMockups'
+import CartasReais from './CartasReais'
+import type { EducaSalesCarta } from '@/lib/educa/server-data'
 
 type Tone = 'dark' | 'light' | 'wine'
 
@@ -29,6 +26,9 @@ type Feature = {
 // Estudar (01) vive na sua própria seção full-screen. Aqui ficam só os
 // outros 4 blocos — alternados de forma que NUNCA tenha duas vinhetas
 // vinhas consecutivas (parchment quebra a sequência).
+//
+// Note: o bloco 5 (Cartas) recebe os dados reais via prop e é construído
+// no componente principal, fora deste array estático.
 const FEATURES: Feature[] = [
   {
     n: 2,
@@ -63,7 +63,10 @@ const FEATURES: Feature[] = [
       'Crie um grupo ou entre num que combine com você. Definam metas semanais, vejam quem está em dia, conversem sobre as lições. A disciplina compartilhada sustenta.',
     mockup: <GrupoMockup tone="light" className="w-full h-auto" />,
   },
-  {
+]
+
+function cartasFeature(cartas: EducaSalesCarta[]): Feature {
+  return {
     n: 5,
     tone: 'dark',
     reverse: false,
@@ -73,9 +76,9 @@ const FEATURES: Feature[] = [
     titleEm: 'desbloqueia uma carta.',
     description:
       'Santos, doutores, documentos da Igreja, marcos da história. Sua coleção cresce conforme você estuda e mantém sequência — um acervo visual da fé que você construiu.',
-    mockup: <CartasMockup tone="dark" className="w-full h-auto" />,
-  },
-]
+    mockup: <CartasReais cartas={cartas} />,
+  }
+}
 
 const fadeFromSide = (fromLeft: boolean): Variants => ({
   hidden: { opacity: 0, x: fromLeft ? -40 : 40 },
@@ -84,12 +87,14 @@ const fadeFromSide = (fromLeft: boolean): Variants => ({
 
 /**
  * Sequência de 4 blocos com texto + mockup SVG, alternando claro/escuro/vinho
- * pra dar ritmo visual à página.
+ * pra dar ritmo visual à página. O 5º (Cartas) é montado dinamicamente com
+ * as cartas reais escolhidas pelo admin.
  */
-export default function Features() {
+export default function Features({ cartas }: { cartas: EducaSalesCarta[] }) {
+  const blocks = [...FEATURES, cartasFeature(cartas)]
   return (
     <div id="funcoes">
-      {FEATURES.map(f => (
+      {blocks.map(f => (
         <FeatureRow key={f.n} feature={f} />
       ))}
     </div>
