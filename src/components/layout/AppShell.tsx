@@ -44,7 +44,7 @@ const LegalGate = dynamic(
 )
 
 const PUBLIC_PATHS = ['/login', '/auth', '/privacidade', '/termos', '/diretrizes', '/cookies', '/dmca', '/consentimento-parental', '/onboarding']
-const FULLSCREEN_PATHS = ['/verbum', '/rosario', '/liturgia/hoje']
+const FULLSCREEN_PATHS = ['/verbum', '/rosario', '/liturgia/hoje', '/educa/assine']
 const FULLSCREEN_EXACT: string[] = []
 
 export default function AppShell({

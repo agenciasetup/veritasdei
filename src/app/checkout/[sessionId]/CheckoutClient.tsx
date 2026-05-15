@@ -88,7 +88,13 @@ type PriceOption = {
   amountCents: number
 }
 
-type UserInfo = { email: string; name: string }
+type UserInfo = {
+  email: string
+  name: string
+  /** Pré-preenchidos do profile quando a conta foi criada na página de venda. */
+  cpf?: string
+  telefone?: string
+}
 
 type OrderBump = {
   id: string
@@ -253,8 +259,8 @@ export default function CheckoutClient({
   const [customer, setCustomer] = useState({
     name: user.name,
     email: user.email,
-    cpfCnpj: '',
-    mobilePhone: '',
+    cpfCnpj: user.cpf ?? '',
+    mobilePhone: user.telefone ?? '',
   })
 
   const [card, setCard] = useState({
