@@ -245,12 +245,28 @@ export default function EducaSalesPage({
       return
     }
 
-    // Salva CPF + telefone no profile pra pré-preencher o checkout.
-    await fetch('/api/educa/signup-billing', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cpf: digits(cpf), telefone: digits(telefone) }),
-    }).catch(() => {})
+    // Salva CPF + telefone no profile pra pré-preencher o checkout. Se
+    // o CPF colide com outra conta, mostra erro e não segue pro pagamento
+    // (não dá pra emitir cobrança com CPF de terceiro).
+    try {
+      const billingRes = await fetch('/api/educa/signup-billing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cpf: digits(cpf), telefone: digits(telefone) }),
+      })
+      if (billingRes.status === 409) {
+        const data = await billingRes.json().catch(() => ({}))
+        setError(
+          data?.cpf_conflict
+            ? 'Este CPF já está cadastrado em outra conta. Confira os números ou entre com a outra conta.'
+            : (data?.error ?? 'Não foi possível salvar seus dados.'),
+        )
+        setLoading(false)
+        return
+      }
+    } catch {
+      /* erro de rede não bloqueia — o checkout coleta os dados de novo */
+    }
 
     await startCheckout(intervalo)
   }
