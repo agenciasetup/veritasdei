@@ -125,6 +125,81 @@ export const getEducaSalesPrices = unstable_cache(
   { revalidate: 300 },
 )
 
+// ─── Trilhas usadas na seção "Estudar" da página de venda ─────────────────
+
+export interface EducaSalesTrailStep {
+  label: string
+  description: string | null
+  sortOrder: number
+}
+
+export interface EducaSalesTrail {
+  id: string
+  title: string
+  subtitle: string | null
+  description: string | null
+  difficulty: string
+  color: string
+  iconName: string
+  sortOrder: number
+  coverUrl: string | null
+  steps: EducaSalesTrailStep[]
+}
+
+/**
+ * Lista todas as trilhas + seus steps (label/descrição, sem o conteúdo
+ * completo) pra montar a seção Estudar da landing.
+ */
+export const getEducaSalesTrails = unstable_cache(
+  async (): Promise<EducaSalesTrail[]> => {
+    const supabase = createAdminClient()
+    const { data, error } = await supabase
+      .from('trails')
+      .select(
+        'id, title, subtitle, description, difficulty, color, icon_name, sort_order, cover_url, trail_steps(label, description, sort_order)',
+      )
+      .order('sort_order', { ascending: true })
+    if (error || !data) {
+      if (error) console.warn('[educa/server-data] trails error:', error.message)
+      return []
+    }
+    type RawStep = { label: string; description: string | null; sort_order: number }
+    type Raw = {
+      id: string
+      title: string
+      subtitle: string | null
+      description: string | null
+      difficulty: string
+      color: string
+      icon_name: string
+      sort_order: number
+      cover_url: string | null
+      trail_steps: RawStep[] | null
+    }
+    return (data as Raw[]).map(t => ({
+      id: t.id,
+      title: t.title,
+      subtitle: t.subtitle,
+      description: t.description,
+      difficulty: t.difficulty,
+      color: t.color,
+      iconName: t.icon_name,
+      sortOrder: t.sort_order,
+      coverUrl: t.cover_url,
+      steps: (t.trail_steps ?? [])
+        .slice()
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map(s => ({
+          label: s.label,
+          description: s.description,
+          sortOrder: s.sort_order,
+        })),
+    }))
+  },
+  ['educa-sales-trails-v1'],
+  { revalidate: 300 },
+)
+
 export function revalidateEducaBanners() {
   // Next 16: 2º argumento exigido. `max` = stale-while-revalidate
   // (resposta instantânea com versão antiga, rebuild em background).

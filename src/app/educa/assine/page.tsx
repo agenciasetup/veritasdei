@@ -12,6 +12,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import {
   getEducaSalesPrices,
+  getEducaSalesTrails,
   type EducaSalesIntervalo,
 } from '@/lib/educa/server-data'
 import EducaSalesPage from '@/components/educa/sales/EducaSalesPage'
@@ -41,7 +42,10 @@ export default async function AssineEducaPage({
     if (profile?.name) prefillName = profile.name as string
   }
 
-  const prices = await getEducaSalesPrices()
+  const [prices, trails] = await Promise.all([
+    getEducaSalesPrices(),
+    getEducaSalesTrails(),
+  ])
   const autoPlan =
     plan && INTERVALOS.includes(plan as EducaSalesIntervalo)
       ? (plan as EducaSalesIntervalo)
@@ -50,6 +54,7 @@ export default async function AssineEducaPage({
   return (
     <EducaSalesPage
       prices={prices}
+      trails={trails}
       isAuthenticated={!!user}
       prefillEmail={user?.email ?? null}
       prefillName={prefillName}
