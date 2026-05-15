@@ -129,7 +129,13 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       setRefreshing(false)
       hasLoadedOnceRef.current = true
     }
-  }, [isAuthenticated, user])
+    // Depende só de `user?.id`, não do objeto `user` inteiro: o AuthContext
+    // re-emite um `user` com NOVA referência a cada visibilitychange / token
+    // refresh, mesmo sem o usuário mudar. Usar o objeto aqui fazia o
+    // `refresh` mudar de identidade toda hora → o useEffect abaixo redisparava
+    // as 2 RPCs sem parar (o "fetch que lotava" a aba Network).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user?.id])
 
   useEffect(() => {
     refresh()
