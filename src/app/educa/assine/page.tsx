@@ -1,21 +1,31 @@
 /**
- * /educa/assine — assinatura do subproduto Veritas Educa.
+ * /educa/assine — página de venda do Veritas Educa.
  *
- * Usa o checkout custom Asaas (via /api/payments/checkout?planCodigo=veritas-educa).
- * Antes redirecionava pra link estático da Hubla; agora cria uma session
- * Asaas e redireciona pra /checkout/[sessionId] com a identidade visual
- * configurada em /admin/checkout.
+ * É a mesma EducaSalesPage da raiz do educa. O middleware do subdomínio
+ * manda pra cá o usuário logado SEM assinatura ativa, então a página se
+ * adapta: com sessão, esconde o cadastro e mostra só o botão "Assinar".
  *
- * Hubla continua como provider alternativo: basta o admin trocar o
- * default_provider do plano `veritas-educa` em /admin/planos.
+ * `?plan=` é usado pra retomar o checkout depois do login com Google
+ * (a página de venda passa esse next no signInWithOAuth).
  */
 
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import AssineEducaClient from './AssineEducaClient'
+import {
+  getEducaSalesPrices,
+  type EducaSalesIntervalo,
+} from '@/lib/educa/server-data'
+import EducaSalesPage from '@/components/educa/sales/EducaSalesPage'
 
 export const dynamic = 'force-dynamic'
 
-export default async function AssineEducaPage() {
+const INTERVALOS: EducaSalesIntervalo[] = ['mensal', 'semestral', 'anual', 'unico']
+
+export default async function AssineEducaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ plan?: string }>
+}) {
+  const { plan } = await searchParams
   const supabase = await createServerSupabaseClient()
   const {
     data: { user },
@@ -31,11 +41,19 @@ export default async function AssineEducaPage() {
     if (profile?.name) prefillName = profile.name as string
   }
 
+  const prices = await getEducaSalesPrices()
+  const autoPlan =
+    plan && INTERVALOS.includes(plan as EducaSalesIntervalo)
+      ? (plan as EducaSalesIntervalo)
+      : null
+
   return (
-    <AssineEducaClient
+    <EducaSalesPage
+      prices={prices}
+      isAuthenticated={!!user}
       prefillEmail={user?.email ?? null}
       prefillName={prefillName}
-      isAuthenticated={!!user}
+      autoPlan={autoPlan}
     />
   )
 }

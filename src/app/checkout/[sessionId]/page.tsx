@@ -147,7 +147,7 @@ export default async function CheckoutPage({
 
   const profile = await supabase
     .from('profiles')
-    .select('name')
+    .select('name, cpf, telefone')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -195,6 +195,8 @@ export default async function CheckoutPage({
       user={{
         email: user.email ?? '',
         name: (profile.data?.name as string | null) ?? '',
+        cpf: (profile.data?.cpf as string | null) ?? '',
+        telefone: (profile.data?.telefone as string | null) ?? '',
       }}
     />
   )

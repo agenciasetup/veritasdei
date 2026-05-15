@@ -80,6 +80,51 @@ export const getPillars = unstable_cache(
   { tags: [TAGS.pillars], revalidate: 300 },
 )
 
+export type EducaSalesIntervalo = 'mensal' | 'semestral' | 'anual' | 'unico'
+
+export interface EducaSalesPrice {
+  id: string
+  intervalo: EducaSalesIntervalo
+  amountCents: number
+}
+
+/**
+ * Preços ativos do plano `veritas-educa`, ordenados mensal → anual.
+ * Usado pela página de venda (raiz do educa + /educa/assine).
+ */
+export const getEducaSalesPrices = unstable_cache(
+  async (): Promise<EducaSalesPrice[]> => {
+    const supabase = createAdminClient()
+    const { data, error } = await supabase
+      .from('billing_plans')
+      .select('id, billing_prices(id, intervalo, amount_cents, ativo)')
+      .eq('codigo', 'veritas-educa')
+      .eq('ativo', true)
+      .maybeSingle()
+    if (error || !data) {
+      if (error) console.warn('[educa/server-data] sales prices error:', error.message)
+      return []
+    }
+    const ordem: Record<string, number> = {
+      mensal: 1,
+      semestral: 2,
+      anual: 3,
+      unico: 4,
+    }
+    type Row = { id: string; intervalo: string; amount_cents: number; ativo: boolean }
+    return ((data.billing_prices ?? []) as Row[])
+      .filter(p => p.ativo)
+      .map(p => ({
+        id: p.id,
+        intervalo: p.intervalo as EducaSalesIntervalo,
+        amountCents: p.amount_cents,
+      }))
+      .sort((a, b) => (ordem[a.intervalo] ?? 99) - (ordem[b.intervalo] ?? 99))
+  },
+  ['educa-sales-prices-v1'],
+  { revalidate: 300 },
+)
+
 export function revalidateEducaBanners() {
   // Next 16: 2º argumento exigido. `max` = stale-while-revalidate
   // (resposta instantânea com versão antiga, rebuild em background).
