@@ -277,6 +277,37 @@ export async function updateSession(request: NextRequest) {
       path === '/consentimento-parental' ||
       path === '/excluir-conta'
 
+    // ───────────────────────────────────────────────────────────────────
+    // OAuth callback fallback
+    //
+    // O Supabase às vezes devolve o `?code=` na raiz do subdomínio (ex.:
+    // educa.veritasdei.com.br/?code=xxx) em vez de em /auth/callback —
+    // acontece quando a redirect URL exata do subdomínio não está na
+    // whitelist do projeto Supabase e ele cai no Site URL fallback.
+    //
+    // Sem esse forward, o /educa renderiza sem trocar o `code` por
+    // sessão e o usuário fica deslogado depois do "Continuar com Google".
+    // Aqui detectamos o pattern e reencaminhamos pro handler correto,
+    // que faz o exchangeCodeForSession e segue pro next esperado.
+    // ───────────────────────────────────────────────────────────────────
+    if (
+      request.method === 'GET' &&
+      request.nextUrl.searchParams.has('code') &&
+      !path.startsWith('/auth/') &&
+      !path.startsWith('/api/')
+    ) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/auth/callback'
+      if (!url.searchParams.has('next')) {
+        // Se o usuário voltou pra raiz / com OAuth, mandamos pro checkout
+        // focado — é o destino esperado de quem clica "Continuar com
+        // Google" na landing. O /auth/callback decide se redireciona pra
+        // /onboarding ou /perfil/seguranca antes disso.
+        url.searchParams.set('next', '/educa/checkout')
+      }
+      return NextResponse.redirect(url, 307)
+    }
+
     if (path === '/') {
       const url = request.nextUrl.clone()
       url.pathname = '/educa'
