@@ -12,8 +12,8 @@
  * RLS na transição anon → authenticated.
  *
  * O CPF tem índice único em profiles. Se o CPF já pertence a outra conta,
- * gravamos só o telefone e seguimos — o checkout coleta o CPF de novo como
- * fallback, então isso nunca trava a venda.
+ * salvamos só o telefone e retornamos 409 com `cpf_conflict=true` — o front
+ * exibe o erro e permite ao usuário corrigir antes de gerar o pagamento.
  */
 
 import { NextResponse } from 'next/server'
@@ -59,19 +59,29 @@ export async function POST(req: Request) {
   const { error } = await admin.from('profiles').update(patch).eq('id', user.id)
 
   if (error) {
-    // 23505 = unique_violation (CPF já usado por outra conta). Regrava só o
-    // telefone — não é motivo pra interromper a assinatura.
-    if (error.code === '23505' && patch.telefone) {
-      const { error: retryError } = await admin
-        .from('profiles')
-        .update({ telefone: patch.telefone })
-        .eq('id', user.id)
-      if (!retryError) {
-        return NextResponse.json({ ok: true, saved: ['telefone'] })
+    // 23505 = unique_violation. Em profiles, o único índice afetado por
+    // este patch é `idx_profiles_cpf`. Se o CPF colide, o usuário precisa
+    // saber — não dá pra ele cobrar uma cobrança com CPF de outra pessoa.
+    // Salvamos só o telefone (que não tem unique) e devolvemos 409.
+    if (error.code === '23505' && patch.cpf) {
+      if (patch.telefone) {
+        await admin
+          .from('profiles')
+          .update({ telefone: patch.telefone })
+          .eq('id', user.id)
       }
+      return NextResponse.json(
+        {
+          error: 'CPF já cadastrado em outra conta',
+          cpf_conflict: true,
+          saved: patch.telefone ? ['telefone'] : [],
+        },
+        { status: 409 },
+      )
     }
     console.warn('[educa/signup-billing] update falhou:', error.message)
-    // Falha silenciosa: o checkout ainda coleta os dados manualmente.
+    // Falha não-unique (rara): segue silenciosa pra não travar a venda.
+    // O checkout coleta de novo manualmente nesse caso.
     return NextResponse.json({ ok: true, saved: [] })
   }
 

@@ -123,18 +123,30 @@ export default function EducaCheckoutClient({
     setInfo(null)
     setLoading(true)
 
-    // Salva CPF/telefone primeiro se foram preenchidos agora
+    // Salva CPF/telefone primeiro. Se signup-billing retornar 409
+    // (CPF de outra conta), aborta o checkout e mostra erro pro usuário
+    // corrigir — não dá pra emitir cobrança com CPF de terceiro.
     const cpfDigits = digits(cpf)
     const telefoneDigits = digits(telefone)
     if (cpfDigits.length === 11 || telefoneDigits.length >= 10) {
       try {
-        await fetch('/api/educa/signup-billing', {
+        const billingRes = await fetch('/api/educa/signup-billing', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ cpf: cpfDigits, telefone: telefoneDigits }),
         })
+        if (billingRes.status === 409) {
+          const data = await billingRes.json().catch(() => ({}))
+          setError(
+            data?.cpf_conflict
+              ? 'Este CPF já está cadastrado em outra conta. Confira os números ou entre com a outra conta.'
+              : (data?.error ?? 'Não foi possível salvar seus dados.'),
+          )
+          setLoading(false)
+          return
+        }
       } catch {
-        /* não bloqueia — o checkout coleta de novo se faltar */
+        /* erro de rede não bloqueia — o checkout coleta os dados de novo */
       }
     }
 
