@@ -267,13 +267,6 @@ export default function EstudarSection({ pilares }: Props) {
             ))}
             <div className="flex-shrink-0 w-6 md:w-12" aria-hidden />
           </div>
-
-          <div
-            className="absolute right-0 top-0 bottom-0 w-12 md:w-16 pointer-events-none hidden md:block"
-            style={{
-              background: 'linear-gradient(to left, var(--surface-1), transparent)',
-            }}
-          />
         </motion.div>
       </div>
 
@@ -303,10 +296,11 @@ function FeaturedCard({
       onClick={onOpen}
       className="relative w-full text-left overflow-hidden rounded-3xl group transition-transform active:scale-[0.995]"
       style={{
+        minHeight: 'clamp(320px, 38vw, 440px)',
         background: hasCover
           ? 'rgba(22,18,14,0.9)'
           : `linear-gradient(135deg, ${color}40 0%, rgba(22,18,14,0.95) 65%)`,
-        border: '1px solid rgba(201,168,76,0.25)',
+        border: '1px solid rgba(201,168,76,0.3)',
         boxShadow: '0 30px 80px rgba(0,0,0,0.45)',
       }}
     >
@@ -316,13 +310,13 @@ function FeaturedCard({
           <img
             src={pilar.coverUrl ?? ''}
             alt=""
-            className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-60 transition-opacity"
+            className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-90 transition-opacity"
             aria-hidden
           />
           <div
             className="absolute inset-0"
             style={{
-              background: `linear-gradient(135deg, ${color}55 0%, rgba(22,18,14,0.92) 65%)`,
+              background: `linear-gradient(105deg, rgba(15,14,12,0.88) 0%, rgba(22,18,14,0.55) 45%, rgba(22,18,14,0.15) 100%)`,
             }}
           />
         </>
@@ -331,11 +325,11 @@ function FeaturedCard({
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: `radial-gradient(60% 80% at 90% 50%, ${color}25 0%, transparent 60%)`,
+          background: `radial-gradient(60% 80% at 100% 50%, ${color}20 0%, transparent 55%)`,
         }}
       />
 
-      <div className="relative grid md:grid-cols-[1fr_320px] gap-6 p-6 md:p-8">
+      <div className="relative h-full grid md:grid-cols-[1fr_320px] gap-6 p-6 md:p-10">
         <div>
           <div className="flex items-center gap-2 mb-4">
             <span

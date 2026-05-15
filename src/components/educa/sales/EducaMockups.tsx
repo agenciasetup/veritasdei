@@ -459,17 +459,17 @@ export function DebateMockup({ tone = 'dark', className = '' }: MockupProps) {
         TEMA · SOLA SCRIPTURA
       </text>
       <text x="24" y="68" fontFamily="Cormorant Garamond, serif" fontSize="18" fill={text(tone)} fontWeight="600">
-        Debate com IA reformista
+        IA protestante questiona
       </text>
 
       {/* AI message */}
       <rect x="24" y="92" width="288" height="92" rx="14" fill={tone === 'dark' ? 'rgba(139,49,69,0.18)' : 'rgba(139,36,53,0.10)'} stroke={WINE} strokeOpacity="0.5" />
       <circle cx="44" cy="116" r="10" fill={WINE} />
       <text x="44" y="120" textAnchor="middle" fontFamily="Cinzel, serif" fontSize="10" fill="#fff" fontWeight="600">
-        R
+        P
       </text>
       <text x="62" y="118" fontFamily="Cinzel, serif" fontSize="9" fill={muted(tone)} letterSpacing="1.6">
-        REFORMADOR · IA
+        IA · PROTESTANTE
       </text>
       <text x="42" y="142" fontFamily="Cormorant Garamond, serif" fontSize="12" fill={text(tone)}>
         &ldquo;A Escritura sozinha basta. Onde

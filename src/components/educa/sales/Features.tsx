@@ -20,6 +20,8 @@ type Feature = {
   title: string
   titleEm: string
   description: string
+  /** Bullets opcionais abaixo do parágrafo (concretos, sem floreio). */
+  bullets?: string[]
   mockup: ReactNode
 }
 
@@ -46,10 +48,15 @@ const FEATURES: Feature[] = [
     tone: 'wine',
     reverse: false,
     eyebrow: 'Modo debate',
-    title: 'Treine apologética',
-    titleEm: 'contra uma IA reformista.',
+    title: 'Aprenda a defender',
+    titleEm: 'sua fé sem travar.',
     description:
-      'Sola Scriptura, sola fide, Maria, Eucaristia, papado. A IA defende a posição protestante, você responde, e ao fim recebe uma avaliação do seu argumento — bíblico, magisterial e em caridade.',
+      'Uma IA assume o papel de um protestante e te questiona no chat — sobre a Bíblia bastar sozinha, o lugar de Maria, a Eucaristia, o papado. Você responde com calma e, ao fim, ela mostra um placar do seu argumento: o quanto foi bíblico, o quanto encostou no Magistério, e o tom de caridade.',
+    bullets: [
+      'Treine respondendo as perguntas que protestantes mais fazem.',
+      'Não decora frase pronta — aprende a montar o argumento.',
+      'Funciona pra você não engolir seco quando alguém te perguntar.',
+    ],
     mockup: <DebateMockup tone="dark" className="w-full h-auto" />,
   },
   {
@@ -58,9 +65,15 @@ const FEATURES: Feature[] = [
     reverse: true,
     eyebrow: 'Grupo de estudos',
     title: 'Estudem juntos,',
-    titleEm: 'com meta e constância.',
+    titleEm: 'com pacto e progresso visível.',
     description:
-      'Crie um grupo ou entre num que combine com você. Definam metas semanais, vejam quem está em dia, conversem sobre as lições. A disciplina compartilhada sustenta.',
+      'Crie um grupo (ou entre num por código de convite) com amigos, família ou pessoal do grupo de oração. Toda semana, definam um pacto coletivo — meta de lições, um lema e um versículo — e cada um avança no seu próprio ritmo dentro de uma trilha curada pelo dono do grupo.',
+    bullets: [
+      'Pacto da semana: meta de lições + lema + versículo combinados juntos.',
+      'Trilha do grupo: o dono escolhe os tópicos pra todo mundo estudar.',
+      'Mural pra conversar sobre o que estudaram e tirar dúvida entre vocês.',
+      'Ranking semanal e lista de quem está em dia — sustenta a disciplina.',
+    ],
     mockup: <GrupoMockup tone="light" className="w-full h-auto" />,
   },
 ]
@@ -177,7 +190,7 @@ function FeatureRow({ feature }: { feature: Feature }) {
           </h2>
 
           <p
-            className="text-base md:text-lg mb-2 max-w-xl mx-auto lg:mx-0 text-center lg:text-left"
+            className="text-base md:text-lg mb-5 max-w-xl mx-auto lg:mx-0 text-center lg:text-left"
             style={{
               color: bodyColor,
               fontFamily: 'var(--font-body)',
@@ -186,6 +199,42 @@ function FeatureRow({ feature }: { feature: Feature }) {
           >
             {feature.description}
           </p>
+
+          {feature.bullets && feature.bullets.length > 0 && (
+            <ul className="flex flex-col gap-2.5 max-w-xl mx-auto lg:mx-0">
+              {feature.bullets.map(item => (
+                <li
+                  key={item}
+                  className="flex items-start gap-2.5 text-sm md:text-[15px]"
+                  style={{
+                    color: bodyColor,
+                    fontFamily: 'var(--font-body)',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  <span
+                    className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5"
+                    style={{
+                      background: isDark
+                        ? 'rgba(201,168,76,0.12)'
+                        : 'rgba(90,22,37,0.08)',
+                      border: `1px solid ${
+                        isDark ? 'rgba(201,168,76,0.35)' : 'rgba(90,22,37,0.28)'
+                      }`,
+                    }}
+                  >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{
+                        background: isDark ? '#C9A84C' : '#5A1625',
+                      }}
+                    />
+                  </span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+          )}
         </motion.div>
 
         {/* ─── Coluna do mockup ─── */}

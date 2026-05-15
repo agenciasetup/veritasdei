@@ -18,28 +18,28 @@ type Item = {
 
 const FAQ: Item[] = [
   {
-    q: 'Posso cancelar quando quiser?',
-    a: 'Sim. Você cancela dentro do seu perfil em qualquer momento — sem fidelidade, sem multa. O acesso permanece ativo até o fim do período já pago.',
+    q: 'Como são as aulas?',
+    a: 'Lições em texto, organizadas em catálogo navegável igual a uma plataforma de streaming. São 14 pilares (Dogmas, Sacramentos, Mandamentos, Orações, Defesa da Fé…) que abrem em 63 tópicos e 136 subtópicos. Você abre o pilar, escolhe o tópico, lê a lição no seu ritmo e o app guarda onde parou.',
   },
   {
-    q: 'Funciona no celular?',
-    a: 'Sim. A plataforma é mobile-first: roda no navegador do celular e dá pra instalar como app (PWA) no Android e iOS. No desktop também funciona em qualquer navegador moderno.',
+    q: 'Vai me ajudar a defender minha fé?',
+    a: 'Vai. Tem três coisas trabalhando juntas: o Modo Debate — uma IA assume o papel de protestante e te questiona sobre Maria, Eucaristia, papado, Bíblia sozinha; você responde e ela mostra um placar do seu argumento. Junto, a trilha de Defesa da Fé (apologética católica) e o pilar de Dogmas te dão a base. No fim, você defende a fé porque entendeu o porquê — não porque decorou frase pronta.',
   },
   {
     q: 'E se eu não conseguir manter o ritmo?',
-    a: 'O Veritas Educa foi feito pra constância, não pressa. Faça uma lição por semana ou três por dia — o app guarda o ponto onde você parou e cria missões diárias curtas pra te ajudar a voltar.',
+    a: 'O app foi feito pra constância, não pressa. Pode fazer uma lição por semana ou cinco por dia — você decide. O app guarda o ponto onde parou e te lembra de voltar com missões curtas (5 a 10 minutos) pra você não perder o fio sem se sentir cobrado.',
+  },
+  {
+    q: 'Funciona no celular?',
+    a: 'Sim. Abre no navegador do celular como qualquer site — Android ou iPhone, dá no mesmo. Computador também funciona com a mesma conta.',
   },
   {
     q: 'Quais são as formas de pagamento?',
-    a: 'Pix, cartão de crédito (em até 12x, sujeito a juros conforme parcelas) e boleto bancário. Processamento pela Asaas, com certificação PCI Level 1.',
+    a: 'Pix, cartão de crédito (parcelado em até 12x) ou boleto. Tudo processado pela Asaas, com pagamento seguro.',
   },
   {
-    q: 'Qual a idade mínima?',
-    a: 'A partir de 14 anos completos. Adolescentes entre 14 e 17 fazem o cadastro com consentimento do responsável legal (LGPD).',
-  },
-  {
-    q: 'Existe garantia?',
-    a: 'Pela legislação brasileira (CDC), você tem 7 dias de arrependimento após a contratação. Solicite o reembolso direto no seu perfil ou pelo suporte; devolvemos integralmente.',
+    q: 'Tem garantia?',
+    a: 'Tem 7 dias. É o prazo do Código de Defesa do Consumidor pra arrependimento — pede o reembolso pelo seu perfil ou pelo suporte e devolvemos integral, sem perguntar o porquê.',
   },
 ]
 
