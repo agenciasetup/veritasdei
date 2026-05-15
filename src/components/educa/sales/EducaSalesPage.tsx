@@ -28,6 +28,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import type {
   EducaSalesIntervalo,
   EducaSalesPrice,
+  EducaSalesTrail,
 } from '@/lib/educa/server-data'
 
 import Hero from './Hero'
@@ -92,6 +93,7 @@ function traduzirErro(error: string): string {
 
 type Props = {
   prices: EducaSalesPrice[]
+  trails: EducaSalesTrail[]
   isAuthenticated: boolean
   prefillEmail: string | null
   prefillName: string | null
@@ -101,6 +103,7 @@ type Props = {
 
 export default function EducaSalesPage({
   prices,
+  trails,
   isAuthenticated,
   prefillEmail,
   prefillName,
@@ -241,7 +244,7 @@ export default function EducaSalesPage({
     <>
       <Hero isAuthenticated={isAuthenticated} onPrimaryClick={scrollToSignup} />
 
-      <EstudarSection />
+      <EstudarSection trails={trails} />
 
       <Features />
 

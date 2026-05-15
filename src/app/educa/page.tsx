@@ -14,7 +14,10 @@
  */
 
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { getEducaSalesPrices } from '@/lib/educa/server-data'
+import {
+  getEducaSalesPrices,
+  getEducaSalesTrails,
+} from '@/lib/educa/server-data'
 import EducaDashboard from './EducaDashboard'
 import EducaSalesPage from '@/components/educa/sales/EducaSalesPage'
 
@@ -27,10 +30,14 @@ export default async function EducaPage() {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    const prices = await getEducaSalesPrices()
+    const [prices, trails] = await Promise.all([
+      getEducaSalesPrices(),
+      getEducaSalesTrails(),
+    ])
     return (
       <EducaSalesPage
         prices={prices}
+        trails={trails}
         isAuthenticated={false}
         prefillEmail={null}
         prefillName={null}
