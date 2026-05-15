@@ -119,6 +119,10 @@ function AuthProviderInner({
 
   const mountedRef = useRef(true)
   const initDoneRef = useRef(false)
+  // Espelha o id do usuário atual num ref — usado pelo handler de
+  // visibilitychange pra decidir se precisa re-emitir o estado (e
+  // re-buscar o profile) ou se basta o token ter sido renovado.
+  const userIdRef = useRef<string | null>(null)
 
   const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
     try {
@@ -145,6 +149,7 @@ function AuthProviderInner({
     if (session?.user) {
       const profile = await fetchProfile(session.user.id)
       if (!mountedRef.current) return
+      userIdRef.current = session.user.id
       setState({
         user: session.user,
         profile,
@@ -155,6 +160,7 @@ function AuthProviderInner({
         role: profile?.role ?? 'user',
       })
     } else {
+      userIdRef.current = null
       setState({ ...DEFAULT_STATE, isLoading: false })
     }
   }, [fetchProfile])
@@ -235,8 +241,18 @@ function AuthProviderInner({
               setTimeout(() => reject(new Error('visibility_refresh_timeout')), 5000)
             ),
           ])
-          if (session && mountedRef.current) {
-            await setAuthState(session)
+          if (session?.user && mountedRef.current) {
+            // getSession() já renovou o token se necessário. Só re-emite o
+            // estado (e re-busca o profile) se o usuário realmente mudou —
+            // re-emitir a cada foco de aba criava um `user` com referência
+            // nova e cascateava re-fetches (SubscriptionContext etc.).
+            if (session.user.id !== userIdRef.current) {
+              await setAuthState(session)
+            }
+          } else if (!session && mountedRef.current && userIdRef.current) {
+            // Sessão sumiu enquanto a aba estava em background (logout em
+            // outra aba) — reflete o logout.
+            await setAuthState(null)
           }
         } catch {
           // Timeout or error — session will refresh on next interaction

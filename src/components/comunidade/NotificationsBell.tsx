@@ -39,6 +39,11 @@ export default function NotificationsBell() {
   const [loading, setLoading] = useState(false)
   const dropdownRef = useRef<HTMLDivElement | null>(null)
   const buttonRef = useRef<HTMLButtonElement | null>(null)
+  // Espelha `open` num ref pro interval de polling enxergar o valor atual
+  // sem recriar o timer — antes a closure capturava `open=false` pra
+  // sempre e o polling rodava mesmo com o dropdown aberto.
+  const openRef = useRef(open)
+  openRef.current = open
 
   async function loadNotifications() {
     setLoading(true)
@@ -57,10 +62,9 @@ export default function NotificationsBell() {
   useEffect(() => {
     void loadNotifications()
     const timer = setInterval(() => {
-      if (!open) void loadNotifications()
+      if (!openRef.current) void loadNotifications()
     }, 60_000)
     return () => clearInterval(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Recarrega quando abre.
