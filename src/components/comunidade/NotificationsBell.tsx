@@ -65,7 +65,6 @@ export default function NotificationsBell() {
       if (!openRef.current) void loadNotifications()
     }, 60_000)
     return () => clearInterval(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Recarrega quando abre.
