@@ -23,6 +23,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import type {
@@ -34,11 +35,15 @@ import type {
 import type { Carta } from '@/types/colecao'
 
 import Hero from './Hero'
-import EstudarSection from './EstudarSection'
-import Features from './Features'
-import Pricing from './Pricing'
-import Faq from './Faq'
-import Signup from './Signup'
+
+// Below-the-fold sections: code-split com next/dynamic pra reduzir o JS
+// crítico do hero (framer-motion, lucide-icons grandes etc. só carregam
+// quando o usuário rola). SSR continua ligado — HTML vem completo pro SEO.
+const EstudarSection = dynamic(() => import('./EstudarSection'))
+const Features = dynamic(() => import('./Features'))
+const Pricing = dynamic(() => import('./Pricing'))
+const Faq = dynamic(() => import('./Faq'))
+const Signup = dynamic(() => import('./Signup'))
 
 // ──────────────────────────────────────────────────────────────────────────
 // Helpers — máscaras e validações
@@ -143,7 +148,6 @@ export default function EducaSalesPage({
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
 
-  const signupRef = useRef<HTMLElement>(null)
   const autoFiredRef = useRef(false)
 
   const selectedPrice = useMemo(
@@ -152,7 +156,12 @@ export default function EducaSalesPage({
   )
 
   function scrollToSignup() {
-    signupRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // Lookup by id pra não depender de ref (componente é dynamic-imported).
+    if (typeof document === 'undefined') return
+    document.getElementById('cadastro')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    })
   }
 
   async function startCheckout(planIntervalo: EducaSalesIntervalo) {
@@ -269,7 +278,6 @@ export default function EducaSalesPage({
       <Faq />
 
       <Signup
-        ref={signupRef}
         isAuthenticated={isAuthenticated}
         prefillName={prefillName}
         prefillEmail={prefillEmail}

@@ -1,6 +1,5 @@
 'use client'
 
-import { forwardRef } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { Check, Eye, EyeOff, Loader2, Lock, ShieldCheck } from 'lucide-react'
@@ -58,7 +57,7 @@ export type SignupProps = {
   onSubscribe: () => void
 }
 
-const Signup = forwardRef<HTMLElement, SignupProps>(function Signup(props, ref) {
+const Signup = function Signup(props: SignupProps) {
   const {
     isAuthenticated,
     prefillName,
@@ -96,7 +95,6 @@ const Signup = forwardRef<HTMLElement, SignupProps>(function Signup(props, ref) 
   return (
     <section
       id="cadastro"
-      ref={ref}
       className="surface-parchment relative py-20 md:py-28 overflow-hidden scroll-mt-4"
     >
       <div className="relative max-w-5xl mx-auto px-5 md:px-8">
@@ -235,7 +233,7 @@ const Signup = forwardRef<HTMLElement, SignupProps>(function Signup(props, ref) 
       </div>
     </section>
   )
-})
+}
 
 export default Signup
 
