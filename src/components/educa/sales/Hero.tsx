@@ -220,7 +220,7 @@ export default function Hero({ isAuthenticated, onPrimaryClick }: Props) {
               <HeroDashboardMockup className="w-full h-auto" />
             </motion.div>
 
-            {/* Mini-card "XP" flutuando à esquerda do phone */}
+            {/* Mini-chip "XP por estudar" flutuando à esquerda do phone */}
             <motion.div
               animate={{ y: [0, 8, 0] }}
               transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
@@ -238,10 +238,10 @@ export default function Hero({ isAuthenticated, onPrimaryClick }: Props) {
               }}
             >
               <Sparkles className="w-3.5 h-3.5" style={{ color: '#C9A84C' }} />
-              +180 XP
+              XP por lição
             </motion.div>
 
-            {/* Mini-card "Sequência" à direita */}
+            {/* Mini-chip "Sequência diária" à direita */}
             <motion.div
               animate={{ y: [0, -8, 0] }}
               transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
@@ -259,22 +259,23 @@ export default function Hero({ isAuthenticated, onPrimaryClick }: Props) {
               }}
             >
               <span
+                aria-hidden
                 style={{
-                  width: 16,
-                  height: 16,
-                  borderRadius: '50%',
-                  background: 'rgba(201,168,76,0.18)',
+                  width: 14,
+                  height: 14,
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#C9A84C',
-                  fontSize: '10px',
-                  fontWeight: 700,
                 }}
               >
-                14
+                <svg viewBox="0 0 24 24" width="14" height="14">
+                  <path
+                    d="M12 4 Q15 8 13 12 Q17 11 17 16 Q17 20 12 20 Q7 20 7 16 Q7 13 9 11 Q11 13 11 10 Q11 7 12 4 Z"
+                    fill="#C9A84C"
+                  />
+                </svg>
               </span>
-              dias seguidos
+              Sequência diária
             </motion.div>
           </motion.div>
         </div>

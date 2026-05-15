@@ -23,7 +23,11 @@ const muted = (t: Tone) => (t === 'dark' ? 'rgba(242,237,228,0.45)' : 'rgba(90,2
 const soft = (t: Tone) => (t === 'dark' ? 'rgba(201,168,76,0.06)' : 'rgba(201,168,76,0.10)')
 
 /* ──────────────────────────────────────────────────────────────────────────
-   HERO — mini "phone" mostrando a dashboard do Educa
+   HERO — mini "phone" espelhando o dashboard mobile real do Veritas Educa.
+   Labels conferem com os componentes reais (GreetingStrip, ContinueHeroCard,
+   TodayCard, EducaBottomNav). Pilar e tópico usados são reais (vindos de
+   public.content_groups / content_topics). Missão exibida é uma das
+   variantes de mission_type (`pray_rosary`).
    ────────────────────────────────────────────────────────────────────────── */
 export function HeroDashboardMockup({ className = '' }: MockupProps) {
   const tone: Tone = 'dark'
@@ -40,168 +44,226 @@ export function HeroDashboardMockup({ className = '' }: MockupProps) {
       <rect x="312" y="28" width="18" height="10" rx="2" fill="none" stroke={muted(tone)} />
       <rect x="314" y="30" width="13" height="6" rx="1" fill={GOLD} fillOpacity="0.7" />
 
-      {/* Eyebrow */}
-      <text x="32" y="76" fontFamily="Cinzel, serif" fontSize="10" fill={GOLD} letterSpacing="2.5">
+      {/* ─── Greeting ─── */}
+      <text x="24" y="76" fontFamily="Cinzel, serif" fontSize="10" fill={GOLD} letterSpacing="2.5">
         BOM DIA
       </text>
-      <text x="32" y="102" fontFamily="Cormorant Garamond, serif" fontSize="22" fill={text(tone)} fontWeight="600">
-        Continue de onde parou
-      </text>
 
-      {/* Continue card */}
+      {/* ─── Continue de onde parou ─── */}
       <rect
         x="24"
-        y="124"
+        y="92"
         width="312"
-        height="120"
-        rx="18"
+        height="148"
+        rx="20"
         fill="url(#heroContinueGrad)"
         stroke={GOLD}
-        strokeOpacity="0.5"
+        strokeOpacity="0.4"
       />
-      <text x="44" y="156" fontFamily="Cinzel, serif" fontSize="9" fill={GOLD} letterSpacing="2">
-        TRILHA · MAGISTÉRIO
+      {/* tag "Continue de onde parou" */}
+      <rect x="40" y="108" width="156" height="22" rx="11" fill="rgba(0,0,0,0.35)" stroke="rgba(255,255,255,0.08)" />
+      {/* play icon */}
+      <path d="M52 119 L48 115 L48 123 Z" fill={GOLD} />
+      <text x="60" y="123" fontFamily="Poppins, sans-serif" fontSize="9" fill={GOLD}>
+        Continue de onde parou
       </text>
-      <text x="44" y="186" fontFamily="Cormorant Garamond, serif" fontSize="20" fill="#F2EDE4" fontWeight="600">
-        Concílio de Trento
+      {/* group title (real pilar) */}
+      <text x="40" y="156" fontFamily="Poppins, sans-serif" fontSize="9.5" fill={muted(tone)} letterSpacing="1">
+        Dogmas da Igreja Católica
       </text>
-      <text x="44" y="204" fontFamily="Cormorant Garamond, serif" fontSize="13" fill="rgba(242,237,228,0.6)">
-        Lição 4 de 12 — 32 min restantes
+      {/* subtopic title (real topic) */}
+      <text x="40" y="184" fontFamily="Cormorant Garamond, serif" fontSize="22" fill="#F2EDE4" fontWeight="600">
+        Dogmas sobre Deus
       </text>
-      {/* Progress bar */}
-      <rect x="44" y="218" width="270" height="6" rx="3" fill="rgba(255,255,255,0.08)" />
-      <rect x="44" y="218" width="92" height="6" rx="3" fill={GOLD} />
+      <text x="40" y="208" fontFamily="Poppins, sans-serif" fontSize="11" fill="rgba(242,237,228,0.65)">
+        Você parou aqui. Continue de onde estava.
+      </text>
+      <text x="40" y="226" fontFamily="Poppins, sans-serif" fontSize="11" fill={GOLD} fontWeight="500">
+        Continuar
+      </text>
+      <path d="M88 222 L92 226 L88 230" stroke={GOLD} strokeWidth="1.4" fill="none" strokeLinecap="round" />
 
-      {/* Row: Hoje + Sequência */}
-      <rect x="24" y="262" width="148" height="84" rx="14" fill="rgba(255,255,255,0.04)" stroke={line(tone)} />
-      <text x="40" y="288" fontFamily="Cinzel, serif" fontSize="9" fill={GOLD} letterSpacing="2">
-        ✦ MISSÃO HOJE
-      </text>
-      <text x="40" y="312" fontFamily="Cormorant Garamond, serif" fontSize="16" fill={text(tone)} fontWeight="600">
-        Reze o terço
-      </text>
-      <text x="40" y="330" fontFamily="Poppins, sans-serif" fontSize="10" fill={muted(tone)}>
-        +120 XP
-      </text>
-
-      <rect x="188" y="262" width="148" height="84" rx="14" fill="rgba(255,255,255,0.04)" stroke={line(tone)} />
-      <text x="204" y="288" fontFamily="Cinzel, serif" fontSize="9" fill={GOLD} letterSpacing="2">
-        SEQUÊNCIA
-      </text>
-      <text x="204" y="318" fontFamily="Cinzel, serif" fontSize="26" fill={text(tone)} fontWeight="600">
-        14
-      </text>
-      <text x="234" y="318" fontFamily="Poppins, sans-serif" fontSize="10" fill={muted(tone)}>
-        dias
-      </text>
-      {/* mini flame */}
+      {/* ─── Hoje (TodayCard) ─── */}
+      <rect
+        x="24"
+        y="258"
+        width="312"
+        height="230"
+        rx="20"
+        fill="#141210"
+        stroke="rgba(255,255,255,0.05)"
+      />
+      {/* Flame icon */}
       <path
-        d="M270 308 Q278 296 274 286 Q286 296 286 312 Q286 324 276 326 Q266 324 266 314 Q266 312 270 308 Z"
+        d="M44 286 Q52 274 48 264 Q60 274 60 290 Q60 302 50 304 Q40 302 40 292 Q40 290 44 286 Z"
         fill={GOLD}
         fillOpacity="0.85"
       />
-
-      {/* Pilares */}
-      <text x="32" y="376" fontFamily="Cinzel, serif" fontSize="9" fill={muted(tone)} letterSpacing="2">
-        ESTUDAR
+      <text x="70" y="290" fontFamily="Cormorant Garamond, serif" fontSize="14" fill={text(tone)} fontWeight="500">
+        Hoje
       </text>
-      {[
-        { x: 24, label: 'Bíblia' },
-        { x: 128, label: 'Magistério' },
-        { x: 232, label: 'Patrística' },
-      ].map((p, i) => (
-        <g key={p.label}>
-          <rect
-            x={p.x}
-            y="388"
-            width="104"
-            height="104"
-            rx="14"
-            fill={i === 1 ? 'rgba(201,168,76,0.10)' : 'rgba(255,255,255,0.04)'}
-            stroke={i === 1 ? GOLD : line(tone)}
-            strokeOpacity={i === 1 ? 0.5 : 1}
-          />
-          {/* book icon */}
-          <path
-            d={`M${p.x + 36} 414 L${p.x + 36} 446 Q${p.x + 36} 442 ${p.x + 52} 442 L${p.x + 68} 442 Q${p.x + 68} 442 ${p.x + 68} 414 Q${p.x + 68} 416 ${p.x + 52} 418 Q${p.x + 36} 416 ${p.x + 36} 414 Z`}
-            fill="none"
-            stroke={GOLD}
-            strokeWidth="1.2"
-            strokeOpacity="0.7"
-          />
-          <text
-            x={p.x + 52}
-            y="476"
-            textAnchor="middle"
-            fontFamily="Cormorant Garamond, serif"
-            fontSize="13"
-            fill={text(tone)}
-            fontWeight="600"
-          >
-            {p.label}
-          </text>
-        </g>
-      ))}
-
-      {/* Cartas strip */}
-      <text x="32" y="524" fontFamily="Cinzel, serif" fontSize="9" fill={muted(tone)} letterSpacing="2">
-        SUAS CARTAS
+      <text
+        x="316"
+        y="290"
+        textAnchor="end"
+        fontFamily="Poppins, sans-serif"
+        fontSize="9.5"
+        fill={muted(tone)}
+      >
+        5 dias de sequência
       </text>
-      {[
-        { x: 24, name: 'Tomás' },
-        { x: 104, name: 'Agostinho' },
-        { x: 184, name: 'Teresa' },
-        { x: 264, name: 'Pio X' },
-      ].map((c, i) => (
-        <g key={c.name} transform={`rotate(${(i - 1.5) * 1.2} ${c.x + 36} 580)`}>
-          <rect
-            x={c.x}
-            y="540"
-            width="72"
-            height="92"
-            rx="8"
-            fill={i === 0 ? '#1C1610' : 'rgba(255,255,255,0.03)'}
-            stroke={GOLD}
-            strokeOpacity={i === 0 ? 0.7 : 0.25}
-          />
-          <circle cx={c.x + 36} cy="568" r="14" fill="none" stroke={GOLD} strokeOpacity="0.6" />
-          <path
-            d={`M${c.x + 36} 558 L${c.x + 36} 578 M${c.x + 28} 568 L${c.x + 44} 568`}
-            stroke={GOLD}
-            strokeWidth="1"
-            strokeOpacity="0.6"
-          />
-          <text
-            x={c.x + 36}
-            y="608"
-            textAnchor="middle"
-            fontFamily="Cinzel, serif"
-            fontSize="8"
-            fill={muted(tone)}
-            letterSpacing="0.5"
-          >
-            {c.name.toUpperCase()}
-          </text>
-        </g>
-      ))}
 
-      {/* Bottom nav */}
-      <rect x="24" y="660" width="312" height="44" rx="22" fill="rgba(255,255,255,0.04)" stroke={line(tone)} />
-      {['Hoje', 'Estudar', 'Comunidade', 'Perfil'].map((label, i) => (
-        <text
-          key={label}
-          x={48 + i * 80}
-          y="688"
-          fontFamily="Poppins, sans-serif"
-          fontSize="10"
-          fill={i === 0 ? GOLD : muted(tone)}
-        >
-          {label}
-        </text>
-      ))}
+      {/* Missão do dia (sub-card) */}
+      <rect
+        x="40"
+        y="302"
+        width="280"
+        height="92"
+        rx="14"
+        fill="rgba(0,0,0,0.25)"
+        stroke="rgba(255,255,255,0.04)"
+      />
+      <text x="56" y="322" fontFamily="Poppins, sans-serif" fontSize="9" fill={GOLD} letterSpacing="1.5">
+        MISSÃO DO DIA
+      </text>
+      <text x="304" y="322" textAnchor="end" fontFamily="Poppins, sans-serif" fontSize="9.5" fill={muted(tone)}>
+        +20 XP
+      </text>
+      <text x="56" y="346" fontFamily="Cormorant Garamond, serif" fontSize="15" fill={text(tone)} fontWeight="500">
+        Reze o rosário de hoje
+      </text>
+      <text x="56" y="376" fontFamily="Poppins, sans-serif" fontSize="11" fill={GOLD} fontWeight="500">
+        Cumprir missão
+      </text>
+      <path d="M124 372 L128 376 L124 380" stroke={GOLD} strokeWidth="1.4" fill="none" strokeLinecap="round" />
+
+      {/* Semana — 7 dot pills */}
+      {Array.from({ length: 7 }).map((_, i) => {
+        const labels = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
+        const cx = 56 + i * 36
+        const checked = i < 5
+        const isToday = i === 4
+        return (
+          <g key={i}>
+            <text
+              x={cx}
+              y="416"
+              textAnchor="middle"
+              fontFamily="Poppins, sans-serif"
+              fontSize="9"
+              fill={isToday ? GOLD : muted(tone)}
+              fontWeight={isToday ? 600 : 400}
+            >
+              {labels[i]}
+            </text>
+            <circle
+              cx={cx}
+              cy="438"
+              r="9"
+              fill={checked ? GOLD : 'transparent'}
+              stroke={isToday ? GOLD : line(tone)}
+              strokeWidth={isToday ? 1.5 : 1}
+            />
+            {checked && !isToday && (
+              <path
+                d={`M${cx - 4} 438 L${cx - 1} 441 L${cx + 4} 435`}
+                stroke="#1C140C"
+                strokeWidth="1.6"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            )}
+            {isToday && <circle cx={cx} cy="438" r="3" fill="#1C140C" />}
+          </g>
+        )
+      })}
+
+      {/* XP bar */}
+      <text x="40" y="468" fontFamily="Poppins, sans-serif" fontSize="9.5" fill={muted(tone)}>
+        Nível 3
+      </text>
+      <text x="320" y="468" textAnchor="end" fontFamily="Poppins, sans-serif" fontSize="9.5" fill={muted(tone)}>
+        320 / 500 XP
+      </text>
+      <rect x="40" y="476" width="280" height="6" rx="3" fill="rgba(255,255,255,0.06)" />
+      <rect x="40" y="476" width="170" height="6" rx="3" fill={GOLD} />
+
+      {/* ─── Cards rail (Rosário do dia + Liturgia) ─── */}
+      <rect x="24" y="504" width="150" height="76" rx="16" fill="#141210" stroke="rgba(255,255,255,0.05)" />
+      <text x="40" y="526" fontFamily="Poppins, sans-serif" fontSize="9" fill={GOLD} letterSpacing="1.5">
+        ROSÁRIO DO DIA
+      </text>
+      <text x="40" y="548" fontFamily="Cormorant Garamond, serif" fontSize="13" fill={text(tone)} fontWeight="500">
+        Mistérios Gloriosos
+      </text>
+      <text x="40" y="566" fontFamily="Poppins, sans-serif" fontSize="10" fill={GOLD}>
+        Rezar agora →
+      </text>
+
+      <rect x="186" y="504" width="150" height="76" rx="16" fill="#141210" stroke="rgba(255,255,255,0.05)" />
+      <text x="202" y="526" fontFamily="Poppins, sans-serif" fontSize="9" fill={GOLD} letterSpacing="1.5">
+        LITURGIA
+      </text>
+      <text x="202" y="548" fontFamily="Cormorant Garamond, serif" fontSize="13" fill={text(tone)} fontWeight="500">
+        Tempo Comum
+      </text>
+      <text x="202" y="566" fontFamily="Poppins, sans-serif" fontSize="10" fill={GOLD}>
+        Ler hoje →
+      </text>
+
+      {/* ─── Magistério + Modo Debate ─── */}
+      <rect x="24" y="596" width="150" height="46" rx="14" fill="#141210" stroke="rgba(255,255,255,0.05)" />
+      <text x="40" y="620" fontFamily="Poppins, sans-serif" fontSize="11" fill={text(tone)} fontWeight="500">
+        Magistério
+      </text>
+      <text x="40" y="632" fontFamily="Poppins, sans-serif" fontSize="8.5" fill={muted(tone)}>
+        Pergunte com IA
+      </text>
+
+      <rect x="186" y="596" width="150" height="46" rx="14" fill="#141210" stroke="rgba(255,255,255,0.05)" />
+      <text x="202" y="620" fontFamily="Poppins, sans-serif" fontSize="11" fill={text(tone)} fontWeight="500">
+        Modo debate
+      </text>
+      <text x="202" y="632" fontFamily="Poppins, sans-serif" fontSize="8.5" fill={muted(tone)}>
+        Treine apologética
+      </text>
+
+      {/* ─── Bottom nav real: Início | Estudo | Rosário | Coleção | Perfil ─── */}
+      <line x1="6" y1="660" x2="354" y2="660" stroke="rgba(255,255,255,0.06)" />
+
+      {[
+        { label: 'Início', active: true },
+        { label: 'Estudo', active: false },
+        { label: 'Rosário', active: false },
+        { label: 'Coleção', active: false },
+        { label: 'Perfil', active: false },
+      ].map((tab, i) => {
+        const cx = 36 + i * 72
+        const cy = 678
+        const fill = tab.active ? GOLD : muted(tone)
+        return (
+          <g key={tab.label}>
+            {/* Top indicator pill if active */}
+            {tab.active && <rect x={cx - 14} y={660} width="28" height="2" rx="1" fill={GOLD} />}
+            <NavIcon label={tab.label} x={cx} y={cy} color={fill} />
+            <text
+              x={cx}
+              y={702}
+              textAnchor="middle"
+              fontFamily="Poppins, sans-serif"
+              fontSize="9"
+              fill={fill}
+              fontWeight={tab.active ? 600 : 400}
+            >
+              {tab.label}
+            </text>
+          </g>
+        )
+      })}
 
       <defs>
-        <linearGradient id="heroContinueGrad" x1="0" y1="0" x2="312" y2="120" gradientUnits="userSpaceOnUse">
+        <linearGradient id="heroContinueGrad" x1="0" y1="0" x2="312" y2="148" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="rgba(107,29,42,0.45)" />
           <stop offset="100%" stopColor="rgba(22,18,14,0.95)" />
         </linearGradient>
@@ -209,6 +271,58 @@ export function HeroDashboardMockup({ className = '' }: MockupProps) {
     </svg>
   )
 }
+
+// Mini ícones lineares pro bottom nav do hero mockup. Tamanho ~16, centralizados em (x, y).
+function NavIcon({ label, x, y, color }: { label: string; x: number; y: number; color: string }) {
+  const s = 1.4 // stroke width
+  switch (label) {
+    case 'Início':
+      // House (Home)
+      return (
+        <g stroke={color} strokeWidth={s} fill="none" strokeLinecap="round" strokeLinejoin="round">
+          <path d={`M${x - 7} ${y + 1} L${x} ${y - 6} L${x + 7} ${y + 1} L${x + 7} ${y + 7} L${x - 7} ${y + 7} Z`} />
+          <path d={`M${x - 2} ${y + 7} L${x - 2} ${y + 3} L${x + 2} ${y + 3} L${x + 2} ${y + 7}`} />
+        </g>
+      )
+    case 'Estudo':
+      // BookOpen
+      return (
+        <g stroke={color} strokeWidth={s} fill="none" strokeLinecap="round" strokeLinejoin="round">
+          <path d={`M${x - 7} ${y - 5} L${x - 7} ${y + 5} Q${x - 4} ${y + 3} ${x} ${y + 4} Q${x + 4} ${y + 3} ${x + 7} ${y + 5} L${x + 7} ${y - 5} Q${x + 4} ${y - 7} ${x} ${y - 6} Q${x - 4} ${y - 7} ${x - 7} ${y - 5}`} />
+          <path d={`M${x} ${y - 6} L${x} ${y + 4}`} />
+        </g>
+      )
+    case 'Rosário':
+      // Cross
+      return (
+        <g stroke={color} strokeWidth={s} fill="none" strokeLinecap="round">
+          <path d={`M${x} ${y - 7} L${x} ${y + 7}`} />
+          <path d={`M${x - 6} ${y - 2} L${x + 6} ${y - 2}`} />
+        </g>
+      )
+    case 'Coleção':
+      // Layers
+      return (
+        <g stroke={color} strokeWidth={s} fill="none" strokeLinecap="round" strokeLinejoin="round">
+          <path d={`M${x - 7} ${y - 3} L${x} ${y - 7} L${x + 7} ${y - 3} L${x} ${y + 1} Z`} />
+          <path d={`M${x - 7} ${y} L${x} ${y + 4} L${x + 7} ${y}`} />
+          <path d={`M${x - 7} ${y + 3} L${x} ${y + 7} L${x + 7} ${y + 3}`} />
+        </g>
+      )
+    case 'Perfil':
+      // User
+      return (
+        <g stroke={color} strokeWidth={s} fill="none" strokeLinecap="round">
+          <circle cx={x} cy={y - 3} r="3.5" />
+          <path d={`M${x - 6} ${y + 7} Q${x - 6} ${y + 2} ${x} ${y + 2} Q${x + 6} ${y + 2} ${x + 6} ${y + 7}`} />
+        </g>
+      )
+    default:
+      return null
+  }
+}
+
+
 
 /* ──────────────────────────────────────────────────────────────────────────
    2. TERÇO EM GRUPO — contador circular + avatares
