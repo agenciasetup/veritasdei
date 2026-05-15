@@ -29,14 +29,12 @@ const BASE_NAV_ITEMS: readonly NavItem[] = [
   { href: '/perfil',         icon: User,          label: 'Perfil' },
 ]
 
-// Item exibido somente quando o usuário está logado e ainda não é premium.
-// Quando assinar, some — não vira lixo visual permanente.
-const SUBSCRIBE_ITEM: NavItem = {
-  href: '/educa/assine',
-  icon: Sparkles,
-  label: 'Assinar',
-  highlight: true,
-}
+// Nav reduzida pra quem está logado e ainda não assinou: só "Assinar" e
+// "Perfil" — é tudo que o middleware libera até a assinatura ativar.
+const FREE_NAV_ITEMS: readonly NavItem[] = [
+  { href: '/educa/assine', icon: Sparkles, label: 'Assinar', highlight: true },
+  { href: '/perfil',       icon: User,     label: 'Perfil' },
+]
 
 function isActive(pathname: string, href: string): boolean {
   if (href === '/educa') return pathname === '/educa'
@@ -55,16 +53,12 @@ export default function EducaSidebar() {
   const { isAuthenticated } = useAuth()
   const { isPremium, loading: subLoading } = useSubscription()
 
-  // Insere "Assinar" antes do Perfil (último item) quando logado e ainda
-  // não tem premium. Enquanto carrega a entitlement, não mostra — evita
-  // pisca-pisca.
+  // Logado sem assinatura → nav reduzida (Assinar + Perfil). Enquanto a
+  // entitlement carrega, mostra a nav completa pra não piscar a versão
+  // reduzida na cara de quem é assinante.
   const navItems: readonly NavItem[] =
     isAuthenticated && !subLoading && !isPremium
-      ? [
-          ...BASE_NAV_ITEMS.slice(0, -1),
-          SUBSCRIBE_ITEM,
-          BASE_NAV_ITEMS[BASE_NAV_ITEMS.length - 1],
-        ]
+      ? FREE_NAV_ITEMS
       : BASE_NAV_ITEMS
 
   return (

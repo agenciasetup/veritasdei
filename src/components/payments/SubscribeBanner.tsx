@@ -22,6 +22,7 @@ import { usePathname } from 'next/navigation'
 import { Sparkles, X } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useSubscription } from '@/contexts/SubscriptionContext'
+import { useProduct } from '@/contexts/ProductContext'
 
 const DISMISS_KEY = 'subscribe-banner-dismissed-at'
 const DISMISS_WINDOW_MS = 14 * 24 * 60 * 60 * 1000 // 14 dias
@@ -60,6 +61,10 @@ export default function SubscribeBanner() {
   const pathname = usePathname()
   const { isAuthenticated } = useAuth()
   const { isPremium, loading: subLoading } = useSubscription()
+  // Produto vem do middleware (hostname) — não do path. No subdomínio
+  // educa.*, telas como /perfil também são "Educa", então o banner deve
+  // convidar pro Veritas Educa, não pro Veritas Dei.
+  const { isEduca } = useProduct()
   const dismissed = useSyncExternalStore(
     subscribeDismissed,
     readDismissed,
@@ -74,7 +79,6 @@ export default function SubscribeBanner() {
     return null
   }
 
-  const isEduca = pathname.startsWith('/educa')
   const href = isEduca ? '/educa/assine' : '/planos'
   const title = isEduca
     ? 'Assine o Veritas Educa'
