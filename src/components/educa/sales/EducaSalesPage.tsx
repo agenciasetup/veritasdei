@@ -31,6 +31,7 @@ import type {
 } from '@/lib/educa/server-data'
 
 import Hero from './Hero'
+import EstudarSection from './EstudarSection'
 import Features from './Features'
 import Pricing from './Pricing'
 import Signup from './Signup'
@@ -219,13 +220,12 @@ export default function EducaSalesPage({
   }
 
   async function handleGoogle() {
+    // Google não exige os checkboxes: a aceitação dos termos é coberta pelo
+    // disclaimer abaixo do botão e o consentimento de idade já é coletado
+    // no fluxo de OAuth do Google (Google só libera conta pra ≥ 13 anos
+    // automaticamente). Mantemos os checkboxes só pro caminho de e-mail.
     setError(null)
     setInfo(null)
-    if (!acceptedLegal || !ageConfirmed) {
-      setError('Pra criar a conta com o Google, aceite os termos e confirme sua idade.')
-      scrollToSignup()
-      return
-    }
     setLoading(true)
     const { error: oauthError } = await signInWithOAuth(
       'google',
@@ -240,6 +240,8 @@ export default function EducaSalesPage({
   return (
     <>
       <Hero isAuthenticated={isAuthenticated} onPrimaryClick={scrollToSignup} />
+
+      <EstudarSection />
 
       <Features />
 

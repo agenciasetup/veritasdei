@@ -1,12 +1,10 @@
 'use client'
 
 import { motion, type Variants } from 'framer-motion'
-import { Check } from 'lucide-react'
 import type { ReactNode } from 'react'
 import {
   CartasMockup,
   DebateMockup,
-  EstudarMockup,
   GrupoMockup,
   TercoMockup,
 } from './EducaMockups'
@@ -16,32 +14,22 @@ type Tone = 'dark' | 'light' | 'wine'
 type Feature = {
   n: number
   tone: Tone
+  /** Quando true, o mockup vai pra esquerda no desktop. */
   reverse: boolean
+  /** Quando true, a seção usa `var(--surface-1)` plano em vez de surface-velvet,
+   *  evitando vinhetas vinhas repetidas em sequência. */
+  flatDark?: boolean
   eyebrow: string
   title: string
   titleEm: string
   description: string
-  bullets?: string[]
   mockup: ReactNode
 }
 
+// Estudar (01) vive na sua própria seção full-screen. Aqui ficam só os
+// outros 4 blocos — alternados de forma que NUNCA tenha duas vinhetas
+// vinhas consecutivas (parchment quebra a sequência).
 const FEATURES: Feature[] = [
-  {
-    n: 1,
-    tone: 'dark',
-    reverse: false,
-    eyebrow: 'Estudar',
-    title: 'Trilhas guiadas',
-    titleEm: 'pelos três pilares da fé.',
-    description:
-      'Bíblia, Magistério e Patrística — cada módulo tem leitura, explicação e avaliação no fim. Você anda no seu ritmo, e o app guarda o ponto onde parou.',
-    bullets: [
-      'Anote dentro do app: suas notas ficam atreladas a cada lição.',
-      'Estude com alguém — convidem-se e acompanhem o progresso lado a lado.',
-      'Avaliação ao fim de cada módulo, com XP e conquistas pra marcar o que dominou.',
-    ],
-    mockup: <EstudarMockup tone="dark" className="w-full h-auto" />,
-  },
   {
     n: 2,
     tone: 'light',
@@ -50,7 +38,7 @@ const FEATURES: Feature[] = [
     title: 'Reze o terço',
     titleEm: 'com outras pessoas ao mesmo tempo.',
     description:
-      'Cada um no seu lugar, mas rezando junto. Entre numa sala por código, vejam quem está conectado e avancem mistério por mistério — o app conta as Ave-Marias e segue o ritmo do grupo.',
+      'Cada um no seu lugar, mas rezando junto. Entre numa sala por código, veja quem está conectado e avancem mistério por mistério — o app conta as Ave-Marias e segue o ritmo do grupo.',
     mockup: <TercoMockup tone="light" className="w-full h-auto" />,
   },
   {
@@ -61,7 +49,7 @@ const FEATURES: Feature[] = [
     title: 'Treine apologética',
     titleEm: 'contra uma IA reformista.',
     description:
-      'Sola Scriptura, sola fide, Maria, Eucaristia, papado. A IA defende a posição protestante, você responde, e ao fim recebe um placar do seu argumento — bíblico, magisterial e em caridade.',
+      'Sola Scriptura, sola fide, Maria, Eucaristia, papado. A IA defende a posição protestante, você responde, e ao fim recebe uma avaliação do seu argumento — bíblico, magisterial e em caridade.',
     mockup: <DebateMockup tone="dark" className="w-full h-auto" />,
   },
   {
@@ -79,6 +67,7 @@ const FEATURES: Feature[] = [
     n: 5,
     tone: 'dark',
     reverse: false,
+    flatDark: true,
     eyebrow: 'Colecionar conquistas',
     title: 'Cada lição',
     titleEm: 'desbloqueia uma carta.',
@@ -88,63 +77,18 @@ const FEATURES: Feature[] = [
   },
 ]
 
-const fadeIn: Variants = {
-  hidden: { opacity: 0, y: 32 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: 'easeOut' } },
-}
-
 const fadeFromSide = (fromLeft: boolean): Variants => ({
   hidden: { opacity: 0, x: fromLeft ? -40 : 40 },
   visible: { opacity: 1, x: 0, transition: { duration: 0.8, ease: 'easeOut' } },
 })
 
 /**
- * Bloco de 5 funções, alternando dark / light / wine como na landing do
- * Veritas Dei. Cada bloco tem texto de um lado e mockup SVG do outro,
- * com animação on-scroll e leve flutuação contínua no mockup.
+ * Sequência de 4 blocos com texto + mockup SVG, alternando claro/escuro/vinho
+ * pra dar ritmo visual à página.
  */
 export default function Features() {
   return (
     <div id="funcoes">
-      {/* Intro short */}
-      <section className="surface-velvet relative py-16 md:py-20">
-        <div className="max-w-3xl mx-auto px-5 md:px-8 text-center">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeIn}
-          >
-            <span
-              className="eyebrow-label inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 tag-dark mb-6"
-            >
-              <span className="inline-block w-1 h-1 rounded-full bg-current opacity-70" />
-              Cinco funções
-            </span>
-            <h2
-              className="display-cormorant text-3xl sm:text-4xl md:text-5xl leading-[1.05] mb-5"
-              style={{ color: '#F5EFE6', textWrap: 'balance' }}
-            >
-              Tudo que você precisa pra estudar,{' '}
-              <span className="italic" style={{ color: '#E6D9B5' }}>
-                num app só.
-              </span>
-            </h2>
-            <p
-              className="text-lg md:text-xl"
-              style={{
-                color: 'rgba(242,237,228,0.72)',
-                fontFamily: 'Cormorant Garamond, serif',
-                lineHeight: 1.55,
-              }}
-            >
-              Sem aulas avulsas, sem caça a PDFs, sem dispersão. Trilha, debate,
-              terço, grupo e coleção — todos conversando entre si.
-            </p>
-          </motion.div>
-        </div>
-      </section>
-
       {FEATURES.map(f => (
         <FeatureRow key={f.n} feature={f} />
       ))}
@@ -155,24 +99,42 @@ export default function Features() {
 function FeatureRow({ feature }: { feature: Feature }) {
   const isDark = feature.tone !== 'light'
   const isWine = feature.tone === 'wine'
-  const surfaceClass = isWine
-    ? 'surface-wine'
-    : feature.tone === 'dark'
-      ? 'surface-velvet'
-      : 'surface-parchment'
+
+  const sectionStyle =
+    feature.flatDark
+      ? { background: 'var(--surface-1)' }
+      : undefined
+
+  const surfaceClass = feature.flatDark
+    ? 'relative'
+    : isWine
+      ? 'surface-wine'
+      : feature.tone === 'dark'
+        ? 'surface-velvet'
+        : 'surface-parchment'
 
   const headingColor = isDark ? '#F5EFE6' : 'var(--ink)'
   const emColor = isDark ? '#E6D9B5' : '#5A1625'
-  const bodyColor = isDark ? 'rgba(242,237,228,0.75)' : 'var(--ink-soft)'
+  const bodyColor = isDark ? 'rgba(242,237,228,0.78)' : 'var(--ink-soft)'
   const ruleColor = isDark ? 'rgba(201,168,76,0.5)' : 'rgba(90,22,37,0.4)'
-  const checkColor = isDark ? '#C9A84C' : '#5A1625'
-  const checkBg = isDark ? 'rgba(201,168,76,0.12)' : 'rgba(90,22,37,0.08)'
-  const checkBorder = isDark ? 'rgba(201,168,76,0.35)' : 'rgba(90,22,37,0.28)'
-
   const numberColor = isDark ? '#C9A84C' : '#5A1625'
 
   return (
-    <section className={`${surfaceClass} relative py-20 md:py-28 overflow-hidden`}>
+    <section
+      className={`${surfaceClass} relative py-20 md:py-28 overflow-hidden`}
+      style={sectionStyle}
+    >
+      {/* Ambient pro flatDark — sem vinheta vinho, só um brilho dourado discreto */}
+      {feature.flatDark && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              'radial-gradient(70% 40% at 90% 50%, rgba(201,168,76,0.10) 0%, transparent 65%)',
+          }}
+        />
+      )}
+
       <div className="relative max-w-6xl mx-auto px-5 md:px-8 grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
         {/* ─── Coluna de texto ─── */}
         <motion.div
@@ -210,39 +172,15 @@ function FeatureRow({ feature }: { feature: Feature }) {
           </h2>
 
           <p
-            className="text-lg md:text-xl mb-8 max-w-xl mx-auto lg:mx-0 text-center lg:text-left"
+            className="text-base md:text-lg mb-2 max-w-xl mx-auto lg:mx-0 text-center lg:text-left"
             style={{
               color: bodyColor,
-              fontFamily: 'Cormorant Garamond, serif',
-              lineHeight: 1.55,
+              fontFamily: 'var(--font-body)',
+              lineHeight: 1.6,
             }}
           >
             {feature.description}
           </p>
-
-          {feature.bullets && (
-            <ul className="space-y-3 max-w-xl mx-auto lg:mx-0">
-              {feature.bullets.map(item => (
-                <li
-                  key={item}
-                  className="flex items-start gap-3"
-                  style={{
-                    color: bodyColor,
-                    fontFamily: 'Cormorant Garamond, serif',
-                    fontSize: '17px',
-                  }}
-                >
-                  <span
-                    className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5"
-                    style={{ background: checkBg, border: `1px solid ${checkBorder}` }}
-                  >
-                    <Check className="w-3 h-3" style={{ color: checkColor }} />
-                  </span>
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          )}
         </motion.div>
 
         {/* ─── Coluna do mockup ─── */}
