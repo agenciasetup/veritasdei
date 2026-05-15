@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useGamification } from '@/lib/gamification/useGamification'
 import LevelAvatar from './LevelAvatar'
 import XpBar from './XpBar'
-import EquippedReliquiaChip from './EquippedReliquiaChip'
+import EquippedCartaChip from '@/components/colecao/EquippedCartaChip'
 
 /**
  * Hero gamificado do /mapa — coração visual da jornada.
@@ -112,9 +112,9 @@ export default function JourneyHero() {
             size="md"
           />
 
-          {g.equippedReliquia && (
+          {g.equippedCarta && (
             <div className="mt-3">
-              <EquippedReliquiaChip reliquia={g.equippedReliquia} size="sm" showName />
+              <EquippedCartaChip carta={g.equippedCarta} size="sm" showName />
             </div>
           )}
         </div>

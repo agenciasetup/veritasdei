@@ -94,11 +94,63 @@ export interface UserCarta {
   desbloqueada_em: string
   vista: boolean
   favorita: boolean
+  /** Número de série sequencial POR carta (#042 etc). */
+  serial_number: number
+  /** Token URL-safe da rota pública /c/<token>. */
+  token: string
+  /** HMAC-SHA256 hex da carta — verificável via fn_verificar_carta. */
+  signature: string
+  /** Timestamp definitivo da cunhagem (entra no HMAC). */
+  minted_at: string
 }
 
 /** Carta desbloqueada + estado de coleção do usuário (join cartas × user_cartas). */
 export interface CartaColecao extends Carta {
   favorita: boolean
+  /** Certificado de autenticidade desta cópia. */
+  serial_number: number
+  token: string
+  signature: string
+  minted_at: string
+}
+
+// --- Verificação pública (rota /c/<token>) ----------------------------------
+export interface CertificadoCarta {
+  valid: true
+  token: string
+  serial_number: number
+  /** Tiragem total mintada até agora (last_serial). */
+  tiragem_atual: number
+  minted_at: string
+  signature_hex: string
+  owner: {
+    user_number: number | null
+    public_handle: string | null
+    name: string | null
+    profile_image_url: string | null
+    verified: boolean
+  }
+  carta: Omit<
+    Carta,
+    | 'personagem_id'
+    | 'status'
+    | 'visivel'
+    | 'ordem'
+    | 'landing_featured'
+    | 'landing_featured_order'
+    | 'created_by'
+    | 'created_at'
+    | 'updated_at'
+    | 'regras'
+    | 'dica_desbloqueio'
+    | 'ilustracao_mobile_url'
+  >
+  personagem: { slug: string; nome: string }
+}
+
+export interface CertificadoInvalido {
+  valid: false
+  reason: string
 }
 
 // --- Metadados visuais por raridade -----------------------------------------

@@ -9,7 +9,7 @@ import AchievementsGrid from '@/components/dashboard/mapa/AchievementsGrid'
 import JourneyHero from '@/components/gamification/JourneyHero'
 import DailyMissionCard from '@/components/gamification/DailyMissionCard'
 import StreakFlames from '@/components/gamification/StreakFlames'
-import ReliquiaShowcase from '@/components/gamification/ReliquiaShowcase'
+import CodexShowcase from '@/components/colecao/CodexShowcase'
 
 export default function MapaPage() {
   const { user } = useAuth()
@@ -61,7 +61,7 @@ export default function MapaPage() {
 
               <AchievementsGrid userId={user?.id} />
 
-              <ReliquiaShowcase />
+              <CodexShowcase />
             </div>
 
             {/* Side rail desktop */}

@@ -23,6 +23,12 @@ interface Props {
   width?: number
   /** Sobrescreve a escala de fonte da carta (preview do editor). */
   escalaFonte?: number
+  /**
+   * Número de série da cópia desbloqueada pelo dono — quando presente,
+   * substitui o "Nº" do catálogo no canto superior direito por um selo
+   * de edição (#042). Vem de `user_cartas.serial_number`.
+   */
+  serialNumber?: number
 }
 
 /**
@@ -39,6 +45,7 @@ export default function CartaView({
   className,
   width = 280,
   escalaFonte,
+  serialNumber,
 }: Props) {
   const meta = RARIDADE_META[carta.raridade]
   const accent = carta.cor_accent || meta.cor
@@ -214,19 +221,43 @@ export default function CartaView({
               ))}
             </div>
           </div>
-          {carta.numero != null && (
-            <span
-              className="tabular-nums"
-              style={{
-                fontFamily: 'Cinzel, serif',
-                color: accent,
-                fontSize: 13,
-                textShadow: '0 1px 4px rgba(0,0,0,0.95)',
-              }}
-            >
-              Nº {String(carta.numero).padStart(3, '0')}
-            </span>
-          )}
+          <div className="flex flex-col items-end" style={{ gap: 4 }}>
+            {carta.numero != null && (
+              <span
+                className="tabular-nums"
+                style={{
+                  fontFamily: 'Cinzel, serif',
+                  color: accent,
+                  fontSize: 13,
+                  textShadow: '0 1px 4px rgba(0,0,0,0.95)',
+                }}
+              >
+                Nº {String(carta.numero).padStart(3, '0')}
+              </span>
+            )}
+            {/* Selo de série — quando a carta vem com `serialNumber` (cópia
+                desbloqueada), mostramos #042 num pílula discreta. Sem ele
+                (catálogo geral / preview admin) nada aparece. */}
+            {serialNumber != null && (
+              <span
+                className="tabular-nums"
+                style={{
+                  fontFamily: 'Cinzel, serif',
+                  color: '#0F0E0C',
+                  background: accent,
+                  fontSize: 10,
+                  letterSpacing: '0.06em',
+                  padding: '2px 7px',
+                  borderRadius: 4,
+                  fontWeight: 600,
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.5)',
+                }}
+                title={`Cópia #${serialNumber} desta carta`}
+              >
+                #{String(serialNumber).padStart(3, '0')}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Texto: ancorado no rodapé */}
