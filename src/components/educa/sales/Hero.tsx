@@ -1,7 +1,15 @@
 'use client'
 
+/**
+ * Hero da página de venda do Veritas Educa.
+ *
+ * Sem framer-motion no above-the-fold — todas as animações são CSS
+ * (`.lp-anim-*` em globals.css). Isso reduz JS crítico em ~50KB e
+ * acelera LCP. Componente fica praticamente "estático" enquanto o
+ * resto da página carrega o framer via dynamic import.
+ */
+
 import { useMemo } from 'react'
-import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { ArrowRight, ChevronRight, MapPin, Sparkles } from 'lucide-react'
 import CrossIcon from '@/components/icons/CrossIcon'
@@ -15,13 +23,6 @@ type Props = {
   totals: EducaSalesTotals
 }
 
-/**
- * Hero da página de venda do Veritas Educa.
- *
- * Estética: surface-velvet (mesma da landing do Veritas Dei) com orbs
- * pulsantes, faíscas douradas e o mockup do app flutuando suavemente.
- * Mobile mostra o mockup empilhado abaixo (em escala reduzida).
- */
 export default function Hero({ isAuthenticated, onPrimaryClick, totals }: Props) {
   // Calcula a liturgia do dia uma vez por mount — usado pra rotular o
   // mockup do dashboard com o nome real do tempo litúrgico de hoje.
@@ -32,7 +33,7 @@ export default function Hero({ isAuthenticated, onPrimaryClick, totals }: Props)
 
   return (
     <section className="surface-velvet relative min-h-[100svh] md:min-h-screen overflow-hidden">
-      {/* ─── Orbs pulsantes (background) ─── */}
+      {/* ─── Orbs pulsantes (CSS animation existente) ─── */}
       <div
         className="hero-orb glow-pulse"
         style={{
@@ -55,27 +56,28 @@ export default function Hero({ isAuthenticated, onPrimaryClick, totals }: Props)
         }}
       />
 
-      {/* ─── Faíscas douradas drifting ─── */}
+      {/* ─── Faíscas douradas — CSS keyframes (lp-anim-spark) ─── */}
       {[
-        { top: '18%', left: '12%', size: 3, delay: 0 },
-        { top: '32%', right: '20%', size: 2, delay: 1.2 },
-        { top: '60%', left: '20%', size: 2, delay: 2.4 },
-        { top: '70%', right: '14%', size: 3, delay: 0.6 },
-        { top: '46%', left: '8%', size: 2, delay: 1.8 },
+        { top: '18%', left: '12%', size: 3, delay: '0s' },
+        { top: '32%', right: '20%', size: 2, delay: '1.2s' },
+        { top: '60%', left: '20%', size: 2, delay: '2.4s' },
+        { top: '70%', right: '14%', size: 3, delay: '0.6s' },
+        { top: '46%', left: '8%', size: 2, delay: '1.8s' },
       ].map((s, i) => (
-        <motion.span
+        <span
           key={i}
           aria-hidden
-          className="absolute hidden md:block rounded-full"
+          className="absolute hidden md:block rounded-full lp-anim-spark"
           style={{
-            ...s,
+            top: s.top,
+            left: s.left,
+            right: s.right,
             width: s.size,
             height: s.size,
             background: '#D9C077',
             boxShadow: '0 0 10px rgba(217,192,119,0.7)',
+            animationDelay: s.delay,
           }}
-          animate={{ y: [0, -14, 0], opacity: [0.3, 0.85, 0.3] }}
-          transition={{ duration: 5 + (i % 3), repeat: Infinity, ease: 'easeInOut', delay: s.delay }}
         />
       ))}
 
@@ -115,12 +117,7 @@ export default function Hero({ isAuthenticated, onPrimaryClick, totals }: Props)
       <div className="relative z-10 min-h-[100svh] md:min-h-screen flex items-center px-5 md:px-10 lg:px-16 pt-24 md:pt-28 pb-20 md:pb-24">
         <div className="max-w-7xl mx-auto w-full grid lg:grid-cols-12 gap-10 lg:gap-6 items-center">
           {/* ─── Texto (esquerda) ─── */}
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: 'easeOut' }}
-            className="lg:col-span-7 text-center lg:text-left"
-          >
+          <div className="lg:col-span-7 text-center lg:text-left lp-anim-fade-in">
             {/* Ornament inline */}
             <div className="flex items-center justify-center lg:justify-start gap-3 mb-6 opacity-80">
               <span
@@ -200,15 +197,10 @@ export default function Hero({ isAuthenticated, onPrimaryClick, totals }: Props)
               <span className="w-px h-3" style={{ background: 'rgba(201,168,76,0.3)' }} />
               <span>Cancele quando quiser</span>
             </div>
-          </motion.div>
+          </div>
 
           {/* ─── Mockup do dashboard (direita) ─── */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.9, delay: 0.2, ease: 'easeOut' }}
-            className="lg:col-span-5 flex justify-center lg:justify-end relative"
-          >
+          <div className="lg:col-span-5 flex justify-center lg:justify-end relative lp-anim-fade-in-delayed">
             {/* Glow atrás */}
             <div
               className="absolute inset-0 -z-10"
@@ -219,23 +211,19 @@ export default function Hero({ isAuthenticated, onPrimaryClick, totals }: Props)
               }}
             />
 
-            {/* Phone flutuando */}
-            <motion.div
-              animate={{ y: [0, -10, 0] }}
-              transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-              className="relative w-[300px] sm:w-[340px] md:w-[340px] lg:w-[380px]"
+            {/* Phone flutuando (CSS animation) */}
+            <div
+              className="relative w-[300px] sm:w-[340px] md:w-[340px] lg:w-[380px] lp-anim-float"
               style={{
                 filter: 'drop-shadow(0 30px 60px rgba(0,0,0,0.55))',
               }}
             >
               <HeroDashboardMockup className="w-full h-auto" liturgia={liturgicalLabel} />
-            </motion.div>
+            </div>
 
-            {/* Mini-chip "XP por estudar" flutuando à esquerda do phone */}
-            <motion.div
-              animate={{ y: [0, 8, 0] }}
-              transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-              className="absolute hidden md:flex items-center gap-2 px-4 py-2.5 rounded-full"
+            {/* Mini-chip "XP por estudar" — float-down */}
+            <div
+              className="absolute hidden md:flex items-center gap-2 px-4 py-2.5 rounded-full lp-anim-float-down"
               style={{
                 top: '14%',
                 left: '-2%',
@@ -250,13 +238,11 @@ export default function Hero({ isAuthenticated, onPrimaryClick, totals }: Props)
             >
               <Sparkles className="w-3.5 h-3.5" style={{ color: '#C9A84C' }} />
               XP por lição
-            </motion.div>
+            </div>
 
-            {/* Mini-chip "Sequência diária" à direita */}
-            <motion.div
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
-              className="absolute hidden md:flex items-center gap-2 px-4 py-2.5 rounded-full"
+            {/* Mini-chip "Sequência diária" — float-up */}
+            <div
+              className="absolute hidden md:flex items-center gap-2 px-4 py-2.5 rounded-full lp-anim-float-up"
               style={{
                 bottom: '18%',
                 right: '-4%',
@@ -287,8 +273,8 @@ export default function Hero({ isAuthenticated, onPrimaryClick, totals }: Props)
                 </svg>
               </span>
               Sequência diária
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         </div>
       </div>
 

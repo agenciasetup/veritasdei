@@ -56,15 +56,19 @@ export default async function AssineEducaPage({
       : null
 
   return (
-    <EducaSalesPage
-      prices={prices}
-      pilares={pilares}
-      cartas={cartas}
-      totals={totals}
-      isAuthenticated={!!user}
-      prefillEmail={user?.email ?? null}
-      prefillName={prefillName}
-      autoPlan={autoPlan}
-    />
+    <>
+      <link rel="preconnect" href="https://media.veritasdei.com.br" />
+      <link rel="dns-prefetch" href="https://media.veritasdei.com.br" />
+      <EducaSalesPage
+        prices={prices}
+        pilares={pilares}
+        cartas={cartas}
+        totals={totals}
+        isAuthenticated={!!user}
+        prefillEmail={user?.email ?? null}
+        prefillName={prefillName}
+        autoPlan={autoPlan}
+      />
+    </>
   )
 }

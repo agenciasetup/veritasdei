@@ -39,16 +39,22 @@ export default async function EducaPage() {
       getEducaSalesTotals(),
     ])
     return (
-      <EducaSalesPage
-        prices={prices}
-        pilares={pilares}
-        cartas={cartas}
-        totals={totals}
-        isAuthenticated={false}
-        prefillEmail={null}
-        prefillName={null}
-        autoPlan={null}
-      />
+      <>
+        {/* Preconnect ao bucket de imagens — economiza ~100-200ms de
+            handshake DNS+TLS pra capas e ilustrações de carta. */}
+        <link rel="preconnect" href="https://media.veritasdei.com.br" />
+        <link rel="dns-prefetch" href="https://media.veritasdei.com.br" />
+        <EducaSalesPage
+          prices={prices}
+          pilares={pilares}
+          cartas={cartas}
+          totals={totals}
+          isAuthenticated={false}
+          prefillEmail={null}
+          prefillName={null}
+          autoPlan={null}
+        />
+      </>
     )
   }
 
