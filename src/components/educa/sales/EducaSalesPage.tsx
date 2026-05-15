@@ -41,9 +41,13 @@ import Hero from './Hero'
 // quando o usuário rola). SSR continua ligado — HTML vem completo pro SEO.
 const EstudarSection = dynamic(() => import('./EstudarSection'))
 const Features = dynamic(() => import('./Features'))
+const SocialProofStrip = dynamic(() => import('./SocialProofStrip'))
 const Pricing = dynamic(() => import('./Pricing'))
 const Faq = dynamic(() => import('./Faq'))
 const Signup = dynamic(() => import('./Signup'))
+const SignupToastNotifier = dynamic(() => import('./SignupToastNotifier'), {
+  ssr: false,
+})
 
 // ──────────────────────────────────────────────────────────────────────────
 // Helpers — máscaras e validações
@@ -177,7 +181,7 @@ export default function EducaSalesPage({
       if (res.status === 401) {
         // Confirmação de e-mail ainda ativa no Supabase — sessão pendente.
         setInfo(
-          'Conta criada! Enviamos um e-mail de confirmação — confirme o endereço e volte aqui pra finalizar a assinatura.',
+          'Conta criada. Enviamos um e-mail de confirmação. Confirme o endereço e volte aqui pra finalizar a assinatura.',
         )
         setLoading(false)
         return
@@ -268,6 +272,8 @@ export default function EducaSalesPage({
 
       <Features cartas={cartas} />
 
+      <SocialProofStrip />
+
       <Pricing
         prices={prices}
         selected={intervalo}
@@ -312,6 +318,8 @@ export default function EducaSalesPage({
       />
 
       <Footer />
+
+      <SignupToastNotifier />
     </div>
   )
 }

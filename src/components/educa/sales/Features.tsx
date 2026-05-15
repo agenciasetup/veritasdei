@@ -38,9 +38,9 @@ const FEATURES: Feature[] = [
     reverse: true,
     eyebrow: 'Terço em grupo',
     title: 'Reze o terço',
-    titleEm: 'com outras pessoas ao mesmo tempo.',
+    titleEm: 'junto com quem você quiser.',
     description:
-      'Cada um no seu lugar, mas rezando junto. Entre numa sala por código, veja quem está conectado e avancem mistério por mistério — o app conta as Ave-Marias e segue o ritmo do grupo.',
+      'Abra uma sala, mande o código pra família ou pros amigos e rezem juntos no mesmo horário, cada um da sua casa. O app conta as Ave-Marias e segue o ritmo do grupo, mistério por mistério.',
     mockup: <TercoMockup tone="light" className="w-full h-auto" />,
   },
   {
@@ -49,13 +49,13 @@ const FEATURES: Feature[] = [
     reverse: false,
     eyebrow: 'Modo debate',
     title: 'Aprenda a defender',
-    titleEm: 'sua fé sem travar.',
+    titleEm: 'a sua fé sem travar.',
     description:
-      'Uma IA assume o papel de um protestante e te questiona no chat — sobre a Bíblia bastar sozinha, o lugar de Maria, a Eucaristia, o papado. Você responde com calma e, ao fim, ela mostra um placar do seu argumento: o quanto foi bíblico, o quanto encostou no Magistério, e o tom de caridade.',
+      'Uma IA assume o papel de um protestante e te pergunta no chat sobre Maria, Eucaristia, papado, a Bíblia "sozinha". Você responde no seu tempo e ela mostra o quanto a sua resposta foi bíblica, fiel ao Magistério e caridosa.',
     bullets: [
-      'Treine respondendo as perguntas que protestantes mais fazem.',
-      'Não decora frase pronta — aprende a montar o argumento.',
-      'Funciona pra você não engolir seco quando alguém te perguntar.',
+      'Treine as perguntas que protestantes mais fazem.',
+      'Aprenda a montar o argumento, sem decorar frase pronta.',
+      'Sai dali sabendo o que dizer quando te perguntarem no trabalho ou em casa.',
     ],
     mockup: <DebateMockup tone="dark" className="w-full h-auto" />,
   },
@@ -65,14 +65,14 @@ const FEATURES: Feature[] = [
     reverse: true,
     eyebrow: 'Grupo de estudos',
     title: 'Estudem juntos,',
-    titleEm: 'com pacto e progresso visível.',
+    titleEm: 'com meta e progresso visível.',
     description:
-      'Crie um grupo (ou entre num por código de convite) com amigos, família ou pessoal do grupo de oração. Toda semana, definam um pacto coletivo — meta de lições, um lema e um versículo — e cada um avança no seu próprio ritmo dentro de uma trilha curada pelo dono do grupo.',
+      'Crie um grupo com amigos, família ou pessoal do grupo de oração da paróquia. Toda semana vocês combinam uma meta de lições, um lema e um versículo. Cada um avança no seu ritmo dentro de uma trilha escolhida pelo dono do grupo.',
     bullets: [
-      'Pacto da semana: meta de lições + lema + versículo combinados juntos.',
+      'Meta da semana: quantas lições, qual versículo, qual lema.',
       'Trilha do grupo: o dono escolhe os tópicos pra todo mundo estudar.',
-      'Mural pra conversar sobre o que estudaram e tirar dúvida entre vocês.',
-      'Ranking semanal e lista de quem está em dia — sustenta a disciplina.',
+      'Mural pra conversar e tirar dúvida sobre o que estudaram.',
+      'Ranking semanal e lista de quem está em dia.',
     ],
     mockup: <GrupoMockup tone="light" className="w-full h-auto" />,
   },
@@ -84,11 +84,11 @@ function cartasFeature(cartas: Carta[]): Feature {
     tone: 'dark',
     reverse: false,
     flatDark: true,
-    eyebrow: 'Colecionar conquistas',
+    eyebrow: 'Sua coleção',
     title: 'Cada lição',
     titleEm: 'desbloqueia uma carta.',
     description:
-      'Santos, doutores, documentos da Igreja, marcos da história. Sua coleção cresce conforme você estuda e mantém sequência — um acervo visual da fé que você construiu.',
+      'Santos, doutores da Igreja, documentos do Magistério e marcos da história. Conforme você estuda, sua coleção cresce e fica visível pra você lembrar do que aprendeu.',
     mockup: <CartasReais cartas={cartas} />,
   }
 }
@@ -163,14 +163,14 @@ function FeatureRow({ feature }: { feature: Feature }) {
           className={feature.reverse ? 'lg:order-2' : ''}
         >
           {/* Eyebrow com número */}
-          <div className="flex items-center gap-3 mb-6 justify-center lg:justify-start">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-6 justify-center lg:justify-start">
             <span
               className="display-cinzel text-4xl md:text-5xl leading-none"
               style={{ color: numberColor, opacity: 0.85, fontWeight: 600 }}
             >
               0{feature.n}
             </span>
-            <span className="w-12 h-px" style={{ background: ruleColor }} />
+            <span className="hidden sm:block w-12 h-px" style={{ background: ruleColor }} />
             <span
               className="eyebrow-label"
               style={{ color: isDark ? '#D9C077' : '#5A1625' }}

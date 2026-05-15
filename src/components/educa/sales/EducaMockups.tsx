@@ -351,7 +351,7 @@ export function TercoMockup({ tone = 'light', className = '' }: MockupProps) {
         Mistérios Gloriosos
       </text>
       <text x="210" y="94" textAnchor="middle" fontFamily="Poppins, sans-serif" fontSize="11" fill={muted(tone)}>
-        2º — A Ascensão do Senhor
+        2º · A Ascensão do Senhor
       </text>
 
       {/* Live dot + members count */}
@@ -534,7 +534,7 @@ export function DebateMockup({ tone = 'dark', className = '' }: MockupProps) {
       ))}
 
       <text x="40" y="468" fontFamily="Cormorant Garamond, serif" fontSize="12" fill={muted(tone)} fontStyle="italic">
-        Bom uso do verso — desenvolva o Magistério.
+        Bom uso do verso. Agora cite o Magistério.
       </text>
     </svg>
   )

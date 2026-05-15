@@ -155,17 +155,53 @@ export default function Hero({ isAuthenticated, onPrimaryClick, totals }: Props)
             </h1>
 
             <p
-              className="text-base md:text-lg lg:text-xl max-w-2xl mx-auto lg:mx-0 mb-10"
+              className="text-base md:text-lg lg:text-xl max-w-2xl mx-auto lg:mx-0 mb-6"
               style={{
                 color: '#CEC3B3',
                 fontFamily: 'var(--font-body)',
                 lineHeight: 1.6,
               }}
             >
-              Trilhas guiadas por Bíblia, Magistério e Patrística. Terço em
-              grupo, modo debate com IA, e um acervo de cartas pra colecionar
-              conforme você estuda — tudo em um app.
+              Você aprende a Bíblia, o Catecismo e o que a Igreja sempre
+              ensinou. Em lições curtas, no seu ritmo, com base no Magistério
+              e nos santos.
             </p>
+
+            <ul
+              className="flex flex-col gap-2 mb-10 max-w-xl mx-auto lg:mx-0"
+              style={{
+                color: 'rgba(242,237,228,0.85)',
+                fontFamily: 'var(--font-body)',
+                lineHeight: 1.5,
+              }}
+            >
+              {[
+                'Dogmas, Sacramentos, Bíblia, Defesa da Fé e outros pilares.',
+                'Modo debate: treine apologética com uma IA católica.',
+                'Terço em grupo, em sala fechada com seus amigos.',
+                'Coleção de cartas de santos e doutores conforme estuda.',
+              ].map(item => (
+                <li
+                  key={item}
+                  className="flex items-start gap-2.5 text-sm md:text-[15px] text-left"
+                >
+                  <span
+                    className="flex-shrink-0 w-5 h-5 rounded-full inline-flex items-center justify-center mt-0.5"
+                    style={{
+                      background: 'rgba(201,168,76,0.14)',
+                      border: '1px solid rgba(201,168,76,0.45)',
+                      color: '#C9A84C',
+                      fontSize: 11,
+                      fontFamily: 'Cinzel, serif',
+                      fontWeight: 600,
+                    }}
+                  >
+                    ✓
+                  </span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
 
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-center lg:justify-start mb-8">
@@ -190,10 +226,10 @@ export default function Hero({ isAuthenticated, onPrimaryClick, totals }: Props)
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-5 text-xs" style={{ fontFamily: 'Poppins, sans-serif', color: 'rgba(242,237,228,0.55)' }}>
               <span className="inline-flex items-center gap-1.5">
                 <MapPin className="w-3 h-3" style={{ color: '#C9A84C' }} />
-                Em português
+                Fiel ao Magistério
               </span>
               <span className="w-px h-3" style={{ background: 'rgba(201,168,76,0.3)' }} />
-              <span>Pagamento Pix, cartão ou boleto</span>
+              <span>Pix, cartão ou boleto</span>
               <span className="w-px h-3" style={{ background: 'rgba(201,168,76,0.3)' }} />
               <span>Cancele quando quiser</span>
             </div>

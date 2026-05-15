@@ -43,33 +43,34 @@ export default function CartasReais({ cartas }: Props) {
 
   return (
     <div
-      className="relative w-full overflow-visible rounded-3xl"
+      className="relative w-full overflow-hidden rounded-3xl"
       style={{
         background: '#14100B',
         border: '1px solid rgba(201,168,76,0.35)',
-        padding: '32px 12px 32px',
+        padding: '32px 8px 28px',
       }}
     >
       {/* Header */}
       <p
-        className="text-center text-[10px] uppercase tracking-[0.32em] mb-6"
+        className="text-center text-[10px] uppercase tracking-[0.28em] mb-6 px-2"
         style={{ color: GOLD, fontFamily: 'Cinzel, serif' }}
       >
         Coleção · suas conquistas
       </p>
 
-      {/* Cartas — flex centralizado, centro maior e elevado */}
-      <div className="flex items-end justify-center gap-1.5 sm:gap-3 md:gap-4 px-1">
+      {/* Cartas: flex centralizado, centro maior e elevado. Em mobile,
+          ângulos menores e gap menor pra todas caberem sem cortar. */}
+      <div className="flex items-end justify-center gap-1 sm:gap-3 md:gap-4">
         {shown.map((carta, i) => {
           const isCenter = i === centerIdx
-          const rotate = i === centerIdx ? 0 : i < centerIdx ? -6 : 6
+          const rotate = i === centerIdx ? 0 : i < centerIdx ? -3 : 3
           return (
             <motion.div
               key={carta.id}
               className="flex-shrink-0"
               style={{
                 transformOrigin: 'bottom center',
-                transform: `translateY(${isCenter ? '-12px' : '0px'}) rotate(${rotate}deg)`,
+                transform: `translateY(${isCenter ? '-10px' : '0px'}) rotate(${rotate}deg)`,
                 zIndex: isCenter ? 10 : 1,
               }}
               animate={isCenter ? { y: [0, -6, 0] } : undefined}
@@ -83,7 +84,7 @@ export default function CartasReais({ cartas }: Props) {
 
       {/* Footer */}
       <p
-        className="text-center text-[9px] uppercase tracking-[0.22em] mt-8"
+        className="text-center text-[9px] uppercase tracking-[0.2em] mt-8 px-2"
         style={{
           color: 'rgba(242,237,228,0.5)',
           fontFamily: 'Cinzel, serif',
@@ -101,16 +102,12 @@ export default function CartasReais({ cartas }: Props) {
  * Em mobile, cartas laterais menores pra todas caberem.
  */
 function ResponsiveCarta({ carta, isCenter }: { carta: Carta; isCenter: boolean }) {
-  // Mobile (< sm): laterais ~95px, centro ~120px
-  // Tablet / desktop: laterais ~145px, centro ~180px
+  // Mobile (< sm) precisa caber 3 cartas + rotação sem cortar.
+  // Centro ~105px, laterais ~84px. Em tablet/desktop volta ao tamanho cheio.
   const baseClass = isCenter
-    ? 'w-[120px] sm:w-[160px] md:w-[180px]'
-    : 'w-[95px] sm:w-[140px] md:w-[145px]'
+    ? 'w-[105px] sm:w-[160px] md:w-[180px]'
+    : 'w-[84px] sm:w-[140px] md:w-[145px]'
 
-  // Width que o CartaView usa internamente pra escalar — corresponde
-  // ao tamanho final desejado. Como CartaView aplica `transform: scale()`
-  // ela precisa do width em px. Fixamos no maior breakpoint e o CSS
-  // de width acima cuida do scaling final no container.
   const designWidth = isCenter ? 180 : 145
 
   return (
