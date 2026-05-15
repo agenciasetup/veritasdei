@@ -223,7 +223,7 @@ export default function Hero({ isAuthenticated, onPrimaryClick, totals }: Props)
             <motion.div
               animate={{ y: [0, -10, 0] }}
               transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-              className="relative w-[240px] sm:w-[280px] md:w-[300px] lg:w-[320px]"
+              className="relative w-[300px] sm:w-[340px] md:w-[340px] lg:w-[380px]"
               style={{
                 filter: 'drop-shadow(0 30px 60px rgba(0,0,0,0.55))',
               }}

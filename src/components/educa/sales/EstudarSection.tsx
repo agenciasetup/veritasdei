@@ -13,6 +13,7 @@
  */
 
 import { useRef, useState } from 'react'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import * as Dialog from '@radix-ui/react-dialog'
 import {
@@ -306,11 +307,13 @@ function FeaturedCard({
     >
       {hasCover && (
         <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={pilar.coverUrl ?? ''}
             alt=""
-            className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:opacity-90 transition-opacity"
+            fill
+            sizes="(min-width: 1024px) 1000px, 100vw"
+            className="object-cover opacity-80 group-hover:opacity-90 transition-opacity"
+            loading="lazy"
             aria-hidden
           />
           <div
@@ -471,11 +474,13 @@ function PilarPoster({
     >
       {hasCover && (
         <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={pilar.coverUrl ?? ''}
             alt=""
-            className="absolute inset-0 w-full h-full object-cover"
+            fill
+            sizes="220px"
+            className="object-cover"
+            loading="lazy"
             aria-hidden
           />
           <div
@@ -605,7 +610,7 @@ function PilarModalBody({ pilar }: { pilar: EducaSalesPilar }) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={pilar.coverUrl}
-              alt=""
+              alt="" loading="lazy" decoding="async"
               className="absolute inset-0 w-full h-full object-cover opacity-30"
               aria-hidden
             />
@@ -758,7 +763,7 @@ function TopicoRow({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={topico.coverUrl ?? ''}
-            alt=""
+            alt="" loading="lazy" decoding="async"
             className="absolute inset-0 w-full h-full object-cover opacity-15"
             aria-hidden
           />

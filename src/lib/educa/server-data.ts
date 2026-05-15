@@ -13,6 +13,7 @@
  */
 import { unstable_cache, revalidateTag } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
+import type { Carta } from '@/types/colecao'
 
 const TAGS = {
   banners: 'educa:banners',
@@ -220,45 +221,22 @@ export const getEducaSalesPilares = unstable_cache(
 
 // ─── Cartas em destaque na landing ────────────────────────────────────────
 
-export interface EducaSalesCarta {
-  id: string
-  nome: string
-  subtitulo: string | null
-  raridade: string
-  estrelas: number
-  fraseCentral: string | null
-  corAccent: string | null
-  ilustracaoUrl: string | null
-}
-
 /**
- * Cartas em destaque na página de venda — escolhidas pelo admin via
- * `cartas.landing_featured = true` (toggle no CartaEditor). Limite de 3.
+ * Cartas em destaque na página de venda. Retorna a linha completa de
+ * `public.cartas` (tipo `Carta` do /types/colecao) pra que a landing
+ * possa renderizar com o componente real `<CartaView>` — mesma estética
+ * da página /colecao.
  *
- * Fallback automático quando nenhuma carta está marcada como destaque:
- * pega as 3 visíveis mais raras (suprema → lendária → epica → rara → comum).
+ * Escolha das cartas: admin marca `landing_featured = true` no CartaEditor.
+ * Sem nenhuma marcada, fallback automático pega as 3 mais raras visíveis.
  */
 export const getEducaSalesCartas = unstable_cache(
-  async (): Promise<EducaSalesCarta[]> => {
+  async (): Promise<Carta[]> => {
     const supabase = createAdminClient()
 
-    type Raw = {
-      id: string
-      nome: string
-      subtitulo: string | null
-      raridade: string
-      estrelas: number
-      frase_central: string | null
-      cor_accent: string | null
-      ilustracao_url: string | null
-    }
-
-    // 1ª tentativa: cartas marcadas pelo admin
     const { data: featured } = await supabase
       .from('cartas')
-      .select(
-        'id, nome, subtitulo, raridade, estrelas, frase_central, cor_accent, ilustracao_url',
-      )
+      .select('*')
       .eq('visivel', true)
       .eq('landing_featured', true)
       .order('landing_featured_order', { ascending: true, nullsFirst: false })
@@ -266,35 +244,22 @@ export const getEducaSalesCartas = unstable_cache(
       .order('numero', { ascending: true })
       .limit(3)
 
-    const mapRow = (r: Raw): EducaSalesCarta => ({
-      id: r.id,
-      nome: r.nome,
-      subtitulo: r.subtitulo,
-      raridade: r.raridade,
-      estrelas: r.estrelas,
-      fraseCentral: r.frase_central,
-      corAccent: r.cor_accent,
-      ilustracaoUrl: r.ilustracao_url,
-    })
-
     if (featured && featured.length > 0) {
-      return (featured as Raw[]).map(mapRow)
+      return featured as unknown as Carta[]
     }
 
-    // Fallback: 3 mais raras (peso por raridade no SQL via CASE)
+    // Fallback: 3 mais raras visíveis (ORDER BY estrelas DESC, numero ASC).
     const { data: fallback } = await supabase
       .from('cartas')
-      .select(
-        'id, nome, subtitulo, raridade, estrelas, frase_central, cor_accent, ilustracao_url',
-      )
+      .select('*')
       .eq('visivel', true)
       .order('estrelas', { ascending: false })
       .order('numero', { ascending: true })
       .limit(3)
 
-    return ((fallback ?? []) as Raw[]).map(mapRow)
+    return (fallback ?? []) as unknown as Carta[]
   },
-  ['educa-sales-cartas-v1'],
+  ['educa-sales-cartas-v2'],
   { revalidate: 300 },
 )
 
