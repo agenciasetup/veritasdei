@@ -131,7 +131,15 @@ export function RosaryDashboard({ onStartIndividual }: Props) {
           </div>
 
           {/* Quick links — desktop sidebar style, mobile inline below */}
-          <div className="mt-6 hidden gap-5 lg:flex" aria-label="Atalhos">
+          <div className="mt-6 hidden flex-wrap gap-x-5 gap-y-2 lg:flex" aria-label="Atalhos">
+            <Link
+              href="/rosario/tematicos"
+              className="text-xs uppercase tracking-[0.2em] transition hover:opacity-100"
+              style={{ color: 'var(--accent)', fontFamily: 'var(--font-display)' }}
+            >
+              Terços Temáticos →
+            </Link>
+            <span style={{ color: 'var(--border-1)' }}>·</span>
             <Link
               href="/rosario/historico"
               className="text-xs uppercase tracking-[0.2em] transition hover:opacity-100"
@@ -306,7 +314,15 @@ export function RosaryDashboard({ onStartIndividual }: Props) {
           </div>
 
           {/* Mobile quick links (visible below the panel on small screens) */}
-          <div className="mt-6 flex justify-center gap-4 lg:hidden">
+          <div className="mt-6 flex flex-wrap justify-center gap-3 lg:hidden">
+            <Link
+              href="/rosario/tematicos"
+              className="text-xs transition"
+              style={{ color: 'var(--accent)' }}
+            >
+              Terços Temáticos →
+            </Link>
+            <span style={{ color: 'var(--border-1)' }}>·</span>
             <Link
               href="/rosario/historico"
               className="text-xs transition"
