@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ROSARY_STEPS } from '@/features/rosario/data/beadSequence'
 import { createClient } from '@/lib/supabase/client'
 import type {
+  RosaryDecadeReaders,
   RosaryRoom,
   RosaryRoomParticipant,
 } from '@/features/rosario/data/historyTypes'
@@ -51,6 +52,11 @@ export interface UseSharedRosaryProgressReturn {
   goTo: (index: number) => Promise<void>
   setState: (state: RosaryRoom['state']) => Promise<void>
   setCoHost: (userId: string | null) => Promise<void>
+  /**
+   * Atribui (ou remove) o leitor de uma dezena (1-5). Apenas host/co-host.
+   * Passe `null` em `userId` pra remover a atribuição daquela dezena.
+   */
+  setDecadeReader: (decade: 1 | 2 | 3 | 4 | 5, userId: string | null) => Promise<void>
   refresh: () => Promise<void>
 }
 
@@ -260,6 +266,21 @@ export function useSharedRosaryProgress(
     [isHost, patch],
   )
 
+  const setDecadeReader = useCallback(
+    async (decade: 1 | 2 | 3 | 4 | 5, userId: string | null) => {
+      if (!canControl) return
+      const key = String(decade) as keyof RosaryDecadeReaders
+      const current: RosaryDecadeReaders = { ...(room.decade_readers ?? {}) }
+      if (userId === null) {
+        delete current[key]
+      } else {
+        current[key] = userId
+      }
+      await patch({ decade_readers: current })
+    },
+    [canControl, room.decade_readers, patch],
+  )
+
   return {
     room,
     participants,
@@ -276,6 +297,7 @@ export function useSharedRosaryProgress(
     goTo,
     setState: setRoomStatePatch,
     setCoHost,
+    setDecadeReader,
     refresh: refreshFromServer,
   }
 }

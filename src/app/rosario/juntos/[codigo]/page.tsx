@@ -2,6 +2,10 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { SharedRoomView } from '@/features/rosario/components/SharedRoomView'
+import {
+  lookupAvatarUrl,
+  lookupDisplayName,
+} from '@/features/rosario/session/lookupDisplayName'
 import type {
   RosaryRoom,
   RosaryRoomParticipant,
@@ -62,6 +66,7 @@ export default async function RoomPage({
     .eq('codigo', upper)
     .maybeSingle()
 
+  let autoJoined = false
   if (!roomRow) {
     // Attempt auto-join via SECURITY DEFINER function
     const { error: joinError } = await supabase.rpc('join_rosary_room', {
@@ -71,6 +76,8 @@ export default async function RoomPage({
     if (joinError) {
       notFound()
     }
+
+    autoJoined = true
 
     // Retry loading after join
     const { data: retryRow } = await supabase
@@ -84,6 +91,21 @@ export default async function RoomPage({
     }
 
     roomRow = retryRow
+  }
+
+  // Defesa em profundidade: a migration de identidade faz o RPC `join_rosary_room`
+  // resolver display_name + avatar_url no SQL. Caso o ambiente esteja
+  // antes da migration, garantimos via UPDATE aqui.
+  if (autoJoined) {
+    const [displayName, avatarUrl] = await Promise.all([
+      lookupDisplayName(supabase, user.id, user.email, user.user_metadata),
+      lookupAvatarUrl(supabase, user.id, user.user_metadata),
+    ])
+    await supabase
+      .from('rosary_room_participants')
+      .update({ display_name: displayName, avatar_url: avatarUrl })
+      .eq('room_id', roomRow.id)
+      .eq('user_id', user.id)
   }
 
   const { data: participantsRows } = await supabase

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { lookupDisplayName } from '@/features/rosario/session/lookupDisplayName'
+import { lookupDisplayName, lookupAvatarUrl } from '@/features/rosario/session/lookupDisplayName'
 
 /**
  * Entrar em uma sala pelo código (Marco 3).
@@ -46,15 +46,18 @@ export async function POST(
     return NextResponse.json({ error: 'room_not_found' }, { status: 404 })
   }
 
-  // Preenche o display_name do participante recém-criado (ou recém-reativado).
-  const displayName = await lookupDisplayName(supabase, user.id, user.email)
-  if (displayName) {
-    await supabase
-      .from('rosary_room_participants')
-      .update({ display_name: displayName })
-      .eq('room_id', room.id)
-      .eq('user_id', user.id)
-  }
+  // A migration `20260516120000_rosary_room_identity_and_readers` faz o
+  // RPC `join_rosary_room` resolver display_name + avatar_url internamente.
+  // Mantemos este UPDATE como defesa em profundidade.
+  const [displayName, avatarUrl] = await Promise.all([
+    lookupDisplayName(supabase, user.id, user.email, user.user_metadata),
+    lookupAvatarUrl(supabase, user.id, user.user_metadata),
+  ])
+  await supabase
+    .from('rosary_room_participants')
+    .update({ display_name: displayName, avatar_url: avatarUrl })
+    .eq('room_id', room.id)
+    .eq('user_id', user.id)
 
   const { data: participants } = await supabase
     .from('rosary_room_participants')

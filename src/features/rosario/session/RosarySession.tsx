@@ -24,7 +24,7 @@ import { RosaryMenu } from '@/features/rosario/components/RosaryMenu'
 import { MYSTERY_GROUPS, getMysteryForToday } from '@/features/rosario/data/mysteries'
 import { getSpeechText } from '@/features/rosario/data/speechText'
 import { getPrayerById } from '@/features/rosario/data/prayerMap'
-import type { MysterySet } from '@/features/rosario/data/types'
+import type { MysteryGroup, MysterySet } from '@/features/rosario/data/types'
 import { getRosaryTheme, type RosaryLanguage } from '@/features/rosario/data/theme'
 
 /**
@@ -84,12 +84,25 @@ const LANGUAGE_STORAGE_KEY = 'rosary:language'
 
 interface RosarySessionProps {
   fullRosary?: boolean
+  /**
+   * Quando definido, sobrepõe o seletor padrão de Mistérios. Usado pra
+   * terços temáticos (São Bento, Dogmas Marianos, etc) — a sessão usa
+   * estes mistérios em vez dos 4 conjuntos canônicos. Estes terços não
+   * são persistidos no histórico (o `mystery_set` no DB é um enum
+   * restrito).
+   */
+  customMysteryGroup?: MysteryGroup
   onExit?: () => void
 }
 
 const ROSARY_SEQUENCE: MysterySet[] = ['gozosos', 'luminosos', 'dolorosos', 'gloriosos']
 
-export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps) {
+export function RosarySession({
+  fullRosary = false,
+  customMysteryGroup,
+  onExit,
+}: RosarySessionProps) {
+  const usingThematic = customMysteryGroup !== undefined
   // --- Language / theme ---
   const [language, setLanguageState] = useState<RosaryLanguage>('pt')
   useEffect(() => {
@@ -112,10 +125,11 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
   const [mysterySetId, setMysterySetId] = useState<MysterySet>(
     () => fullRosary ? ROSARY_SEQUENCE[0] : getMysteryForToday().id,
   )
-  const mysteryGroup = useMemo(
+  const fallbackMysteryGroup = useMemo(
     () => MYSTERY_GROUPS.find((g) => g.id === mysterySetId) ?? MYSTERY_GROUPS[0],
     [mysterySetId],
   )
+  const mysteryGroup = customMysteryGroup ?? fallbackMysteryGroup
 
   const {
     currentIndex,
@@ -169,6 +183,13 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
   const [resumedFrom, setResumedFrom] = useState<number | null>(null)
 
   useEffect(() => {
+    // Terços temáticos começam sempre do zero — não restauramos
+    // sessão salva (seria de outro conjunto de mistérios) nem salvamos
+    // a esta sessão por cima.
+    if (usingThematic) {
+      setHydrated(true)
+      return
+    }
     const saved = loadSession()
     if (saved && !saved.isCompleted && saved.currentIndex > 0) {
       setMysterySetId(saved.mysterySetId)
@@ -181,10 +202,11 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
 
   useEffect(() => {
     if (!hydrated) return
+    if (usingThematic) return
     if (isCompleted) { clearSession(); return }
     if (currentIndex === 0) { clearSession(); return }
     saveSession({ mysterySetId, currentIndex, isCompleted })
-  }, [hydrated, mysterySetId, currentIndex, isCompleted])
+  }, [hydrated, mysterySetId, currentIndex, isCompleted, usingThematic])
 
   // --- Session timing for history ---
   const sessionStartRef = useRef<number | null>(null)
@@ -199,6 +221,13 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
     if (!hydrated) return
     if (!isCompleted) { recordedCompletionRef.current = false; return }
     if (recordedCompletionRef.current) return
+    // Terços temáticos não persistem no histórico — o enum `mystery_set`
+    // no DB só aceita os 4 conjuntos canônicos. Mantemos a sessão funcional
+    // mas pulamos o INSERT.
+    if (usingThematic) {
+      recordedCompletionRef.current = true
+      return
+    }
     recordedCompletionRef.current = true
     const startTs = sessionStartRef.current ?? Date.now()
     const durationSeconds = Math.max(0, Math.round((Date.now() - startTs) / 1000))
@@ -208,7 +237,7 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
       started_at: new Date(startTs).toISOString(),
       duration_seconds: durationSeconds,
     })
-  }, [hydrated, isCompleted, mysterySetId, activeIntentionId, recordSession])
+  }, [hydrated, isCompleted, mysterySetId, activeIntentionId, recordSession, usingThematic])
 
   // --- Rosário completo: intercept completion to show transition ---
   const isLastRosarioSet = rosarioIndex >= ROSARY_SEQUENCE.length - 1
@@ -324,9 +353,11 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
     isLatin && mysteryGroup.latinName
       ? mysteryGroup.latinName.replace('Mysteria ', '')
       : mysteryShortNamePt
-  const headerTitle = fullRosary
-    ? `${mysteryShortName} (${rosarioIndex + 1}/4)`
-    : mysteryShortName
+  const headerTitle = usingThematic
+    ? mysteryGroup.name
+    : fullRosary
+      ? `${mysteryShortName} (${rosarioIndex + 1}/4)`
+      : mysteryShortName
 
   const stepLabels = isLatin ? STEP_LABELS_LA : STEP_LABELS_PT
 
@@ -870,7 +901,7 @@ export function RosarySession({ fullRosary = false, onExit }: RosarySessionProps
         onClose={() => setMenuOpen(false)}
         mysterySetId={mysterySetId}
         onMysteryChange={handleMysteryChange}
-        mysteryLocked={fullRosary}
+        mysteryLocked={fullRosary || usingThematic}
         hapticSupported={haptic.supported}
         hapticEnabled={haptic.enabled}
         onHapticToggle={() => haptic.setEnabled(!haptic.enabled)}
