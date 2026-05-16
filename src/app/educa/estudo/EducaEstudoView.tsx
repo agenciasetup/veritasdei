@@ -10,7 +10,7 @@
  *
  * Conteúdo (com fade entre o hero e a próxima seção):
  *  - Pilares de estudo (rail horizontal com capas reais quando há cover_url).
- *  - Provas recentes + Selos (2 cols no desktop, stack no mobile).
+ *  - Provas recentes + Coleção de cartas (2 cols no desktop, stack no mobile).
  *  - Grupos de estudo (atalho).
  *
  * Trilhas foram removidas do hub — material ainda raso. Continuam
@@ -29,20 +29,18 @@ import {
   Loader2,
   NotebookPen,
   Scroll,
-  Sparkles,
   Trophy,
   Users,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useMyStudyRecent } from '@/lib/study/useMyStudyRecent'
 import { useLastStudied } from '@/lib/content/useLastStudied'
-import { useReliquias } from '@/lib/gamification/useReliquias'
 import { createClient } from '@/lib/supabase/client'
 import ContentRail, { RailItem } from '@/components/educa/ContentRail'
 import BannerSlider, { useActiveBanners } from '@/components/educa/BannerSlider'
 import CinematicHero from '@/components/educa/CinematicHero'
 import GlassCard from '@/components/educa/GlassCard'
-import { RARITY_META } from '@/types/gamification'
+import DashboardCartasStrip from '@/components/educa/DashboardCartasStrip'
 
 // Paleta sacra dos pilares (fallback quando não há cover_url cadastrado).
 const PILLAR_VISUAL: Record<
@@ -171,7 +169,6 @@ export default function EducaEstudoView({
   const { user } = useAuth()
   const { last, loading: lastLoading } = useLastStudied(user?.id)
   const { attempts, pillars, loading: recentLoading } = useMyStudyRecent()
-  const { catalog, unlockedIds, loading: relLoading } = useReliquias(user?.id)
   // Server já hidratou banners — pula loading completamente quando há prop.
   const fallbackBanners = useActiveBanners()
   const banners = initialBanners ?? fallbackBanners.banners
@@ -195,7 +192,6 @@ export default function EducaEstudoView({
     : null
   const pillarCovers = usePillarCovers(initialCoversMap)
 
-  const unlockedSelos = catalog.filter((r) => unlockedIds.has(r.id))
   const hasBanners = banners.length > 0
   const heroLoading = bannersLoading || lastLoading
 
@@ -274,14 +270,10 @@ export default function EducaEstudoView({
           </ContentRail>
         )}
 
-        {/* ─── PROVAS + SELOS ─────────────────────────────────────── */}
+        {/* ─── PROVAS + COLEÇÃO ───────────────────────────────────── */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
           <ProvasCard attempts={attempts} loading={recentLoading} />
-          <SelosCard
-            unlocked={unlockedSelos}
-            total={catalog.length}
-            loading={relLoading}
-          />
+          <DashboardCartasStrip />
         </section>
 
         {/* ─── GRUPOS DE ESTUDO ──────────────────────────────────── */}
@@ -625,96 +617,6 @@ function ProvasCard({
             </li>
           ))}
         </ul>
-      )}
-    </GlassCard>
-  )
-}
-
-// ──────────────────────────────────────────────────────────────────────
-// Selos com raridade visual
-// ──────────────────────────────────────────────────────────────────────
-
-function SelosCard({
-  unlocked,
-  total,
-  loading,
-}: {
-  unlocked: Array<{
-    id: string
-    name: string
-    rarity: keyof typeof RARITY_META
-    image_url: string | null
-  }>
-  total: number
-  loading: boolean
-}) {
-  return (
-    <GlassCard variant="default" padded>
-      <div className="flex items-center justify-between mb-4">
-        <h3
-          className="text-sm tracking-[0.15em] uppercase flex items-center gap-2"
-          style={{
-            color: 'var(--accent)',
-            fontFamily: 'var(--font-display)',
-          }}
-        >
-          <Sparkles className="w-4 h-4" />
-          Selos de devoção
-        </h3>
-        <Link
-          href="/perfil?tab=reliquias"
-          className="text-[11px]"
-          style={{ color: 'var(--accent)', fontFamily: 'var(--font-body)' }}
-        >
-          {unlocked.length}/{total} →
-        </Link>
-      </div>
-      {loading ? (
-        <div className="py-4 flex justify-center">
-          <Loader2
-            className="w-4 h-4 animate-spin"
-            style={{ color: 'var(--text-3)' }}
-          />
-        </div>
-      ) : unlocked.length === 0 ? (
-        <p
-          className="text-sm py-2"
-          style={{ color: 'var(--text-3)', fontFamily: 'var(--font-body)' }}
-        >
-          Conclua estudos e gabarite provas pra desbloquear selos.
-        </p>
-      ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
-          {unlocked.slice(0, 8).map((r) => {
-            const meta = RARITY_META[r.rarity]
-            return (
-              <div
-                key={r.id}
-                title={r.name}
-                className="aspect-square rounded-2xl flex items-center justify-center relative overflow-hidden"
-                style={{
-                  background: `color-mix(in srgb, ${meta.color} 18%, rgba(0,0,0,0.4))`,
-                  border: `1px solid color-mix(in srgb, ${meta.color} 40%, transparent)`,
-                  boxShadow: `0 2px 12px -4px ${meta.color}55`,
-                }}
-              >
-                {r.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={r.image_url}
-                    alt=""
-                    className="w-2/3 h-2/3 object-contain"
-                  />
-                ) : (
-                  <Sparkles
-                    className="w-1/3 h-1/3"
-                    style={{ color: meta.color }}
-                  />
-                )}
-              </div>
-            )
-          })}
-        </div>
       )}
     </GlassCard>
   )
