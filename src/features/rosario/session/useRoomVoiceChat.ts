@@ -392,6 +392,28 @@ export function useRoomVoiceChat(
     cleanedUpRef.current = false
 
     try {
+      // Pré-check: alguns browsers (Chrome com permissão previamente
+      // negada) rejeitam getUserMedia silenciosamente sem mostrar prompt.
+      // Detecta esse caso e dá uma mensagem clara antes da chamada.
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const perms = (navigator as any).permissions
+        if (perms?.query) {
+          const status = await perms.query({ name: 'microphone' as PermissionName })
+          if (status.state === 'denied') {
+            throw Object.assign(new Error(
+              'Microfone bloqueado nas configurações do navegador. Clique no cadeado ao lado da URL e permita o microfone.',
+            ), { name: 'NotAllowedError' })
+          }
+        }
+      } catch (permErr) {
+        // Se o objeto Permissions não suporta 'microphone' (Safari antigo),
+        // ignoramos e seguimos pro getUserMedia normal — que ele aceita.
+        if (permErr instanceof Error && permErr.name === 'NotAllowedError') {
+          throw permErr
+        }
+      }
+
       // 1. Permission + local stream
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
