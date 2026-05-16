@@ -1,8 +1,7 @@
 import Link from 'next/link'
-import { ArrowLeft, Sparkles, Lock, Check } from 'lucide-react'
+import { ArrowLeft, Sparkles } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { rowToSkin } from '@/features/rosario/skins/loadActiveSkin'
-import { SkinMiniPreview } from '@/features/rosario/components/SkinMiniPreview'
 import { LojaFilters } from '@/features/rosario/components/LojaFilters'
 import { RedeemCodeButton } from '@/features/rosario/components/RedeemCodeButton'
 import type { RosarySkinCatalogItem } from '@/features/rosario/data/skinTypes'
@@ -104,7 +103,6 @@ export default async function RosaryLojaPage() {
       </Link>
 
       <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-col px-4 py-16 md:px-8 md:py-20 lg:py-24">
-        {/* Hero */}
         <header className="mb-10 text-center md:mb-14">
           <p
             className="mb-4 text-[10px] uppercase tracking-[0.4em] md:text-[11px]"
@@ -132,10 +130,7 @@ export default async function RosaryLojaPage() {
             algumas pelo terço físico.
           </p>
           {authenticated && (
-            <p
-              className="mx-auto mt-4 text-xs"
-              style={{ color: 'var(--text-3)' }}
-            >
+            <p className="mx-auto mt-4 text-xs" style={{ color: 'var(--text-3)' }}>
               Sua coleção: <span style={{ color: 'var(--accent)' }}>{totalOwned}</span>/{items.length}
             </p>
           )}
@@ -145,216 +140,8 @@ export default async function RosaryLojaPage() {
           </div>
         </header>
 
-        {/* Filtros + grid (client component) */}
-        <LojaFilters items={items} authenticated={authenticated}>
-          {(filtered) => (
-            <ul className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
-              {filtered.map((skin) => (
-                <li key={skin.id}>
-                  <SkinCard skin={skin} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </LojaFilters>
+        <LojaFilters items={items} authenticated={authenticated} />
       </div>
     </main>
   )
-}
-
-function SkinCard({ skin }: { skin: RosarySkinCatalogItem }) {
-  const status = unlockStatusOf(skin)
-  const clickable = status === 'owned' || status === 'unlocked' || status === 'locked'
-
-  const Inner = (
-    <article
-      className="relative flex h-full flex-col gap-4 overflow-hidden rounded-3xl border p-5 transition"
-      style={{
-        borderColor: skin.equipped
-          ? 'var(--accent)'
-          : status === 'coming_soon'
-            ? 'var(--border-1)'
-            : skin.theme.borderStrong,
-        background: 'var(--surface-2)',
-        opacity: status === 'coming_soon' ? 0.55 : 1,
-      }}
-    >
-      {/* Glow assinatura */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            status === 'coming_soon'
-              ? 'transparent'
-              : `radial-gradient(ellipse 60% 50% at 50% 0%, ${skin.theme.accent}18 0%, transparent 55%)`,
-        }}
-      />
-
-      {/* Header com raridade + equipped */}
-      <div className="relative flex items-center justify-between">
-        <span
-          className="text-[9px] uppercase tracking-[0.28em]"
-          style={{
-            color: rarityColor(skin.raridade),
-            fontFamily: 'var(--font-display)',
-          }}
-        >
-          {skin.raridade}
-        </span>
-        {skin.equipped && (
-          <span
-            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] uppercase tracking-[0.18em]"
-            style={{
-              background: 'var(--accent-soft)',
-              color: 'var(--accent)',
-              fontFamily: 'var(--font-display)',
-            }}
-          >
-            <Check className="h-2.5 w-2.5" strokeWidth={3} /> Equipado
-          </span>
-        )}
-        {!skin.equipped && skin.owned && (
-          <span
-            className="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] uppercase tracking-[0.18em]"
-            style={{
-              borderColor: 'var(--border-1)',
-              color: 'var(--text-3)',
-              border: '1px solid var(--border-1)',
-              fontFamily: 'var(--font-display)',
-            }}
-          >
-            Na coleção
-          </span>
-        )}
-        {status === 'coming_soon' && (
-          <span
-            className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.18em]"
-            style={{
-              borderColor: 'var(--border-1)',
-              color: 'var(--text-3)',
-            }}
-          >
-            <Lock className="h-2.5 w-2.5" /> Em breve
-          </span>
-        )}
-        {status === 'locked' && (
-          <span
-            className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.18em]"
-            style={{
-              borderColor: 'var(--border-1)',
-              color: 'var(--text-3)',
-            }}
-          >
-            <Lock className="h-2.5 w-2.5" /> Bloqueado
-          </span>
-        )}
-      </div>
-
-      {/* Preview mini-rosary */}
-      <div className="relative flex justify-center py-2">
-        <SkinMiniPreview theme={skin.theme} size={160} />
-      </div>
-
-      {/* Nome + subtítulo */}
-      <div className="relative">
-        <h2
-          className="text-xl leading-tight md:text-[1.4rem]"
-          style={{
-            color: 'var(--text-1)',
-            fontFamily: 'var(--font-display)',
-            letterSpacing: '0.005em',
-          }}
-        >
-          {skin.nome}
-        </h2>
-        {skin.subtitulo && (
-          <p
-            className="mt-1 text-xs italic md:text-sm"
-            style={{ color: 'var(--text-3)' }}
-          >
-            {skin.subtitulo}
-          </p>
-        )}
-      </div>
-
-      {/* CTA */}
-      <div className="relative mt-auto flex items-center justify-between gap-3 pt-2">
-        <span
-          className="text-[10px] uppercase tracking-[0.18em]"
-          style={{
-            color: 'var(--text-3)',
-            fontFamily: 'var(--font-display)',
-          }}
-        >
-          {skin.categoria}
-        </span>
-        {status === 'owned' && (
-          <span
-            className="inline-flex items-center gap-1.5 text-sm font-medium"
-            style={{
-              color: skin.theme.accent,
-              fontFamily: 'var(--font-display)',
-              letterSpacing: '0.06em',
-            }}
-          >
-            Detalhes →
-          </span>
-        )}
-        {status === 'unlocked' && (
-          <span
-            className="inline-flex items-center gap-1.5 text-sm font-medium"
-            style={{
-              color: 'var(--accent)',
-              fontFamily: 'var(--font-display)',
-              letterSpacing: '0.06em',
-            }}
-          >
-            Disponível →
-          </span>
-        )}
-        {status === 'locked' && skin.unlock_label && (
-          <span className="text-right text-[10px] italic leading-tight" style={{ color: 'var(--text-3)' }}>
-            {skin.unlock_label}
-          </span>
-        )}
-      </div>
-    </article>
-  )
-
-  if (!clickable) return <div className="h-full">{Inner}</div>
-
-  return (
-    <Link
-      href={`/rosario/loja/${skin.slug}`}
-      className="block h-full transition active:scale-[0.985]"
-      style={{ textDecoration: 'none' }}
-    >
-      {Inner}
-    </Link>
-  )
-}
-
-function unlockStatusOf(
-  skin: RosarySkinCatalogItem,
-): 'owned' | 'unlocked' | 'locked' | 'coming_soon' {
-  if (skin.owned) return 'owned'
-  if (skin.unlock_tipo === 'coming_soon') return 'coming_soon'
-  if (skin.unlock_tipo === 'free') return 'unlocked'
-  return 'locked'
-}
-
-function rarityColor(r: RosarySkinCatalogItem['raridade']): string {
-  switch (r) {
-    case 'lendaria':
-      return '#D9C077'
-    case 'suprema':
-      return '#E6C078'
-    case 'epica':
-      return '#C4B0E2'
-    case 'rara':
-      return '#9FCBE6'
-    default:
-      return 'var(--text-3)'
-  }
 }
