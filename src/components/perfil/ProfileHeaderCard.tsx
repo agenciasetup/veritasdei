@@ -23,7 +23,7 @@ import { VOCACOES } from '@/types/auth'
 import { VocacaoIcon } from '@/components/icons/VocacaoIcons'
 import LevelBadge from '@/components/gamification/LevelBadge'
 import XpBar from '@/components/gamification/XpBar'
-import EquippedReliquiaChip from '@/components/gamification/EquippedReliquiaChip'
+import EquippedCartaChip from '@/components/colecao/EquippedCartaChip'
 import { useGamification } from '@/lib/gamification/useGamification'
 import SantoCoverFallback from '@/components/devocao/SantoCoverFallback'
 import type { SantoResumo } from '@/types/santo'
@@ -389,8 +389,8 @@ export default function ProfileHeaderCard({
                 size="sm"
               />
             </div>
-            {gami.equippedReliquia && (
-              <EquippedReliquiaChip reliquia={gami.equippedReliquia} size="sm" showName />
+            {gami.equippedCarta && (
+              <EquippedCartaChip carta={gami.equippedCarta} size="sm" showName />
             )}
           </div>
         )}

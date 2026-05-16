@@ -130,6 +130,23 @@ export interface PublicProfileSnapshot {
       image_url: string | null
       rarity: 'comum' | 'rara' | 'epica' | 'lendaria'
     } | null
+    /** Carta-vitrine equipada (chip ao lado do nome). */
+    equipped_carta?: {
+      id: string
+      slug: string
+      nome: string
+      subtitulo: string | null
+      numero: number | null
+      raridade: 'comum' | 'rara' | 'epica' | 'lendaria' | 'suprema'
+      estrelas: number
+      simbolo: string | null
+      cor_accent: string | null
+      ilustracao_url: string | null
+      moldura: string
+      serial_number: number
+      token: string
+      minted_at: string
+    } | null
   } | null
   veritas: Array<{
     id: string

@@ -11,8 +11,9 @@ import { SosButton } from '@/components/moderation/SosButton'
 import ProfileTabs from '@/components/comunidade/ProfileTabs'
 import { OrnamentDivider } from '@/components/landing/components/OrnamentDivider'
 import LevelBadge from '@/components/gamification/LevelBadge'
-import EquippedReliquiaChip from '@/components/gamification/EquippedReliquiaChip'
-import type { Reliquia } from '@/types/gamification'
+import EquippedCartaChip, {
+  type EquippedCartaChipData,
+} from '@/components/colecao/EquippedCartaChip'
 
 interface Props {
   snapshot: PublicProfileSnapshot
@@ -206,10 +207,10 @@ export default function PublicProfileView({
                 <RoleBadge role={profile.community_role} />
               </div>
 
-              {profile.equipped_reliquia && (
+              {profile.equipped_carta && (
                 <div className="mt-2">
-                  <EquippedReliquiaChip
-                    reliquia={profile.equipped_reliquia as Reliquia}
+                  <EquippedCartaChip
+                    carta={profile.equipped_carta as EquippedCartaChipData}
                     size="sm"
                     showName
                   />

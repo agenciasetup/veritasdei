@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { tierForLevel } from './levelTier'
 import { percentInLevel, xpInLevel, xpToNextLevel, XP_PER_LEVEL } from './xpCurve'
 import type { LevelTier, Reliquia, UserGamification } from '@/types/gamification'
+import type { EquippedCartaChipData } from '@/components/colecao/EquippedCartaChip'
 
 export interface GamificationData {
   level: number
@@ -17,6 +18,8 @@ export interface GamificationData {
   longestStreak: number
   studiedToday: boolean
   equippedReliquia: Reliquia | null
+  /** Carta equipada como vitrine no perfil (chip ao lado do nome). */
+  equippedCarta: EquippedCartaChipData | null
   unlockedReliquiaIds: Set<string>
   loading: boolean
   reload: () => Promise<void>
@@ -31,6 +34,7 @@ const DEFAULT_TIER = tierForLevel(1)
 export function useGamification(userId: string | undefined): GamificationData {
   const [gami, setGami] = useState<UserGamification | null>(null)
   const [equipped, setEquipped] = useState<Reliquia | null>(null)
+  const [equippedCarta, setEquippedCarta] = useState<EquippedCartaChipData | null>(null)
   const [unlockedIds, setUnlockedIds] = useState<Set<string>>(new Set())
   const [studiedToday, setStudiedToday] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -98,6 +102,38 @@ export function useGamification(userId: string | undefined): GamificationData {
       } else {
         setEquipped(null)
       }
+
+      // Carta-vitrine equipada (chip ao lado do nome).
+      const equippedCartaId = (row as { equipped_carta_id?: string | null } | null)
+        ?.equipped_carta_id
+      if (equippedCartaId) {
+        const { data: cartaRow } = await supabase
+          .from('user_cartas')
+          .select(
+            'serial_number, token, minted_at, carta:cartas(id, slug, nome, subtitulo, numero, raridade, estrelas, simbolo, cor_accent, ilustracao_url)',
+          )
+          .eq('user_id', userId)
+          .eq('carta_id', equippedCartaId)
+          .maybeSingle()
+        if (cartaRow && (cartaRow as { carta: unknown }).carta) {
+          const r = cartaRow as unknown as {
+            serial_number: number
+            token: string
+            minted_at: string
+            carta: Omit<EquippedCartaChipData, 'serial_number' | 'token' | 'minted_at'>
+          }
+          setEquippedCarta({
+            ...r.carta,
+            serial_number: r.serial_number,
+            token: r.token,
+            minted_at: r.minted_at,
+          })
+        } else {
+          setEquippedCarta(null)
+        }
+      } else {
+        setEquippedCarta(null)
+      }
     } catch {
       // degrada silenciosamente
     } finally {
@@ -125,6 +161,7 @@ export function useGamification(userId: string | undefined): GamificationData {
     longestStreak: gami?.longest_streak ?? 0,
     studiedToday,
     equippedReliquia: equipped,
+    equippedCarta,
     unlockedReliquiaIds: unlockedIds,
     loading,
     reload: load,

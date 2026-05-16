@@ -32,6 +32,10 @@ interface UserCartaRow {
   desbloqueada_em: string
   vista: boolean
   favorita: boolean
+  serial_number: number
+  token: string
+  signature: string
+  minted_at: string
   carta: Carta | null
 }
 
@@ -63,7 +67,7 @@ export function useCodex(userId: string | undefined): CodexState {
         const ucRes = await supabase
           .from('user_cartas')
           .select(
-            'carta_id, desbloqueada_em, vista, favorita, carta:cartas(*)',
+            'carta_id, desbloqueada_em, vista, favorita, serial_number, token, signature, minted_at, carta:cartas(*)',
           )
           .eq('user_id', userId)
           .order('desbloqueada_em', { ascending: false })
@@ -72,7 +76,14 @@ export function useCodex(userId: string | undefined): CodexState {
         const rows = (ucRes.data as unknown as UserCartaRow[] | null) ?? []
         porPersonagem = rows.reduce((acc, row) => {
           if (!row.carta) return acc
-          const carta: CartaColecao = { ...row.carta, favorita: row.favorita }
+          const carta: CartaColecao = {
+            ...row.carta,
+            favorita: row.favorita,
+            serial_number: row.serial_number,
+            token: row.token,
+            signature: row.signature,
+            minted_at: row.minted_at,
+          }
           const lista = acc.get(row.carta.personagem_id) ?? []
           lista.push(carta)
           acc.set(row.carta.personagem_id, lista)
