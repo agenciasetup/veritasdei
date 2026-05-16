@@ -45,7 +45,10 @@ export async function updateSession(request: NextRequest) {
       path.startsWith('/api/') ||
       path.startsWith('/auth/') ||
       path === '/checkout' ||
-      path.startsWith('/checkout/')
+      path.startsWith('/checkout/') ||
+      // Certificado público de carta — funciona em qualquer domínio sem
+      // empurrar pro subdomínio educa.* (compartilhável "tipo NFT").
+      path.startsWith('/c/')
     if (!stayOnMainDomain) {
       const host = request.headers.get('host') ?? ''
       const educaHost = host.startsWith('educa.')
@@ -148,7 +151,10 @@ export async function updateSession(request: NextRequest) {
       path === '/cookies' ||
       path === '/dmca' ||
       path === '/consentimento-parental' ||
-      path === '/excluir-conta'
+      path === '/excluir-conta' ||
+      // Certificado público da coleção (carta NFT-style) — qualquer pessoa
+      // com o token consegue verificar a autenticidade sem login.
+      path.startsWith('/c/')
 
     // ───────────────────────────────────────────────────────────────────
     // Anônimo: bloqueia conteúdo premium.
@@ -275,7 +281,10 @@ export async function updateSession(request: NextRequest) {
       path === '/cookies' ||
       path === '/dmca' ||
       path === '/consentimento-parental' ||
-      path === '/excluir-conta'
+      path === '/excluir-conta' ||
+      // Certificado público da coleção (carta NFT-style) — qualquer pessoa
+      // com o token consegue verificar a autenticidade sem login.
+      path.startsWith('/c/')
 
     // ───────────────────────────────────────────────────────────────────
     // OAuth callback fallback
