@@ -525,7 +525,7 @@ function SignupForm({
           style={{ color: 'var(--ink-muted)', fontFamily: 'Poppins, sans-serif' }}
         >
           Já tem conta?{' '}
-          <Link href="/login?next=/educa/inicio" className="underline" style={{ color: '#5A1625' }}>
+          <Link href="/login?next=/educa" className="underline" style={{ color: '#5A1625' }}>
             Entrar
           </Link>
         </p>

@@ -124,19 +124,18 @@ export async function updateSession(request: NextRequest) {
   // ─────────────────────────────────────────────────────────────────────
   // Trancamento do subdomínio educa.*
   //
-  // Veritas Educa é um produto isolado. No subdomínio, apenas /educa/* +
-  // rotas operacionais (auth, api, páginas legais) são acessíveis. Qualquer
-  // outra rota redireciona pra /educa, evitando que o user "vaze" pro
-  // Veritas full a partir do educa.veritasdei.com.br.
-  //
-  // - Raiz "/" → rewrite (URL preservada) pra /educa.
-  // - Demais paths fora da whitelist → 307 redirect pra /educa.
+  // Veritas Educa é um produto isolado. No subdomínio:
+  //   - "/"     → landing/sales (pública pra todo mundo, logado ou não)
+  //   - /educa  → dashboard (Início) — só logado + assinante
+  //   - /educa/checkout, /educa/assine → checkout (público)
+  //   - /estudo, /rosario, /colecao, /perfil, /liturgia → conteúdo premium
+  //   - Demais paths → redireciona pra / (landing)
   // ─────────────────────────────────────────────────────────────────────
   if (product === 'veritas-educa') {
-    // Paths sempre públicos no subdomínio: landing, auth, legais e
+    // Paths sempre públicos no subdomínio: landing, auth, legais,
     // checkout/assine. Não exigem login pra serem renderizados.
     const isAlwaysPublic =
-      path === '/educa' ||
+      path === '/' ||
       path === '/educa/assine' ||
       path === '/educa/checkout' ||
       path === '/login' ||
@@ -153,12 +152,13 @@ export async function updateSession(request: NextRequest) {
     // ───────────────────────────────────────────────────────────────────
     // Anônimo: bloqueia conteúdo premium.
     //
-    // Sem login não dá pra entrar em /estudo, /colecao, /rosario etc.
-    // Tudo que não estiver na whitelist pública volta pra /educa, que
-    // mostra a landing com CTA de assinar.
+    // Sem login não dá pra entrar em /educa (dashboard), /estudo, /colecao,
+    // /rosario etc. Tudo que não estiver na whitelist pública volta pra /
+    // (landing), que tem CTA de assinar.
     // ───────────────────────────────────────────────────────────────────
     if (!authedUser) {
       const isPremiumArea =
+        path === '/educa' || // dashboard
         path === '/estudo' || path.startsWith('/estudo/') ||
         path === '/rosario' || path.startsWith('/rosario/') ||
         path === '/colecao' || path.startsWith('/colecao/') ||
@@ -169,7 +169,7 @@ export async function updateSession(request: NextRequest) {
 
       if (isPremiumArea) {
         const url = request.nextUrl.clone()
-        url.pathname = '/educa'
+        url.pathname = '/'
         url.search = ''
         const redirectResponse = NextResponse.redirect(url, 307)
         for (const setCookie of supabaseResponse.headers.getSetCookie()) {
@@ -182,8 +182,9 @@ export async function updateSession(request: NextRequest) {
     // ───────────────────────────────────────────────────────────────────
     // Gate de assinatura (logado mas sem premium)
     //
-    // Pode ver landing (/educa) e checkout (/educa/checkout, /educa/assine).
-    // Qualquer rota de conteúdo premium redireciona pro checkout focado.
+    // Pode ver landing (/) e checkout (/educa/checkout, /educa/assine).
+    // Qualquer rota de conteúdo premium — inclusive /educa (dashboard) —
+    // redireciona pro checkout focado.
     // ───────────────────────────────────────────────────────────────────
     if (authedUser) {
       // Cache de 60s num cookie assinado evita um RPC de DB por navegação.
@@ -232,6 +233,7 @@ export async function updateSession(request: NextRequest) {
     }
 
     const isAllowedInEduca =
+      path === '/' ||
       path === '/educa' ||
       path.startsWith('/educa/') ||
       // Conteúdo de estudo (pilares, tópicos, subtópicos, grupos) — o
@@ -308,19 +310,9 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url, 307)
     }
 
-    if (path === '/') {
-      const url = request.nextUrl.clone()
-      url.pathname = '/educa'
-      const rewriteResponse = NextResponse.rewrite(url, { request })
-      for (const setCookie of supabaseResponse.headers.getSetCookie()) {
-        rewriteResponse.headers.append('set-cookie', setCookie)
-      }
-      return rewriteResponse
-    }
-
     if (!isAllowedInEduca) {
       const url = request.nextUrl.clone()
-      url.pathname = '/educa'
+      url.pathname = '/'
       url.search = ''
       const redirectResponse = NextResponse.redirect(url, 307)
       for (const setCookie of supabaseResponse.headers.getSetCookie()) {

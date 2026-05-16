@@ -45,10 +45,10 @@ const LegalGate = dynamic(
 
 const PUBLIC_PATHS = ['/login', '/auth', '/privacidade', '/termos', '/diretrizes', '/cookies', '/dmca', '/consentimento-parental', '/onboarding']
 const FULLSCREEN_PATHS = ['/verbum', '/rosario', '/liturgia/hoje', '/educa/assine']
-// /educa é a landing pública: rola sem chrome (sem EducaShell/Sidebar/TopBar)
-// inclusive pra usuários logados. Quem tá logado e quer o dashboard usa o
-// link "Ir pro estudo" no menu do Hero (vai pra /educa/inicio).
-const FULLSCREEN_EXACT: string[] = ['/educa']
+// "/" no subdomínio educa renderiza a sales/landing pública: sem chrome
+// (sem EducaShell/Sidebar/TopBar/SubscribeBanner) inclusive pra usuários
+// logados. Quem tá logado vai pro dashboard em /educa.
+const FULLSCREEN_EXACT: string[] = ['/']
 
 export default function AppShell({
   children,

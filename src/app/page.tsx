@@ -1,76 +1,78 @@
-'use client'
-
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
-
-import LandingPage from '@/components/landing/LandingPage'
-import {
-  SkeletonAvatar,
-  SkeletonCard,
-  SkeletonText,
-} from '@/components/mobile/Skeleton'
-
 /**
  * `/` — rota raiz.
  *
- * Comportamento pós-Sprint 1.11:
- *   - Não-autenticado  → renderiza LandingPage
- *   - Em onboarding    → redireciona para /onboarding
- *   - Autenticado      → redireciona para /rezar (novo hub inicial)
+ * Dispatch por produto:
+ *   - veritas-educa (subdomínio educa.*) → renderiza a sales/landing
+ *     direto (não vai pra /educa). É a página de venda pública, igual
+ *     pra todos — visitante ou logado.
+ *   - veritas-dei (domínio principal) → VeritasHomeClient (redirecting
+ *     pra /rezar se logado, LandingPage se anônimo).
  *
- * A antiga Home "Hoje" (liturgia, propósitos, atalhos, continuar) foi
- * redistribuída: Liturgia do dia vive no topo de /rezar; Propósitos
- * em /perfil (Fase 2.16); Continuar estudando em /formacao (Fase 2.4).
+ * No subdomínio educa, /educa é o DASHBOARD (não a landing). Quem é
+ * assinante e clica em "Entrar" cai em /educa.
  */
-export default function Home() {
-  const { isAuthenticated, isLoading: authLoading, profile } = useAuth()
-  const router = useRouter()
 
-  useEffect(() => {
-    if (authLoading) return
-    if (!isAuthenticated) return
-    if (profile && !profile.onboarding_completed) {
-      router.replace('/onboarding')
-      return
+import { getCurrentProduct } from '@/lib/product/server'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
+import {
+  getEducaLandingDestaques,
+  getEducaSalesCartas,
+  getEducaSalesPilares,
+  getEducaSalesPrices,
+  getEducaSalesTotals,
+} from '@/lib/educa/server-data'
+import EducaSalesPage from '@/components/educa/sales/EducaSalesPage'
+import VeritasHomeClient from './VeritasHomeClient'
+
+export const dynamic = 'force-dynamic'
+
+export default async function Home() {
+  const product = await getCurrentProduct()
+
+  if (product === 'veritas-educa') {
+    const supabase = await createServerSupabaseClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    let prefillName: string | null = null
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('name')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (profile?.name) prefillName = profile.name as string
     }
-    router.replace('/rezar')
-  }, [authLoading, isAuthenticated, profile, router])
 
-  if (!authLoading && !isAuthenticated) {
-    return <LandingPage />
+    const [prices, pilares, cartas, totals, destaques] = await Promise.all([
+      getEducaSalesPrices(),
+      getEducaSalesPilares(),
+      getEducaSalesCartas(),
+      getEducaSalesTotals(),
+      getEducaLandingDestaques(),
+    ])
+
+    return (
+      <>
+        {/* Preconnect ao bucket de imagens — economiza ~100-200ms de
+            handshake DNS+TLS pra capas e ilustrações de carta. */}
+        <link rel="preconnect" href="https://media.veritasdei.com.br" />
+        <link rel="dns-prefetch" href="https://media.veritasdei.com.br" />
+        <EducaSalesPage
+          prices={prices}
+          pilares={pilares}
+          cartas={cartas}
+          totals={totals}
+          destaques={destaques}
+          isAuthenticated={!!user}
+          prefillEmail={user?.email ?? null}
+          prefillName={prefillName}
+          autoPlan={null}
+        />
+      </>
+    )
   }
 
-  // Loading skeleton para usuário autenticado enquanto redirect acontece.
-  return (
-    <main className="flex flex-col min-h-screen relative pb-24">
-      <header className="flex items-center justify-between px-5 pt-6 pb-4">
-        <div className="flex items-center gap-3">
-          <SkeletonAvatar size={44} />
-          <div>
-            <SkeletonText width={70} height={10} />
-            <div className="mt-2">
-              <SkeletonText width={120} height={16} />
-            </div>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <SkeletonAvatar size={40} />
-          <SkeletonAvatar size={40} />
-        </div>
-      </header>
-      <div className="px-4 mb-3">
-        <SkeletonCard height={140} rounded={24} />
-      </div>
-      <div className="px-4 flex gap-3 overflow-hidden mb-4">
-        <SkeletonCard className="flex-shrink-0" height={170} rounded={20} style={{ width: 224 }} />
-        <SkeletonCard className="flex-shrink-0" height={170} rounded={20} style={{ width: 224 }} />
-      </div>
-      <div className="px-5 flex justify-around mb-4">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <SkeletonAvatar key={i} size={64} />
-        ))}
-      </div>
-    </main>
-  )
+  return <VeritasHomeClient />
 }
