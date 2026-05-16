@@ -61,13 +61,15 @@ const SECURITY_HEADERS = [
   },
   {
     // Permissions Policy — corta features sensíveis que o app não usa.
-    // geolocation e camera precisam ficar habilitadas (paroquias/buscar usa
-    // localização; upload de foto de perfil pode usar câmera em mobile).
+    // geolocation/camera/microphone ficam habilitadas pra self:
+    //   - geolocation: /paroquias/buscar
+    //   - camera: upload de foto de perfil em mobile
+    //   - microphone: áudio em grupo no terço compartilhado
     key: 'Permissions-Policy',
     value: [
       'geolocation=(self)',
       'camera=(self)',
-      'microphone=()',
+      'microphone=(self)',
       'payment=(self)',       // Stripe checkout
       'usb=()',
       'bluetooth=()',
