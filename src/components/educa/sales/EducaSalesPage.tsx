@@ -406,7 +406,7 @@ function Footer() {
             Termos
           </Link>
           <span style={{ color: 'rgba(201,168,76,0.3)' }}>·</span>
-          <Link href="/login?next=/educa" className="underline-offset-4 hover:underline" style={{ color: '#D9C077' }}>
+          <Link href="/login?next=/educa/inicio" className="underline-offset-4 hover:underline" style={{ color: '#D9C077' }}>
             Já tenho conta
           </Link>
         </div>
