@@ -25,6 +25,16 @@
 - **Lendária (5 ★):** condição agregada e simbolicamente forte. **Limitada a 144 cópias no mundo** (referência a Ap 7,4 — 12×12). Quando esgotam, a carta sai do desbloqueio automático.
 - **Suprema (5 ★ + selo dourado):** condição máxima de uma trilha temática. **Limitada a 33 cópias no mundo** (idade de Cristo na Páscoa). First-come; depois disso a carta vira pura lenda.
 
+**Paleta de bordas (revisada — sai roxo/azul, entra âmbar/bordô):**
+
+| Raridade | `cor_accent` | Símbolo |
+|---|---|---|
+| Comum | `#C2B7A6` (pedra/granito) | granito da Igreja |
+| Rara | `#D4A574` (âmbar de vela) | cera de vela acesa |
+| Épica | `#8B1E3F` (bordô) | sangue dos mártires |
+| Lendária | `#E8C766` (ouro velho) | santidade |
+| Suprema | `#F4DE96` (creme dourado) | transfiguração |
+
 > **`[TODO motor]` para edição limitada:** a tabela `cartas` precisa ganhar
 > `tiragem int` (NULL = ilimitada) e `tiragem_restante int` (NULL = ilimitada).
 > A função `fn_avaliar_cartas` precisa decrementar `tiragem_restante` de forma
@@ -35,9 +45,12 @@
 
 ## 2. Categoria A — Conteúdo, Módulo e Provas (regra geral)
 
-Aplicada **a todas as 12 trilhas/módulos** do `src/features/trilhas/trails*.ts`:
-`iniciante`, `sacramental`, `doutrina`, `caridade`, `defesa`, `oracao`,
-`mariologia`, `josefologia`, `escatologia`, `missa`, `perscrutacao`, `latim`.
+> **Nota — slugs reais.** As 12 trilhas do front (`iniciante`, `sacramental`…)
+> não existem como `content_groups` no banco — são apenas agrupamentos
+> estáticos em TS. Os **7 pilares canônicos** no Supabase são: `dogmas`,
+> `sacramentos`, `mandamentos`, `preceitos`, `oracoes`, `virtudes-pecados`,
+> `obras-misericordia`. As cartas A.3/A.4/A.5 foram alinhadas a esses 7
+> pilares (única forma de o `grupo_concluido` desbloquear na prática).
 
 ### A.1 — "Cada conteúdo terminado" → **Comum**
 Uma carta **por subtópico** (~96 cartas comuns).
@@ -71,7 +84,7 @@ Uma por trilha (~12 cartas épicas).
 | `defesa` | "Apologista" | Justino Mártir | "Estai sempre prontos a dar resposta." (1Pd 3,15) |
 | `oracao` | "Orai Sem Cessar" | Teresa d'Ávila | "Orai sem cessar." (1Ts 5,17) |
 | `mariologia` | "Filho de Maria" | Maria | "Eis a tua Mãe." (Jo 19,27) |
-| `josefologia` | "Sob o Manto de José" | José | "José fez como o anjo do Senhor ordenara." (Mt 1,24) |
+| `josefologia` | "Ite ad Joseph" | José | "Ide a José." (Gn 41,55 / *Quemadmodum Deus*, Pio IX, 1870) |
 | `escatologia` | "Os Novíssimos" | Cristo Rei | "Vinde, benditos de meu Pai." (Mt 25,34) |
 | `missa` | "Servo do Altar" | Cristo Eucarístico | "Hoc est enim corpus meum." |
 | `perscrutacao` | "Scrutamini Scripturas" | Jerônimo | "Examinai as Escrituras." (Jo 5,39) |
@@ -80,11 +93,11 @@ Uma por trilha (~12 cartas épicas).
 ### A.4 — "Todos os conteúdos finalizados" → **Lendária**
 1 carta. Limitada a 144 cópias.
 
-- **Nome:** `Doutor Veritatis` ("Doutor da Verdade")
-- **Personagem:** Tomás de Aquino
+- **Nome:** `Lumen Doctrinae` ("Luz da Doutrina")
+- **Personagem:** Doutores da Igreja (coleção, capitaneada por Tomás de Aquino)
 - **Regra:** `operador: 'todas'`, condições = lista das 12 trilhas (`grupo_concluido` × 12).
-- **Frase:** "A verdade não pode contradizer a verdade." (Leão XIII, *Aeterni Patris*)
-- **Recompensa:** "Coroa Doutoral", molde `vitral`.
+- **Frase:** "A verdade não pode contradizer a verdade." (Leão XIII, *Aeterni Patris*, 1879)
+- **Recompensa:** "Coroa Doutoral", moldura `vitral`.
 
 ### A.5 — "Todas as provas feitas 100%" → **Suprema**
 1 carta. **Limitada a 33 cópias.**
@@ -134,7 +147,7 @@ Frases curtas e marcantes, em conteúdos que naturalmente as sugerem.
 | "O Verbo se Fez Carne" | dogma da Encarnação | `verbum caro factum est` |
 | "Lumen Gentium" | trilha `iniciante` — A Igreja | `luz das nações` |
 | "Extra Ecclesiam" | trilha `defesa` — unicidade da Igreja | `fora da igreja não há salvação` |
-| "Solus Christus" (contra-resposta) | trilha `defesa` — sola scriptura | `mas tradição também` ⟵ ironia |
+| "Una Sancta" | trilha `defesa` — unidade da Igreja | `creio numa só igreja santa católica e apostólica` |
 | "Cor ad Cor Loquitur" | trilha `oracao` — oração mental | `coração fala ao coração` |
 | "Ad Maiorem Dei Gloriam" | trilha `josefologia` — silêncio de José | `para a maior glória de deus` |
 
@@ -229,10 +242,13 @@ Base: `study_groups`, `study_group_members.joined_at`, `member_count`.
 - Regra: `grupo_estudo_tamanho >= 12` (já em `cartas_seed_especiais`).
 - Concedida aos **12 primeiros membros** quando o 12º entra (trigger já existe).
 
-### F.2 — "Judas Iscariotes" — **Lendária** (144)
+### F.2 — "Iscariotes" — **Lendária** (144)
 - Tema: o **primeiro** que **sai** de um grupo depois dele ter atingido 12.
-- Frase: "Era melhor a esse homem não ter nascido." (Mt 26,24)
-- Categoria: Sombra. Aviso: carta é estética/lore, **não traz desabono real**; sentido catequético é mostrar que o pertencimento exige fidelidade.
+- Frase central: "Era melhor a esse homem não ter nascido." (Mt 26,24)
+- Frase de redenção (`autoridade_doutrinaria`): "Senhor, tu sabes que te amo." (Jo 21,17 — Pedro restaurado)
+- Categoria: Sombra.
+- **Nota pastoral (lore):** *A Igreja nunca declarou ninguém condenado — o destino final de qualquer alma é mistério reservado a Deus. Esta carta é símbolo catequético do peso de abandonar a comunhão; quem saiu sempre pode voltar — e voltar é "Pedro Restaurado". A carta da volta apaga a sombra desta.*
+- **Carta paralena de redenção:** **"Pedro Restaurado"** (Épica, sem limite) — entregue quando o usuário **volta** ao mesmo grupo dentro de 30 dias após sair. Frase: "Apascenta as minhas ovelhas." (Jo 21,17). Quando ganha "Pedro Restaurado", a Igreja confessa: o discípulo voltou.
 
 > **`[TODO motor]`:**
 > 1. Adicionar `study_group_members.left_at timestamptz null`.
@@ -326,7 +342,7 @@ crescente). Cada carta retrata o **martírio/missão** do apóstolo.
 |---|---|---|---|---|
 | 1 | "Pedro, a Pedra" | Pedro | 3 | Roma, crucificado de cabeça pra baixo. *"Tu és Pedro."* (Mt 16,18) |
 | 2 | "André, a Cruz em X" | André | 5 | Patras, Grécia. *"Vinde após mim."* |
-| 3 | "Tiago Maior, Compostela" | Tiago Maior | 7 | Espanha, decapitado em Jerusalém. *"Filho do Trovão."* |
+| 3 | "Tiago Maior, Compostela" | Tiago Maior | 7 | Decapitado em Jerusalém por Herodes Agripa (At 12,2); sepultado em Compostela, segundo a tradição. *"Filho do Trovão."* |
 | 4 | "João, o Discípulo Amado" | João | 9 | Éfeso. *"Eis aí teu filho."* (Jo 19,26) |
 | 5 | "Filipe, Frígia" | Filipe | 11 | Hierápolis. *"Senhor, mostra-nos o Pai."* (Jo 14,8) |
 | 6 | "Bartolomeu, o Esfolado" | Bartolomeu | 13 | Armênia. *"Eis um verdadeiro israelita."* (Jo 1,47) |

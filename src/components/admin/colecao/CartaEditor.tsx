@@ -218,6 +218,7 @@ export default function CartaEditor({
       moldura: form.moldura,
       cor_accent: form.cor_accent || null,
       escala_fonte: form.escala_fonte,
+      tiragem: carta?.tiragem ?? null,
       dica_desbloqueio: form.dica_desbloqueio || null,
       regras: form.regras,
       status: form.status,
