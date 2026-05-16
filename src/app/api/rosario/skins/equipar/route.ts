@@ -5,8 +5,11 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
  *   POST /api/rosario/skins/equipar
  *     body: { skin_id: string }
  *
- * Define a skin ativa do usuário (`profiles.active_rosary_skin_id`).
- * Valida que o user é dono da skin (existe linha em user_rosary_skins).
+ * Define a skin ativa do user. Delega pra RPC `fn_set_active_rosary_skin`
+ * que roda como SECURITY DEFINER — necessário porque a policy UPDATE
+ * `profiles_admin_update_all` (pré-existente) faz EXISTS recursivo na
+ * própria tabela profiles, quebrando qualquer UPDATE feito direto via
+ * PostgREST com cookie autenticado.
  */
 export async function POST(req: NextRequest) {
   const supabase = await createServerSupabaseClient()
@@ -29,37 +32,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invalid_skin_id' }, { status: 400 })
   }
 
-  // Confirma que o usuário possui a skin
-  const { data: ownership } = await supabase
-    .from('user_rosary_skins')
-    .select('skin_id')
-    .eq('user_id', user.id)
-    .eq('skin_id', skinId)
-    .maybeSingle()
-
-  if (!ownership) {
-    return NextResponse.json({ error: 'skin_not_owned' }, { status: 403 })
-  }
-
-  // Confirma que a skin é publicada (não pode equipar uma admin-only oculta)
-  const { data: skin } = await supabase
-    .from('rosary_skins')
-    .select('id, status, visivel')
-    .eq('id', skinId)
-    .maybeSingle()
-
-  if (!skin || skin.status !== 'published' || !skin.visivel) {
-    return NextResponse.json({ error: 'skin_unavailable' }, { status: 410 })
-  }
-
-  const { error } = await supabase
-    .from('profiles')
-    .update({ active_rosary_skin_id: skinId })
-    .eq('id', user.id)
+  const { data, error } = await supabase.rpc('fn_set_active_rosary_skin', {
+    p_skin_id: skinId,
+  })
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    const msg = error.message ?? ''
+    if (msg.includes('not_authenticated')) {
+      return NextResponse.json({ error: 'unauthenticated' }, { status: 401 })
+    }
+    if (msg.includes('skin_unavailable')) {
+      return NextResponse.json({ error: 'skin_unavailable' }, { status: 410 })
+    }
+    if (msg.includes('skin_not_owned')) {
+      return NextResponse.json({ error: 'skin_not_owned' }, { status: 403 })
+    }
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 
-  return NextResponse.json({ ok: true, active_skin_id: skinId })
+  return NextResponse.json({ ok: true, active_skin_id: data ?? skinId })
 }
