@@ -200,7 +200,7 @@ export default function Hero({ isAuthenticated, userName, onPrimaryClick, totals
               </div>
             ) : (
               <Link
-                href="/login?next=/educa"
+                href="/login?next=/educa/inicio"
                 className="text-[10px] uppercase underline-offset-4 hover:underline transition-colors"
                 style={{
                   color: '#D9C077',
