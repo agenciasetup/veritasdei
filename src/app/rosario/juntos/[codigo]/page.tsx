@@ -6,6 +6,7 @@ import {
   lookupAvatarUrl,
   lookupDisplayName,
 } from '@/features/rosario/session/lookupDisplayName'
+import { loadActiveSkin } from '@/features/rosario/skins/loadActiveSkin'
 import type {
   RosaryRoom,
   RosaryRoomParticipant,
@@ -118,11 +119,18 @@ export default async function RoomPage({
   const room = roomRow as RosaryRoom
   const participants = (participantsRows ?? []) as RosaryRoomParticipant[]
 
+  // Carrega skin equipada do viewer pra aplicar tema visual também
+  // na sala compartilhada — cada participante vê a sala com o tema da
+  // SUA skin equipada (preferência pessoal). O conteúdo (mistérios,
+  // passo, leitor) vem do estado da sala, comum a todos.
+  const activeSkin = await loadActiveSkin(supabase, user.id)
+
   return (
     <SharedRoomView
       initialRoom={room}
       initialParticipants={participants}
       viewerUserId={user.id}
+      activeSkin={activeSkin}
     />
   )
 }
