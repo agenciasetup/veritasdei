@@ -27,7 +27,7 @@ export function SkinDetailActions({
   const [pending, setPending] = useState<null | 'equipar' | 'rezar'>(null)
   const [error, setError] = useState<string | null>(null)
 
-  async function equipar() {
+  async function equipar(): Promise<boolean> {
     setPending('equipar')
     setError(null)
     try {
@@ -44,27 +44,32 @@ export function SkinDetailActions({
           skin_unavailable: 'Skin indisponível.',
         }
         setError(map[data.error as string] ?? data.error ?? 'Erro ao equipar.')
-        return
+        return false
       }
       router.refresh()
+      return true
     } catch {
       setError('Erro de conexão.')
+      return false
     } finally {
       setPending(null)
     }
   }
 
   function rezarAgora() {
-    // Garante que a skin esteja equipada antes — se já está, vai direto.
+    // Hard reload em vez de router.push: o Next Router Cache pode servir
+    // payload velho de /rosario (que foi visitada antes do equipar),
+    // mostrando o tema antigo. window.location força fetch fresco do
+    // server component, que carrega a skin recém-equipada.
     if (!skin.equipped) {
       void (async () => {
         setPending('rezar')
-        await equipar()
-        router.push('/rosario')
+        const ok = await equipar()
+        if (ok) window.location.href = '/rosario'
       })()
       return
     }
-    router.push('/rosario')
+    window.location.href = '/rosario'
   }
 
   if (status === 'coming_soon') {
