@@ -161,7 +161,7 @@ export default function Hero({ isAuthenticated, userName, onPrimaryClick, totals
                         </p>
                       )}
                       <Link
-                        href="/educa/inicio"
+                        href="/educa"
                         onClick={() => setMenuOpen(false)}
                         className="block px-4 py-2.5 text-[12px] hover:bg-white/5"
                         style={{
@@ -200,7 +200,7 @@ export default function Hero({ isAuthenticated, userName, onPrimaryClick, totals
               </div>
             ) : (
               <Link
-                href="/login?next=/educa/inicio"
+                href="/login?next=/educa"
                 className="text-[10px] uppercase underline-offset-4 hover:underline transition-colors"
                 style={{
                   color: '#D9C077',
