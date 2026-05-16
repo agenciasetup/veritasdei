@@ -9,9 +9,13 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
  * terço (Frente 3).
  *
  * Arquitetura:
- *   - **Sinalização**: Supabase Realtime broadcast no canal
- *     `rosario:voice:<roomId>`. Eventos: voice:join, voice:leave,
- *     voice:offer, voice:answer, voice:ice, voice:mute.
+ *   - **Descoberta**: Supabase Realtime Presence no canal
+ *     `rosario:voice:<roomId>` — cada peer faz `channel.track({user_id})`
+ *     e recebe o estado completo no evento `sync`. Independente da
+ *     ordem de entrada, todos veem todos.
+ *   - **Sinalização SDP/ICE**: broadcast no mesmo canal, targeted por
+ *     `to: userId`. Eventos: voice:offer, voice:answer, voice:ice,
+ *     voice:mute.
  *   - **Mídia**: WebRTC peer-to-peer em malha. Cada par mantém uma
  *     `RTCPeerConnection`. Adequado pra até ~6 pessoas.
  *   - **STUN**: servidores públicos do Google (sem TURN — NATs
@@ -378,11 +382,15 @@ export function useRoomVoiceChat(
   }, [stopSpeakingLoop, teardownPeer])
 
   const leaveVoice = useCallback(() => {
-    if (!cleanedUpRef.current) {
-      void broadcast('voice:leave', {})
+    // Presence.untrack remove o user da lista — os outros peers recebem
+    // 'sync' e fazem teardown da peer connection automaticamente.
+    const channel = channelRef.current
+    if (channel) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      try { void (channel as any).untrack() } catch {}
     }
     teardown()
-  }, [broadcast, teardown])
+  }, [teardown])
 
   const joinVoice = useCallback(async () => {
     if (!supported || !roomId) return
@@ -428,47 +436,57 @@ export function useRoomVoiceChat(
         throw new Error('Supabase client indisponível')
       }
       const channel = supabase.channel(`rosario:voice:${roomId}`, {
-        config: { broadcast: { self: false } },
+        config: {
+          broadcast: { self: false },
+          // Presence é o que faz o pareamento funcionar: todo mundo vê
+          // a lista completa de quem está no áudio no `sync`, independente
+          // de quem entrou primeiro. Sem isso, broadcast `voice:join`
+          // perde joins anteriores ao próprio subscribe → pares
+          // assimétricos nunca se descobrem.
+          presence: { key: viewerUserId },
+        },
       })
 
       type B<T> = { payload: T }
-      channel.on('broadcast', { event: 'voice:join' }, ((msg: B<{ from: string }>) => {
-        const other = msg.payload.from
-        if (other === viewerUserId) return
-        setVoiceJoinedUserIds((prev) => {
-          if (prev.has(other)) return prev
-          const next = new Set(prev)
-          next.add(other)
-          return next
-        })
-        // Glare: quem tem id menor inicia a offer.
-        if (shouldInitiate(other)) {
-          void sendOffer(other)
-        }
-        // O outro lado também precisa saber que EU estou aqui — re-broadcast
-        // não é necessário porque cada novo participante manda voice:join
-        // ao entrar, e eu já estou subscrito antes dele se eu sou o anterior.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      }) as any)
 
-      channel.on('broadcast', { event: 'voice:leave' }, ((msg: B<{ from: string }>) => {
-        const other = msg.payload.from
-        if (other === viewerUserId) return
-        setVoiceJoinedUserIds((prev) => {
-          if (!prev.has(other)) return prev
-          const next = new Set(prev)
-          next.delete(other)
-          return next
-        })
-        setMutedUserIds((prev) => {
-          if (!prev.has(other)) return prev
-          const next = new Set(prev)
-          next.delete(other)
-          return next
-        })
-        teardownPeer(other)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      }) as any)
+      // ── Presence: descobre/desconecta peers ─────────────────────────
+      channel.on(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        'presence' as any,
+        { event: 'sync' },
+        () => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const state = (channel as any).presenceState() as Record<string, unknown>
+          const presentIds = new Set<string>(Object.keys(state))
+
+          // Atualiza estado público
+          setVoiceJoinedUserIds(presentIds)
+
+          // Pra cada peer remoto presente sem conexão ainda, decide quem
+          // inicia o offer pela regra "menor ID inicia".
+          for (const otherId of presentIds) {
+            if (otherId === viewerUserId) continue
+            if (peersRef.current.has(otherId)) continue
+            if (shouldInitiate(otherId)) {
+              void sendOffer(otherId)
+            }
+            // Se não sou eu quem inicia, espero o offer chegar via broadcast.
+          }
+
+          // Limpa peers que saíram (não estão mais no presence)
+          for (const peerUserId of Array.from(peersRef.current.keys())) {
+            if (!presentIds.has(peerUserId)) {
+              teardownPeer(peerUserId)
+              setMutedUserIds((prev) => {
+                if (!prev.has(peerUserId)) return prev
+                const next = new Set(prev)
+                next.delete(peerUserId)
+                return next
+              })
+            }
+          }
+        },
+      )
 
       channel.on('broadcast', { event: 'voice:offer' }, ((msg: B<{
         from: string; to: string; sdp: string; type: RTCSdpType
@@ -536,9 +554,12 @@ export function useRoomVoiceChat(
 
       channelRef.current = channel
 
-      // 4. Anuncia entrada
-      await broadcast('voice:join', {})
-      // Estado inicial não-mutado também broadcast pra UI dos outros
+      // 4. Anuncia entrada via Presence — todos os peers (incluindo
+      // os que já estavam no canal) recebem 'sync' e descobrem este user.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (channel as any).track({ user_id: viewerUserId, at: Date.now() })
+
+      // Broadcast inicial do mute state (Presence não carrega isso por padrão).
       await broadcast('voice:mute', { muted: false })
 
       // 5. Set self joined
@@ -582,8 +603,12 @@ export function useRoomVoiceChat(
   // ── Cleanup on unmount ───────────────────────────────────────────────────
   useEffect(() => {
     return () => {
-      // Tenta anunciar saída antes de derrubar.
-      try { void broadcast('voice:leave', {}) } catch {}
+      // Untrack pra remover de Presence — peers fazem teardown ao receber sync.
+      const channel = channelRef.current
+      if (channel) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        try { void (channel as any).untrack() } catch {}
+      }
       teardown()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
