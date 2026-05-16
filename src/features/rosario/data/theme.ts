@@ -37,6 +37,22 @@ export interface RosaryTheme {
   readonly beadFutureStops: readonly [string, string]
   readonly beadCompletedStops: readonly [string, string]
   readonly cordStroke: string
+  /**
+   * Variantes de glyph — preenchidos pelas skins do banco.
+   * Os themes legados (GOLD/MISSAL abaixo) ficam com defaults seguros.
+   */
+  readonly crucifixVariant?:
+    | 'classic'
+    | 'benedictine'
+    | 'budded'
+    | 'celtic'
+    | 'pio'
+  readonly introBeadVariant?:
+    | 'classic'
+    | 'medal-bento'
+    | 'medal-divine-mercy'
+    | 'rose'
+  readonly beadShape?: 'sphere' | 'rose' | 'cube' | 'oval'
 }
 
 // Modo PT: usa CSS vars semânticas — responde ao tema do app.
@@ -62,6 +78,9 @@ const GOLD: RosaryTheme = {
   beadFutureStops: ['rgba(201,168,76,0.22)', 'rgba(201,168,76,0.08)'],
   beadCompletedStops: ['rgba(201,168,76,0.45)', 'rgba(201,168,76,0.18)'],
   cordStroke: 'var(--border-1)',
+  crucifixVariant: 'classic',
+  introBeadVariant: 'classic',
+  beadShape: 'sphere',
 }
 
 // Modo LA: missal antigo — dourado oxidado sobre borgonha profundo.
@@ -91,6 +110,9 @@ const MISSAL: RosaryTheme = {
   beadFutureStops: ['rgba(168,136,78,0.24)', 'rgba(168,136,78,0.08)'],
   beadCompletedStops: ['rgba(212,181,116,0.50)', 'rgba(168,136,78,0.18)'],
   cordStroke: 'rgba(212, 181, 116, 0.20)',
+  crucifixVariant: 'budded',
+  introBeadVariant: 'rose',
+  beadShape: 'sphere',
 }
 
 export const ROSARY_THEMES: Readonly<Record<RosaryLanguage, RosaryTheme>> =

@@ -1,7 +1,10 @@
 'use client'
 
+import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { getRosaryTheme, type RosaryTheme } from '@/features/rosario/data/theme'
+import type { RosarySkin, RosarySkinTheme } from '@/features/rosario/data/skinTypes'
 import {
   Mic,
   MicOff,
@@ -56,12 +59,19 @@ export interface SharedRoomViewProps {
   initialRoom: RosaryRoom
   initialParticipants: RosaryRoomParticipant[]
   viewerUserId: string
+  /**
+   * Skin equipada do viewer. Aplicada como tema visual da sala — cada
+   * participante vê a sala com SUA skin. O conteúdo da sessão (passos,
+   * mistério, leitor) vem do server, comum a todos.
+   */
+  activeSkin?: RosarySkin | null
 }
 
 export function SharedRoomView({
   initialRoom,
   initialParticipants,
   viewerUserId,
+  activeSkin,
 }: SharedRoomViewProps) {
   const shared = useSharedRosaryProgress(
     initialRoom,
@@ -176,10 +186,41 @@ export function SharedRoomView({
     ? participants.find((p) => p.user_id === currentReaderId) ?? null
     : null
 
+  // Tema da skin equipada — aplicado como CSS vars no root pra ecoar
+  // automaticamente em todos os var(--surface-1), var(--accent), etc
+  // espalhados pelos filhos. Sem skin, herda o tema global do app.
+  const skinVars: CSSProperties | undefined = activeSkin?.theme
+    ? ({
+        '--surface-1': activeSkin.theme.pageBg,
+        '--surface-2': activeSkin.theme.cardBg,
+        '--text-1': activeSkin.theme.textPrimary,
+        '--text-2': activeSkin.theme.textSecondary,
+        '--text-3': activeSkin.theme.textMuted,
+        '--accent': activeSkin.theme.accent,
+        '--accent-hover': activeSkin.theme.accentLight,
+        '--accent-soft': activeSkin.theme.borderStrong,
+        '--accent-contrast': activeSkin.theme.buttonText,
+        '--border-1': activeSkin.theme.border,
+      } as CSSProperties)
+    : undefined
+
+  // Tema passado pro `<RosaryBeads />` — usa glyph variants (cruz, conta
+  // inicial, shape) da skin. Fallback pro tema PT padrão.
+  const beadsTheme: RosaryTheme = activeSkin?.theme
+    ? ({
+        ...(activeSkin.theme as RosarySkinTheme),
+        language: 'pt',
+      } as unknown as RosaryTheme)
+    : getRosaryTheme('pt')
+
   return (
     <main
       className="fixed inset-0 flex flex-col"
-      style={{ backgroundColor: 'var(--surface-1)', color: 'var(--text-1)' }}
+      style={{
+        ...skinVars,
+        backgroundColor: 'var(--surface-1)',
+        color: 'var(--text-1)',
+      }}
     >
       <div className="bg-glow" aria-hidden />
 
@@ -291,6 +332,7 @@ export function SharedRoomView({
               currentReader={currentReader}
               currentDecade={currentDecade}
               roomState={room.state}
+              beadsTheme={beadsTheme}
             />
           ) : (
             <LobbyMain
@@ -607,6 +649,7 @@ interface SessionMainProps {
   currentReader: RosaryRoomParticipant | null
   currentDecade?: number
   roomState: RosaryRoom['state']
+  beadsTheme: RosaryTheme
 }
 
 function SessionMain({
@@ -619,6 +662,7 @@ function SessionMain({
   progressPct,
   onBeadSelect,
   onAdvance,
+  beadsTheme,
   currentReader,
   currentDecade,
   roomState,
@@ -661,6 +705,7 @@ function SessionMain({
             lg:max-w-[460px] xl:max-w-[520px]
           "
           ariaDescription={`Terço — passo ${currentIndex + 1} de ${ROSARY_STEPS.length}`}
+          theme={beadsTheme}
         />
 
         {/* Progress slim */}
