@@ -31,6 +31,7 @@ const ADMIN_NAV = [
   { href: '/admin/trilhas',             icon: GraduationCap,  label: 'Trilhas' },
   { href: '/admin/provas',              icon: GraduationCap,  label: 'Provas' },
   { href: '/admin/colecao',               icon: Sparkles,       label: 'Coleção' },
+  { href: '/admin/tercos',                icon: Sparkles,       label: 'Terços' },
   { href: '/admin/educa/banners',       icon: Megaphone,      label: 'Banners' },
   { href: '/admin/educa/destaques',     icon: Users,          label: 'Destaques' },
   { href: '/admin/aprovacoes',          icon: CheckSquare,    label: 'Aprovações' },

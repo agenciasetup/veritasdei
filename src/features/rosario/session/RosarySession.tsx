@@ -25,7 +25,12 @@ import { MYSTERY_GROUPS, getMysteryForToday } from '@/features/rosario/data/myst
 import { getSpeechText } from '@/features/rosario/data/speechText'
 import { getPrayerById } from '@/features/rosario/data/prayerMap'
 import type { MysteryGroup, MysterySet } from '@/features/rosario/data/types'
-import { getRosaryTheme, type RosaryLanguage } from '@/features/rosario/data/theme'
+import {
+  getRosaryTheme,
+  type RosaryLanguage,
+  type RosaryTheme,
+} from '@/features/rosario/data/theme'
+import type { RosarySkin, RosarySkinTheme } from '@/features/rosario/data/skinTypes'
 
 /**
  * `<RosarySession />` — orquestrador completo de uma sessão de terço.
@@ -85,11 +90,17 @@ const LANGUAGE_STORAGE_KEY = 'rosary:language'
 interface RosarySessionProps {
   fullRosary?: boolean
   /**
-   * Quando definido, sobrepõe o seletor padrão de Mistérios. Usado pra
-   * terços temáticos (São Bento, Dogmas Marianos, etc) — a sessão usa
-   * estes mistérios em vez dos 4 conjuntos canônicos. Estes terços não
-   * são persistidos no histórico (o `mystery_set` no DB é um enum
-   * restrito).
+   * Skin ativa do user, carregada server-side. Define paleta visual
+   * (`activeSkin.theme`) e — opcionalmente — substitui os 5 mistérios
+   * pelo conjunto temático (`activeSkin.mysteries`). Quando nula,
+   * cai pro tema/comportamento padrão (compat com cenários sem login).
+   */
+  activeSkin?: RosarySkin | null
+  /**
+   * Quando definido, sobrepõe os mistérios usando um MysteryGroup
+   * arbitrário. Mantido por compat com a rota /rosario/tematicos/*
+   * (que vai ser deprecada em favor de skins). Tem precedência sobre
+   * `activeSkin.mysteries`.
    */
   customMysteryGroup?: MysteryGroup
   onExit?: () => void
@@ -99,10 +110,26 @@ const ROSARY_SEQUENCE: MysterySet[] = ['gozosos', 'luminosos', 'dolorosos', 'glo
 
 export function RosarySession({
   fullRosary = false,
+  activeSkin,
   customMysteryGroup,
   onExit,
 }: RosarySessionProps) {
-  const usingThematic = customMysteryGroup !== undefined
+  // Mistérios temáticos podem vir de 2 fontes:
+  //   (a) customMysteryGroup direto (legado /rosario/tematicos)
+  //   (b) activeSkin.mysteries (loja de skins, fonte atual)
+  // Em ambos os casos, o usuário não pode trocar o conjunto no menu e
+  // a sessão não é gravada no histórico (enum DB só aceita os 4 canônicos).
+  const skinMysteryGroup: MysteryGroup | undefined =
+    activeSkin && activeSkin.mysteries && activeSkin.mysteries.length > 0
+      ? {
+          id: activeSkin.slug as MysteryGroup['id'],
+          name: activeSkin.nome,
+          days: activeSkin.subtitulo ?? '',
+          mysteries: activeSkin.mysteries,
+        }
+      : undefined
+  const effectiveCustomGroup = customMysteryGroup ?? skinMysteryGroup
+  const usingThematic = effectiveCustomGroup !== undefined
   // --- Language / theme ---
   const [language, setLanguageState] = useState<RosaryLanguage>('pt')
   useEffect(() => {
@@ -115,7 +142,20 @@ export function RosarySession({
     setLanguageState(lang)
     try { localStorage.setItem(LANGUAGE_STORAGE_KEY, lang) } catch {}
   }, [])
-  const theme = useMemo(() => getRosaryTheme(language), [language])
+  // Tema visual: vem da skin equipada quando há uma. Fallback pro tema
+  // legado (gold pt / missal la) — preserva comportamento anônimo e DB
+  // sem seed. O cast é seguro: RosarySkinTheme tem todas as chaves de
+  // cor que RosaryTheme exige; campos extras (glyph variants) são lidos
+  // por RosaryBeads quando presentes, ignorados caso contrário.
+  const theme = useMemo<RosaryTheme>(() => {
+    if (activeSkin?.theme) {
+      return {
+        ...(activeSkin.theme as RosarySkinTheme),
+        language,
+      } as unknown as RosaryTheme
+    }
+    return getRosaryTheme(language)
+  }, [activeSkin?.theme, language])
   const isLatin = language === 'la'
 
   // Rosário completo: track which of the 4 terços we're on (0–3)
@@ -129,7 +169,7 @@ export function RosarySession({
     () => MYSTERY_GROUPS.find((g) => g.id === mysterySetId) ?? MYSTERY_GROUPS[0],
     [mysterySetId],
   )
-  const mysteryGroup = customMysteryGroup ?? fallbackMysteryGroup
+  const mysteryGroup = effectiveCustomGroup ?? fallbackMysteryGroup
 
   const {
     currentIndex,

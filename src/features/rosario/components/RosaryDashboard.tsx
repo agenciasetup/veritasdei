@@ -3,17 +3,19 @@
 import { useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { User, Users, Link2, Cross, Crown, ArrowLeft } from 'lucide-react'
+import { User, Users, Link2, Cross, Crown, ArrowLeft, Sparkles } from 'lucide-react'
 import { useProduct } from '@/contexts/ProductContext'
+import type { RosarySkin } from '@/features/rosario/data/skinTypes'
 
 type PrayerMode = 'individual' | 'grupo' | 'entrar'
 type PrayerType = 'terco' | 'rosario'
 
 interface Props {
   onStartIndividual: (type: PrayerType) => void
+  activeSkin?: RosarySkin | null
 }
 
-export function RosaryDashboard({ onStartIndividual }: Props) {
+export function RosaryDashboard({ onStartIndividual, activeSkin }: Props) {
   const router = useRouter()
   const [mode, setMode] = useState<PrayerMode>('individual')
   const [type, setType] = useState<PrayerType>('terco')
@@ -133,11 +135,11 @@ export function RosaryDashboard({ onStartIndividual }: Props) {
           {/* Quick links — desktop sidebar style, mobile inline below */}
           <div className="mt-6 hidden flex-wrap gap-x-5 gap-y-2 lg:flex" aria-label="Atalhos">
             <Link
-              href="/rosario/tematicos"
+              href="/rosario/loja"
               className="text-xs uppercase tracking-[0.2em] transition hover:opacity-100"
               style={{ color: 'var(--accent)', fontFamily: 'var(--font-display)' }}
             >
-              Terços Temáticos →
+              Loja de Terços →
             </Link>
             <span style={{ color: 'var(--border-1)' }}>·</span>
             <Link
@@ -177,6 +179,57 @@ export function RosaryDashboard({ onStartIndividual }: Props) {
               background: 'transparent',
             }}
           >
+            {/* Skin equipada — mini-preview + atalho pra loja */}
+            {activeSkin && (
+              <Link
+                href="/rosario/loja"
+                className="group flex items-center gap-3 rounded-xl border px-3 py-2.5 transition active:scale-[0.98]"
+                style={{
+                  borderColor: 'var(--border-1)',
+                  background: 'rgba(255,255,255,0.015)',
+                  textDecoration: 'none',
+                }}
+                aria-label="Trocar terço"
+              >
+                <span
+                  aria-hidden
+                  className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-base"
+                  style={{
+                    background: activeSkin.theme.cardBg,
+                    border: `1px solid ${activeSkin.theme.borderStrong}`,
+                    color: activeSkin.theme.accent,
+                    fontFamily: 'var(--font-display)',
+                  }}
+                >
+                  {activeSkin.glyph}
+                </span>
+                <div className="flex min-w-0 flex-1 flex-col leading-tight">
+                  <span
+                    className="text-[10px] uppercase tracking-[0.22em]"
+                    style={{ color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}
+                  >
+                    Terço equipado
+                  </span>
+                  <span
+                    className="truncate text-sm"
+                    style={{ color: 'var(--text-1)' }}
+                  >
+                    {activeSkin.nome}
+                  </span>
+                </div>
+                <span
+                  className="flex flex-shrink-0 items-center gap-1 text-[10px] uppercase tracking-[0.18em] transition group-hover:opacity-100"
+                  style={{
+                    color: 'var(--accent)',
+                    fontFamily: 'var(--font-display)',
+                    opacity: 0.8,
+                  }}
+                >
+                  <Sparkles className="h-3 w-3" /> Trocar
+                </span>
+              </Link>
+            )}
+
             {/* Step 1: Mode */}
             <section>
               <h2
@@ -316,11 +369,11 @@ export function RosaryDashboard({ onStartIndividual }: Props) {
           {/* Mobile quick links (visible below the panel on small screens) */}
           <div className="mt-6 flex flex-wrap justify-center gap-3 lg:hidden">
             <Link
-              href="/rosario/tematicos"
+              href="/rosario/loja"
               className="text-xs transition"
               style={{ color: 'var(--accent)' }}
             >
-              Terços Temáticos →
+              Loja de Terços →
             </Link>
             <span style={{ color: 'var(--border-1)' }}>·</span>
             <Link
