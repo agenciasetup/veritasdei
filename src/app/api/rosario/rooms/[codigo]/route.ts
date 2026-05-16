@@ -80,6 +80,33 @@ interface PatchBody {
   passo_index?: unknown
   state?: unknown
   co_host_user_id?: unknown
+  /**
+   * Mapa de leitores: `{ "1": user_id, ..., "5": user_id }`. Substitui
+   * o mapa inteiro — se quiser apenas atribuir uma dezena, manda o mapa
+   * existente com a chave modificada. Use `null` em vez do mapa pra
+   * resetar (host lê tudo).
+   */
+  decade_readers?: unknown
+}
+
+const DECADE_KEYS = new Set(['1', '2', '3', '4', '5'])
+
+function sanitizeDecadeReaders(value: unknown):
+  | { ok: true; value: Record<string, string> | null }
+  | { ok: false } {
+  if (value === null) return { ok: true, value: null }
+  if (typeof value !== 'object' || Array.isArray(value)) return { ok: false }
+  const out: Record<string, string> = {}
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    if (!DECADE_KEYS.has(k)) return { ok: false }
+    if (typeof v !== 'string' || v.length === 0) return { ok: false }
+    // Validação UUID v4 leve — 8-4-4-4-12 hex
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)) {
+      return { ok: false }
+    }
+    out[k] = v
+  }
+  return { ok: true, value: out }
 }
 
 export async function PATCH(
@@ -147,6 +174,34 @@ export async function PATCH(
     if (body.state === 'finalizada' || body.state === 'encerrada') {
       patch.ended_at = new Date().toISOString()
     }
+  }
+
+  if ('decade_readers' in body) {
+    const result = sanitizeDecadeReaders(body.decade_readers)
+    if (!result.ok) {
+      return NextResponse.json({ error: 'invalid_decade_readers' }, { status: 400 })
+    }
+    const readers = result.value
+    if (readers && Object.keys(readers).length > 0) {
+      // Cada user_id atribuído precisa estar entre os participantes ativos.
+      const uniqueIds = Array.from(new Set(Object.values(readers)))
+      const { data: present } = await supabase
+        .from('rosary_room_participants')
+        .select('user_id')
+        .eq('room_id', room.id)
+        .is('left_at', null)
+        .in('user_id', uniqueIds)
+      const presentIds = new Set((present ?? []).map((r) => r.user_id as string))
+      for (const id of uniqueIds) {
+        if (!presentIds.has(id)) {
+          return NextResponse.json(
+            { error: 'reader_not_participant' },
+            { status: 400 },
+          )
+        }
+      }
+    }
+    patch.decade_readers = readers ?? {}
   }
 
   if ('co_host_user_id' in body) {

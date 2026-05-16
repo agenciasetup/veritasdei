@@ -67,6 +67,13 @@ export type RosaryRoomState =
   | 'finalizada'
   | 'encerrada'
 
+/**
+ * Mapa de leitores por dezena: `{ "1": user_id, "2": user_id, ..., "5": user_id }`.
+ * Chaves omitidas → host lê aquela dezena. user_id precisa estar entre
+ * os participantes ativos da sala (validado no PATCH handler).
+ */
+export type RosaryDecadeReaders = Partial<Record<'1' | '2' | '3' | '4' | '5', string>>
+
 export interface RosaryRoom {
   id: string
   codigo: string
@@ -77,6 +84,8 @@ export interface RosaryRoom {
   state: RosaryRoomState
   passo_index: number
   titulo: string | null
+  /** Mapa "1"→user_id de quem lê cada dezena. Default `{}` (host lê tudo). */
+  decade_readers?: RosaryDecadeReaders
   created_at: string
   updated_at: string
   started_at: string | null
@@ -94,6 +103,8 @@ export interface RosaryRoomParticipant {
   room_id: string
   user_id: string
   display_name: string | null
+  /** URL da foto de perfil. Pode ser null se o usuário não tem avatar. */
+  avatar_url?: string | null
   joined_at: string
   left_at: string | null
 }
