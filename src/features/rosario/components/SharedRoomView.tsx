@@ -20,12 +20,11 @@ import { useRosaryHistoryRecord } from '@/features/rosario/session/useRosaryHist
 /**
  * `<SharedRoomView />` — UI da sala compartilhada (lobby + sessão).
  *
- * Sprint 3.2: lobby, lista de participantes, promoção a co-líder.
- * Sprint 3.3: sincronização ao vivo via `useSharedRosaryProgress` —
- *   quando o estado vira 'rezando', renderiza `<RosaryBeads/>` e
- *   `<PrayerStage/>` lendo o `passo_index` do servidor. Host e
- *   co-líder veem botões de avançar/voltar; demais ficam em modo
- *   "seguir".
+ * Layout responsivo:
+ *   - Mobile/tablet: vertical, conteúdo centralizado num column scrollável.
+ *   - Desktop (lg+): fullscreen — lobby empilhado verticalmente com lista
+ *     larga, sessão em split-screen (terço esquerda, oração direita, lista
+ *     de participantes em sidebar fina à direita).
  */
 export interface SharedRoomViewProps {
   initialRoom: RosaryRoom
@@ -125,58 +124,86 @@ export function SharedRoomView({
   const displayError = error ?? localError
 
   const showSession = room.state === 'rezando' || room.state === 'finalizada'
+  const progressPct = Math.round(
+    ((currentIndex + (isCompleted ? 1 : 0)) / ROSARY_STEPS.length) * 100,
+  )
 
   return (
     <main
-      className="relative min-h-screen w-full px-4 py-10"
+      className="relative min-h-screen w-full"
       style={{ backgroundColor: 'var(--surface-1)', color: 'var(--text-1)' }}
     >
       <div className="bg-glow" aria-hidden />
 
-      <div className="relative z-10 mx-auto max-w-xl">
-        <header className="mb-6 text-center">
+      <div
+        className="
+          relative z-10 mx-auto flex flex-col px-4 py-8
+          md:px-8 md:py-12
+          lg:max-w-7xl lg:px-12
+        "
+      >
+        <header className="mb-6 text-center md:mb-8">
+          <p
+            className="mb-2 text-[10px] uppercase tracking-[0.4em]"
+            style={{ color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}
+          >
+            Sala de oração
+          </p>
           <h1
-            className="font-serif text-2xl md:text-3xl"
-            style={{ color: 'var(--text-1)', fontFamily: 'var(--font-display)' }}
+            className="text-3xl md:text-4xl lg:text-5xl"
+            style={{
+              color: 'var(--text-1)',
+              fontFamily: 'var(--font-display)',
+              letterSpacing: '0.01em',
+            }}
           >
             {room.titulo ?? 'Terço compartilhado'}
           </h1>
-          <p className="mt-1 text-xs" style={{ color: 'var(--text-3)' }}>
+          <p className="mt-2 text-xs md:text-sm" style={{ color: 'var(--text-3)' }}>
             {mysteryGroup.name}
           </p>
         </header>
 
         {/* Estado da sala */}
-        <RoomStateBanner state={room.state} canControl={canControl} />
+        <div className="mx-auto w-full max-w-md md:max-w-lg">
+          <RoomStateBanner state={room.state} canControl={canControl} />
+        </div>
 
-        {/* Código de convite — visível no lobby e discreto durante a sessão. */}
+        {/* Código de convite — destaque grande no lobby, discreto durante a sessão */}
         {room.state === 'aguardando' ? (
           <section
-            className="mb-6 rounded-2xl border p-5 text-center"
+            className="
+              mx-auto mb-6 w-full max-w-md rounded-3xl border p-6 text-center
+              md:max-w-lg md:p-8 lg:max-w-xl
+            "
             style={{
               borderColor: 'var(--accent-soft)',
-              backgroundColor: 'rgba(20, 18, 14, 0.6)',
+              backgroundColor: 'rgba(20, 18, 14, 0.55)',
             }}
           >
             <div
-              className="text-[10px] uppercase tracking-[0.2em]"
-              style={{ color: 'var(--text-3)' }}
+              className="text-[10px] uppercase tracking-[0.3em] md:text-[11px]"
+              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}
             >
               Código de convite
             </div>
             <div
-              className="mt-2 font-mono text-3xl tracking-[0.4em]"
-              style={{ color: 'var(--accent)' }}
+              className="mt-3 font-mono text-3xl tracking-[0.4em] md:text-4xl lg:text-5xl"
+              style={{
+                color: 'var(--accent)',
+                textShadow: '0 0 24px rgba(201, 168, 76, 0.25)',
+              }}
             >
               {room.codigo}
             </div>
             <button
               type="button"
               onClick={copyCode}
-              className="mt-3 rounded-md border px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] transition"
+              className="mt-4 rounded-md border px-4 py-1.5 text-[10px] uppercase tracking-[0.25em] transition active:scale-[0.97]"
               style={{
                 borderColor: 'var(--accent-soft)',
                 color: 'var(--accent)',
+                fontFamily: 'var(--font-display)',
               }}
             >
               Copiar código
@@ -191,121 +218,139 @@ export function SharedRoomView({
           </div>
         )}
 
-        {/* Sessão ao vivo */}
+        {/* Sessão ao vivo — split-screen no desktop */}
         {showSession && (
-          <section aria-label="Sessão do terço">
-            <div className="mb-4">
-              <RosaryBeads
-                currentBeadId={currentStep.beadId}
-                completedBeadIds={completedBeadIds}
-                // Navegação por clique só existe pra quem controla.
-                onBeadSelect={
-                  canControl
-                    ? (beadId: BeadId) => {
-                        const step = firstStepForBead(beadId)
-                        if (step) void shared.goTo(step.index)
-                      }
-                    : undefined
-                }
-                className="mx-auto h-auto w-full max-w-md"
-                ariaDescription={`Terço compartilhado — passo ${currentIndex + 1} de ${ROSARY_STEPS.length}`}
-              />
-            </div>
-
-            <div className="mb-4" aria-hidden>
-              <div
-                className="h-1 w-full overflow-hidden rounded-full"
-                style={{ background: 'var(--accent-soft)' }}
-              >
-                <div
-                  className="rosary-progress-fill h-full"
-                  style={{
-                    width: `${Math.round(
-                      ((currentIndex + (isCompleted ? 1 : 0)) / ROSARY_STEPS.length) * 100,
-                    )}%`,
-                    background: 'linear-gradient(90deg, #C9A84C, #D9C077)',
-                  }}
+          <section
+            aria-label="Sessão do terço"
+            className="lg:grid lg:grid-cols-[1fr_1fr] lg:gap-12 lg:items-start"
+          >
+            {/* Beads + progress (left on desktop) */}
+            <div className="mb-6 lg:mb-0 lg:sticky lg:top-8">
+              <div className="mx-auto flex max-w-md flex-col items-center gap-4 lg:max-w-none">
+                <RosaryBeads
+                  currentBeadId={currentStep.beadId}
+                  completedBeadIds={completedBeadIds}
+                  onBeadSelect={
+                    canControl
+                      ? (beadId: BeadId) => {
+                          const step = firstStepForBead(beadId)
+                          if (step) void shared.goTo(step.index)
+                        }
+                      : undefined
+                  }
+                  className="
+                    h-auto w-full
+                    max-w-[300px] sm:max-w-[360px] md:max-w-[420px]
+                    lg:max-w-[460px] xl:max-w-[520px]
+                  "
+                  ariaDescription={`Terço compartilhado — passo ${currentIndex + 1} de ${ROSARY_STEPS.length}`}
                 />
-              </div>
-              <div
-                className="mt-2 text-center font-mono text-[11px] uppercase tracking-[0.25em]"
-                style={{ color: 'var(--text-3)' }}
-              >
-                Passo {currentIndex + 1} / {ROSARY_STEPS.length}
+
+                <div className="w-full" aria-hidden>
+                  <div
+                    className="h-1 w-full overflow-hidden rounded-full"
+                    style={{ background: 'var(--accent-soft)' }}
+                  >
+                    <div
+                      className="rosary-progress-fill h-full"
+                      style={{
+                        width: `${progressPct}%`,
+                        background: 'linear-gradient(90deg, #C9A84C, #D9C077)',
+                      }}
+                    />
+                  </div>
+                  <div
+                    className="mt-2 flex justify-between font-mono text-[10px] uppercase tracking-[0.25em]"
+                    style={{ color: 'var(--text-3)' }}
+                  >
+                    <span>Passo {currentIndex + 1} / {ROSARY_STEPS.length}</span>
+                    <span>{progressPct}%</span>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <PrayerStage
-              step={currentStep}
-              mysteryGroup={mysteryGroup}
-              isCompleted={isCompleted}
-              onAdvance={canControl ? () => void shared.advance() : noop}
-            />
+            {/* Prayer + controls (right on desktop) */}
+            <div className="lg:max-w-2xl">
+              <PrayerStage
+                step={currentStep}
+                mysteryGroup={mysteryGroup}
+                isCompleted={isCompleted}
+                onAdvance={canControl ? () => void shared.advance() : noop}
+              />
 
-            {!canControl && !isCompleted && (
-              <div
-                className="mt-3 rounded-md border px-3 py-2 text-center text-[11px]"
-                role="status"
-                aria-live="polite"
-                style={{
-                  borderColor: 'var(--accent-soft)',
-                  color: 'var(--text-3)',
-                }}
-              >
-                O {room.co_host_user_id ? 'host ou co-líder' : 'host'} avança as contas.
-              </div>
-            )}
-
-            {canControl && !isCompleted && (
-              <div className="mt-4 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => void shared.back()}
-                  disabled={pending || currentIndex === 0}
-                  className="flex-1 rounded-lg border px-4 py-2 text-sm transition disabled:opacity-30"
+              {!canControl && !isCompleted && (
+                <div
+                  className="mt-3 rounded-md border px-3 py-2 text-center text-[11px]"
+                  role="status"
+                  aria-live="polite"
                   style={{
                     borderColor: 'var(--accent-soft)',
-                    color: 'var(--accent)',
+                    color: 'var(--text-3)',
                   }}
                 >
-                  Voltar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void shared.advance()}
-                  disabled={pending}
-                  className="flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-60"
-                  style={{
-                    background: 'linear-gradient(180deg, #C9A84C, #A88437)',
-                    color: 'var(--accent-contrast)',
-                  }}
-                >
-                  Próximo
-                </button>
-              </div>
-            )}
+                  O {room.co_host_user_id ? 'host ou co-líder' : 'host'} avança as contas.
+                </div>
+              )}
+
+              {canControl && !isCompleted && (
+                <div className="mt-4 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void shared.back()}
+                    disabled={pending || currentIndex === 0}
+                    className="flex-1 rounded-lg border px-4 py-3 text-sm transition disabled:opacity-30"
+                    style={{
+                      borderColor: 'var(--accent-soft)',
+                      color: 'var(--accent)',
+                    }}
+                  >
+                    Voltar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void shared.advance()}
+                    disabled={pending}
+                    className="flex-1 rounded-lg px-4 py-3 text-sm font-semibold transition disabled:opacity-60"
+                    style={{
+                      background: 'linear-gradient(180deg, #C9A84C, #A88437)',
+                      color: 'var(--accent-contrast)',
+                      fontFamily: 'var(--font-display)',
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Próximo
+                  </button>
+                </div>
+              )}
+            </div>
           </section>
         )}
 
-        {/* Lista de participantes — sempre visível. */}
+        {/* Lista de participantes */}
         <section
-          className="mt-6 rounded-2xl border p-5"
+          className="
+            mx-auto mt-6 w-full max-w-md rounded-2xl border p-5
+            md:max-w-lg md:p-6
+            lg:max-w-3xl
+          "
           style={{
             borderColor: 'var(--accent-soft)',
-            backgroundColor: 'rgba(20, 18, 14, 0.6)',
+            backgroundColor: 'rgba(20, 18, 14, 0.55)',
           }}
           aria-labelledby="participantes-titulo"
         >
           <div className="flex items-center justify-between">
             <h2
               id="participantes-titulo"
-              className="text-[10px] uppercase tracking-[0.2em]"
-              style={{ color: 'var(--text-3)' }}
+              className="text-[10px] uppercase tracking-[0.25em]"
+              style={{ color: 'var(--text-3)', fontFamily: 'var(--font-display)' }}
             >
               Na sala ({participants.length})
             </h2>
             <span
-              className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em]"
+              className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.25em]"
               style={{ color: 'var(--accent)' }}
               aria-label={`${onlineCount} online agora`}
             >
@@ -320,7 +365,7 @@ export function SharedRoomView({
               {onlineCount} online
             </span>
           </div>
-          <ul className="mt-3 flex flex-col gap-2">
+          <ul className="mt-4 flex flex-col gap-2 lg:grid lg:grid-cols-2 lg:gap-3">
             {participants.map((p) => {
               const isP_Host = p.user_id === room.host_user_id
               const isP_CoHost = p.user_id === room.co_host_user_id
@@ -339,11 +384,12 @@ export function SharedRoomView({
                     <span className="relative inline-flex">
                       <span
                         aria-hidden
-                        className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px]"
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[11px]"
                         style={{
                           backgroundColor: 'var(--accent-soft)',
                           color: 'var(--accent)',
                           opacity: isOnline ? 1 : 0.5,
+                          fontFamily: 'var(--font-display)',
                         }}
                       >
                         {(p.display_name ?? 'A').trim().charAt(0).toUpperCase() || 'A'}
@@ -432,7 +478,7 @@ export function SharedRoomView({
 
         {displayError && (
           <div
-            className="mt-4 rounded-md border px-3 py-2 text-xs"
+            className="mx-auto mt-4 w-full max-w-md rounded-md border px-3 py-2 text-xs md:max-w-lg"
             role="alert"
             style={{
               borderColor: 'color-mix(in srgb, var(--danger) 45%, transparent)',
@@ -445,16 +491,19 @@ export function SharedRoomView({
         )}
 
         {/* Ações principais do lobby / saída */}
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mx-auto mt-6 flex w-full max-w-md flex-wrap gap-2 md:max-w-lg">
           {room.state === 'aguardando' && isHost && (
             <button
               type="button"
               onClick={handleStart}
               disabled={pending}
-              className="flex-1 rounded-lg px-5 py-2.5 text-sm font-semibold transition disabled:opacity-60"
+              className="flex-1 rounded-lg px-5 py-3 text-sm font-semibold transition disabled:opacity-60"
               style={{
                 background: 'linear-gradient(180deg, #C9A84C, #A88437)',
                 color: 'var(--accent-contrast)',
+                fontFamily: 'var(--font-display)',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
               }}
             >
               {pending ? 'Iniciando…' : 'Iniciar terço'}
@@ -462,7 +511,7 @@ export function SharedRoomView({
           )}
           {room.state === 'aguardando' && !isHost && (
             <div
-              className="flex-1 rounded-lg border px-5 py-2.5 text-center text-sm"
+              className="flex-1 rounded-lg border px-5 py-3 text-center text-sm"
               style={{
                 borderColor: 'var(--accent-soft)',
                 color: 'var(--text-3)',
@@ -476,7 +525,7 @@ export function SharedRoomView({
           {(room.state === 'finalizada' || room.state === 'encerrada') && (
             <Link
               href="/rosario/juntos"
-              className="flex-1 rounded-lg border px-5 py-2.5 text-center text-sm transition"
+              className="flex-1 rounded-lg border px-5 py-3 text-center text-sm transition"
               style={{
                 borderColor: 'var(--accent-soft)',
                 color: 'var(--accent)',
@@ -489,7 +538,7 @@ export function SharedRoomView({
             type="button"
             onClick={handleLeave}
             disabled={pending}
-            className="rounded-lg border px-5 py-2.5 text-sm transition disabled:opacity-60"
+            className="rounded-lg border px-5 py-3 text-sm transition disabled:opacity-60"
             style={{
               borderColor: 'rgba(122, 115, 104, 0.4)',
               color: 'var(--text-3)',
@@ -530,10 +579,11 @@ function RoomStateBanner({
     info.tone === 'active' ? 'var(--accent)' : info.tone === 'ended' ? 'var(--text-3)' : 'var(--text-3)'
   return (
     <div
-      className="mb-4 rounded-full border px-4 py-2 text-center text-[10px] uppercase tracking-[0.2em]"
+      className="mb-4 rounded-full border px-4 py-2 text-center text-[10px] uppercase tracking-[0.25em]"
       style={{
         borderColor: 'var(--accent-soft)',
         color,
+        fontFamily: 'var(--font-display)',
       }}
       role="status"
       aria-live="polite"
