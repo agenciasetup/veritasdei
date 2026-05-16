@@ -16,6 +16,9 @@ import { RosaryBeads } from '@/features/rosario/components/RosaryBeads'
 import { PrayerStage } from '@/features/rosario/components/PrayerStage'
 import { useSharedRosaryProgress } from '@/features/rosario/session/useSharedRosaryProgress'
 import { useRosaryHistoryRecord } from '@/features/rosario/session/useRosaryHistoryRecord'
+import { useRoomVoiceChat } from '@/features/rosario/session/useRoomVoiceChat'
+import { VoiceControlBar } from '@/features/rosario/components/VoiceControlBar'
+import { Mic, MicOff } from 'lucide-react'
 import type { RosaryDecadeReaders } from '@/features/rosario/data/historyTypes'
 
 /**
@@ -56,6 +59,7 @@ export function SharedRoomView({
   } = shared
   const onlineCount = onlineUserIds.size
   const { recordSession } = useRosaryHistoryRecord()
+  const voice = useRoomVoiceChat(initialRoom.id, viewerUserId)
 
   /**
    * Ao entrar em `finalizada`, cada viewer grava uma entrada individual
@@ -228,6 +232,11 @@ export function SharedRoomView({
           >
             Código {room.codigo}
           </div>
+        )}
+
+        {/* Áudio em grupo — disponível durante lobby e sessão */}
+        {(room.state === 'aguardando' || room.state === 'rezando') && (
+          <VoiceControlBar voice={voice} />
         )}
 
         {/* Painel de leitores das dezenas — visível no lobby e durante a sessão */}
@@ -422,6 +431,7 @@ export function SharedRoomView({
                       name={p.display_name}
                       avatarUrl={p.avatar_url ?? null}
                       online={isOnline}
+                      speaking={voice.speakingUserIds.has(p.user_id)}
                       size={32}
                     />
                     <span
@@ -431,6 +441,28 @@ export function SharedRoomView({
                       {p.display_name ?? 'Convidado'}
                       {isViewer ? ' (você)' : ''}
                     </span>
+                    {voice.voiceJoinedUserIds.has(p.user_id) && (
+                      <span
+                        aria-label={
+                          voice.mutedUserIds.has(p.user_id) ? 'Microfone mudo' : 'Microfone ativo'
+                        }
+                        title={
+                          voice.mutedUserIds.has(p.user_id) ? 'Mudo' : 'No áudio'
+                        }
+                        className="flex-shrink-0"
+                        style={{
+                          color: voice.mutedUserIds.has(p.user_id)
+                            ? 'var(--text-3)'
+                            : 'var(--accent)',
+                        }}
+                      >
+                        {voice.mutedUserIds.has(p.user_id) ? (
+                          <MicOff className="h-3.5 w-3.5" strokeWidth={2} />
+                        ) : (
+                          <Mic className="h-3.5 w-3.5" strokeWidth={2} />
+                        )}
+                      </span>
+                    )}
                   </div>
                   <div className="flex gap-1.5">
                     {isP_Host && (
@@ -619,16 +651,36 @@ function ParticipantAvatar({
   name,
   avatarUrl,
   online,
+  speaking,
   size = 28,
 }: {
   name: string | null
   avatarUrl: string | null
   online?: boolean
+  /** Quando true, mostra ring pulsante dourado ao redor (no áudio em grupo). */
+  speaking?: boolean
   size?: number
 }) {
   const initial = (name ?? 'C').trim().charAt(0).toUpperCase() || 'C'
   return (
-    <span className="relative inline-flex flex-shrink-0">
+    <span
+      className="relative inline-flex flex-shrink-0"
+      style={{ width: size, height: size }}
+    >
+      {/* Ring pulsante de "falando" — gold halo */}
+      {speaking && (
+        <span
+          aria-hidden
+          className="rosary-speaking-ring absolute"
+          style={{
+            inset: -4,
+            borderRadius: '9999px',
+            border: '2px solid var(--accent)',
+            boxShadow: '0 0 12px rgba(201, 168, 76, 0.55)',
+          }}
+        />
+      )}
+
       {avatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -674,6 +726,20 @@ function ParticipantAvatar({
           }}
         />
       )}
+      <style>{`
+        @keyframes rosary-speaking-pulse {
+          0%, 100% { opacity: 0.55; transform: scale(1); }
+          50%      { opacity: 1;    transform: scale(1.04); }
+        }
+        .rosary-speaking-ring {
+          animation: rosary-speaking-pulse 1100ms ease-in-out infinite;
+          transform-origin: center;
+          pointer-events: none;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .rosary-speaking-ring { animation: none; opacity: 0.85; }
+        }
+      `}</style>
     </span>
   )
 }
