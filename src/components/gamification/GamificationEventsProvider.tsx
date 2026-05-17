@@ -25,7 +25,9 @@ export default function GamificationEventsProvider({
   const [toasts, setToasts] = useState<XpToastItem[]>([])
   const [levelUp, setLevelUp] = useState<number | null>(null)
   const [reliquia, setReliquia] = useState<ReliquiaUnlockData | null>(null)
-  const [carta, setCarta] = useState<Carta | null>(null)
+  // Fila de cartas desbloqueadas: quando várias chegam juntas (ex.: triggers
+  // em cascata), a animação roda uma por vez. dismissCarta() avança a fila.
+  const [cartaQueue, setCartaQueue] = useState<Carta[]>([])
   const baseline = useRef<Baseline | null>(null)
   const toastSeq = useRef(0)
 
@@ -137,7 +139,7 @@ export default function GamificationEventsProvider({
             .select('*')
             .eq('id', cartaId)
             .maybeSingle()
-          if (data) setCarta(data as Carta)
+          if (data) setCartaQueue((q) => [...q, data as Carta])
         },
       )
       .subscribe()
@@ -152,11 +154,11 @@ export default function GamificationEventsProvider({
     setToasts((prev) => prev.filter((t) => t.id !== id))
   }
 
-  // Ao fechar o popup da carta, marca como vista pra não reaparecer
-  // na vitrine da Coleção.
+  // Ao fechar o popup da carta, avança a fila + marca a carta atual como
+  // vista pra não reaparecer na vitrine da Coleção.
   async function dismissCarta() {
-    const atual = carta
-    setCarta(null)
+    const atual = cartaQueue[0]
+    setCartaQueue((q) => q.slice(1))
     if (!atual || !user?.id) return
     const supabase = createClient()
     await supabase
@@ -166,6 +168,8 @@ export default function GamificationEventsProvider({
       .eq('carta_id', atual.id)
   }
 
+  const cartaAtual = cartaQueue[0] ?? null
+
   return (
     <>
       {children}
@@ -174,8 +178,13 @@ export default function GamificationEventsProvider({
       {reliquia ? (
         <ReliquiaUnlockModal reliquia={reliquia} onClose={() => setReliquia(null)} />
       ) : null}
-      {carta ? (
-        <CartaUnlockModal carta={carta} onClose={dismissCarta} />
+      {cartaAtual ? (
+        // key força remount a cada carta — a animação de entrada toca de novo
+        <CartaUnlockModal
+          key={cartaAtual.id}
+          carta={cartaAtual}
+          onClose={dismissCarta}
+        />
       ) : null}
     </>
   )

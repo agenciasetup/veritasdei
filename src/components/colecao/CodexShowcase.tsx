@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Search, Loader2, BookOpen, X } from 'lucide-react'
+import { Search, Loader2, BookOpen, X, ChevronDown, ChevronUp } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCodex } from '@/lib/colecao/useCodex'
 import CartaView from './CartaView'
@@ -22,6 +22,8 @@ import {
 // Provider — aqui não repetimos.
 
 const CARD_W = 158
+// Padrão: ~2 linhas em desktop (5 colunas × 2). Filtro/busca expande tudo.
+const COLAPSADO_LIMITE = 10
 
 function normalizar(s: string): string {
   return s
@@ -44,8 +46,18 @@ export default function CodexShowcase() {
   const [busca, setBusca] = useState('')
   const [raridade, setRaridade] = useState<'todas' | CartaRaridade>('todas')
   const [detalhe, setDetalhe] = useState<CartaColecao | null>(null)
+  const [expandidos, setExpandidos] = useState<Set<string>>(new Set())
 
   const filtrando = busca.trim() !== '' || raridade !== 'todas'
+
+  function toggleExpandido(id: string) {
+    setExpandidos((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   const secoes = useMemo(() => {
     const q = normalizar(busca.trim())
@@ -175,59 +187,105 @@ export default function CodexShowcase() {
           </div>
         ) : (
           <div className="flex flex-col gap-7">
-            {secoes.map(({ personagem, cartas, seladas }) => (
-              <section key={personagem.id}>
-                {/* Cabeçalho do capítulo */}
-                <div className="flex items-center gap-3 mb-3">
-                  <h3
-                    className="whitespace-nowrap"
-                    style={{
-                      fontFamily: 'Cinzel, serif',
-                      color: '#F2EDE4',
-                      fontSize: 16,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {personagem.desbloqueadas === 0 && !filtrando
-                      ? 'Personagem selado'
-                      : personagem.nome}
-                  </h3>
-                  <span
-                    className="h-px flex-1"
-                    style={{ background: 'rgba(201,168,76,0.25)' }}
-                  />
-                  <span
-                    className="text-[11px] whitespace-nowrap"
-                    style={{
-                      color: '#8A8378',
-                      fontFamily: 'Poppins, sans-serif',
-                    }}
-                  >
-                    {personagem.desbloqueadas}/{personagem.total_cartas}
-                  </span>
-                </div>
+            {secoes.map(({ personagem, cartas, seladas }) => {
+              const total = cartas.length + seladas
+              // Filtrando expande tudo — não dá pra esconder o que o usuário
+              // pediu pra ver. Sem filtro, colapsa se passar do limite.
+              const expandido = filtrando || expandidos.has(personagem.id)
+              const corte = expandido ? total : Math.min(total, COLAPSADO_LIMITE)
+              const cartasMostrar = cartas.slice(0, corte)
+              const seladasMostrar = Math.max(
+                0,
+                corte - cartasMostrar.length,
+              )
+              const restantes = total - corte
 
-                {/* Grade de cartas */}
-                <div
-                  className="grid gap-3 justify-center sm:justify-start"
-                  style={{
-                    gridTemplateColumns: `repeat(auto-fill, ${CARD_W}px)`,
-                  }}
-                >
-                  {cartas.map((c) => (
-                    <CartaView
-                      key={c.id}
-                      carta={c}
-                      width={CARD_W}
-                      onClick={() => setDetalhe(c)}
+              return (
+                <section key={personagem.id}>
+                  {/* Cabeçalho do capítulo */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <h3
+                      className="whitespace-nowrap"
+                      style={{
+                        fontFamily: 'Cinzel, serif',
+                        color: '#F2EDE4',
+                        fontSize: 16,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {personagem.desbloqueadas === 0 && !filtrando
+                        ? 'Personagem selado'
+                        : personagem.nome}
+                    </h3>
+                    <span
+                      className="h-px flex-1"
+                      style={{ background: 'rgba(201,168,76,0.25)' }}
                     />
-                  ))}
-                  {Array.from({ length: seladas }).map((_, i) => (
-                    <CartaSlotBloqueada key={`s-${i}`} width={CARD_W} />
-                  ))}
-                </div>
-              </section>
-            ))}
+                    <span
+                      className="text-[11px] whitespace-nowrap"
+                      style={{
+                        color: '#8A8378',
+                        fontFamily: 'Poppins, sans-serif',
+                      }}
+                    >
+                      {personagem.desbloqueadas}/{personagem.total_cartas}
+                    </span>
+                  </div>
+
+                  {/* Grade de cartas — auto-fill ocupa toda a largura */}
+                  <div
+                    className="grid gap-3 justify-center sm:justify-start"
+                    style={{
+                      gridTemplateColumns: `repeat(auto-fill, minmax(${CARD_W}px, 1fr))`,
+                    }}
+                  >
+                    {cartasMostrar.map((c) => (
+                      <div key={c.id} className="flex justify-center">
+                        <CartaView
+                          carta={c}
+                          width={CARD_W}
+                          onClick={() => setDetalhe(c)}
+                        />
+                      </div>
+                    ))}
+                    {Array.from({ length: seladasMostrar }).map((_, i) => (
+                      <div key={`s-${i}`} className="flex justify-center">
+                        <CartaSlotBloqueada width={CARD_W} />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Ver mais / Ver menos */}
+                  {!filtrando && total > COLAPSADO_LIMITE ? (
+                    <div className="flex justify-center mt-4">
+                      <button
+                        type="button"
+                        onClick={() => toggleExpandido(personagem.id)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-[12px] uppercase tracking-[0.1em] transition-colors hover:bg-[rgba(201,168,76,0.08)]"
+                        style={{
+                          fontFamily: 'Cinzel, serif',
+                          color: '#C9A84C',
+                          border: '1px solid rgba(201,168,76,0.3)',
+                          background: 'rgba(0,0,0,0.3)',
+                        }}
+                      >
+                        {expandido ? (
+                          <>
+                            <ChevronUp className="w-4 h-4" />
+                            Ver menos
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="w-4 h-4" />
+                            Ver mais {restantes} {restantes === 1 ? 'carta' : 'cartas'}
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  ) : null}
+                </section>
+              )
+            })}
           </div>
         )}
       </div>

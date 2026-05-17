@@ -8,7 +8,7 @@ export default function CodexPage() {
     <AuthGuard>
       <main className="min-h-screen px-4 md:px-8 py-8 relative">
         <div className="bg-glow" />
-        <div className="relative z-10 max-w-2xl mx-auto">
+        <div className="relative z-10 max-w-[1600px] mx-auto">
           <header className="mb-6">
             <h1
               className="text-2xl font-bold tracking-wider uppercase"
