@@ -2,13 +2,14 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ChevronRight, NotebookPen, ArrowRight } from 'lucide-react'
+import { ChevronRight, NotebookPen, ArrowRight, Pencil } from 'lucide-react'
 import ImmersiveReader from '@/components/content/ImmersiveReader'
 import StudyDeepdive from './StudyDeepdive'
 import StudyNotesPanel from './StudyNotesPanel'
 import ProgressTrack from './ProgressTrack'
 import { useStudyDeepdive } from '@/lib/study/useStudyDeepdive'
 import InlineEditOverlay from '@/components/admin/InlineEditOverlay'
+import { useAuth } from '@/contexts/AuthContext'
 import type {
   ContentItem,
   StudyNextHint,
@@ -72,10 +73,13 @@ export default function StudyReader({
   isStudied,
   next,
   videoUrl,
+  coverUrl,
 }: StudyReaderProps) {
   const { deepdive } = useStudyDeepdive(contentType, contentRef)
+  const { isAdmin } = useAuth()
   const [notesOpen, setNotesOpen] = useState(false)
   const ytId = youtubeId(videoUrl)
+  const hasCover = Boolean(coverUrl)
 
   const pillarPercent = useMemo(() => {
     if (!pillar.total) return 0
@@ -89,58 +93,58 @@ export default function StudyReader({
         subtitle={subtitle}
         description={description}
         items={items}
+        coverUrl={coverUrl}
+        contentSubtopicId={contentRef}
         onMarkStudied={onMarkStudied}
         isStudied={isStudied}
         topSlot={
-          <>
-            <ProgressTrack
-              percent={pillarPercent}
-              label={`${pillar.title} · ${pillar.studiedCount}/${pillar.total}`}
-            />
-            {/* Botão de edição inline da lição (capa + vídeo). Só admin vê. */}
-            <div className="mt-3">
-              <InlineEditOverlay
-                table="content_subtopics"
-                id={contentRef}
-                fields={['cover_url', 'video_url']}
-                label="Editar lição"
-                position="top-right"
-              >
-                {ytId ? (
-                  <div
-                    className="relative w-full rounded-2xl overflow-hidden mb-4"
-                    style={{
-                      aspectRatio: '16 / 9',
-                      background: 'rgba(0,0,0,0.5)',
-                      border:
-                        '1px solid color-mix(in srgb, var(--accent) 22%, transparent)',
-                      boxShadow:
-                        '0 8px 32px -12px color-mix(in srgb, var(--accent) 24%, transparent)',
-                    }}
-                  >
-                    <iframe
-                      src={`https://www.youtube.com/embed/${ytId}?rel=0`}
-                      title="Vídeo da lição"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      allowFullScreen
-                      loading="lazy"
-                      className="absolute inset-0 w-full h-full"
-                      style={{ border: 0 }}
-                    />
-                  </div>
-                ) : (
-                  /* Slot vazio (sem vídeo) — só o botão de edição flutua sobre
-                   *  um placeholder discreto pra que admin saiba que pode editar.
-                   *  Pra não-admin, o InlineEditOverlay renderiza só children, e
-                   *  como children está vazio, nada aparece. */
-                  <div />
-                )}
-              </InlineEditOverlay>
-            </div>
-          </>
+          <ProgressTrack
+            percent={pillarPercent}
+            label={`${pillar.title} · ${pillar.studiedCount}/${pillar.total}`}
+          />
         }
         headerSlot={
-          <Breadcrumb pillar={pillar} topic={topic} currentTitle={title} />
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <Breadcrumb pillar={pillar} topic={topic} currentTitle={title} />
+            </div>
+            {isAdmin && !hasCover && !ytId ? (
+              <EditLessonChip subtopicId={contentRef} />
+            ) : null}
+          </div>
+        }
+        videoSlot={
+          ytId ? (
+            <InlineEditOverlay
+              table="content_subtopics"
+              id={contentRef}
+              fields={['cover_url', 'video_url']}
+              label="Editar lição"
+              position="top-right"
+            >
+              <div
+                className="relative w-full rounded-2xl overflow-hidden"
+                style={{
+                  aspectRatio: '16 / 9',
+                  background: 'rgba(0,0,0,0.5)',
+                  border:
+                    '1px solid color-mix(in srgb, var(--accent) 22%, transparent)',
+                  boxShadow:
+                    '0 8px 32px -12px color-mix(in srgb, var(--accent) 24%, transparent)',
+                }}
+              >
+                <iframe
+                  src={`https://www.youtube.com/embed/${ytId}?rel=0`}
+                  title="Vídeo da lição"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  loading="lazy"
+                  className="absolute inset-0 w-full h-full"
+                  style={{ border: 0 }}
+                />
+              </div>
+            </InlineEditOverlay>
+          ) : null
         }
         afterItems={
           <>
@@ -159,6 +163,31 @@ export default function StudyReader({
         contentTitle={title}
       />
     </>
+  )
+}
+
+function EditLessonChip({ subtopicId }: { subtopicId: string }) {
+  return (
+    <InlineEditOverlay
+      table="content_subtopics"
+      id={subtopicId}
+      fields={['cover_url', 'video_url']}
+      label="Editar lição"
+      asTrigger
+    >
+      <span
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] tracking-[0.12em] uppercase whitespace-nowrap"
+        style={{
+          background: 'rgba(201,168,76,0.06)',
+          border: '1px solid rgba(201,168,76,0.18)',
+          color: 'var(--accent)',
+          fontFamily: 'var(--font-body)',
+        }}
+      >
+        <Pencil className="w-3 h-3" />
+        Editar
+      </span>
+    </InlineEditOverlay>
   )
 }
 

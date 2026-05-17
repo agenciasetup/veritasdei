@@ -49,6 +49,10 @@ type Props = {
   /** Position default top-right. Mantém estável em diferentes hosts. */
   position?: 'top-right' | 'top-left' | 'bottom-right'
   children: ReactNode
+  /** Quando true, `children` vira o próprio gatilho (envolvido em um button)
+   *  e o pencil flutuante não é renderizado. Útil pra chips inline em headers
+   *  onde o pencil sobreporia outro conteúdo. */
+  asTrigger?: boolean
   /** Callback opcional após salvar (ex.: refresh manual). Quando omitido,
    *  a página é recarregada via window.location.reload() pra refletir
    *  o novo estado sem refator do hook que carregou os dados. */
@@ -141,6 +145,7 @@ export default function InlineEditOverlay({
   label = 'Editar',
   position = 'top-right',
   children,
+  asTrigger = false,
   onSaved,
 }: Props) {
   const { profile } = useAuth()
@@ -148,7 +153,43 @@ export default function InlineEditOverlay({
   const [open, setOpen] = useState(false)
 
   if (!isAdmin) {
-    return <>{children}</>
+    return asTrigger ? null : <>{children}</>
+  }
+
+  const handleOpen = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setOpen(true)
+  }
+
+  if (asTrigger) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={handleOpen}
+          aria-label={label}
+          title={label}
+          className="inline-flex items-center active:scale-95 transition-transform"
+        >
+          {children}
+        </button>
+        {open && (
+          <EditDrawer
+            table={table}
+            id={id}
+            fields={fields}
+            label={label}
+            onClose={() => setOpen(false)}
+            onSaved={() => {
+              setOpen(false)
+              if (onSaved) onSaved()
+              else if (typeof window !== 'undefined') window.location.reload()
+            }}
+          />
+        )}
+      </>
+    )
   }
 
   return (
@@ -157,11 +198,7 @@ export default function InlineEditOverlay({
 
       <button
         type="button"
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          setOpen(true)
-        }}
+        onClick={handleOpen}
         aria-label={label}
         title={label}
         className={`absolute z-30 inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs active:scale-95 transition-transform ${

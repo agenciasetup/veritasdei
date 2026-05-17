@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Copy, Check, BookOpen, Quote, Scroll, List } from 'lucide-react'
 import type { ContentItem } from '@/lib/content/useContentGroup'
 import ReaderToolbar, { type FontScale } from './ReaderToolbar'
+import InlineEditOverlay from '@/components/admin/InlineEditOverlay'
 
 const FONT_KEY = 'veritasdei:reader:font-scale'
 const FONT_RATIO: Record<FontScale, number> = { sm: 0.92, md: 1.0, lg: 1.15 }
@@ -39,6 +40,13 @@ interface ImmersiveReaderProps {
   afterItems?: React.ReactNode
   /** Content rendered after the mark-as-studied button (e.g. next button) */
   footerSlot?: React.ReactNode
+  /** Vídeo opcional. Quando presente, é renderizado logo após o hero/header. */
+  videoSlot?: React.ReactNode
+  /** Capa opcional. Quando presente, desenha um hero full-bleed com a imagem
+   *  e o título sobreposto, no mesmo estilo dos cards de tópico/lição. */
+  coverUrl?: string | null
+  /** ID do subtópico — habilita o botão de edição inline da capa pra admin. */
+  contentSubtopicId?: string
   /**
    * Coluna de leitura.
    * - `reading` (default) = 740px, legibilidade editorial (~75ch)
@@ -65,8 +73,12 @@ export default function ImmersiveReader({
   headerSlot,
   afterItems,
   footerSlot,
+  videoSlot,
+  coverUrl,
+  contentSubtopicId,
   contentWidth = 'reading',
 }: ImmersiveReaderProps) {
+  const hasCover = Boolean(coverUrl)
   const [fontScale, setFontScale] = useState<FontScale>(() => loadFontScale())
   const [scrollPct, setScrollPct] = useState(0)
   const articleRef = useRef<HTMLElement>(null)
@@ -110,46 +122,61 @@ export default function ImmersiveReader({
         onCycleFont={cycleFont}
         topSlot={topSlot}
       />
-      {headerSlot ? <div className="mb-2">{headerSlot}</div> : null}
-      {/* ── Title section ── */}
-      <header className="text-center py-10 md:py-14 fade-in">
-        {subtitle && (
-          <span
-            className="inline-block px-4 py-1.5 rounded-full text-xs tracking-[0.2em] uppercase mb-6"
-            style={{
-              background: 'rgba(201,168,76,0.1)',
-              border: '1px solid rgba(201,168,76,0.2)',
-              color: 'var(--gold)',
-              fontFamily: 'Poppins, sans-serif',
-            }}
+      {headerSlot ? <div className="mt-3 mb-2">{headerSlot}</div> : null}
+
+      {/* ── Cover hero (opcional) — quando a lição tem capa, mostra full-bleed
+       *  com título sobreposto, no mesmo padrão dos cards de módulo/lição.
+       *  Quando não tem, renderiza header centralizado tradicional abaixo. */}
+      {hasCover ? (
+        <LessonCoverHero
+          coverUrl={coverUrl as string}
+          title={title}
+          subtitle={subtitle}
+          description={description}
+          contentSubtopicId={contentSubtopicId}
+        />
+      ) : (
+        <header className="text-center py-10 md:py-14 fade-in">
+          {subtitle && (
+            <span
+              className="inline-block px-4 py-1.5 rounded-full text-xs tracking-[0.2em] uppercase mb-6"
+              style={{
+                background: 'rgba(201,168,76,0.1)',
+                border: '1px solid rgba(201,168,76,0.2)',
+                color: 'var(--gold)',
+                fontFamily: 'Poppins, sans-serif',
+              }}
+            >
+              {subtitle}
+            </span>
+          )}
+
+          <h1
+            className="text-3xl md:text-4xl font-bold leading-tight mb-4"
+            style={{ fontFamily: 'Cinzel, serif', color: 'var(--text-primary)' }}
           >
-            {subtitle}
-          </span>
-        )}
+            {title}
+          </h1>
 
-        <h1
-          className="text-3xl md:text-4xl font-bold leading-tight mb-4"
-          style={{ fontFamily: 'Cinzel, serif', color: 'var(--text-primary)' }}
-        >
-          {title}
-        </h1>
+          {description && (
+            <p
+              className="text-base md:text-lg leading-relaxed max-w-xl mx-auto"
+              style={{ color: 'var(--text-secondary)', fontFamily: 'Poppins, sans-serif', fontWeight: 300 }}
+            >
+              {description}
+            </p>
+          )}
 
-        {description && (
-          <p
-            className="text-base md:text-lg leading-relaxed max-w-xl mx-auto"
-            style={{ color: 'var(--text-secondary)', fontFamily: 'Poppins, sans-serif', fontWeight: 300 }}
-          >
-            {description}
-          </p>
-        )}
+          {/* Ornament */}
+          <div className="flex items-center gap-4 my-6 w-48 mx-auto">
+            <span className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.2)' }} />
+            <Scroll className="w-4 h-4" style={{ color: 'var(--gold)', opacity: 0.5 }} />
+            <span className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.2)' }} />
+          </div>
+        </header>
+      )}
 
-        {/* Ornament */}
-        <div className="flex items-center gap-4 my-6 w-48 mx-auto">
-          <span className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.2)' }} />
-          <Scroll className="w-4 h-4" style={{ color: 'var(--gold)', opacity: 0.5 }} />
-          <span className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.2)' }} />
-        </div>
-      </header>
+      {videoSlot ? <div className="mb-8">{videoSlot}</div> : null}
 
       {/* ── Content sections ── */}
       <div className="space-y-8">
@@ -433,6 +460,104 @@ function PrayerSection({ item }: { item: ContentItem }) {
         {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
         {copied ? 'Copiado' : 'Copiar oração'}
       </button>
+    </section>
+  )
+}
+
+function LessonCoverHero({
+  coverUrl,
+  title,
+  subtitle,
+  description,
+  contentSubtopicId,
+}: {
+  coverUrl: string
+  title: string
+  subtitle?: string
+  description?: string
+  contentSubtopicId?: string
+}) {
+  const hero = (
+    <div
+      className="relative w-full rounded-2xl overflow-hidden fade-in"
+      style={{
+        aspectRatio: '16 / 9',
+        background: 'var(--surface-2)',
+        border: '1px solid rgba(255,255,255,0.05)',
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={coverUrl}
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover"
+        loading="eager"
+      />
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            'linear-gradient(0deg, rgba(15,14,12,0.98) 0%, rgba(15,14,12,0.85) 28%, rgba(15,14,12,0.45) 60%, rgba(15,14,12,0.1) 85%, transparent 100%)',
+        }}
+      />
+      <div className="absolute inset-x-0 bottom-0 p-6 md:p-10 text-center">
+        {subtitle && (
+          <span
+            className="inline-block px-4 py-1.5 rounded-full text-[11px] tracking-[0.2em] uppercase mb-4"
+            style={{
+              background: 'rgba(201,168,76,0.12)',
+              border: '1px solid rgba(201,168,76,0.25)',
+              color: 'var(--accent)',
+              fontFamily: 'var(--font-body)',
+              backdropFilter: 'blur(8px)',
+            }}
+          >
+            {subtitle}
+          </span>
+        )}
+        <h1
+          className="text-2xl md:text-4xl font-bold leading-tight"
+          style={{
+            fontFamily: 'var(--font-display)',
+            color: 'var(--text-1)',
+            textShadow: '0 2px 24px rgba(0,0,0,0.5)',
+          }}
+        >
+          {title}
+        </h1>
+        {description && (
+          <p
+            className="mt-3 text-sm md:text-base leading-relaxed max-w-xl mx-auto"
+            style={{
+              color: 'var(--text-2)',
+              fontFamily: 'var(--font-body)',
+              fontWeight: 300,
+              textShadow: '0 1px 12px rgba(0,0,0,0.6)',
+            }}
+          >
+            {description}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+
+  return (
+    <section className="mt-2 mb-8">
+      {contentSubtopicId ? (
+        <InlineEditOverlay
+          table="content_subtopics"
+          id={contentSubtopicId}
+          fields={['cover_url', 'video_url']}
+          label="Editar capa"
+          position="top-right"
+        >
+          {hero}
+        </InlineEditOverlay>
+      ) : (
+        hero
+      )}
     </section>
   )
 }

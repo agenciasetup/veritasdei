@@ -508,6 +508,10 @@ function PillarTopicView({
     return (
       <div className="flex flex-col min-h-screen relative">
         <StudyLayout
+          pillarProgress={{
+            studied: studiedIds.size,
+            total: totalSubtopics || subtopics.length,
+          }}
           sidebar={
             <StudyLessonsSidebar
               pillarSlug={pillarSlug}

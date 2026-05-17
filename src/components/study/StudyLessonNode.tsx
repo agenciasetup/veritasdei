@@ -69,7 +69,8 @@ export default function StudyLessonNode({
                 <Link
                   href={`/estudo/${pillarSlug}/${topic.slug}/${sub.slug}`}
                   onClick={onNavigate}
-                  className="group flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-md text-sm transition-colors relative"
+                  title={sub.title}
+                  className="group flex items-start gap-2 pl-3 pr-2 py-1.5 rounded-md text-sm transition-colors relative"
                   style={{
                     color: isActive ? 'var(--accent)' : 'var(--text-2)',
                     fontFamily: 'var(--font-body)',
@@ -85,16 +86,16 @@ export default function StudyLessonNode({
                   ) : null}
                   {isStudied ? (
                     <Check
-                      className="w-3.5 h-3.5 flex-shrink-0"
+                      className="w-3.5 h-3.5 flex-shrink-0 mt-0.5"
                       style={{ color: 'var(--accent)' }}
                     />
                   ) : (
                     <Circle
-                      className="w-3 h-3 flex-shrink-0"
+                      className="w-3 h-3 flex-shrink-0 mt-1"
                       style={{ color: isActive ? 'var(--accent)' : 'var(--text-3)', opacity: 0.5 }}
                     />
                   )}
-                  <span className="flex-1 truncate leading-snug">{sub.title}</span>
+                  <span className="flex-1 line-clamp-2 leading-snug">{sub.title}</span>
                 </Link>
               </li>
             )
