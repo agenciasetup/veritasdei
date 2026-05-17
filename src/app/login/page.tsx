@@ -9,6 +9,9 @@ import { LogIn, UserPlus, Mail, Eye, EyeOff, ArrowLeft, CheckCircle } from 'luci
 import Link from 'next/link'
 import CrossIcon from '@/components/icons/CrossIcon'
 import { safeNext } from '@/lib/auth/safe-next'
+import { createClient } from '@/lib/supabase/client'
+
+const REFERRAL_STORAGE_KEY = 'codex.referral.v1'
 
 type Tab = 'login' | 'registro' | 'primeiro-acesso'
 
@@ -44,9 +47,38 @@ function LoginPageInner() {
   const { signInWithPassword, signUp, signInWithMagicLink, signInWithOAuth, isAuthenticated } = useAuth()
   const router = useRouter()
 
-  // Redirect if already logged in
+  // Códex: captura `?ref=ABC123` da URL e guarda em localStorage. O
+  // primeiro login após isso aciona fn_referral_aceitar para criar o
+  // vínculo e ativar o convite atomicamente.
   useEffect(() => {
-    if (isAuthenticated) router.push(nextPath)
+    const ref = searchParams.get('ref')
+    if (!ref) return
+    try {
+      window.localStorage.setItem(REFERRAL_STORAGE_KEY, ref.toUpperCase())
+    } catch {
+      // localStorage indisponível — não trava o login
+    }
+  }, [searchParams])
+
+  // Redirect if already logged in. Antes de redirecionar, tenta resgatar o
+  // referral pendente (chamada idempotente — se já estava ativado, não faz nada).
+  useEffect(() => {
+    if (!isAuthenticated) return
+    void (async () => {
+      try {
+        const codigo = window.localStorage.getItem(REFERRAL_STORAGE_KEY)
+        if (codigo) {
+          const supabase = createClient()
+          if (supabase) {
+            await supabase.rpc('fn_referral_aceitar', { p_codigo: codigo })
+          }
+          window.localStorage.removeItem(REFERRAL_STORAGE_KEY)
+        }
+      } catch {
+        // tudo aqui é best-effort; nunca bloqueia o redirect
+      }
+      router.push(nextPath)
+    })()
   }, [isAuthenticated, nextPath, router])
 
   const clearState = () => {

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, BookOpen, Check, Copy, Music, Sparkles } from 'lucide-react'
 import type { LiturgiaDia, LeituraRef } from '@/types/liturgia'
 import { sanitizeLiturgicalText } from '@/lib/liturgia/text'
+import { createClient } from '@/lib/supabase/client'
 
 type ReadingTabKey = 'primeira' | 'salmo' | 'segunda' | 'aclamacao' | 'evangelho'
 type LeituraTabKey = ReadingTabKey | 'reflexao'
@@ -528,6 +529,18 @@ export default function LiturgiaReaderClient({
   hoje,
   season,
 }: LiturgiaReaderClientProps) {
+  // Códex: marca a abertura da liturgia no dia. O RPC é idempotente por
+  // user×dia e dispara os contadores `liturgia_<slug>` configurados em
+  // liturgia_calendario, liberando as cartas dominicais.
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) return
+    void (async () => {
+      const { error } = await supabase.rpc('fn_liturgia_marcar_abertura')
+      if (error) console.warn('[liturgia] marcar_abertura:', error.message)
+    })()
+  }, [])
+
   const sections = useMemo(() => (liturgia ? mapLeituraSections(liturgia) : []), [liturgia])
 
   const tabs = useMemo<TabItem[]>(() => {

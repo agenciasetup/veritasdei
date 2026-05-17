@@ -32,6 +32,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { rateLimit } from '@/lib/rate-limit'
 import { checkAndConsumeAiBudget } from '@/lib/ai/budget'
 import { detectPromptInjection } from '@/lib/ai/prompt-defense'
@@ -201,6 +202,28 @@ export async function POST(req: NextRequest) {
 
     const raw = completion.choices[0]?.message?.content ?? ''
     const out = parseAiReply(raw)
+
+    // Vitória — o oponente concedeu. Persiste a sessão e dispara os contadores
+    // do Códex (debates_vencidos / debates_perfeitos). Scores do modelo são
+    // 0-3; a função do banco aceita 0-100, então mapeamos *100/3 e arredondamos.
+    if (out.conceded) {
+      try {
+        const admin = createAdminClient()
+        const toPct = (n: number) => Math.round((n * 100) / 3)
+        await admin.rpc('fn_debate_finalizar', {
+          p_user_id: user.id,
+          p_tema: topic.title,
+          p_score_biblico: toPct(out.eval.biblical),
+          p_score_magisterio: toPct(out.eval.magisterium),
+          p_score_caridade: toPct(out.eval.charity),
+          p_argumentos: messages,
+        })
+      } catch (e) {
+        // Não bloqueia a resposta do debate; só registra no log.
+        console.error('[educa/debate] fn_debate_finalizar falhou:', e)
+      }
+    }
+
     return NextResponse.json(out, {
       headers: {
         // Resposta personalizada por turno — jamais cachear ou compartilhar
