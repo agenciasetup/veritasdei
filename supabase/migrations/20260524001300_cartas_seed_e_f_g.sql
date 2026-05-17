@@ -1,0 +1,328 @@
+-- ============================================================================
+-- Códex Veritas — Seed E (rosário/terço) + F (grupo) + G (streak)
+-- ============================================================================
+
+begin;
+
+-- ============================================================================
+-- E — Terço / Rosário
+-- ============================================================================
+insert into public.cartas (
+  personagem_id, slug, nome, subtitulo, categoria, raridade, estrelas, tiragem,
+  frase_central, frase_referencia, autoridade_doutrinaria, efeito_simbolico,
+  recompensa, simbolo, moldura, cor_accent, dica_desbloqueio, regras, status, ordem
+) values
+  ((select id from public.personagens where slug='santos-do-rosario'),
+   'um-terco', 'Um Terço', 'Primeira coroa',
+   'Oração', 'comum', 2, null,
+   'Rezai o terço todos os dias.', 'Nossa Senhora de Fátima (13 de maio de 1917)',
+   'Leão XIII, Supremi Apostolatus Officio (1883) — primeira encíclica sobre o Rosário.',
+   'Marca o início do hábito do Rosário.',
+   '["Carta Comum","Selo: Um Terço"]'::jsonb,
+   '☩', 'classica', '#C2B7A6',
+   'Reze um terço completo.',
+   jsonb_build_object('operador','todas','condicoes',
+     jsonb_build_array(jsonb_build_object('tipo','contador','ref','tercos_rezados','valor',1))),
+   'publicado', 100),
+
+  ((select id from public.personagens where slug='santos-do-rosario'),
+   'rosario-completo', 'Rosário Completo', 'Os quatro mistérios no mesmo dia',
+   'Oração', 'rara', 3, null,
+   'O Rosário é a minha oração predileta.', 'São João Paulo II',
+   'João Paulo II, Carta Apostólica Rosarium Virginis Mariae (2002).',
+   'Sela a alma com os quatro mistérios.',
+   '["Carta Rara","Selo: Rosário Completo"]'::jsonb,
+   '✠', 'classica', '#D4A574',
+   'Reze os quatro conjuntos (gozosos, luminosos, dolorosos, gloriosos) no mesmo dia.',
+   jsonb_build_object('operador','todas','condicoes',
+     jsonb_build_array(jsonb_build_object('tipo','contador','ref','rosarios_completos','valor',1))),
+   'publicado', 101),
+
+  ((select id from public.personagens where slug='santos-do-rosario'),
+   'triduum-mariale', 'Triduum Mariale', 'Três terços',
+   'Oração', 'rara', 3, null,
+   'Em tudo dai graças, pois esta é a vontade de Deus em Cristo Jesus para convosco.',
+   '1 Tessalonicenses 5,18',
+   'Tridum mariano — três dias seguidos de oração à Virgem.',
+   'Estreita os laços com a Senhora.',
+   '["Carta Rara","Selo: Triduum"]'::jsonb,
+   '☩', 'classica', '#D4A574',
+   'Reze três terços.',
+   jsonb_build_object('operador','todas','condicoes',
+     jsonb_build_array(jsonb_build_object('tipo','contador','ref','tercos_rezados','valor',3))),
+   'publicado', 102),
+
+  ((select id from public.personagens where slug='santos-do-rosario'),
+   'os-cinco-misterios', 'Os Cinco Mistérios', 'Cinco terços',
+   'Oração', 'rara', 3, null,
+   'Façam tudo o que Ele vos disser.', 'João 2,5',
+   'Mistérios gozosos: cinco contemplações que abrem o Rosário.',
+   'Aprofunda a contemplação dos mistérios da fé.',
+   '["Carta Rara","Selo: Cinco Mistérios"]'::jsonb,
+   '✠', 'classica', '#D4A574',
+   'Reze cinco terços.',
+   jsonb_build_object('operador','todas','condicoes',
+     jsonb_build_array(jsonb_build_object('tipo','contador','ref','tercos_rezados','valor',5))),
+   'publicado', 103),
+
+  ((select id from public.personagens where slug='maria-mae-de-deus'),
+   'sete-dores-de-maria', 'As Sete Dores de Maria', 'Sete terços',
+   'Oração', 'epica', 4, null,
+   'Uma espada traspassará a tua própria alma.', 'Lucas 2,35',
+   'Devoção às Sete Dores promovida pelos Servitas (séc. XIII).',
+   'Une o portador à compaixão da Mãe.',
+   '["Carta Épica","Selo: Sete Dores"]'::jsonb,
+   '🗡', 'ornamentada', '#8B1E3F',
+   'Reze sete terços.',
+   jsonb_build_object('operador','todas','condicoes',
+     jsonb_build_array(jsonb_build_object('tipo','contador','ref','tercos_rezados','valor',7))),
+   'publicado', 104),
+
+  ((select id from public.personagens where slug='santos-do-rosario'),
+   'decada-selada', 'Década Selada', 'Dez terços',
+   'Oração', 'epica', 4, null,
+   'Cada Ave Maria é uma rosa lançada aos pés da Mãe.', 'Atribuída a Santo Afonso de Ligório',
+   'A "década" do Rosário: dez Ave-Marias entre os mistérios.',
+   'Sela o costume da oração mariana.',
+   '["Carta Épica","Selo: Década"]'::jsonb,
+   '☩', 'ornamentada', '#8B1E3F',
+   'Reze dez terços.',
+   jsonb_build_object('operador','todas','condicoes',
+     jsonb_build_array(jsonb_build_object('tipo','contador','ref','tercos_rezados','valor',10))),
+   'publicado', 105),
+
+  ((select id from public.personagens where slug='santos-do-rosario'),
+   'rosario-do-vigesimo', 'Rosário do Vigésimo', 'Vinte terços',
+   'Oração', 'epica', 4, null,
+   'Acrescentou João Paulo II os Mistérios Luminosos: vinte ao todo.',
+   'Rosarium Virginis Mariae (2002)',
+   'Os cinco mistérios luminosos somados aos gozosos, dolorosos e gloriosos.',
+   'Compõe o ciclo dos vinte mistérios.',
+   '["Carta Épica","Selo: Vinte Mistérios"]'::jsonb,
+   '✠', 'ornamentada', '#8B1E3F',
+   'Reze vinte terços.',
+   jsonb_build_object('operador','todas','condicoes',
+     jsonb_build_array(jsonb_build_object('tipo','contador','ref','tercos_rezados','valor',20))),
+   'publicado', 106),
+
+  ((select id from public.personagens where slug='santos-do-rosario'),
+   'cinquenta-aves', 'Cinquenta Aves', 'Cinquenta terços',
+   'Oração', 'lendaria', 5, 144,
+   'Mil aves não são demais para Maria.', 'Provérbio dominicano',
+   'Domingos de Gusmão recebeu o Rosário de Nossa Senhora em Prouille (1208).',
+   'Coroa cinquenta vezes a Mãe — anel de cinquenta rosas.',
+   '["Carta Lendária","Selo: Cinquenta"]'::jsonb,
+   '☩', 'vitral', '#E8C766',
+   'Reze cinquenta terços.',
+   jsonb_build_object('operador','todas','condicoes',
+     jsonb_build_array(jsonb_build_object('tipo','contador','ref','tercos_rezados','valor',50))),
+   'publicado', 107),
+
+  ((select id from public.personagens where slug='santos-do-rosario'),
+   'centena-coroada', 'Centena Coroada', 'Cem terços',
+   'Oração', 'lendaria', 5, 144,
+   'Centum rosae Mariae.', 'Antífona medieval',
+   'O hábito dominicano de cem mistérios em uma só vigília.',
+   'Cem coroas de rosas, uma sobre a outra.',
+   '["Carta Lendária","Selo: Centena"]'::jsonb,
+   '✠', 'vitral', '#E8C766',
+   'Reze cem terços.',
+   jsonb_build_object('operador','todas','condicoes',
+     jsonb_build_array(jsonb_build_object('tipo','contador','ref','tercos_rezados','valor',100))),
+   'publicado', 108),
+
+  ((select id from public.personagens where slug='santos-do-rosario'),
+   'mil-aves', 'Mil Aves', 'Mil terços',
+   'Oração', 'suprema', 5, 33,
+   'Mil vezes Ave Maria, mil vezes plena de graça.', 'Tradição dominicana',
+   'Lepanto (1571) — vitória atribuída ao Rosário; festa de Nossa Senhora do Rosário em 7 de outubro.',
+   'A coroa final do orante perseverante.',
+   '["Carta Suprema (33 cópias)","Selo: Mil Aves"]'::jsonb,
+   '☀', 'vitral', '#F4DE96',
+   'Reze mil terços.',
+   jsonb_build_object('operador','todas','condicoes',
+     jsonb_build_array(jsonb_build_object('tipo','contador','ref','tercos_rezados','valor',1000))),
+   'publicado', 109),
+
+  ((select id from public.personagens where slug='santos-do-rosario'),
+   'onde-dois-ou-tres', 'Onde Dois ou Três', 'Terço em sala compartilhada',
+   'Oração', 'epica', 4, null,
+   'Onde dois ou três estiverem reunidos em meu nome, ali estou eu no meio deles.',
+   'Mateus 18,20',
+   'CIC 2745 — oração em comunhão.',
+   'A oração coletiva soma graças sobre o portador.',
+   '["Carta Épica","Selo: Comunhão Orante"]'::jsonb,
+   '☩', 'ornamentada', '#8B1E3F',
+   'Reze um terço inteiro em uma sala compartilhada com pelo menos duas outras pessoas.',
+   jsonb_build_object('operador','todas','condicoes',
+     jsonb_build_array(jsonb_build_object('tipo','contador','ref','tercos_em_sala','valor',1))),
+   'publicado', 110)
+on conflict (slug) do update set
+  nome = excluded.nome, raridade = excluded.raridade, tiragem = excluded.tiragem,
+  frase_central = excluded.frase_central, regras = excluded.regras,
+  status = excluded.status, ordem = excluded.ordem;
+
+-- ============================================================================
+-- F — Grupo de Estudo (Iscariotes, Pedro Restaurado, Matias, Pentecostes)
+-- ============================================================================
+
+insert into public.cartas (
+  personagem_id, slug, nome, subtitulo, categoria, raridade, estrelas, tiragem,
+  frase_central, frase_referencia, autoridade_doutrinaria, efeito_simbolico,
+  recompensa, concilio, virtude, simbolo, lore, moldura, cor_accent,
+  dica_desbloqueio, regras, status, ordem
+) values
+  ((select id from public.personagens where slug='os-doze'),
+   'iscariotes', 'Iscariotes', 'O que saiu',
+   'Sombra', 'lendaria', 5, 144,
+   'Era melhor a esse homem não ter nascido.', 'Mateus 26,24',
+   'Senhor, tu sabes que te amo. (Jo 21,17 — Pedro restaurado)',
+   'Símbolo catequético do peso de abandonar a comunhão. Não é juízo final — é convite à volta.',
+   '["Carta Lendária","Categoria: Sombra"]'::jsonb,
+   null, 'Memória',
+   '🌒',
+   'A Igreja nunca declarou ninguém condenado — o destino final de qualquer alma é mistério reservado a Deus. Esta carta é símbolo catequético do peso de abandonar a comunhão. Quem saiu sempre pode voltar — e voltar é "Pedro Restaurado". A carta da volta apaga a sombra desta.',
+   'ornamentada', '#3B2C2C',
+   null,
+   jsonb_build_object('operador','todas','condicoes',
+     jsonb_build_array(jsonb_build_object('tipo','contador','ref','foi_o_judas','valor',1))),
+   'publicado', 120),
+
+  ((select id from public.personagens where slug='os-doze'),
+   'pedro-restaurado', 'Pedro Restaurado', 'Apascenta as minhas ovelhas',
+   'Redenção', 'epica', 4, null,
+   'Senhor, tu sabes tudo, tu sabes que te amo.', 'João 21,17',
+   'O Senhor restaura Pedro à beira do Tibericano após a tríplice negação.',
+   'Apaga a sombra de "Iscariotes" do portador. Marca a volta como vitória.',
+   '["Carta Épica","Selo: Redenção","Apaga: Sombra"]'::jsonb,
+   null, 'Conversão',
+   '🌅',
+   'Três vezes Pedro negou; três vezes o Senhor perguntou "tu me amas?". Quem volta ao grupo dentro de trinta dias herda essa cena — e a sombra do Iscariotes some.',
+   'ornamentada', '#8B1E3F',
+   'Volte a um grupo do qual você saiu, dentro de 30 dias.',
+   jsonb_build_object('operador','todas','condicoes',
+     jsonb_build_array(jsonb_build_object('tipo','contador','ref','pedro_restaurado','valor',1))),
+   'publicado', 121),
+
+  ((select id from public.personagens where slug='os-doze'),
+   'matias-o-eleito', 'Matias, o Eleito', 'A sorte caiu sobre Matias',
+   'Eleição', 'lendaria', 5, 144,
+   'E lançaram a sorte sobre eles, e a sorte caiu sobre Matias.', 'Atos 1,26',
+   'Atos 1,15–26 — eleição do décimo segundo Apóstolo no lugar de Judas.',
+   'Sela o portador como reposição do colégio apostólico.',
+   '["Carta Lendária","Selo: Matias"]'::jsonb,
+   null, 'Eleição Providente',
+   '🎲',
+   'O décimo terceiro a entrar num grupo de onde alguém saiu. A Igreja não deixa o número doze incompleto — Pedro preside, Matias entra.',
+   'vitral', '#E8C766',
+   null,
+   jsonb_build_object('operador','todas','condicoes',
+     jsonb_build_array(jsonb_build_object('tipo','contador','ref','foi_o_matias','valor',1))),
+   'publicado', 122),
+
+  ((select id from public.personagens where slug='a-igreja'),
+   'pentecostes', 'Pentecostes', 'Cento e vinte no Cenáculo',
+   'Comunhão Suprema', 'suprema', 5, 33,
+   'E todos se encheram do Espírito Santo.', 'Atos 2,4',
+   'At 1,15 — "cerca de cento e vinte pessoas reunidas". CIC 731–732.',
+   'Quem pertence a um grupo de 120+ pessoas que concluiu uma trilha juntos.',
+   '["Carta Suprema (33 cópias)","Selo: Pentecostes"]'::jsonb,
+   'Pentecostes (cerca do ano 30 d.C.)',
+   'Comunhão',
+   '🔥',
+   'Cento e vinte no Cenáculo. Trinta e três cartas no Codex. As línguas de fogo desceram uma única vez na história — e esta carta carrega esse instante.',
+   'vitral', '#F4DE96',
+   'Pertença a um grupo que atingiu 120 membros ativos e que concluiu uma trilha em comum.',
+   jsonb_build_object('operador','todas','condicoes', jsonb_build_array(
+     jsonb_build_object('tipo','grupo_estudo_tamanho','valor',120)
+   )),
+   'publicado', 123)
+on conflict (slug) do update set
+  nome = excluded.nome, raridade = excluded.raridade, tiragem = excluded.tiragem,
+  regras = excluded.regras, status = excluded.status, ordem = excluded.ordem;
+
+-- ============================================================================
+-- G — Constância (streak)
+-- ============================================================================
+
+insert into public.cartas (
+  personagem_id, slug, nome, subtitulo, categoria, raridade, estrelas, tiragem,
+  frase_central, frase_referencia, autoridade_doutrinaria, efeito_simbolico,
+  recompensa, simbolo, moldura, cor_accent, dica_desbloqueio, regras, status, ordem
+) values
+  ((select id from public.personagens where slug='jesus-cristo'),
+   'triduum-pascal', 'Tríduo Pascal', 'Três dias seguidos',
+   'Constância', 'rara', 3, null,
+   'Eis que estou convosco todos os dias.', 'Mateus 28,20',
+   'O Tríduo Pascal — três dias santos da liturgia.',
+   'Selo dos primeiros três passos da fidelidade.',
+   '["Carta Rara","Selo: Tríduo"]'::jsonb,
+   '✠', 'classica', '#D4A574',
+   'Estude três dias seguidos.',
+   jsonb_build_object('operador','todas','condicoes',
+     jsonb_build_array(jsonb_build_object('tipo','streak','valor',3))),
+   'publicado', 130),
+
+  ((select id from public.personagens where slug='doutores-da-igreja'),
+   'sete-dias-do-verbo', 'Os Sete Dias do Verbo', 'Sete dias seguidos',
+   'Constância', 'epica', 4, null,
+   'Sete vezes ao dia eu te louvo, por causa dos teus justos juízos.', 'Salmo 119,164',
+   'Regra de São Bento — sete horas canônicas distribuídas no dia.',
+   'O ritmo monástico se forma — passou da véspera ao hábito.',
+   '["Carta Épica","Selo: Septenário"]'::jsonb,
+   '☩', 'ornamentada', '#8B1E3F',
+   'Estude sete dias seguidos.',
+   jsonb_build_object('operador','todas','condicoes',
+     jsonb_build_array(jsonb_build_object('tipo','streak','valor',7))),
+   'publicado', 131),
+
+  ((select id from public.personagens where slug='jesus-cristo'),
+   'quaresma-curta', 'Quaresma Curta', 'Duas semanas',
+   'Constância', 'epica', 4, null,
+   'Velai e orai, para não cairdes em tentação.', 'Mateus 26,41',
+   'A "quaresma curta" do catecúmeno antigo — primeiras semanas de purificação.',
+   'O esforço penitencial começa a colher fruto.',
+   '["Carta Épica","Selo: Penitência"]'::jsonb,
+   '☩', 'ornamentada', '#8B1E3F',
+   'Estude catorze dias seguidos.',
+   jsonb_build_object('operador','todas','condicoes',
+     jsonb_build_array(jsonb_build_object('tipo','streak','valor',14))),
+   'publicado', 132),
+
+  ((select id from public.personagens where slug='jesus-cristo'),
+   'quaresma-do-senhor', 'Quaresma do Senhor', 'Quarenta dias',
+   'Constância Lendária', 'lendaria', 5, 144,
+   'Quarenta dias e quarenta noites no deserto.', 'Mateus 4,2',
+   'Quaresma — tempo litúrgico de quarenta dias.',
+   'Reproduz no estudo a duração do jejum do Senhor.',
+   '["Carta Lendária","Selo: Quarenta Dias"]'::jsonb,
+   '✠', 'vitral', '#E8C766',
+   'Estude quarenta dias seguidos.',
+   jsonb_build_object('operador','todas','condicoes',
+     jsonb_build_array(jsonb_build_object('tipo','streak','valor',40))),
+   'publicado', 133),
+
+  ((select id from public.personagens where slug='a-igreja'),
+   'pentecostes-em-mim', 'Pentecostes em Mim', 'Cinquenta dias',
+   'Constância Lendária', 'lendaria', 5, 144,
+   'Eles oravam unanimemente em oração e súplica.', 'Atos 1,14',
+   'Cinquenta dias entre Páscoa e Pentecostes.',
+   'A perseverança madura — o Espírito desce sobre o estudo.',
+   '["Carta Lendária","Selo: Pentecostes"]'::jsonb,
+   '🔥', 'vitral', '#E8C766',
+   'Estude cinquenta dias seguidos.',
+   jsonb_build_object('operador','todas','condicoes',
+     jsonb_build_array(jsonb_build_object('tipo','streak','valor',50))),
+   'publicado', 134)
+on conflict (slug) do update set
+  nome = excluded.nome, raridade = excluded.raridade, tiragem = excluded.tiragem,
+  regras = excluded.regras, status = excluded.status, ordem = excluded.ordem;
+
+select public.fn_recalc_personagem_total(p.id)
+  from public.personagens p
+ where p.slug in (
+   'santos-do-rosario','maria-mae-de-deus','os-doze','a-igreja',
+   'jesus-cristo','doutores-da-igreja'
+ );
+
+commit;

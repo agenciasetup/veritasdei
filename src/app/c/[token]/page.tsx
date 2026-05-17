@@ -115,6 +115,7 @@ function PaginaValida({ cert }: { cert: CertificadoCarta }) {
     moldura: cert.carta.moldura,
     cor_accent: cert.carta.cor_accent,
     escala_fonte: cert.carta.escala_fonte,
+    tiragem: null,
     dica_desbloqueio: null,
     regras: { operador: 'todas', condicoes: [] },
     status: 'publicado',

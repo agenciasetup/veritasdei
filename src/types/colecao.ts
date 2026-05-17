@@ -20,6 +20,8 @@ export type CartaCondicaoTipo =
   | 'nota_contem_frase'
   | 'grupo_estudo_tamanho'
   | 'contador'
+  | 'conteudo_estudado_slug'
+  | 'dogma_estudado'
 
 export interface CartaCondicao {
   tipo: CartaCondicaoTipo
@@ -74,6 +76,8 @@ export interface Carta {
   cor_accent: string | null
   /** Multiplicador de fonte p/ diagramação (0.5–2.0, padrão 1.0). */
   escala_fonte: number
+  /** Limite máximo de cópias da carta (NULL = ilimitada). Lendárias=144, Supremas=33. */
+  tiragem: number | null
   dica_desbloqueio: string | null
   regras: CartaRegras
   status: CartaStatus
@@ -188,9 +192,9 @@ export const RARIDADE_META: Record<CartaRaridade, RaridadeMeta> = {
   },
   rara: {
     label: 'Rara',
-    cor: '#7FB5D6',
-    borda: 'rgba(127,181,214,0.6)',
-    glow: '0 0 20px rgba(127,181,214,0.22)',
+    cor: '#D4A574',
+    borda: 'rgba(212,165,116,0.65)',
+    glow: '0 0 20px rgba(212,165,116,0.24)',
     artMode: 'janela',
     artFracao: 0.66,
     holo: false,
@@ -198,9 +202,9 @@ export const RARIDADE_META: Record<CartaRaridade, RaridadeMeta> = {
   },
   epica: {
     label: 'Épica',
-    cor: '#B98BE6',
-    borda: 'rgba(185,139,230,0.75)',
-    glow: '0 0 34px rgba(185,139,230,0.4)',
+    cor: '#8B1E3F',
+    borda: 'rgba(139,30,63,0.75)',
+    glow: '0 0 34px rgba(139,30,63,0.42)',
     artMode: 'cheia',
     artFracao: 1,
     holo: false,
@@ -247,6 +251,8 @@ export const CONDICAO_LABEL: Record<CartaCondicaoTipo, string> = {
   nota_contem_frase: 'Escrever uma frase numa anotação (carta-segredo)',
   grupo_estudo_tamanho: 'Grupo de estudo atingir N membros',
   contador: 'Atingir um contador de evento',
+  conteudo_estudado_slug: 'Concluir um subtópico (por slug)',
+  dogma_estudado: 'Estudar um dogma específico',
 }
 
 export const REGRAS_VAZIA: CartaRegras = { operador: 'todas', condicoes: [] }
