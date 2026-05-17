@@ -1,15 +1,24 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ChevronRight, NotebookPen, ArrowRight, Pencil } from 'lucide-react'
+import { ChevronRight, ArrowRight, Pencil } from 'lucide-react'
 import ImmersiveReader from '@/components/content/ImmersiveReader'
 import StudyDeepdive from './StudyDeepdive'
 import StudyNotesPanel from './StudyNotesPanel'
 import ProgressTrack from './ProgressTrack'
+import StudyFloatingToolbar from './StudyFloatingToolbar'
+import SelectionPopover from './SelectionPopover'
+import type { SelectionInfo } from './HighlightableText'
 import { useStudyDeepdive } from '@/lib/study/useStudyDeepdive'
 import InlineEditOverlay from '@/components/admin/InlineEditOverlay'
 import { useAuth } from '@/contexts/AuthContext'
+import {
+  useLessonHighlights,
+  type HighlightColor,
+  type HighlightVisibility,
+  type LessonHighlight,
+} from '@/lib/study/useLessonHighlights'
 import type {
   ContentItem,
   StudyNextHint,
@@ -76,10 +85,77 @@ export default function StudyReader({
   coverUrl,
 }: StudyReaderProps) {
   const { deepdive } = useStudyDeepdive(contentType, contentRef)
-  const { isAdmin } = useAuth()
+  const { isAdmin, user } = useAuth()
   const [notesOpen, setNotesOpen] = useState(false)
   const ytId = youtubeId(videoUrl)
   const hasCover = Boolean(coverUrl)
+
+  const { byItem: highlightsByItem, create: createHighlight, remove: removeHighlight } =
+    useLessonHighlights(contentType, contentRef)
+
+  // Estado de seleção ativa — dispara o popover. `existingHighlight` é
+  // setado quando o usuário clica num marcador existente em vez de selecionar
+  // texto novo.
+  const [selection, setSelection] = useState<SelectionInfo | null>(null)
+  const [existingHighlight, setExistingHighlight] =
+    useState<LessonHighlight | null>(null)
+  const [defaultVisibility, setDefaultVisibility] =
+    useState<HighlightVisibility>('private')
+
+  const handleTextSelect = useCallback((info: SelectionInfo) => {
+    setExistingHighlight(null)
+    setSelection(info)
+  }, [])
+
+  const handleHighlightClick = useCallback(
+    (h: LessonHighlight) => {
+      // Reaproveita o popover pra oferecer "remover" sobre marcadores já
+      // criados. A "selection" sintética cobre o intervalo do marcador
+      // pra posicionar o popover na mesma região.
+      const fakeRect = new DOMRect(
+        window.innerWidth / 2,
+        window.scrollY + window.innerHeight / 2,
+        0,
+        0,
+      )
+      setExistingHighlight(h)
+      setSelection({
+        itemId: h.item_id,
+        charStart: h.char_start,
+        charEnd: h.char_end,
+        rect: fakeRect,
+        text: '',
+      })
+    },
+    [],
+  )
+
+  const handlePickColor = useCallback(
+    async (color: HighlightColor, sel: SelectionInfo) => {
+      if (!user?.id) return
+      await createHighlight({
+        itemId: sel.itemId,
+        charStart: sel.charStart,
+        charEnd: sel.charEnd,
+        color,
+        visibility: defaultVisibility,
+      })
+      setSelection(null)
+      setExistingHighlight(null)
+      // Limpa a seleção do navegador pra evitar re-trigger.
+      window.getSelection()?.removeAllRanges()
+    },
+    [user?.id, createHighlight, defaultVisibility],
+  )
+
+  const handleRemoveHighlight = useCallback(
+    async (h: LessonHighlight) => {
+      await removeHighlight(h.id)
+      setSelection(null)
+      setExistingHighlight(null)
+    },
+    [removeHighlight],
+  )
 
   const pillarPercent = useMemo(() => {
     if (!pillar.total) return 0
@@ -97,6 +173,9 @@ export default function StudyReader({
         contentSubtopicId={contentRef}
         onMarkStudied={onMarkStudied}
         isStudied={isStudied}
+        highlightsByItem={highlightsByItem}
+        onTextSelect={user ? handleTextSelect : undefined}
+        onHighlightClick={user ? handleHighlightClick : undefined}
         topSlot={
           <ProgressTrack
             percent={pillarPercent}
@@ -146,13 +225,40 @@ export default function StudyReader({
             </InlineEditOverlay>
           ) : null
         }
-        afterItems={
-          <>
-            {deepdive ? <StudyDeepdive deepdive={deepdive} /> : null}
-            <ActionBar onOpenNotes={() => setNotesOpen(true)} />
-          </>
-        }
+        afterItems={deepdive ? <StudyDeepdive deepdive={deepdive} /> : null}
         footerSlot={next ? <NextCallout next={next} /> : null}
+      />
+
+      {user ? (
+        <StudyFloatingToolbar
+          onOpenNotes={() => setNotesOpen(true)}
+          defaultVisibility={defaultVisibility}
+          onChangeVisibility={setDefaultVisibility}
+          hasGroupContext={false}
+          fontScale="md"
+          onCycleFont={() => {
+            /* Tamanho de fonte continua no ReaderToolbar do topo —
+             *  o botão aqui só dá pista visual. Sem efeito por enquanto. */
+          }}
+          hideVisibility={false}
+        />
+      ) : null}
+
+      <SelectionPopover
+        selection={selection}
+        existingHighlight={existingHighlight}
+        onPickColor={handlePickColor}
+        onRemove={handleRemoveHighlight}
+        onComment={() => {
+          setNotesOpen(true)
+          setSelection(null)
+          setExistingHighlight(null)
+          window.getSelection()?.removeAllRanges()
+        }}
+        onDismiss={() => {
+          setSelection(null)
+          setExistingHighlight(null)
+        }}
       />
 
       <StudyNotesPanel
@@ -232,27 +338,6 @@ function Breadcrumb({
         {currentTitle}
       </span>
     </nav>
-  )
-}
-
-function ActionBar({ onOpenNotes }: { onOpenNotes: () => void }) {
-  return (
-    <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-      <button
-        type="button"
-        onClick={onOpenNotes}
-        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm transition-all duration-200"
-        style={{
-          background: 'rgba(201,168,76,0.08)',
-          border: '1px solid rgba(201,168,76,0.2)',
-          color: 'var(--gold)',
-          fontFamily: 'Poppins, sans-serif',
-        }}
-      >
-        <NotebookPen className="w-4 h-4" />
-        Minhas anotações
-      </button>
-    </div>
   )
 }
 

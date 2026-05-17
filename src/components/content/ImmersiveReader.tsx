@@ -5,6 +5,10 @@ import { Copy, Check, BookOpen, Quote, Scroll, List } from 'lucide-react'
 import type { ContentItem } from '@/lib/content/useContentGroup'
 import ReaderToolbar, { type FontScale } from './ReaderToolbar'
 import InlineEditOverlay from '@/components/admin/InlineEditOverlay'
+import HighlightableText, {
+  type SelectionInfo,
+} from '@/components/study/HighlightableText'
+import type { LessonHighlight } from '@/lib/study/useLessonHighlights'
 
 const FONT_KEY = 'veritasdei:reader:font-scale'
 const FONT_RATIO: Record<FontScale, number> = { sm: 0.92, md: 1.0, lg: 1.15 }
@@ -47,6 +51,13 @@ interface ImmersiveReaderProps {
   coverUrl?: string | null
   /** ID do subtópico — habilita o botão de edição inline da capa pra admin. */
   contentSubtopicId?: string
+  /** Marcadores indexados por item_id — quando presente, os textos viram
+   *  selecionáveis e os trechos cobertos ganham <mark> colorido. */
+  highlightsByItem?: Map<string, LessonHighlight[]>
+  /** Callback acionado quando o usuário seleciona um trecho. */
+  onTextSelect?: (info: SelectionInfo) => void
+  /** Callback acionado quando o usuário clica em um marcador existente. */
+  onHighlightClick?: (highlight: LessonHighlight) => void
   /**
    * Coluna de leitura.
    * - `reading` (default) = 740px, legibilidade editorial (~75ch)
@@ -76,6 +87,9 @@ export default function ImmersiveReader({
   videoSlot,
   coverUrl,
   contentSubtopicId,
+  highlightsByItem,
+  onTextSelect,
+  onHighlightClick,
   contentWidth = 'reading',
 }: ImmersiveReaderProps) {
   const hasCover = Boolean(coverUrl)
@@ -180,7 +194,11 @@ export default function ImmersiveReader({
 
       {/* ── Content sections ── */}
       <div className="space-y-8">
-        {renderGroupedItems(items)}
+        {renderGroupedItems(items, {
+          highlightsByItem,
+          onTextSelect,
+          onHighlightClick,
+        })}
       </div>
 
       {afterItems ? <div className="mt-4">{afterItems}</div> : null}
@@ -227,7 +245,16 @@ export default function ImmersiveReader({
 
 /* ─── Render content items, grouping consecutive definitions ─── */
 
-function renderGroupedItems(items: ContentItem[]): React.ReactNode[] {
+interface RenderOptions {
+  highlightsByItem?: Map<string, LessonHighlight[]>
+  onTextSelect?: (info: SelectionInfo) => void
+  onHighlightClick?: (h: LessonHighlight) => void
+}
+
+function renderGroupedItems(
+  items: ContentItem[],
+  opts: RenderOptions = {},
+): React.ReactNode[] {
   const sections: React.ReactNode[] = []
   let i = 0
 
@@ -247,24 +274,30 @@ function renderGroupedItems(items: ContentItem[]): React.ReactNode[] {
       continue
     }
 
+    const itemHighlights = opts.highlightsByItem?.get(item.id)
+    const shared = {
+      highlights: itemHighlights,
+      onTextSelect: opts.onTextSelect,
+      onHighlightClick: opts.onHighlightClick,
+    }
     switch (item.kind) {
       case 'text':
-        sections.push(<TextSection key={item.id} item={item} />)
+        sections.push(<TextSection key={item.id} item={item} {...shared} />)
         break
       case 'verse':
-        sections.push(<VerseSection key={item.id} item={item} />)
+        sections.push(<VerseSection key={item.id} item={item} {...shared} />)
         break
       case 'list':
         sections.push(<ListSection key={item.id} item={item} />)
         break
       case 'prayer':
-        sections.push(<PrayerSection key={item.id} item={item} />)
+        sections.push(<PrayerSection key={item.id} item={item} {...shared} />)
         break
       case 'image':
         sections.push(<ImageSection key={item.id} item={item} />)
         break
       default:
-        sections.push(<TextSection key={item.id} item={item} />)
+        sections.push(<TextSection key={item.id} item={item} {...shared} />)
     }
     i++
   }
@@ -272,9 +305,16 @@ function renderGroupedItems(items: ContentItem[]): React.ReactNode[] {
   return sections
 }
 
+interface SectionProps {
+  item: ContentItem
+  highlights?: LessonHighlight[]
+  onTextSelect?: (info: SelectionInfo) => void
+  onHighlightClick?: (h: LessonHighlight) => void
+}
+
 /* ─── Section components ─── */
 
-function TextSection({ item }: { item: ContentItem }) {
+function TextSection({ item, highlights, onTextSelect, onHighlightClick }: SectionProps) {
   return (
     <section className="fade-in">
       {item.title && (
@@ -292,13 +332,19 @@ function TextSection({ item }: { item: ContentItem }) {
         className="text-base md:text-lg leading-[2] tracking-wide"
         style={{ color: '#E8E2D8', fontFamily: 'Poppins, sans-serif', fontWeight: 300 }}
       >
-        {item.body}
+        <HighlightableText
+          itemId={item.id}
+          text={item.body}
+          highlights={highlights}
+          onSelect={onTextSelect}
+          onHighlightClick={onHighlightClick}
+        />
       </p>
     </section>
   )
 }
 
-function VerseSection({ item }: { item: ContentItem }) {
+function VerseSection({ item, highlights, onTextSelect, onHighlightClick }: SectionProps) {
   const [copied, setCopied] = useState(false)
 
   async function handleCopy() {
@@ -330,7 +376,15 @@ function VerseSection({ item }: { item: ContentItem }) {
           className="text-lg md:text-xl leading-[1.8] italic mt-3"
           style={{ fontFamily: 'Cormorant Garamond, serif', color: '#E8E2D8' }}
         >
-          &ldquo;{item.body}&rdquo;
+          &ldquo;
+          <HighlightableText
+            itemId={item.id}
+            text={item.body}
+            highlights={highlights}
+            onSelect={onTextSelect}
+            onHighlightClick={onHighlightClick}
+          />
+          &rdquo;
         </blockquote>
 
         {/* Copy button */}
@@ -420,7 +474,7 @@ function ListSection({ item }: { item: ContentItem }) {
   )
 }
 
-function PrayerSection({ item }: { item: ContentItem }) {
+function PrayerSection({ item, highlights, onTextSelect, onHighlightClick }: SectionProps) {
   const [copied, setCopied] = useState(false)
 
   async function handleCopy() {
@@ -444,7 +498,13 @@ function PrayerSection({ item }: { item: ContentItem }) {
         className="text-xl md:text-2xl leading-[2.2] whitespace-pre-line"
         style={{ fontFamily: 'Cormorant Garamond, serif', color: '#E8E2D8', fontWeight: 400 }}
       >
-        {item.body}
+        <HighlightableText
+          itemId={item.id}
+          text={item.body}
+          highlights={highlights}
+          onSelect={onTextSelect}
+          onHighlightClick={onHighlightClick}
+        />
       </p>
 
       <button
